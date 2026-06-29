@@ -1,0 +1,7 @@
+# Ignore the agent directory at the root level
+/agent/
+
+# .NET build artifacts
+[Bb]in/
+[Oo]bj/
+*.user

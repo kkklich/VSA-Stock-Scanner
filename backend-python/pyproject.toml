@@ -1,0 +1,18 @@
+[project]
+name = "stockpilot-api"
+version = "0.1.0"
+description = "StockPilot — VSA stock scanner backend for the Warsaw Stock Exchange (GPW)."
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# A sensible, idiomatic default rule set (pyflakes, pycodestyle, isort, bugbear, pyupgrade).
+select = ["E", "F", "I", "B", "UP"]
