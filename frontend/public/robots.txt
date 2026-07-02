@@ -1,0 +1,6 @@
+# StockPilot — allow all crawlers, point them at the sitemap.
+User-agent: *
+Allow: /
+
+# Replace the domain below with your real one once registered.
+Sitemap: https://stockpilot.pl/sitemap.xml

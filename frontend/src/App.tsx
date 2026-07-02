@@ -1,68 +1,71 @@
-// App shell: persistent sidebar + top bar, with a lightweight state-based
-// router switching between the primary screens. (A real router can drop in
-// later; this keeps the mock-first build self-contained.)
+// App shell + client-side routing (react-router-dom).
+// The Layout renders the persistent sidebar + top bar and an <Outlet> for the
+// active route. "/" is the home page (Watchlist). Each stock has its own URL
+// at /stock/:ticker so links are shareable and indexable.
 
 import { useState } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { DashboardPage } from './pages/DashboardPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { ChartsPage } from './pages/ChartsPage'
 import { ScannerPage } from './pages/ScannerPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { usePageSeo } from './lib/seo'
 
-export type PageId =
-  | 'dashboard'
-  | 'scanner'
-  | 'watchlist'
-  | 'filters'
-  | 'charts'
-  | 'stats'
-  | 'settings'
-
-const titles: Record<PageId, string> = {
-  dashboard: 'Dashboard',
-  scanner: 'VSA Scanner — GPW',
-  watchlist: 'Watchlist',
-  filters: 'Filters',
-  charts: 'Stock Detail',
-  stats: 'Statistics',
-  settings: 'Settings',
+/** Human-readable top-bar title for the current path. */
+function titleForPath(pathname: string): string {
+  if (pathname === '/') return 'Dashboard'
+  if (pathname.startsWith('/watchlist')) return 'Watchlist'
+  if (pathname.startsWith('/scanner')) return 'VSA Scanner — GPW'
+  if (pathname.startsWith('/stock/')) return 'Stock Detail'
+  if (pathname.startsWith('/filters')) return 'Filters'
+  if (pathname.startsWith('/settings')) return 'Settings'
+  return 'StockPilot'
 }
 
-export default function App() {
-  const [page, setPage] = useState<PageId>('watchlist')
+function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
 
-  const navigate = (id: PageId) => {
-    setPage(id)
-    setMenuOpen(false) // close the mobile drawer after picking a destination
-  }
-
-  // Clicking a ticker in the watchlist drills into the chart/detail view.
-  const openTicker = (_ticker: string) => navigate('charts')
+  // Keep the document title + meta description in sync with the active route.
+  usePageSeo(pathname)
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <Sidebar
-        active={page}
-        open={menuOpen}
-        onNavigate={navigate}
-        onClose={() => setMenuOpen(false)}
-      />
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar title={titles[page]} onMenuClick={() => setMenuOpen(true)} />
+        <TopBar
+          title={titleForPath(pathname)}
+          onMenuClick={() => setMenuOpen(true)}
+        />
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          {page === 'watchlist' && <WatchlistPage onSelect={openTicker} />}
-          {page === 'charts' && <ChartsPage />}
-          {page === 'scanner' && <ScannerPage />}
-          {page === 'dashboard' && <PlaceholderPage title="Dashboard" />}
-          {page === 'filters' && <PlaceholderPage title="Filters" />}
-          {page === 'stats' && <PlaceholderPage title="Statistics" />}
-          {page === 'settings' && <PlaceholderPage title="Settings" />}
+          <Outlet />
         </main>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        {/* Home / main page */}
+        <Route index element={<DashboardPage />} />
+        {/* /dashboard is an alias for the home page */}
+        <Route path="dashboard" element={<Navigate to="/" replace />} />
+        <Route path="watchlist" element={<WatchlistPage />} />
+        <Route path="scanner" element={<ScannerPage />} />
+        <Route path="stock/:ticker" element={<ChartsPage />} />
+        <Route path="filters" element={<PlaceholderPage title="Filters" />} />
+        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        {/* Unknown paths fall back to the home page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   )
 }

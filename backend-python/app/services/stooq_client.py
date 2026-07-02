@@ -13,6 +13,7 @@ This is a direct port of the .NET ``StooqClient``.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -47,8 +48,12 @@ _CHALLENGE_RE = re.compile(r'c="(?P<c>[^"]+)",d=(?P<d>\d+)')
 class StooqClient:
     """Downloads EOD OHLCV history from stooq.pl, transparently solving its anti-bot challenge."""
 
-    def __init__(self, http: httpx.AsyncClient) -> None:
+    def __init__(self, http: httpx.AsyncClient, max_concurrent: int = 3) -> None:
         self._http = http
+        # Hard cap on simultaneous HTTP requests to stooq.pl across ALL callers
+        # (ingest + ranking + any future endpoint share the same client instance).
+        # Keep this low (≤4) to avoid triggering stooq's IP rate-limiting.
+        self._semaphore = asyncio.Semaphore(max_concurrent)
 
     async def get_daily_history(
         self,
@@ -66,12 +71,16 @@ class StooqClient:
             raise ValueError("Ticker must be provided.")
 
         url = _build_daily_url(ticker.strip().casefold(), from_date, to_date)
-        csv = await self._get_with_challenge(url)
+        async with self._semaphore:
+            csv = await self._get_with_challenge(url)
         return _parse_daily_csv(csv, ticker)
 
     async def _get_with_challenge(self, url: str) -> str:
         """GET ``url``, solving the anti-bot challenge if present, and return the body."""
-        body = (await self._http.get(url)).text
+        try:
+            body = (await self._http.get(url)).text
+        except httpx.TransportError as exc:
+            raise StooqAccessError(f"stooq.pl connection failed: {exc}") from exc
 
         challenge = _CHALLENGE_RE.search(body)
         if challenge:
@@ -79,13 +88,17 @@ class StooqClient:
 
             c = challenge.group("c")
             difficulty = int(challenge.group("d"))
-            n = _solve_proof_of_work(c, difficulty)
+            # Offload CPU-bound POW to a thread so the event loop stays free.
+            n = await asyncio.to_thread(_solve_proof_of_work, c, difficulty)
 
             verify_url = _verify_url_for(url)
-            verify_response = await self._http.post(verify_url, data={"c": c, "n": str(n)})
-            verify_response.raise_for_status()
+            try:
+                verify_response = await self._http.post(verify_url, data={"c": c, "n": str(n)})
+                verify_response.raise_for_status()
+                body = (await self._http.get(url)).text
+            except httpx.TransportError as exc:
+                raise StooqAccessError(f"stooq.pl connection failed during PoW: {exc}") from exc
 
-            body = (await self._http.get(url)).text
             if _CHALLENGE_RE.search(body):
                 raise StooqAccessError(
                     "stooq.pl re-issued the anti-bot challenge after verification."

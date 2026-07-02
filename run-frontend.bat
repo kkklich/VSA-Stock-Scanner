@@ -23,8 +23,9 @@ if not exist node_modules (
 )
 
 echo.
-echo Starting the dev server. Your browser will open at http://localhost:5173
-echo Leave this window open while you use the app. Press Ctrl+C here to stop it.
+echo Starting the dev server at http://localhost:5173
+echo Open that address in your browser. Leave this window open while you use
+echo the app. Press Ctrl+C here to stop it.
 echo.
-call npm run dev -- --open
+call npm run dev
 pause

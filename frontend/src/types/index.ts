@@ -88,4 +88,6 @@ export interface EffectivenessRow {
   signal: string
   successPct: number
   rewardRisk: number
+  /** Historical sample size the stats are computed from. */
+  trades: number
 }

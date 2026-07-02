@@ -1,0 +1,3929 @@
+{
+  "11b": {
+    "description": "11 bit studios S.A. engages in the production and sale of multiplatform video games worldwide. The company also publishes games created by external developers. 11 bit studios S.A. was incorporated in 2009 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 265,
+    "website": "https://11bitstudios.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 319070272,
+    "peRatio": 30.275229,
+    "forwardPe": 2.3917377,
+    "eps": 4.36,
+    "dividendYield": null,
+    "totalRevenue": 143333376,
+    "netIncome": 10533212,
+    "sharesOutstanding": 2417199,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 19802487,
+        "netIncome": -2783072
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 39723920,
+        "netIncome": -15026646
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 44068827,
+        "netIncome": 13486407
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 39738136,
+        "netIncome": 14856524
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 17503440,
+        "netIncome": -6373618
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "acp": {
+    "description": "Asseco Poland S.A. produces and sells software products worldwide. The company offers software and IT solutions for banking, payment, insurance, public administration, healthcare, defense and uniformed services, energy and gas, telecommunications and media, and security sectors. It also provides cloud solutions; and ERP solutions and services, including proprietary and third-party software, and consulting and implementation services for micro, small, and mid-sized companies, as well as large enterprises.",
+    "industry": "Software - Application",
+    "employees": 30443,
+    "website": "https://asseco.com",
+    "country": "Poland",
+    "city": "Rzeszów",
+    "marketCap": 14161760256,
+    "peRatio": 18.265835,
+    "forwardPe": 25.754026,
+    "eps": 9.63,
+    "dividendYield": 7.81,
+    "totalRevenue": 17135399936,
+    "netIncome": 717699968,
+    "sharesOutstanding": 80510294,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 4399400000,
+        "netIncome": 228400000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 4525300000,
+        "netIncome": 685500000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 4267500000,
+        "netIncome": 171100000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 4460600000,
+        "netIncome": 145900000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 4043800000,
+        "netIncome": 136200000
+      }
+    ]
+  },
+  "ale": {
+    "description": "Allegro.eu S.A. operates a commerce platform for consumers in Poland, Czech Republic, Slovakia, Hungary, and internationally. It operates through Allegro, Ceneo, Allegro International, and Other segments. The company engages in operating B2C, C2C, and B2B e-commerce platforms comprising online marketplace; and various services, such as consumer lending and logistics services. It also provides multi-category price comparison services allowing the customer to find prices among the different websites and marketplaces. In addition, it operates eBilet, an event ticket sales site.",
+    "industry": "Internet Retail",
+    "employees": 5754,
+    "website": "https://www.allegro.eu",
+    "country": "Luxembourg",
+    "city": "Luxembourg",
+    "marketCap": 39079800832,
+    "peRatio": 21.914772,
+    "forwardPe": 19.57868,
+    "eps": 1.76,
+    "dividendYield": null,
+    "totalRevenue": 11851700224,
+    "netIncome": 1828099968,
+    "sharesOutstanding": 1013217622,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 2897800000,
+        "netIncome": 341100000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3064400000,
+        "netIncome": 438600000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 2878000000,
+        "netIncome": 396200000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 2922379000,
+        "netIncome": 385748000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 2504200000,
+        "netIncome": 296500000
+      }
+    ]
+  },
+  "alr": {
+    "description": "Alior Bank S.A. provides various banking products and services for individuals, businesses, and enterprises in Poland. The company operates through three segments: Retail, Corporate, and Treasury Activities. It offers retail products, including cash loans, credit cards, current account overdraft facilities, and mortgage loans; term and savings deposits; brokerage products and investment funds; personal accounts; cash deposits, withdrawals, and transfers; and currency exchange transactions.",
+    "industry": "Banks - Diversified",
+    "employees": 6559,
+    "website": "https://www.aliorbank.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 17213544448,
+    "peRatio": 7.5000005,
+    "forwardPe": 7.504269,
+    "eps": 17.58,
+    "dividendYield": 6.87,
+    "totalRevenue": 5733020160,
+    "netIncome": 2293920000,
+    "sharesOutstanding": 130553991,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1537178000,
+        "netIncome": 403186000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1536402000,
+        "netIncome": 687688000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1574748000,
+        "netIncome": 640226000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1501867000,
+        "netIncome": 476314000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 1601747000,
+        "netIncome": 615129000
+      }
+    ]
+  },
+  "amb": {
+    "description": "Ambra S.A., together with its subsidiaries, engages in the manufacture, import, and distribution of grape wines in Poland, the Czech Republic, Slovakia, and Romania. It offers sparkling and carbonated wines, table and flavored wines, champagne type soft drinks, meads, and ciders, as well as other alcoholic and non-alcoholic beverages. The company offers its products under the CIN&CIN, DORATO, EL SOL, FRESCO, PLISKA, PICCOLO, CYDR LUBELSKI, WINIARNIA ZAMOJSKA, SLANTSCHEW BRJAG, ROBBY BUBBLE, ROSSIJSKOE IGRISTOE, FLY SEKT, ZAREA, MILCOV, CARPATEN, and CORRIDO brand names.",
+    "industry": "Beverages - Wineries & Distilleries",
+    "employees": 968,
+    "website": "https://www.ambra.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 464306400,
+    "peRatio": 9.494845,
+    "forwardPe": null,
+    "eps": 1.94,
+    "dividendYield": 6.1,
+    "totalRevenue": 912294016,
+    "netIncome": 49137000,
+    "sharesOutstanding": 25206644,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 157476000,
+        "netIncome": -6015000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 361970000,
+        "netIncome": 44964000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 194797000,
+        "netIncome": 4016000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 198051000,
+        "netIncome": 6172000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 150625000,
+        "netIncome": -5057000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "apr": {
+    "description": "Auto Partner SA imports and distributes parts for passenger cars, delivery vans, and motorcycles in Poland. The company's products portfolio consists of suspension and steering systems, brake systems, motorbike assortments, workshop equipment, shock absorbers and springs, drive systems, filters, timing gears, hydraulics, metal and rubber parts, pneumatic tools, health and safety products, turbochargers, drivetrains, seals, workshop equipment, electric systems, cooling systems, oils and car chemicals, wipers, power window regulators, exhaust systems, body and lighting products, batteries, tires",
+    "industry": "Auto Parts",
+    "employees": 2642,
+    "website": "https://autopartner.com",
+    "country": "Poland",
+    "city": "Bierun",
+    "marketCap": 3363464960,
+    "peRatio": 15.1470585,
+    "forwardPe": null,
+    "eps": 1.7,
+    "dividendYield": 0.6,
+    "totalRevenue": 4521635840,
+    "netIncome": 221788992,
+    "sharesOutstanding": 130620000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1170033000,
+        "netIncome": 62093000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1073915000,
+        "netIncome": 52568000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 1136474000,
+        "netIncome": 49192000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1141214000,
+        "netIncome": 57936000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1073292000,
+        "netIncome": 39236000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "arh": {
+    "description": "Archicom S.A. engages in the real estate activities in Poland. It also involves in the construction and sale of residential real estate; buying and selling real estate; implementation of construction projects; and leasing of intellectual property and similar products, as well as provides financial services. The company was founded in 1986 and is headquartered in Wroclaw, Poland. Archicom S.A. operates as a subsidiary of Echo Investment S.A.",
+    "industry": "Real Estate - Development",
+    "employees": 342,
+    "website": "https://www.archicom.pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 2959899648,
+    "peRatio": 15.014837,
+    "forwardPe": 5.0854273,
+    "eps": 3.37,
+    "dividendYield": 3.52,
+    "totalRevenue": 1306873984,
+    "netIncome": 197490000,
+    "sharesOutstanding": 58496043,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 366681000,
+        "netIncome": 55420000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 438305000,
+        "netIncome": 79132000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 198476000,
+        "netIncome": 5892000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 303412000,
+        "netIncome": 31167000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 21465000,
+        "netIncome": -32220000
+      }
+    ]
+  },
+  "asb": {
+    "description": "ASBISc Enterprises Plc, together with its subsidiaries, operates as a trader and distributor of computer hardware and software in the Former Soviet Union, Central Eastern Europe, Western Europe, the Middle east, Africa, Cyprus, and internationally. The company offers IT components, including servers, storage systems, desktop PCs, laptops, and networking, as well as data center infrastructure, software, and cybersecurity solutions; robotic solutions; business solutions; and consumer distribution, including PC peripherals and gaming, tv and home appliances, premium audio-video products, printing",
+    "industry": "Electronics & Computer Distribution",
+    "employees": 2734,
+    "website": "https://www.asbis.com",
+    "country": "Cyprus",
+    "city": "Limassol",
+    "marketCap": 5480625152,
+    "peRatio": 16.909246,
+    "forwardPe": 17.144096,
+    "eps": 5.84,
+    "dividendYield": 2.05,
+    "totalRevenue": 4395147776,
+    "netIncome": 89770000,
+    "sharesOutstanding": 55500000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1268512000,
+        "netIncome": 36515000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1247789000,
+        "netIncome": 29280000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 929508000,
+        "netIncome": 11851000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 949339000,
+        "netIncome": 12124000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 736363000,
+        "netIncome": 7384000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "ast": {
+    "description": "Astarta Holding PLC, together with its subsidiaries, engages in the agriculture, sugar production, cattle farming, soybean crushing, and bioenergy businesses in Ukraine, Switzerland, Europe, Asia, and internationally. It offers sugar, molasses, and sugar beet pulp granulated; feed corn, wheat, soybean, and Ukrainian rapeseeds and sunflower seeds; hydrated soybean oil, toasted soybean feed meal, and granulated soybean shell; millet, sunflower, mustard seed, and flax; and milk.",
+    "industry": "Farm Products",
+    "employees": 7037,
+    "website": "https://astartaholding.com",
+    "country": "Ukraine",
+    "city": "Kyiv",
+    "marketCap": 1162343936,
+    "peRatio": 226.19049,
+    "forwardPe": 0.6510417,
+    "eps": 0.21,
+    "dividendYield": 4.47,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 24470400,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 131368000,
+        "netIncome": -12305000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 129145000,
+        "netIncome": -23760000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 116161000,
+        "netIncome": 1430000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 102042000,
+        "netIncome": 35850000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 124577000,
+        "netIncome": 6421000
+      }
+    ]
+  },
+  "att": {
+    "description": "Grupa Azoty S.A. manufactures and sells fertilizers, plastics, and other chemicals in Poland, Germany, South America, Asia, other European Union countries, and internationally. The company operates through The Fertilizers and Pigments segments. It provides compound fertilizers, nitrogen fertilizers with sulfur content, nitrogen fertilizers, ammonia, technical grade; and ammonia and urea solutions. The company also offers plastic and plastic products, including Tarnamid PA6 natural engineering plastics; Alphalon, a trademark of high quality polyamide 6; and Polyamide tubes.",
+    "industry": "Agricultural Inputs",
+    "employees": 13707,
+    "website": "https://tarnow.grupaazoty.com",
+    "country": "Poland",
+    "city": "Tarnów",
+    "marketCap": 1924392448,
+    "peRatio": null,
+    "forwardPe": -1.6033057,
+    "eps": -42.12,
+    "dividendYield": null,
+    "totalRevenue": 13011444736,
+    "netIncome": -4178685952,
+    "sharesOutstanding": 99195484,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 3700367000,
+        "netIncome": -157360000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3103318000,
+        "netIncome": -3359384000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 2894444000,
+        "netIncome": -147013000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 3318708000,
+        "netIncome": -514929000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 3821685000,
+        "netIncome": -288174000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "bdx": {
+    "description": "Budimex SA, together with its subsidiaries, operates as a construction company in Poland, Germany, Slovakia, Czechia, Latvia, rest of the European Union, and internationally. It operates through Construction Business and Service Activities segments. The company carries out road, bridge, and hydraulic engineering construction projects; general contracting of public buildings, as well as commercial, industrial, military, residential, and sports facilities; railroad projects with infrastructure facilities, such as platforms, stations, and overpasses, including railroad lines; and railroad constru",
+    "industry": "Engineering & Construction",
+    "employees": 5513,
+    "website": "https://budimex.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 18677819392,
+    "peRatio": 25.915691,
+    "forwardPe": 22.970171,
+    "eps": 28.23,
+    "dividendYield": 4.4,
+    "totalRevenue": 9293063168,
+    "netIncome": 719968000,
+    "sharesOutstanding": 25530098,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1496564000,
+        "netIncome": 86277000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3029592000,
+        "netIncome": 307025000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 2305224000,
+        "netIncome": 156160000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1642059000,
+        "netIncome": 114323000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 2607454000,
+        "netIncome": 168894000
+      }
+    ]
+  },
+  "bft": {
+    "description": "Benefit Systems S.A. provides non-pay employee benefits solutions in Poland, Czech Republic, Slovakia, Bulgaria, Croatia, and Turkey. The company offers Multisport card, which provides access to sports facilities; MultiBilet and MultiTeatr for providing solutions for culture and entertainment; MyBenefit platform for distributing sport cards, as well as provides wellbeing services. It also develops MultiLife, an online accessible product engages in promoting employee well-being in the areas of mental health, personal development, healthy eating, and physical activity. Benefit Systems S.A.",
+    "industry": "Leisure",
+    "employees": 3770,
+    "website": "https://www.benefitsystems.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 16254330880,
+    "peRatio": 21.458143,
+    "forwardPe": 113.195404,
+    "eps": 229.47,
+    "dividendYield": 2.05,
+    "totalRevenue": 4954604032,
+    "netIncome": 743718976,
+    "sharesOutstanding": 3301042,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1383914000,
+        "netIncome": 229568000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1292527000,
+        "netIncome": 159294000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 1184183000,
+        "netIncome": 211946000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1093980000,
+        "netIncome": 142911000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 951993000,
+        "netIncome": 56699000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "bnp": {
+    "description": "BNP Paribas Bank Polska S.A. provides a range of banking products and services to individual and institutional clients in Poland. It operates through Retail and Business Banking; Small and Medium-Sized Enterprises; Corporate Banking; Corporate and Institutional Banking; and Other Operations segments. The company offers brokerage services; wealth management; cash, car, and installment loans; debit and credit cards; cash management; global trade finance services; import and export services; documentary collection; overdrafts; investment loans; and loans from agribusiness financing products.",
+    "industry": "Banks - Regional",
+    "employees": null,
+    "website": "https://www.bnpparibas.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 21866905600,
+    "peRatio": 8.165746,
+    "forwardPe": 9.134734,
+    "eps": 18.1,
+    "dividendYield": 6.85,
+    "totalRevenue": 8175865856,
+    "netIncome": 2691650048,
+    "sharesOutstanding": 147949302,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 2020853000,
+        "netIncome": 375344000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 2448578000,
+        "netIncome": 886959000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 1935939000,
+        "netIncome": 695501000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 2163269000,
+        "netIncome": 733846000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 2143152000,
+        "netIncome": 741448000
+      }
+    ]
+  },
+  "bos": {
+    "description": "Bank Ochrony Srodowiska S.A. provides various banking products and services in Poland. It offers broker, leasing, RES consultancy, arrangement of debt finance, financial, M and A, business, and technical consultancy services. The company also engages in wind farm development and environmental protection activities. In addition, it provides personal accounts; ECO and mortgage loans Bank; cash products; deposit and saving accounts; electronic and telephone banking services; and insurance for cash loans. Ochrony Srodowiska S.A. was founded in 1990 and is based in Warsaw, Poland.",
+    "industry": "Banks - Regional",
+    "employees": 1773,
+    "website": "https://www.bosbank.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 899367808,
+    "peRatio": 4.6315794,
+    "forwardPe": null,
+    "eps": 2.09,
+    "dividendYield": null,
+    "totalRevenue": 1060632000,
+    "netIncome": 128894000,
+    "sharesOutstanding": 92909896,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 284810000,
+        "netIncome": 16222000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 233664000,
+        "netIncome": 38776000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 265202000,
+        "netIncome": 6017000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 304426000,
+        "netIncome": 67879000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 256835000,
+        "netIncome": 11842000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "brs": {
+    "description": "Boryszew S.A. engages in the automotive, metals and chemical industries in Poland and internationally. The company operates through four segments: Automotive, Metals, Chemical products, and Other non-allocated. The Automotive segment offers automotive fluid transport systems, including air-conditioning hoses and high-pressure rubber hoses, and external and internal plastic automotive parts, including galvanized, large-size, and moving parts.",
+    "industry": "Conglomerates",
+    "employees": 6200,
+    "website": "https://www.boryszew.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1006970048,
+    "peRatio": 31.156252,
+    "forwardPe": null,
+    "eps": 0.16,
+    "dividendYield": 7.08,
+    "totalRevenue": 4772853760,
+    "netIncome": 32168000,
+    "sharesOutstanding": 202000000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1274675000,
+        "netIncome": 14424000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1130350000,
+        "netIncome": -2116000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 1136687000,
+        "netIncome": 16680000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1231142000,
+        "netIncome": 3180000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1338322000,
+        "netIncome": 5879000
+      }
+    ]
+  },
+  "cdr": {
+    "description": "CD Projekt S.A., together its subsidiaries, engages in the production, publishing, and digital distribution of video games and related products in Poland. The company's flagship products include The Witcher series of games and Cyberpunk 2077. It also exports its products to Europe, North America, South America, Asia, Australia, and Africa. The company was incorporated in 2001 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 808,
+    "website": "https://www.cdprojekt.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 22429908992,
+    "peRatio": 39.734512,
+    "forwardPe": 141.19496,
+    "eps": 5.65,
+    "dividendYield": 0.46,
+    "totalRevenue": 878004992,
+    "netIncome": 515854016,
+    "sharesOutstanding": 99910510,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 191107000,
+        "netIncome": 106200000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 349072000,
+        "netIncome": 193492000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 216734000,
+        "netIncome": 68953000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 180091000,
+        "netIncome": 111795000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 332655000,
+        "netIncome": 221724000
+      }
+    ]
+  },
+  "cig": {
+    "description": "CI Games SE, together with its subsidiaries, engages in the production, publishing, and distribution of video games in Poland and internationally. The company offers Lords of the Fallen, Project 3, and Sniper Ghost Warrior game products. It distributes its own game titles and sells licenses to various platforms, including PlayStation, Xbox, and PC consoles. The company was founded in 2002 and is based in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 166,
+    "website": "https://cigames.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 498920736,
+    "peRatio": 228.0,
+    "forwardPe": -22.8,
+    "eps": 0.01,
+    "dividendYield": null,
+    "totalRevenue": 71170000,
+    "netIncome": 843000,
+    "sharesOutstanding": 218824880,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 13648000,
+        "netIncome": -1574000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 21867000,
+        "netIncome": 3473000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 10747000,
+        "netIncome": -10029000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 24908000,
+        "netIncome": 8973000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 16260000,
+        "netIncome": 1001000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "cog": {
+    "description": "Cognor Holding S.A. engages in the production and distribution of steel products in Poland, the Czech Republic, Germany, and internationally. The company offers flat bars, round rolled peeled bars, slabs, round and square bars, reinforcing bars, billets with rounded edges for forgings, sections, T-profiles, equal and unequal side angles, metal sheets, conventional polygon ingots, carbon and medium-alloy steels, and high-alloy and special steels, as well as products from non-ferrous metals and non-ferrous metal scrap; C-section products; design of steel composition; and bronze, brass, and coppe",
+    "industry": "Steel",
+    "employees": 1854,
+    "website": "https://cognor.eu",
+    "country": "Poland",
+    "city": "Poraj",
+    "marketCap": 1352653696,
+    "peRatio": null,
+    "forwardPe": 292.25,
+    "eps": -0.63,
+    "dividendYield": null,
+    "totalRevenue": 2128786048,
+    "netIncome": -112254000,
+    "sharesOutstanding": 231420663,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 591260000,
+        "netIncome": -1060000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 446310000,
+        "netIncome": -75206000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 496330000,
+        "netIncome": -24744000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 594886000,
+        "netIncome": -11244000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 543318000,
+        "netIncome": -13982000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "cps": {
+    "description": "Cyfrowy Polsat S.A. provides digital satellite platform and terrestrial television (TV), and telecommunication services primarily in Poland. It operates through B2C and B2B Services, Media, Real Estate, and Green Energy segments. The company offers various pay TV; radio, TV, and media; bundling of services; paid premium content channels, OTT platform Polsat Box Go, Disney+ access, Max and FilmBox platforms, online video, multiroom, catch-up TV, and nPVR services; purchase add-on packages; mobile voice services; and various tariff plans; unlimited calls, SMS, and MMS, as well as tariff-based da",
+    "industry": "Entertainment",
+    "employees": 8323,
+    "website": "https://grupapolsatplus.pl/pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 8524890624,
+    "peRatio": null,
+    "forwardPe": 14.884616,
+    "eps": -4.65,
+    "dividendYield": null,
+    "totalRevenue": 14428399616,
+    "netIncome": -2506099968,
+    "sharesOutstanding": 550703531,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 3635000000,
+        "netIncome": 127900000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3771600000,
+        "netIncome": -2816500000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 3431400000,
+        "netIncome": 69600000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 3590400000,
+        "netIncome": 112900000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 3530200000,
+        "netIncome": 82600000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "crj": {
+    "description": "Creepy Jar S.A. develops and publishes computer games in Poland and internationally. Creepy Jar S.A. was founded in 2016 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 64,
+    "website": "https://www.creepyjar.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 333596640,
+    "peRatio": 8.193061,
+    "forwardPe": 8.7555065,
+    "eps": 58.22,
+    "dividendYield": 2.23,
+    "totalRevenue": 29832208,
+    "netIncome": 17195398,
+    "sharesOutstanding": 699364,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 39977349,
+        "netIncome": 29755858
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 10233649,
+        "netIncome": 6258614
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 5558548,
+        "netIncome": 2609867
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 5501430,
+        "netIncome": 3329092
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 8538582,
+        "netIncome": 4997825
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "dnp": {
+    "description": "Dino Polska S.A., together with its subsidiaries, operates a network of medium-sized grocery supermarkets under the Dino brand in Poland. The company stores offer fresh food products, such as meat, poultry, cold cuts, fruits and vegetables, dairy products, and bread; other groceries, including children's food, breakfast products, ready to eat meals, beverages, candies, snacks, frozen goods, processed goods, oils, grain and bulk products, condiments, and alcohol and cigarettes; and non-grocery products comprising flowers, cleaning agents, sanitary articles, pet food, seasonal products, and smal",
+    "industry": "Grocery Stores",
+    "employees": 56715,
+    "website": "https://www.grupadino.pl",
+    "country": "Poland",
+    "city": "Krotoszyn",
+    "marketCap": 28431599616,
+    "peRatio": 18.238993,
+    "forwardPe": 1.5951595,
+    "eps": 1.59,
+    "dividendYield": null,
+    "totalRevenue": 34719260672,
+    "netIncome": 1563092992,
+    "sharesOutstanding": 980400000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 8439401000,
+        "netIncome": 315978000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 8896051000,
+        "netIncome": 367723000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 8761234000,
+        "netIncome": 481868000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 8622573000,
+        "netIncome": 397524000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 7354297000,
+        "netIncome": 311245000
+      }
+    ]
+  },
+  "dom": {
+    "description": "Dom Development S.A., together with its subsidiaries, engages in the construction and sale of residential and commercial real estate properties, and related support activities in Poland. It is also involved in marketing, sales, customer service, and design and construction management of real estate properties. The company was founded in 1995 and is based in Warsaw, Poland. Dom Development S.A. operates as a subsidiary of Groupe Belleforêt S.à r.l.",
+    "industry": "Real Estate - Development",
+    "employees": 695,
+    "website": "https://www.domd.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 6256117248,
+    "peRatio": 9.123401,
+    "forwardPe": 9.893921,
+    "eps": 26.58,
+    "dividendYield": 5.86,
+    "totalRevenue": 3474669056,
+    "netIncome": 685817024,
+    "sharesOutstanding": 25798422,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 960934000,
+        "netIncome": 180001000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1255091000,
+        "netIncome": 279920000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 706565000,
+        "netIncome": 128612000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 552079000,
+        "netIncome": 97284000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 741859000,
+        "netIncome": 148366000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "eat": {
+    "description": "AmRest Holdings SE, together with its subsidiaries, operates and manages quick service, fast casual, coffee, and casual dining restaurants in Central and Eastern Europe, Western Europe, China, and internationally. The company operates Kentucky Fried Chicken, Pizza Hut, Burger King, and Starbucks restaurants based on franchise agreements. It also operates its own restaurants under the La Tagliatella brand name, as well as Blue Frog, Sushi Shop, and Bacoa brand names.",
+    "industry": "Restaurants",
+    "employees": 15981,
+    "website": "https://www.amrest.eu",
+    "country": "Spain",
+    "city": "Madrid",
+    "marketCap": 2383195648,
+    "peRatio": 65.52941,
+    "forwardPe": 7.050633,
+    "eps": 0.17,
+    "dividendYield": 2.62,
+    "totalRevenue": 2526599936,
+    "netIncome": 8700000,
+    "sharesOutstanding": 213931371,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 588700000,
+        "netIncome": -17200000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 635600000,
+        "netIncome": 3100000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 660600000,
+        "netIncome": 15200000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 641700000,
+        "netIncome": 7600000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 620200000,
+        "netIncome": -9800000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "ech": {
+    "description": "Echo Investment S.A. engages in the construction, lease, and sale of office, retail, and residential buildings in Poland. It sells residential and commercial spaces within residential projects; The company also trades in real estate properties; and rents apartments. In addition, it provides advisory, managerial, legal, and other services; organization and management of tenders for construction works, and supervision and coordination of construction works, as well as customer services; and brokerage, accounting, legal, consulting, IT, financial, marketing, and other services.",
+    "industry": "Real Estate - Diversified",
+    "employees": 712,
+    "website": "https://www.echo.com.pl",
+    "country": "Poland",
+    "city": "Kielce",
+    "marketCap": 2009803136,
+    "peRatio": 32.466663,
+    "forwardPe": 9.54902,
+    "eps": 0.15,
+    "dividendYield": 8.26,
+    "totalRevenue": 2423198976,
+    "netIncome": 62185000,
+    "sharesOutstanding": 412690582,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 469020000,
+        "netIncome": 10278000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 826435000,
+        "netIncome": 109122000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 721356000,
+        "netIncome": 56399000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 370321000,
+        "netIncome": -113614000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 94608000,
+        "netIncome": -85442000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "ena": {
+    "description": "ENEA S.A., together with its subsidiaries, generates, transmits, distributes, and trades in electricity in Poland. The company generates electricity from wind farms, and hydropower and biogas plants, as well as photovoltaic farms. It also produces and sells coal and heat; modernizes road lighting equipment; and provides transport, repair, and construction services. It sells electricity to individual consumers, and small and medium-sized companies, as well as large industrial plants. The company was formerly known as Energetyka Poznanska S.A. ENEA S.A.",
+    "industry": "Utilities - Regulated Electric",
+    "employees": 17782,
+    "website": "https://www.enea.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 10144350208,
+    "peRatio": 5.984375,
+    "forwardPe": 4.96114,
+    "eps": 3.2,
+    "dividendYield": 2.89,
+    "totalRevenue": 27298476032,
+    "netIncome": 1694164992,
+    "sharesOutstanding": 529731093,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 7172833000,
+        "netIncome": 929338000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 7331187000,
+        "netIncome": -856194000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 6443604000,
+        "netIncome": 747062000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 6350852000,
+        "netIncome": 873959000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 7413863000,
+        "netIncome": 1051428000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "erg": {
+    "description": "ERG Spólka Akcyjna manufactures and sells plastic products and polyethylene films products in Poland. It operates through three segments: Plastic Products, Commercial Activities, and Other. It offers bags and hoods, liner and separator sheets, shrink films, box and carton liners, films for frozen products, box and cardboard films, films for FFS packaging machines, perforated film for cooking, and paperlike films; films for printing and lamination; lamination film with PR foam, film for underfloor heating, film for torch-on felt, film for mineral wool, and big bag liners; pellet and eco-pea coa",
+    "industry": "Auto Parts",
+    "employees": 124,
+    "website": "https://erg.com.pl",
+    "country": "Poland",
+    "city": "Dabrowa Górnicza",
+    "marketCap": 30480324,
+    "peRatio": 56.756756,
+    "forwardPe": null,
+    "eps": 0.74,
+    "dividendYield": null,
+    "totalRevenue": 71738000,
+    "netIncome": 535000,
+    "sharesOutstanding": 725721,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 18319000,
+        "netIncome": 30000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 15136000,
+        "netIncome": -428000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 17397000,
+        "netIncome": -96000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 20886000,
+        "netIncome": 1104000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 21044000,
+        "netIncome": -572000
+      }
+    ]
+  },
+  "eur": {
+    "description": "Eurocash S.A. engages in the wholesale distribution of food and other fast moving consumer goods (FMCG) in Poland. It operates through Wholesale, Retail, Projects, and Other segments. The company's products include basic food, soft and alcoholic drinks, tobacco products, phone cards, pre-paid top-ups; and non-food items, such as cosmetics, household chemicals, OTC medicines, and other. It distributes its products to traditional grocery market, retail stores, convenience stores, gas stations, restaurants, and hotel and café chains.",
+    "industry": "Grocery Stores",
+    "employees": null,
+    "website": "https://www.eurocash.pl",
+    "country": "Poland",
+    "city": "Komorniki",
+    "marketCap": 712515968,
+    "peRatio": null,
+    "forwardPe": 6.3999996,
+    "eps": -2.28,
+    "dividendYield": null,
+    "totalRevenue": 29806927872,
+    "netIncome": -292357408,
+    "sharesOutstanding": 139163286,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 6656799147,
+        "netIncome": -86368815
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 7326210644,
+        "netIncome": -244002367
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 7937436660,
+        "netIncome": 6947761
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 7886480126,
+        "netIncome": -13495075
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 6873782249,
+        "netIncome": -85538304
+      }
+    ]
+  },
+  "gpw": {
+    "description": "Gielda Papierów Wartosciowych w Warszawie S.A., together with its subsidiaries, operates a stock exchange in Poland. It operates through Financial, Commodity, and Other segments. The company trades in equities; equity-related financial instruments; other cash markets instruments, such as structured products, investment certificates, and exchange traded fund units; derivatives; corporate, municipal, co-operative, treasury, and mortgage bonds; debt instruments; and agricultural commodities, as well as provides listing, trading, clearing services for shares and bonds, and information services.",
+    "industry": "Financial Data & Stock Exchanges",
+    "employees": 616,
+    "website": "https://www.gpw.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 3874015744,
+    "peRatio": 18.062622,
+    "forwardPe": 24.48276,
+    "eps": 5.11,
+    "dividendYield": 3.83,
+    "totalRevenue": 588323968,
+    "netIncome": 214102000,
+    "sharesOutstanding": 41972000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 168759000,
+        "netIncome": 69576000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 140419000,
+        "netIncome": 37676000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 135081000,
+        "netIncome": 49175000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 144065000,
+        "netIncome": 57675000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 132314000,
+        "netIncome": 50502000
+      }
+    ]
+  },
+  "hub": {
+    "description": null,
+    "industry": null,
+    "employees": null,
+    "website": null,
+    "country": null,
+    "city": null,
+    "marketCap": 226612928,
+    "peRatio": 11.316668,
+    "forwardPe": null,
+    "eps": null,
+    "dividendYield": null,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 667490180,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 70317865,
+        "netIncome": 3984866
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 137523873,
+        "netIncome": 7944111
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 64964415,
+        "netIncome": 4309269
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 67231639,
+        "netIncome": 8841204
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 59625989,
+        "netIncome": 11782056
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "ing": {
+    "description": "ING Bank Slaski S.A., together with its subsidiaries, provides various banking products and services for retail clients and businesses in Poland. It operates in two segments, Retail Banking and Corporate Banking. The company accepts personal and business accounts. Its loan products include cash loans, mortgages, business line of credit, invoice financing, leasing, factoring, investment loans, business loans, trade finance, guarantees, long-term financing, commercial real estate financing, and reverse factoring.",
+    "industry": "Banks - Regional",
+    "employees": 7692,
+    "website": "https://www.ing.pl",
+    "country": "Poland",
+    "city": "Katowice",
+    "marketCap": 57868476416,
+    "peRatio": 13.036343,
+    "forwardPe": 12.777937,
+    "eps": 34.12,
+    "dividendYield": 5.99,
+    "totalRevenue": 11148000256,
+    "netIncome": 4441999872,
+    "sharesOutstanding": 130100000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 3036000000,
+        "netIncome": 823000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3057000000,
+        "netIncome": 1372000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": null,
+        "netIncome": null
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 2909000000,
+        "netIncome": 1135000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 2910000000,
+        "netIncome": 1014000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 2893700000,
+        "netIncome": 1309000000
+      }
+    ]
+  },
+  "jsw": {
+    "description": "Jastrzebska Spólka Weglowa S.A. engages in the extraction, production, and sale of coal, coke, and hydrocarbons in Poland, Austria, the Czech Republic, Germany, Slovakia, Belgium, Spain, Norway, Switzerland, Romania , Luxembourg, Holland, and France. It operates through Coal, Coke, and Other segments. The company provides maintenance, inspection, renovation, and repairs service of machinery and equipment; technical research services; and chemical and physiochemical analyses of minerals, as well as solid, liquid, and gaseous materials and products.",
+    "industry": "Thermal Coal",
+    "employees": 28046,
+    "website": "https://www.jsw.pl",
+    "country": "Poland",
+    "city": "Jastrzebie Zdrój",
+    "marketCap": 2888325376,
+    "peRatio": null,
+    "forwardPe": -8.172758,
+    "eps": -46.49,
+    "dividendYield": null,
+    "totalRevenue": 9120900096,
+    "netIncome": -5459100160,
+    "sharesOutstanding": 117411596,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 2097000000,
+        "netIncome": -611500000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 2398800000,
+        "netIncome": -3330700000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 2294500000,
+        "netIncome": -796300000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 2277200000,
+        "netIncome": -724100000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 2384200000,
+        "netIncome": -1363500000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "kgh": {
+    "description": "KGHM Polska Miedz S.A. engages in the exploration and mining of copper, nickel, precious metals, and non-ferrous metals in Poland and internationally. The company offers copper cathodes, wire rod, Cu - Ofe wire, Cu - Ag wire, and granules; silver and gold; molybdenum; rhenium; nickel; and lead, sulphuric acid, copper and nickel sulphate, and selenium products, as well as platinum, palladium, and rock salt products. It holds a portfolio of mines located in Europe, Asia, Australia, Africa, and the United States. The company was founded in 1961 and is headquartered in Lubin, Poland.",
+    "industry": "Copper",
+    "employees": 34349,
+    "website": "https://kghm.com",
+    "country": "Poland",
+    "city": "Lubin",
+    "marketCap": 65729998848,
+    "peRatio": 9.539912,
+    "forwardPe": 15.286046,
+    "eps": 34.45,
+    "dividendYield": 0.45,
+    "totalRevenue": 39287001088,
+    "netIncome": 6886000128,
+    "sharesOutstanding": 200000000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 11872000000,
+        "netIncome": 3529000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 10495000000,
+        "netIncome": 2675000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 8315000000,
+        "netIncome": 433000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 8614000000,
+        "netIncome": 249000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 8942000000,
+        "netIncome": 330000000
+      }
+    ]
+  },
+  "krk": {
+    "description": "Krka, d. d., a generic pharmaceutical company, develops, produces, markets, and sells prescription pharmaceuticals, non-prescription products, and animal health products in Slovenia, South-East Europe, East Europe, Central Europe, West Europe, and internationally. The company offers prescription pharmaceuticals for cardiovascular, central nervous system, gastrointestinal tract, pain, diabetes, and other therapeutic areas.",
+    "industry": "Drug Manufacturers - Specialty & Generic",
+    "employees": 13204,
+    "website": "https://www.krka.biz",
+    "country": "Slovenia",
+    "city": "Novo Mesto",
+    "marketCap": 33207881728,
+    "peRatio": 21.414616,
+    "forwardPe": null,
+    "eps": 51.18,
+    "dividendYield": 3.61,
+    "totalRevenue": 2084685056,
+    "netIncome": 372004000,
+    "sharesOutstanding": 30299162,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 565774000,
+        "netIncome": 120947000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 506997000,
+        "netIncome": 80309000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 485487000,
+        "netIncome": 77083000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 526427000,
+        "netIncome": 93665000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 522114000,
+        "netIncome": 152179000
+      }
+    ]
+  },
+  "kru": {
+    "description": "KRUK Spólka Akcyjna, together with its subsidiaries, engages in the management of debt in Poland, Romania, Italy, the Czech Republic, Slovakia, France, Germany, and Spain. The company operates through three segments: Consumer Debts, Mortgage Debts, and Corporate Debts. It offers credit management services, including receivables management services to banks, loan brokers, insurers, leasing companies, landline and mobile telecommunications operators, cable TV operators, digital TV operators, and companies from the FMCG sector.",
+    "industry": "Credit Services",
+    "employees": 3175,
+    "website": "https://www.pl.kruk.eu",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 8239493120,
+    "peRatio": 7.9129133,
+    "forwardPe": 7.2402544,
+    "eps": 53.28,
+    "dividendYield": 4.74,
+    "totalRevenue": 2605943040,
+    "netIncome": 1095672960,
+    "sharesOutstanding": 19543390,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 673977000,
+        "netIncome": 262290000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 661005000,
+        "netIncome": 208388000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": null,
+        "netIncome": null
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 627844000,
+        "netIncome": 332393000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 609390000,
+        "netIncome": 251625000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 610515000,
+        "netIncome": 115201000
+      }
+    ]
+  },
+  "kty": {
+    "description": "Grupa Kety S.A. produces and sells aluminum profiles and components in Poland and internationally. It operates through three segments: Extruded Products, Aluminum Systems, and Flexible Packaging. The company produces and sells aluminum profiles and components. It also engages in the production, trading, and sale of aluminum facades systems, doors and windows, internal structures, external aluminum roller shutters, and roller gates for the construction business. In addition, the company produces and sells pergolas, external blinds, awnings, reflex screens, and sunbreakers.",
+    "industry": "Aluminum",
+    "employees": 6000,
+    "website": "https://www.grupakety.com",
+    "country": "Poland",
+    "city": "Kety",
+    "marketCap": 11889076224,
+    "peRatio": 20.160482,
+    "forwardPe": 19.07624,
+    "eps": 59.82,
+    "dividendYield": 4.06,
+    "totalRevenue": 5513999872,
+    "netIncome": 592000000,
+    "sharesOutstanding": 9858272,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1374000000,
+        "netIncome": 145000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1251000000,
+        "netIncome": 102000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1442000000,
+        "netIncome": 169000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1354000000,
+        "netIncome": 121000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 1248304000,
+        "netIncome": 96338000
+      }
+    ]
+  },
+  "lpp": {
+    "description": "LPP SA designs, manufactures, and distributes apparel for women, men, and children. It offers apparel, accessories, footwear, and supplementary items under the Reserved, Cropp, House, Mohito, and Sinsay brand names. The company sells its products through offline and online stores. LPP SA was incorporated in 1989 and is headquartered in Gdansk, Poland.",
+    "industry": "Apparel Manufacturing",
+    "employees": 63000,
+    "website": "https://www.lpp.com",
+    "country": "Poland",
+    "city": "Gdansk",
+    "marketCap": 34386096128,
+    "peRatio": 20.996483,
+    "forwardPe": 14.526438,
+    "eps": 881.1,
+    "dividendYield": 5.47,
+    "totalRevenue": 8393937408,
+    "netIncome": -48731584,
+    "sharesOutstanding": 1858708,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-04-30",
+        "revenue": 5472000000,
+        "netIncome": 475000000
+      },
+      {
+        "periodEnd": "2026-01-31",
+        "revenue": 6460000000,
+        "netIncome": 714000000
+      },
+      {
+        "periodEnd": "2025-10-31",
+        "revenue": 6141000000,
+        "netIncome": -18000000
+      },
+      {
+        "periodEnd": "2025-07-31",
+        "revenue": 5554000000,
+        "netIncome": 467000000
+      },
+      {
+        "periodEnd": "2025-04-30",
+        "revenue": 4954000000,
+        "netIncome": 334000000
+      },
+      {
+        "periodEnd": "2025-01-31",
+        "revenue": null,
+        "netIncome": null
+      },
+      {
+        "periodEnd": "2024-10-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "mab": {
+    "description": "Mabion S.A., a biopharmaceutical company, provides services as a contract development and manufacturing organization in the process development, analytics, and manufacturing of biologic medicines in Poland. It offers drug substance manufacturing, fill and finish, gene to vial end-to-end development, process development, analytics, and banking services. In addition, it offers cell line development, process development, production of a product for preclinical and clinical trials, development and validation of analytical methods, and preparation of the necessary documentation.",
+    "industry": "Biotechnology",
+    "employees": 199,
+    "website": "https://www.mabion.eu",
+    "country": "Poland",
+    "city": "Konstantynów Lódzki",
+    "marketCap": 119601216,
+    "peRatio": null,
+    "forwardPe": -3.3333333,
+    "eps": -3.53,
+    "dividendYield": null,
+    "totalRevenue": 17612000,
+    "netIncome": -57097000,
+    "sharesOutstanding": 16162326,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 4571000,
+        "netIncome": -9738000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 5696000,
+        "netIncome": -21189000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 4084000,
+        "netIncome": -10753000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 2716000,
+        "netIncome": -15255000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 4750000,
+        "netIncome": -17873000
+      }
+    ]
+  },
+  "mbk": {
+    "description": "mBank S.A. provides various banking and financial services in Poland, the Czech Republic, Slovakia, and internationally. The company provides retail, SME, corporate, and investment banking services. It offers banking services, such as personal, savings, currency, investment, and business accounts, as well as various deposits. It also provides debit and credit cards; cash, car, secured, and corporate and personal loans, as well as mortgages; pension, insurance, and stock exchange products; and transaction and mobile banking services.",
+    "industry": "Banks - Regional",
+    "employees": 7851,
+    "website": "https://www.mbank.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 58175348736,
+    "peRatio": 15.358706,
+    "forwardPe": 11.638591,
+    "eps": 89.07,
+    "dividendYield": null,
+    "totalRevenue": 12120104960,
+    "netIncome": 3790540032,
+    "sharesOutstanding": 42525841,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 3157000000,
+        "netIncome": 953000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3129904000,
+        "netIncome": 1041489000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": null,
+        "netIncome": null
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 3207254000,
+        "netIncome": 959390000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 3091000000,
+        "netIncome": 706000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 3153426000,
+        "netIncome": 986002000
+      }
+    ]
+  },
+  "mci": {
+    "description": "MCI Capital Alternatywna Spólka Inwestycyjna S.A., is a private equity and venture capital firm specializing in seed/startup, early to late venture, buy-out, middle market, mature, emerging growth, and growth capital investments. The firm seeks to invest in digital economy, digital climatech with a focus in area of green transformation in technology/digital companies, digital disruption, digital transformation & digital infrastructure.",
+    "industry": "Asset Management",
+    "employees": 19,
+    "website": "https://www.mci.pl/en",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1463662720,
+    "peRatio": 697.5,
+    "forwardPe": null,
+    "eps": 0.04,
+    "dividendYield": 5.75,
+    "totalRevenue": 57684000,
+    "netIncome": 1654000,
+    "sharesOutstanding": 52461033,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 16559000,
+        "netIncome": 3449000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 16583000,
+        "netIncome": 2249000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 37396000,
+        "netIncome": 19451000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 27442000,
+        "netIncome": 15004000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": -23727000,
+        "netIncome": -35050000
+      }
+    ]
+  },
+  "mil": {
+    "description": "Bank Millennium S.A. provides various banking products and services in Poland. It operates through Retail Customer; Corporate Customer; and Treasury, Assets and Liabilities Management, and Other segments. The company offers current, savings, foreign currency savings, individual investment retirement, private banking, business, and VAT accounts; and term and structured deposits.",
+    "industry": "Banks - Regional",
+    "employees": 6885,
+    "website": "https://www.bankmillennium.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 23805280256,
+    "peRatio": 18.018347,
+    "forwardPe": 14.028571,
+    "eps": 1.09,
+    "dividendYield": null,
+    "totalRevenue": 6992391168,
+    "netIncome": 1323312000,
+    "sharesOutstanding": 1212081575,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1703623000,
+        "netIncome": 300792000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1815941000,
+        "netIncome": 346537000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1873299000,
+        "netIncome": 331477000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1737886000,
+        "netIncome": 179269000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 1853799000,
+        "netIncome": 172514000
+      }
+    ]
+  },
+  "mlt": {
+    "description": null,
+    "industry": null,
+    "employees": null,
+    "website": null,
+    "country": null,
+    "city": null,
+    "marketCap": 1491498,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": null,
+    "dividendYield": null,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 9520002,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 237000,
+        "netIncome": -20837
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 265000,
+        "netIncome": 27335
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 195000,
+        "netIncome": 4561
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 186000,
+        "netIncome": 7473
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 50800,
+        "netIncome": -6425
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "mrc": {
+    "description": "Mercator Medical S.A., together with its subsidiaries, manufactures and distributes disposable medical gloves, dressings, and non-woven fabric products in Poland, the Czech Republic, Ukraine, France, Hungary, Italy, Romania, Germany, rest of Europe, and Thailand. The company offers surgical and protective, sterile examination and protective, and household gloves; glove brackets; and household and protective  professional products, including caps, masks, gowns, shoe covers, surgical shirts, and sleeve protectors.",
+    "industry": "Medical Instruments & Supplies",
+    "employees": 950,
+    "website": "https://en.mercatormedical.eu",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 454497216,
+    "peRatio": 36.544117,
+    "forwardPe": null,
+    "eps": 1.36,
+    "dividendYield": 1.37,
+    "totalRevenue": 585566976,
+    "netIncome": 97401000,
+    "sharesOutstanding": 9144813,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 145641000,
+        "netIncome": 13171000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 138016000,
+        "netIncome": 3367000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 145218000,
+        "netIncome": 4727000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 143293000,
+        "netIncome": -9316000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 147649000,
+        "netIncome": 29456000
+      }
+    ]
+  },
+  "opl": {
+    "description": "Orange Polska S.A., together with its subsidiaries, provides telecommunications services for individuals, small and large businesses, and corporations in Poland. The company offers mobile and fixed telecommunications services, including calls, messaging, content, and access to the Internet and TV; and information technology and integration services, leased lines, and other value-added telecommunication services. It also engages in the sale of telecommunications equipment; provision of data transmission services; and construction of telecommunications infrastructure.",
+    "industry": "Telecom Services",
+    "employees": 8105,
+    "website": "https://www.orange.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 18674845696,
+    "peRatio": 21.892307,
+    "forwardPe": 18.973333,
+    "eps": 0.65,
+    "dividendYield": 4.26,
+    "totalRevenue": 13162999808,
+    "netIncome": 866000000,
+    "sharesOutstanding": 1312357479,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 3183000000,
+        "netIncome": 295000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 3493000000,
+        "netIncome": 69000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 3158000000,
+        "netIncome": 274000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 3153000000,
+        "netIncome": 191000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 3423000000,
+        "netIncome": 201000000
+      }
+    ]
+  },
+  "pcf": {
+    "description": "PCF Group Spólka Akcyjna engages in the development and production of video games in Poland and internationally. The company is involved in the production of games on demand, the acquisition and management of copyrights to produced games, and the production and publishing of its own games. It distributes its products through the Steam platform. The company was incorporated in 2019 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 385,
+    "website": "https://peoplecanfly.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 136352880,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -3.68,
+    "dividendYield": null,
+    "totalRevenue": 199598000,
+    "netIncome": -123403000,
+    "sharesOutstanding": 42610271,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 45566000,
+        "netIncome": -23087000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 47503000,
+        "netIncome": -6949000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 36789000,
+        "netIncome": -95412000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 52314000,
+        "netIncome": -17293000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 62992000,
+        "netIncome": -3749000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pco": {
+    "description": "Pepco Group N.V. operates as a variety discount retailer in the United Kingdom, the Republic of Ireland, Poland, and the rest of Europe. The company offers general merchandise; apparel for the whole family, including children's wear; household goods and toys; homeware; home décor; and seasonal products. In addition, the company provides direct product sourcing, product development, and technical services. Pepco Group N.V. operates stores under the Pepco, Poundland, and Dealz brands. The company was founded in 1990 and is based in London, the United Kingdom. Pepco Group N.V.",
+    "industry": "Discount Stores",
+    "employees": 25666,
+    "website": "https://www.pepcogroup.eu",
+    "country": "United Kingdom",
+    "city": "London",
+    "marketCap": 20034015232,
+    "peRatio": 22.10241,
+    "forwardPe": 87.35714,
+    "eps": 1.66,
+    "dividendYield": 1.13,
+    "totalRevenue": 4640476160,
+    "netIncome": 223830000,
+    "sharesOutstanding": 546034737,
+    "quarterlyReports": []
+  },
+  "pcr": {
+    "description": "PCC Rokita SA designs, produces, and sells chemical products in Poland, Germany, the European Union, rest of Europe, the United States, Asia, and internationally. It operates through five segments: Polyurethanes, Chlorine Derivatives, Other Chemical Activities, Energy, and Other Activities. The Polyurethanes segment produces polyols, polyurethane systems, and prepolymers; and flexible foams, rigid foams, coatings, elastomers, adhesives, impregnations, and other products. The Chlorine Derivatives segment provides chlorine, sodium hydroxide, caustic soda, chlorobenzene, and hydrochloric acid.",
+    "industry": "Chemicals",
+    "employees": 1649,
+    "website": "https://www.pcc.rokita.pl",
+    "country": "Poland",
+    "city": "Brzeg Dolny",
+    "marketCap": 1296541952,
+    "peRatio": 23.880596,
+    "forwardPe": 8.648648,
+    "eps": 2.68,
+    "dividendYield": 4.15,
+    "totalRevenue": 1724870016,
+    "netIncome": 53055000,
+    "sharesOutstanding": 20258469,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 432097000,
+        "netIncome": -5556000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 428674000,
+        "netIncome": 20684000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 414545000,
+        "netIncome": 32563000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 449554000,
+        "netIncome": 5364000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 508518000,
+        "netIncome": 2869000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pcx": {
+    "description": "PCC Exol S.A. manufactures and distributes surfactants in Poland and internationally. The company offers anionic, nonionic, cationic, and amphoteric surfactants. Its products are used in household chemicals, personal care products, textile, and industrial applications, as well as wetting agents, emulsifiers, hair care, industrial cleaning and auxiliary agents in paper, metallurgy, and many other areas. The company was incorporated in 2008 and is headquartered in Brzeg Dolny, Poland. PCC Exol S.A. operates as a subsidiary of PCC SE.",
+    "industry": "Specialty Chemicals",
+    "employees": 336,
+    "website": "https://www.pcc-exol.eu",
+    "country": "Poland",
+    "city": "Brzeg Dolny",
+    "marketCap": 332600992,
+    "peRatio": 10.052631,
+    "forwardPe": null,
+    "eps": 0.19,
+    "dividendYield": null,
+    "totalRevenue": 1085502976,
+    "netIncome": 37933000,
+    "sharesOutstanding": 174136643,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 284397000,
+        "netIncome": 7048000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 254636000,
+        "netIncome": 6942000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 270939000,
+        "netIncome": 10190000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 269921000,
+        "netIncome": 9375000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 290007000,
+        "netIncome": 11426000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "peo": {
+    "description": "Bank Polska Kasa Opieki S.A., a commercial bank, provides banking products and services to retail and corporate clients in Poland. It operates through Retail Banking and Private Banking; Enterprise banking; and Corporate and Investment Banking segments. The company offers bank accounts, deposits and certificates of deposit, payment cards, loan products, mortgage and consumer loans, and insurance products.",
+    "industry": "Banks - Regional",
+    "employees": 14783,
+    "website": "https://www.pekao.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 60578082816,
+    "peRatio": 9.228309,
+    "forwardPe": 9.935429,
+    "eps": 25.01,
+    "dividendYield": 8.64,
+    "totalRevenue": 16046000128,
+    "netIncome": 6561999872,
+    "sharesOutstanding": 262470034,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 4170000000,
+        "netIncome": 1232000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 4437000000,
+        "netIncome": 1824000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 4393000000,
+        "netIncome": 1601000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 4259000000,
+        "netIncome": 1685000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 4418000000,
+        "netIncome": 1612000000
+      }
+    ]
+  },
+  "pep": {
+    "description": "Polenergia S.A., engages in the generation, distribution, trading, and sale of electricity in Poland and internationally. The company operates through Onshore Wind Farms, Photovoltaics, Offshore Wind Farms, Gas and Clean Fuels, Trading and Sales, and Distribution segments. The Onshore Wind Farms segment engages in the development, construction, and maintenance of facilities generating electrical energy from onshore wind. The Photovoltaics segment develops, constructs, and maintains facilities generating electrical energy using the solar radiation.",
+    "industry": "Utilities - Independent Power Producers",
+    "employees": 449,
+    "website": "https://www.polenergia.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 4702631936,
+    "peRatio": null,
+    "forwardPe": 16.24,
+    "eps": -1.39,
+    "dividendYield": null,
+    "totalRevenue": 3926849024,
+    "netIncome": -107357000,
+    "sharesOutstanding": 77218913,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 924880000,
+        "netIncome": 60443000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 993755000,
+        "netIncome": -73441000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 915364000,
+        "netIncome": -11318000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 1129132000,
+        "netIncome": -83041000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1187520000,
+        "netIncome": 43232000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pge": {
+    "description": "PGE Polska Grupa Energetyczna S.A. engages in the production and distribution of electricity and heat in Poland. It operates through Renewables, Gas-fired Generation, Coal Energy, District Heating, Distribution, Railway Energy Services, Supply, and Other Activities segments. The Renewables segment engages in generation of electricity in pumped-storage power plants and from renewable sources. Its Gas-fired Generation segment produces electricity from gas-fired units. The Coal Energy segment includes lignite mining and electricity generation from conventional sources.",
+    "industry": "Utilities - Regulated Electric",
+    "employees": 40148,
+    "website": "https://www.gkpge.pl",
+    "country": "Poland",
+    "city": "Lublin",
+    "marketCap": 21149237248,
+    "peRatio": null,
+    "forwardPe": 7.3640623,
+    "eps": -1.78,
+    "dividendYield": null,
+    "totalRevenue": 61719998464,
+    "netIncome": -3975000064,
+    "sharesOutstanding": 2243712994,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 17453000000,
+        "netIncome": 1938000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 16678000000,
+        "netIncome": 3141000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 13785000000,
+        "netIncome": 552000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 13804000000,
+        "netIncome": -9606000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 17167000000,
+        "netIncome": 2416000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "phn": {
+    "description": "Polski Holding Nieruchomosci S.A. operates in real estate industry in Poland. The company engages in the rental and management of real estate and implementation of new commercial investments; implementation of new housing investments; and sale of apartments. It is also involved in rental of existing facilities and implementation of new logistics investments; general contracting activities; and owner or co-owner of hotel facilities and lease of existing facilities.",
+    "industry": "Real Estate Services",
+    "employees": 530,
+    "website": "https://www.phnsa.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 476321024,
+    "peRatio": 14.090909,
+    "forwardPe": null,
+    "eps": 0.66,
+    "dividendYield": null,
+    "totalRevenue": 963299968,
+    "netIncome": 108500000,
+    "sharesOutstanding": 51217313,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 160700000,
+        "netIncome": 15200000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 245300000,
+        "netIncome": 24500000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 201800000,
+        "netIncome": 5400000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 205300000,
+        "netIncome": -11500000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 223800000,
+        "netIncome": 185600000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pkn": {
+    "description": "Orlen S.A. operates in refining, petrochemical, energy, retail, gas, and upstream business. It engages in the processing and wholesale of refinery products, such as crude oil; production and sale of fuel, oil, chemicals, and petrochemicals, as well as provision of supporting services; production, distribution, and sale of electricity and heat from conventional and renewable energy sources comprising solar photovoltaics, as well as natural gas; trading of electricity; exploration and extraction of mineral resources; exploration, production, and import of natural gas; and trading and storage of",
+    "industry": "Oil & Gas Integrated",
+    "employees": 65889,
+    "website": "https://www.orlen.pl",
+    "country": "Poland",
+    "city": "Plock",
+    "marketCap": 147091357696,
+    "peRatio": 22.78777,
+    "forwardPe": 11.212389,
+    "eps": 5.56,
+    "dividendYield": 6.32,
+    "totalRevenue": 269945995264,
+    "netIncome": 6450999808,
+    "sharesOutstanding": 1160942049,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 75769000000,
+        "netIncome": 8079000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 72128000000,
+        "netIncome": 3129000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 61007000000,
+        "netIncome": 2135000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 60659000000,
+        "netIncome": 1567000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 73650000000,
+        "netIncome": 4159000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pko": {
+    "description": "Powszechna Kasa Oszczednosci Bank Polski Spólka Akcyjna provides various banking products and services in Poland and internationally. It operates through three segments: Retail, Corporate and Investment, and Transfer Center and Other. The company offers current, currency, children and teenagers, and savings accounts; term deposits; and consumer, real estate, business, mortgage, and corporate loans.",
+    "industry": "Banks - Regional",
+    "employees": 25704,
+    "website": "https://www.pkobp.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 130749997056,
+    "peRatio": 12.1769495,
+    "forwardPe": 12.06459,
+    "eps": 8.59,
+    "dividendYield": 5.95,
+    "totalRevenue": 29168001024,
+    "netIncome": 10734999552,
+    "sharesOutstanding": 1250000000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 7770000000,
+        "netIncome": 2522000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 7704000000,
+        "netIncome": 2715000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 7836000000,
+        "netIncome": 2837000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 7852000000,
+        "netIncome": 2661000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 7629000000,
+        "netIncome": 2469000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "pkp": {
+    "description": "Pkp Cargo S.A. engages in the provision of logistics services in the field of rail freight in Poland and internationally. The company offers rail freight transport services for coal, coke, aggregates, building materials, liquid fuels and chemicals, metals and ores, timber and agricultural crops, emergency and military, and automotive products.",
+    "industry": "Railroads",
+    "employees": null,
+    "website": "https://www.pkpcargo.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 506092192,
+    "peRatio": 11.894737,
+    "forwardPe": 3.2753623,
+    "eps": 0.95,
+    "dividendYield": null,
+    "totalRevenue": 3755000064,
+    "netIncome": 42200000,
+    "sharesOutstanding": 44786917,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 897000000,
+        "netIncome": -45800000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 1021700000,
+        "netIncome": 49800000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 943000000,
+        "netIncome": 7500000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 893300000,
+        "netIncome": 30700000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 927900000,
+        "netIncome": -48600000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "plw": {
+    "description": "PlayWay S.A. produces and publishes games and applications in Poland and internationally. It sells its products to computers, consoles, and mobile phones through How Steam, Google Play, App store, Amazon App store, Microsoft store, Nintendo E-Shop, and PlayStore platforms. The company was founded in 2011 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": null,
+    "website": "https://www.playway.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1633170048,
+    "peRatio": 13.857466,
+    "forwardPe": 11.036036,
+    "eps": 17.68,
+    "dividendYield": 7.08,
+    "totalRevenue": 304131008,
+    "netIncome": 75446000,
+    "sharesOutstanding": 6666000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 73301000,
+        "netIncome": 35639000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 75237000,
+        "netIncome": 11807000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 72682000,
+        "netIncome": 35388000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 68912000,
+        "netIncome": 30098000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 80199000,
+        "netIncome": 38174000
+      }
+    ]
+  },
+  "prm": {
+    "description": "Prochem S.A. provides engineering and construction services in Poland. The company offers pre-investment services, such as program -and-spatial concepts, expert studies, and technical recommendations; and conducts feasibility studies for new investment projects, as well as for the purpose of modernization and extension projects. It also provides design services in various disciplines and stages comprising obtaining agreements, approvals, and permits, as well as offers project execution management services. In addition, the company offers procurement and consulting services.",
+    "industry": "Engineering & Construction",
+    "employees": 313,
+    "website": "https://www.prochem.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 47919500,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -5.26,
+    "dividendYield": null,
+    "totalRevenue": 148360000,
+    "netIncome": -10542000,
+    "sharesOutstanding": 2005000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 36085000,
+        "netIncome": -1623000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 44067000,
+        "netIncome": -4612000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 40620000,
+        "netIncome": 940000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 21076000,
+        "netIncome": -5738000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 18147000,
+        "netIncome": -12153000
+      }
+    ]
+  },
+  "prt": {
+    "description": "Protektor S.A. engages in the production, distribution, and sale of work and military footwear in Europe, Asia, Africa, and South America. It offers safety footwear for mechanical injuries, chemical injuries, moisture, burns, and other harmful effects of temperature; occupational footwear for military, police, other special uniformed services, security companies, and hobbyists; and heavy-duty firefighting footwear for rescue operations, fire extinguishing, and safety operations. The company sells its products under the PROTEKTOR and ABEBA brands. Protektor S.A.",
+    "industry": "Footwear & Accessories",
+    "employees": null,
+    "website": "https://www.protektorsa.pl",
+    "country": "Poland",
+    "city": "Lublin",
+    "marketCap": 37109024,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -0.57,
+    "dividendYield": null,
+    "totalRevenue": 78913000,
+    "netIncome": -11016000,
+    "sharesOutstanding": 31825919,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 20264000,
+        "netIncome": -2265000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 19840000,
+        "netIncome": -1974000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 20879000,
+        "netIncome": -681000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 18881000,
+        "netIncome": -4626000
+      }
+    ]
+  },
+  "pzu": {
+    "description": "Powszechny Zaklad Ubezpieczen SA provides life and non-life insurance products and services in Poland, the Baltic States, and Ukraine. It operates through Corporate Insurance; Mass Insurance; Group Insurance and Individually Continued Insurance; Individual Insurance; Life Investment Insurance; Investments; Banking; Pension Insurance; Baltic Countries; Ukraine; and Investment Contracts segments. The company offers motor, property, casualty, agricultural, fire, and third-party liability insurance, as well as health and accident insurance.",
+    "industry": "Insurance - Property & Casualty",
+    "employees": 31538,
+    "website": "https://www.pzu.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 57182494720,
+    "peRatio": 9.071233,
+    "forwardPe": 10.5278225,
+    "eps": 7.3,
+    "dividendYield": 7.31,
+    "totalRevenue": 62572998656,
+    "netIncome": 6301000192,
+    "sharesOutstanding": 863523000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 15067000000,
+        "netIncome": 1362000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 22041000000,
+        "netIncome": 1474000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 14623000000,
+        "netIncome": 1995000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 14196000000,
+        "netIncome": 1470000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 15741000000,
+        "netIncome": 1760000000
+      }
+    ]
+  },
+  "rbw": {
+    "description": "Rainbow Tours S.A. operates as a tour operator in Poland. The company operates through Sale of Tourist Events, Hotel, and Others segments. Rainbow Tours S.A. was founded in 1990 and is headquartered in Lódz, Poland.",
+    "industry": "Travel Services",
+    "employees": 1058,
+    "website": "https://www.r.pl",
+    "country": "Poland",
+    "city": "Lódz",
+    "marketCap": 2059107968,
+    "peRatio": 8.45786,
+    "forwardPe": 8.860363,
+    "eps": 16.73,
+    "dividendYield": 5.88,
+    "totalRevenue": 4478537216,
+    "netIncome": 269648992,
+    "sharesOutstanding": 14552000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 884322000,
+        "netIncome": 45718000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 803219000,
+        "netIncome": 14606000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 1956525000,
+        "netIncome": 160049000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 928231000,
+        "netIncome": 25031000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 869832000,
+        "netIncome": 59525000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "rwl": {
+    "description": "Rawlplug S.A. design, manufacture, and sells fixings, fasteners, and tools under KOELNER, RAWPLUG, and MODECO EXPERT brands in Europe and internationally. It offers cordless and electric power tools, and power tool accessories; concrete and steel nail guns; accessories for nail guns and concrete; clips, washers, and tapes for nail guns; and building, mechanical, basic, cutting, measuring, connection, painting, and garden tools, as well as glue and glue guns, belts, health and safety articles, and tool transport accessories.",
+    "industry": "Tools & Accessories",
+    "employees": 2000,
+    "website": "https://www.rawlplug.com",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 417748928,
+    "peRatio": 16.204819,
+    "forwardPe": null,
+    "eps": 0.83,
+    "dividendYield": 2.99,
+    "totalRevenue": 1051353984,
+    "netIncome": 25422000,
+    "sharesOutstanding": 31059401,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 254596000,
+        "netIncome": 7011000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 247755000,
+        "netIncome": 8364000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 292684000,
+        "netIncome": 15373000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 256319000,
+        "netIncome": -5326000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 272245000,
+        "netIncome": 1046000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "shd": {
+    "description": "Soho Development S.A. operates as an investment company. It primarily focuses on investing in real estate, healthcare, food, and publishing sectors, as well as companies that are in the early stages of development. The company was formerly known as Black Lion Fund S.A. and changed its name to Soho Development S.A. in May 2015. Soho Development S.A. was founded in 1994 and is based in Warsaw, Poland.",
+    "industry": "Asset Management",
+    "employees": null,
+    "website": "https://sohodevelopment.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 7153959,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -0.02,
+    "dividendYield": null,
+    "totalRevenue": null,
+    "netIncome": -916000,
+    "sharesOutstanding": 62754031,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 0,
+        "netIncome": -352000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 0,
+        "netIncome": 211000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 0,
+        "netIncome": -418000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 0,
+        "netIncome": -455000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 0,
+        "netIncome": -254000
+      }
+    ]
+  },
+  "snk": {
+    "description": "Sanok Rubber Company Spólka Akcyjna engages in the production and sale of rubber products in Poland, Germany, France, Finland, Hungary, Ukraine, and Belarus. The company operates through five segments: Automotive, Construction, Agriculture and Industry, Rubber Mixtures, and Other. It offers rubber, rubber-metal, rubber-plastic, and elastomer products; thermoplastic TPEs for body sealing and car suspension systems, as well as exhaust system suspensions; sealing systems used in the production of window and door joinery, and gutter and ventilation systems; and self-adhesive seals used for sealing",
+    "industry": "Auto Parts",
+    "employees": null,
+    "website": "https://www.sanokrubber.com",
+    "country": "Poland",
+    "city": "Sanok",
+    "marketCap": 503063264,
+    "peRatio": 14.459459,
+    "forwardPe": 9.727272,
+    "eps": 1.48,
+    "dividendYield": 5.71,
+    "totalRevenue": 1480774016,
+    "netIncome": 40075000,
+    "sharesOutstanding": 23507630,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 368212000,
+        "netIncome": 6502000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 357274000,
+        "netIncome": 11413000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 365885000,
+        "netIncome": 10319000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 389403000,
+        "netIncome": 11877000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 357406000,
+        "netIncome": 7785000
+      }
+    ]
+  },
+  "stf": {
+    "description": "Stalprofil S.A. engages in the distribution of steel products in Poland and internationally. It provides hot rolled profiles, channels, equal-leg angles, unequal angles, and T-bars; cold formed profiles, such as square and rectangular profiles, and channels; flat, round, square, drawn, and ribbed bars, as well as wire rods; and hot and cold rolled plates, and patterned sheets.",
+    "industry": "Industrial Distribution",
+    "employees": 622,
+    "website": "https://www.stalprofil.com.pl",
+    "country": "Poland",
+    "city": "Dabrowa Górnicza",
+    "marketCap": 152950000,
+    "peRatio": 33.615383,
+    "forwardPe": null,
+    "eps": 0.26,
+    "dividendYield": 3.41,
+    "totalRevenue": 2350465024,
+    "netIncome": 4353000,
+    "sharesOutstanding": 17500000,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 383701000,
+        "netIncome": 19111000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 556380000,
+        "netIncome": -1163000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": null,
+        "netIncome": null
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 573264000,
+        "netIncome": 1238000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 611219000,
+        "netIncome": 1785000
+      }
+    ]
+  },
+  "stp": {
+    "description": "Stalprodukt S.A., together with its subsidiaries, manufactures and sells processed steel products in Poland. It operates through three segments: Electrical Sheets, Profiles, and Zinc. The company offers cold-bent sections, cold- and hot-rolled cut sheets and strips, transformer sheets and toroidal cores, cold-bent pipes and sections, road and bridge protective barriers, and transformer cores; and heat supplies, alterations/repair, transport and equipment-related, and hotel services, as well as edible protein casings, hoop iron products, and woodwork products.",
+    "industry": "Steel",
+    "employees": null,
+    "website": "https://stalprodukt.com.pl",
+    "country": "Poland",
+    "city": "Bochnia",
+    "marketCap": 1083942144,
+    "peRatio": null,
+    "forwardPe": 16.653635,
+    "eps": -11.21,
+    "dividendYield": 2.78,
+    "totalRevenue": 3593414912,
+    "netIncome": -57775000,
+    "sharesOutstanding": 5088930,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 888679000,
+        "netIncome": -24526000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 863294000,
+        "netIncome": -17936000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 889818000,
+        "netIncome": -8434000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 951624000,
+        "netIncome": -6879000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 1032512000,
+        "netIncome": -17445000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "tpe": {
+    "description": "TAURON Polska Energia S.A., through its subsidiaries, generates, distributes, and supplies electricity and heat in Poland and the Czech Republic. It operates through Generation, Heat, Renewable Energy Sources, distribution, Supply and Wholesale Trading segments. The Generation segment is involved in electricity generation through conventional sources, including co-generation, as well as through biomass burning; generation and supply of heat; and generation equipment's overhaul operations.",
+    "industry": "Utilities - Renewable",
+    "employees": 19171,
+    "website": "https://www.tauron.pl",
+    "country": "Poland",
+    "city": "Katowice",
+    "marketCap": 15804489728,
+    "peRatio": 4.9823203,
+    "forwardPe": 7.707692,
+    "eps": 1.81,
+    "dividendYield": 2.2,
+    "totalRevenue": 34232999936,
+    "netIncome": 3161999872,
+    "sharesOutstanding": 1752549394,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 9507000000,
+        "netIncome": 979000000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 9240000000,
+        "netIncome": 416000000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 7819000000,
+        "netIncome": 844000000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 7667000000,
+        "netIncome": 923000000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 9632000000,
+        "netIncome": 1130000000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "trk": {
+    "description": "Trakcja S.A. operates in the infrastructure and energy construction sector in Poland and internationally. The company designs road and railway infrastructure elements and building structures; and constructs drainage, traction networks and power supply systems, cable and overhead power lines, engineering facilities, roads and highways, and utility infrastructure.",
+    "industry": "Engineering & Construction",
+    "employees": 1832,
+    "website": "https://www.grupatrakcja.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1612771072,
+    "peRatio": 18.394737,
+    "forwardPe": null,
+    "eps": 0.19,
+    "dividendYield": null,
+    "totalRevenue": 2265339904,
+    "netIncome": 84003000,
+    "sharesOutstanding": 461450976,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 324888000,
+        "netIncome": -6720000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 750381000,
+        "netIncome": 53733000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 572388000,
+        "netIncome": 36658000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 617683000,
+        "netIncome": 862000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 301909000,
+        "netIncome": -9815000
+      }
+    ]
+  },
+  "uni": {
+    "description": "UNIBEP S.A. operates as a construction company in Poland, Sweden, Norway, Iceland, Denmark, Germany, Belarus, and internationally. The company constructs hotels, multi-family housing, office buildings, student accommodation, pre-schools and nurseries, outpatient clinics and nursing homes, and commercial pavilions, as well as road and bridges. It is also involved in energy and industrial construction, and property development activities. In addition, the company provides general contracting services. The company was founded in 1950 and is headquartered in Bielsk Podlaski, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 1611,
+    "website": "https://www.unibep.pl",
+    "country": "Poland",
+    "city": "Bielsk Podlaski",
+    "marketCap": 431179296,
+    "peRatio": 8.706667,
+    "forwardPe": null,
+    "eps": 1.5,
+    "dividendYield": 3.07,
+    "totalRevenue": 2257526016,
+    "netIncome": 41418000,
+    "sharesOutstanding": 33015259,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 328996000,
+        "netIncome": -5458000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 743514420,
+        "netIncome": 26078315
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 579359707,
+        "netIncome": 14820030
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 605656326,
+        "netIncome": 5977783
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 429843000,
+        "netIncome": -5627000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "vox": {
+    "description": "Voxel S.A. provides medical services in Poland. The company offers imaging diagnostics services, including reimbursed, commercial, and private patient examinations; teleradiology services; and clinical/pharmaceutical trials. It is also involved in the sale of radiopharmaceuticals, and the leasing of land. Voxel S.A. was incorporated in 2005 and is headquartered in Kraków, Poland.",
+    "industry": "Diagnostics & Research",
+    "employees": 356,
+    "website": "https://www.voxel.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 1190994816,
+    "peRatio": 3.0256138,
+    "forwardPe": 11.553745,
+    "eps": 37.48,
+    "dividendYield": 2.24,
+    "totalRevenue": 583135296,
+    "netIncome": 106167904,
+    "sharesOutstanding": 10502600,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 157194400,
+        "netIncome": 31901800
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 155633900,
+        "netIncome": 24819100
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 142966100,
+        "netIncome": 27571800
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 127340900,
+        "netIncome": 21875200
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 157847700,
+        "netIncome": 24267800
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "vrg": {
+    "description": "VRG S.A. designs, manufactures, and sells jewelry and clothing for women and men in Poland and internationally. It operates through the Clothing and Jeweler segments. The company offers classical and avant-garde jackets, well-cut trousers, suits, modern knitwear, coats and jackets, polo shirts, and other accessories; and silk and bow ties, and cufflinks. It also provides gold and platinum jewelry, as well as jewelry with diamonds and precious stones; and watches. The company sells its products under the Vistula, BYTOM, Wólczanka, Deni Cler, and W.KRUK brands.",
+    "industry": "Apparel Manufacturing",
+    "employees": 2170,
+    "website": "https://www.vrg.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 1275439744,
+    "peRatio": 13.948719,
+    "forwardPe": 12.651163,
+    "eps": 0.39,
+    "dividendYield": 0.95,
+    "totalRevenue": 1567675008,
+    "netIncome": 92070000,
+    "sharesOutstanding": 234455840,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 356482000,
+        "netIncome": -154000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 487726000,
+        "netIncome": 51208000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 345938000,
+        "netIncome": 12398000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 377529000,
+        "netIncome": 28618000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 293639000,
+        "netIncome": 6017000
+      }
+    ]
+  },
+  "wpl": {
+    "description": "Wirtualna Polska Holding S.A., through its subsidiaries, engages in the media, advertising, and e-commerce businesses in Poland. The company operates tourism portals, comprising Wakacje.pl, nocowanie.pl, WAKACYJNY SWIAT, eazygo, PARKLOT.PL, and SZALLAS Group. It also provides financing for new cars through Totalmoney, Direct.Money.pl, Finansowy Supermarket, and Superauto.pl. In addition, the company sells home designs through the Homebook, Extradom, and Selsey platforms, as well as the Naturalnie platform.",
+    "industry": "Advertising Agencies",
+    "employees": null,
+    "website": "https://holding.wp.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1709102080,
+    "peRatio": null,
+    "forwardPe": 21.180813,
+    "eps": -2.11,
+    "dividendYield": 2.19,
+    "totalRevenue": 2396907008,
+    "netIncome": -62764000,
+    "sharesOutstanding": 29775297,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 555238000,
+        "netIncome": -16872000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 578613000,
+        "netIncome": -130732000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 722241000,
+        "netIncome": 97678000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 540815000,
+        "netIncome": -11074000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 371953000,
+        "netIncome": 10010000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "xtb": {
+    "description": "XTB S.A., together with its subsidiaries, provides ETF, currency derivatives, commodities, indices, stocks, and bonds brokerage services in Central and Eastern Europe, Western Europe, Latin America, and the Middle East. It operates in two segments, Retail Operations and Institutional Activity. The Retail operations segment engages in the provision of trading in financial instruments for individual customers.",
+    "industry": "Capital Markets",
+    "employees": 1553,
+    "website": "https://www.xtb.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 12913763328,
+    "peRatio": 13.142175,
+    "forwardPe": 14.666667,
+    "eps": 8.37,
+    "dividendYield": 3.81,
+    "totalRevenue": 3155385088,
+    "netIncome": 985281984,
+    "sharesOutstanding": 117397851,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 1091708000,
+        "netIncome": 535034000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 599360000,
+        "netIncome": 180902000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 367754000,
+        "netIncome": 53222000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 563446000,
+        "netIncome": 216125000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 574022000,
+        "netIncome": 193946000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "zep": {
+    "description": "ZE PAK SA produces and sells electricity and heat in Poland. The company produces energy from conventional and renewable sources, such as wind sources, photovoltaics, and biomass, as well as through lignite-fired power plants. It also engages in the construction and installation work, maintenance work, services, manufacturing, commercial activities, coal mining, and coal-based energy production. The company was founded in 1958 and is headquartered in Konin, Poland. ZE PAK SA operates as a subsidiary of Argumenol Investment Company Limited.",
+    "industry": "Utilities - Independent Power Producers",
+    "employees": 2132,
+    "website": "https://www.zepak.com.pl",
+    "country": "Poland",
+    "city": "Konin",
+    "marketCap": 870099200,
+    "peRatio": null,
+    "forwardPe": 4.891429,
+    "eps": -3.17,
+    "dividendYield": null,
+    "totalRevenue": 1367608064,
+    "netIncome": -161018000,
+    "sharesOutstanding": 50823547,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 343116000,
+        "netIncome": -10364000
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "revenue": 358184000,
+        "netIncome": -45298000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 331181000,
+        "netIncome": -39584000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 335127000,
+        "netIncome": -65772000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 309342000,
+        "netIncome": -13801000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": null,
+        "netIncome": null
+      }
+    ]
+  },
+  "zue": {
+    "description": "ZUE S.A., together with its subsidiaries, provides construction services in Poland. It engages in the design, construction, modernization, and maintenance of catenary networks, catenary substations, and tram tracks; and construction and maintenance of lighting fixtures, street lighting, traffic lights, and communication networks for cable piping and fibre optic wiring.",
+    "industry": "Infrastructure Operations",
+    "employees": 686,
+    "website": "https://www.grupazue.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 280014816,
+    "peRatio": 30.75,
+    "forwardPe": null,
+    "eps": 0.4,
+    "dividendYield": null,
+    "totalRevenue": 913897024,
+    "netIncome": 11688000,
+    "sharesOutstanding": 22765431,
+    "quarterlyReports": [
+      {
+        "periodEnd": "2026-03-31",
+        "revenue": 148133000,
+        "netIncome": -4229000
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "revenue": 288146000,
+        "netIncome": -439000
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "revenue": 222642000,
+        "netIncome": 10391000
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "revenue": 180134000,
+        "netIncome": -4757000
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "revenue": 297911000,
+        "netIncome": 3832000
+      }
+    ]
+  },
+  "cez": {
+    "description": "CEZ, a. s. engages in the generation, distribution, trade, and sale of electricity, heat, thermal energy and other commodities in Central Europe. It operates through four segments: Generation, Distribution, Sales, and Mining. The company operates hydroelectric, wind, solar, nuclear, coal, photovoltaic, and biomass power plants, and combined cycle gas turbine power plant and combined heat and power units. It is also involved in the trade and sale of natural gas; mining of coal; quarrying and processing of construction aggregates and limestones; commodity trading business; and provision of energ…",
+    "industry": "Utilities - Regulated Electric",
+    "employees": 33700,
+    "website": "https://www.cez.cz",
+    "country": "Czech Republic",
+    "marketCap": 121855926272,
+    "peRatio": 23.945148,
+    "forwardPe": 4.189738,
+    "eps": 9.48,
+    "dividendYield": 3.36,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 536810247,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 84295000000,
+        "net_income": 13498000000,
+        "operating_income": 21886000000,
+        "eps": 25.1
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 91798000000,
+        "net_income": 5945000000,
+        "operating_income": 21164000000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 72253000000,
+        "net_income": 5513000000,
+        "operating_income": 15617000000,
+        "eps": 10.3
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 73480000000,
+        "net_income": 3992000000,
+        "operating_income": 15829000000,
+        "eps": 7.4
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 92708000000,
+        "net_income": 12703000000,
+        "operating_income": 26489000000,
+        "eps": 23.7
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "cfi": {
+    "description": "CFI Holding S.A. engages in construction activities in Poland. The company operates in Hotels and Restaurants, Real Estate, and Chemicals segments. It engages in hotel and restaurant and catering activities; rental of real estate and apartments in the TBS system; and recreation, sports, and medical services sectors activities. The company is also involved in commercial activities; catering activities and operational support for hotel activities; and rental of construction machinery. In addition, it sells artificial fertilizers, plant protection products, dyes, and other chemicals. CFI Holding …",
+    "industry": "Conglomerates",
+    "employees": null,
+    "website": "https://www.cfiholding.pl",
+    "country": "Poland",
+    "marketCap": 379620736,
+    "peRatio": 13.8,
+    "forwardPe": null,
+    "eps": 0.01,
+    "dividendYield": null,
+    "totalRevenue": 259136000,
+    "netIncome": 21325000,
+    "sharesOutstanding": 2750874900,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 62151000,
+        "net_income": 2674000,
+        "operating_income": 6895000,
+        "eps": 0.001
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 73861000,
+        "net_income": -9624000,
+        "operating_income": -5718000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 59988000,
+        "net_income": 6239000,
+        "operating_income": 19286000,
+        "eps": 0.002268
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 67545000,
+        "net_income": 16988000,
+        "operating_income": 28848000,
+        "eps": 0.006175
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 57743000,
+        "net_income": 2096000,
+        "operating_income": 8472000,
+        "eps": 0.001
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "ebp": {
+    "description": "Erste Bank Polska S.A. provides various banking products and services for individuals, small or medium-sized enterprises, corporate clients, and public sector institutions. The company offers personal account, savings accounts and term deposits, currencies, internet and mobile banking, and contactless payments, and debit and credit solutions. It also provides consumer loans and home mortgages; mutual funds, including pension schemes and various investment programmes; and tourist/travel, motor, and home insurance products, as well as bancassurance products. In addition, the company offers forei…",
+    "industry": "Banks - Regional",
+    "employees": 10144,
+    "website": "https://www.erste.pl",
+    "country": "Poland",
+    "marketCap": 65830354944,
+    "peRatio": 11.331574,
+    "forwardPe": 9.983357,
+    "eps": 56.85,
+    "dividendYield": 7.75,
+    "totalRevenue": 15449759744,
+    "netIncome": 5632520192,
+    "sharesOutstanding": 102189314,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 3991755000,
+        "net_income": 1027720000,
+        "operating_income": null,
+        "eps": 10.06
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 4013591000,
+        "net_income": 1838393000,
+        "operating_income": null,
+        "eps": 17.99
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 4051292000,
+        "net_income": 1017969000,
+        "operating_income": null,
+        "eps": 10.34
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 3949594000,
+        "net_income": 1733624000,
+        "operating_income": null,
+        "eps": 16.96
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 3957599000,
+        "net_income": 913395000,
+        "operating_income": null,
+        "eps": 8.94
+      }
+    ]
+  },
+  "gtc": {
+    "description": "Globe Trade Centre S.A., a real estate developer and investor company, engages in the development, management, and rental of office, retail, and residential spaces. It operates in Poland, Hungary, Germany, Bucharest, Belgrade, Zagreb, Sofia, and internationally. The company was founded in 1994 and is headquartered in Warsaw, Poland. Globe Trade Centre S.A. is a subsidiary of GTC Dutch Holdings B.V.",
+    "industry": "Real Estate Services",
+    "employees": 246,
+    "website": "https://www.gtcgroup.com",
+    "country": "Poland",
+    "marketCap": 1315044224,
+    "peRatio": null,
+    "forwardPe": 4.2407403,
+    "eps": -1.2,
+    "dividendYield": null,
+    "totalRevenue": 205600000,
+    "netIncome": -161500000,
+    "sharesOutstanding": 574255122,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 53300000,
+        "net_income": -5500000,
+        "operating_income": 31900000,
+        "eps": -0.01
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 50500000,
+        "net_income": -125200000,
+        "operating_income": 1800000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 50500000,
+        "net_income": -28900000,
+        "operating_income": 22500000,
+        "eps": -0.05
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 51300000,
+        "net_income": -1900000,
+        "operating_income": 26900000,
+        "eps": 0.0
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 49800000,
+        "net_income": 1000000,
+        "operating_income": 26200000,
+        "eps": 0.0
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "ims": {
+    "description": "IMS S.A., together with its subsidiaries, primarily provides sensory marketing services in Poland. The company offers in-store music and royalty free music, scent marketing, scenting stores, and room aromatization services; digital signage, video wall, digital signage storefronts, and interactive screen for mall; in-store radio, advertising in shopping malls, video advertising, video marketing, and commercial networks through audio media; advertising totems and monitors, and video walls; and touch display for mall, gift card kiosk, and digital signage specialized devices. It also designs inter…",
+    "industry": "Advertising Agencies",
+    "employees": 51,
+    "website": "https://www.imssensory.com",
+    "country": "Poland",
+    "marketCap": 73074464,
+    "peRatio": 8.833333,
+    "forwardPe": null,
+    "eps": 0.24,
+    "dividendYield": 2.82,
+    "totalRevenue": 66496000,
+    "netIncome": 8320000,
+    "sharesOutstanding": 34469086,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 15849000,
+        "net_income": 957000,
+        "operating_income": 1707000,
+        "eps": 0.03
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 15586000,
+        "net_income": 1677000,
+        "operating_income": 2511000,
+        "eps": 0.04
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 16288000,
+        "net_income": 1666000,
+        "operating_income": 3231000,
+        "eps": 0.05
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 14266000,
+        "net_income": 1029000,
+        "operating_income": 1572000,
+        "eps": 0.03
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 20356000,
+        "net_income": 3948000,
+        "operating_income": 6117000,
+        "eps": null
+      }
+    ]
+  },
+  "jrh": {
+    "description": "JR Holding ASI S.A., an alternative investment company, invests in the computer gaming, renewable energy, modern media, biotechnology, and digital technology businesses in Poland. It also invests in the artificial intelligence and digital business, energy transformation, deeptech and spacetech, medtech, sustainability, and circular economy sectors. The company was formerly known as JR Holding S.A. and changed its name to JR Holding ASI S.A. in December 2019. JR Holding ASI S.A. was founded in 2003 and is headquartered in Kraków, Poland.",
+    "industry": "Asset Management",
+    "employees": 12,
+    "website": "https://jrh.ai",
+    "country": "Poland",
+    "marketCap": 204095552,
+    "peRatio": 8.053572,
+    "forwardPe": null,
+    "eps": 0.56,
+    "dividendYield": null,
+    "totalRevenue": 41036068,
+    "netIncome": 25440556,
+    "sharesOutstanding": 45254000,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 64061,
+        "net_income": 6325848,
+        "operating_income": 8014686,
+        "eps": 0.14
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": -8398130,
+        "net_income": -9809898,
+        "operating_income": -10322546,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": -807885,
+        "net_income": 28640193,
+        "operating_income": 35863138,
+        "eps": 0.63
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": -4285956,
+        "net_income": 284411,
+        "operating_income": 1205130,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": -83366,
+        "net_income": 12282094,
+        "operating_income": 15965989,
+        "eps": 0.27
+      }
+    ]
+  },
+  "kci": {
+    "description": "KCI Spolka Akcyjna, formerly known as Jupiter Spolka Akcyjna, is a private equity firm specializing in real estate and media sector. It seeks to invest in Poland. KCI Spolka Akcyjna is based in Kracow, Poland.",
+    "industry": "Real Estate - Development",
+    "employees": null,
+    "website": "https://www.kci.pl",
+    "country": "Poland",
+    "marketCap": 61175280,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -0.09,
+    "dividendYield": null,
+    "totalRevenue": 1604000,
+    "netIncome": -13730000,
+    "sharesOutstanding": 68582150,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 616000,
+        "net_income": -3999000,
+        "operating_income": -2002000,
+        "eps": -0.06
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 825000,
+        "net_income": -6138000,
+        "operating_income": -3219000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 6472000,
+        "net_income": 1417000,
+        "operating_income": -1312000,
+        "eps": 0.02
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 380000,
+        "net_income": -3405000,
+        "operating_income": -2674000,
+        "eps": -0.05
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 367000,
+        "net_income": -14585000,
+        "operating_income": -1203000,
+        "eps": null
+      }
+    ]
+  },
+  "kgl": {
+    "description": "KGL SA engages in the supply of thermoplastic polymer granulates in Poland and internationally. It offers styrenics, such as expandable, and low and high impact polystyrene, as well as styrene-butadiene copolymer; and polyolefins, including polypropylene homopolymer, polypropylene block copolymer, random polypropylene copolymer, metallocene polypropylene, metallocene polyethylene, and ethylene vinyl acetate copolymer, as well as high-, medium-, and low-density polyethylene. The company also provides engineering plastics, such as polyoxymethylene polyacetal, polycarbonate, polymethyl methacryla…",
+    "industry": "Specialty Chemicals",
+    "employees": 793,
+    "website": "https://www.kgl.pl",
+    "country": "Poland",
+    "marketCap": 72649072,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -2.52,
+    "dividendYield": 9.52,
+    "totalRevenue": 542361024,
+    "netIncome": -17802000,
+    "sharesOutstanding": 7053308,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 138281000,
+        "net_income": 107000,
+        "operating_income": 4475000,
+        "eps": 0.02
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 136589000,
+        "net_income": -9182000,
+        "operating_income": -4235000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 131845000,
+        "net_income": -5711000,
+        "operating_income": -1995000,
+        "eps": -0.81
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 123645000,
+        "net_income": -479000,
+        "operating_income": 1408000,
+        "eps": -0.07
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 134756000,
+        "net_income": -3477000,
+        "operating_income": 844000,
+        "eps": null
+      }
+    ]
+  },
+  "mcr": {
+    "description": "mcr Spolka Akcyjna produces, sells, installs, and services passive fire protection systems in Poland. It provides active extinguishing includes water mist fire extinguishing; construction security includes panel systems, spray systems, installation penetration systems, intumescent coating systems, and sprayed acoustic plasters; building systems integration, industrial energy storage, and fire partitions. It serves industrial buildings, professional energy, server rooms, high-rise buildings, cultural heritage buildings, industry and energy, public buildings, and commercial and logistics facilit…",
+    "industry": "Security & Protection Services",
+    "employees": null,
+    "website": "https://www.mcrsa.pl",
+    "country": "Poland",
+    "marketCap": 222607760,
+    "peRatio": 1.469697,
+    "forwardPe": null,
+    "eps": 9.9,
+    "dividendYield": 12.85,
+    "totalRevenue": 448332000,
+    "netIncome": 165532000,
+    "sharesOutstanding": 15299502,
+    "quarterlyReports": [
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 51566000,
+        "net_income": 131967000,
+        "operating_income": -13571000,
+        "eps": 8.8
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 146723000,
+        "net_income": 28172000,
+        "operating_income": 7993000,
+        "eps": 1.84
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 124257000,
+        "net_income": 831000,
+        "operating_income": 2812000,
+        "eps": 0.05
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 125786000,
+        "net_income": 2046000,
+        "operating_income": 3243000,
+        "eps": null
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 131351000,
+        "net_income": 2599000,
+        "operating_income": 2161000,
+        "eps": 0.17
+      }
+    ]
+  },
+  "mfo": {
+    "description": "MFO S.A. manufactures and sells steel profiles in Poland. The company offers CD profiles, UD and UA profiles, CW and UW standard profiles, and CW and UW eco profiles for drywall framing applications; mounting rails for ventilation and air conditioning, and electrical installation applications; and steel sections for technical flooring systems applications. It also provides steel profiles for furniture industry, rack system, and semi-trailer and truck body applications; and steel posts for applications in fencing systems and gates. The company was incorporated in 2011 and is based in Sochaczew,…",
+    "industry": "Metal Fabrication",
+    "employees": 393,
+    "website": "https://www.mfo.pl",
+    "country": "Poland",
+    "marketCap": 186991968,
+    "peRatio": 20.808823,
+    "forwardPe": null,
+    "eps": 1.36,
+    "dividendYield": null,
+    "totalRevenue": 689180032,
+    "netIncome": 9023000,
+    "sharesOutstanding": 6607490,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 173387000,
+        "net_income": 2429000,
+        "operating_income": 3919000,
+        "eps": 0.37
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 167686000,
+        "net_income": -1023000,
+        "operating_income": 1395000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 177545000,
+        "net_income": 3275000,
+        "operating_income": 5397000,
+        "eps": 0.49565
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 170563000,
+        "net_income": 4342000,
+        "operating_income": 6327000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 169702000,
+        "net_income": 3481000,
+        "operating_income": 6161000,
+        "eps": 0.53
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "mol": {
+    "description": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság, together with its subsidiaries, operates as an integrated oil and gas company in Hungary and internationally. The company offers MOL EVO fuel products; operates convenience store under the Fresh Corner brand; and provides e-charging solutions. It also provides lubricants and autochemicals; gasoline, diesel, heating oil, and bunker diesel; JET A-1 aviation fuel; liquefied petroleum gas, including butanes, propane-butane mix, autogas, propane; petrochemicals; black products, such as bitumen, HFO, petrolcoke, and liquid sulphur, as…",
+    "industry": "Oil & Gas Refining & Marketing",
+    "employees": 24744,
+    "website": "https://www.molgroup.info",
+    "country": "Hungary",
+    "marketCap": 34886791168,
+    "peRatio": 14.218651,
+    "forwardPe": null,
+    "eps": 3.11,
+    "dividendYield": 3.68,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 788936919,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 2017128000000,
+        "net_income": 38841000000,
+        "operating_income": 83240000000,
+        "eps": 49.232073
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 2058724000000,
+        "net_income": 12834000000,
+        "operating_income": 15794000000,
+        "eps": 16.26746
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 2267569000000,
+        "net_income": 94800000000,
+        "operating_income": 162972000000,
+        "eps": 120.161698
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 2198746000000,
+        "net_income": 38076000000,
+        "operating_income": 78531000000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 2171244000000,
+        "net_income": 152343000000,
+        "operating_income": 185849000000,
+        "eps": 190.667535
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": -10.61955
+      }
+    ]
+  }
+}

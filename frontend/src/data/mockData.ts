@@ -194,27 +194,30 @@ export const mockMiniWatchlist = [
   { ticker: 'AAPL', rating: 88, ratingChange: 3 },
 ]
 
-/** Scanner "Silnik VSA" rule toggles. */
+/**
+ * Scanner "Silnik VSA" rule toggles — the canonical set of detectable VSA
+ * signals. Names are unique and align 1:1 with mockEffectiveness below so the
+ * engine list, the per-signal tuner, and the stats table stay in sync.
+ */
 export const mockEngineRules: EngineRule[] = [
   { id: 'spring', side: 'Siła', name: 'Spring', enabled: true },
-  { id: 'ut1', side: 'Słabość', name: 'Upthrust', enabled: true },
-  { id: 'nodemand', side: 'Siła', name: 'No Demand', enabled: true },
-  { id: 'ut2', side: 'Słabość', name: 'Upthrust', enabled: true },
-  { id: 'nodemand2', side: 'Siła', name: 'No Demand', enabled: true },
   { id: 'sos', side: 'Siła', name: 'Sign of Strength', enabled: true },
-  { id: 'ut3', side: 'Słabość', name: 'Upthrust', enabled: true },
-  { id: 'volspring', side: 'Siła', name: 'Volume Spring', enabled: false },
+  { id: 'test', side: 'Siła', name: 'Test', enabled: true },
+  { id: 'shakeout', side: 'Siła', name: 'Shakeout', enabled: false },
+  { id: 'upthrust', side: 'Słabość', name: 'Upthrust', enabled: true },
+  { id: 'nodemand', side: 'Słabość', name: 'No Demand', enabled: true },
+  { id: 'sow', side: 'Słabość', name: 'Sign of Weakness', enabled: false },
 ]
 
-/** Effectiveness statistics table + donut. */
+/** Effectiveness statistics table + donut. Keyed by the same signal names. */
 export const mockEffectiveness: EffectivenessRow[] = [
-  { signal: 'Spring', successPct: 67, rewardRisk: 2.7 },
-  { signal: 'Upthrust', successPct: 62, rewardRisk: 1.1 },
-  { signal: 'No Demand', successPct: 71, rewardRisk: 0.7 },
-  { signal: 'Sign of Strength', successPct: 67, rewardRisk: 2.7 },
-  { signal: 'Test', successPct: 62, rewardRisk: 1.9 },
-  { signal: 'Shakeout', successPct: 71, rewardRisk: 1.2 },
-  { signal: 'Stopping Volume', successPct: 71, rewardRisk: 0.7 },
+  { signal: 'Spring', successPct: 67, rewardRisk: 2.7, trades: 142 },
+  { signal: 'Sign of Strength', successPct: 64, rewardRisk: 2.3, trades: 98 },
+  { signal: 'Test', successPct: 62, rewardRisk: 1.9, trades: 120 },
+  { signal: 'Shakeout', successPct: 71, rewardRisk: 1.2, trades: 54 },
+  { signal: 'Upthrust', successPct: 59, rewardRisk: 1.1, trades: 110 },
+  { signal: 'No Demand', successPct: 66, rewardRisk: 0.8, trades: 88 },
+  { signal: 'Sign of Weakness', successPct: 61, rewardRisk: 1.4, trades: 73 },
 ]
 
 /** Last end-of-day ingestion timestamp shown in the top bar. */

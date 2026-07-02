@@ -1,32 +1,397 @@
 [
-  { "ticker": "ale", "name": "Allegro.eu", "sector": "E-commerce" },
-  { "ticker": "pkn", "name": "Orlen", "sector": "Energy" },
-  { "ticker": "pko", "name": "PKO Bank Polski", "sector": "Banking" },
-  { "ticker": "peo", "name": "Bank Pekao", "sector": "Banking" },
-  { "ticker": "pzu", "name": "PZU", "sector": "Insurance" },
-  { "ticker": "kgh", "name": "KGHM Polska Miedź", "sector": "Mining" },
-  { "ticker": "dnp", "name": "Dino Polska", "sector": "Retail" },
-  { "ticker": "cdr", "name": "CD Projekt", "sector": "Gaming" },
-  { "ticker": "lpp", "name": "LPP", "sector": "Apparel" },
-  { "ticker": "spl", "name": "Santander Bank Polska", "sector": "Banking" },
-  { "ticker": "pge", "name": "PGE Polska Grupa Energetyczna", "sector": "Utilities" },
-  { "ticker": "cps", "name": "Cyfrowy Polsat", "sector": "Media & Telecom" },
-  { "ticker": "pco", "name": "Pepco Group", "sector": "Retail" },
-  { "ticker": "alr", "name": "Alior Bank", "sector": "Banking" },
-  { "ticker": "kru", "name": "Kruk", "sector": "Financial Services" },
-  { "ticker": "mbk", "name": "mBank", "sector": "Banking" },
-  { "ticker": "opl", "name": "Orange Polska", "sector": "Telecom" },
-  { "ticker": "ccc", "name": "CCC", "sector": "Footwear Retail" },
-  { "ticker": "jsw", "name": "Jastrzębska Spółka Węglowa", "sector": "Mining" },
-  { "ticker": "bdx", "name": "Budimex", "sector": "Construction" },
-  { "ticker": "kty", "name": "Grupa Kęty", "sector": "Industrials" },
-  { "ticker": "tpe", "name": "Tauron Polska Energia", "sector": "Utilities" },
-  { "ticker": "gpw", "name": "GPW (Giełda Papierów Wartościowych)", "sector": "Financial Services" },
-  { "ticker": "eat", "name": "AmRest Holdings", "sector": "Restaurants" },
-  { "ticker": "xtb", "name": "XTB", "sector": "Financial Services" },
-  { "ticker": "11b", "name": "11 bit studios", "sector": "Gaming" },
-  { "ticker": "att", "name": "Grupa Azoty", "sector": "Chemicals" },
-  { "ticker": "ena", "name": "Enea", "sector": "Utilities" },
-  { "ticker": "bft", "name": "Benefit Systems", "sector": "Consumer Services" },
-  { "ticker": "cmr", "name": "Comarch", "sector": "Software" }
+  {
+    "ticker": "11b",
+    "name": "11 bit studios S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "acp",
+    "name": "Asseco Poland S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "ale",
+    "name": "Allegro.eu S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "alr",
+    "name": "Alior Bank S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "amb",
+    "name": "Ambra S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "apr",
+    "name": "Auto Partner SA",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "arh",
+    "name": "Archicom S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "asb",
+    "name": "ASBISc Enterprises Plc",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "ast",
+    "name": "Astarta Holding PLC",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "att",
+    "name": "Grupa Azoty S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "bdx",
+    "name": "Budimex SA",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "bft",
+    "name": "Benefit Systems S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "bnp",
+    "name": "BNP Paribas Bank Polska S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "bos",
+    "name": "Bank Ochrony Srodowiska S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "brs",
+    "name": "Boryszew S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "cdr",
+    "name": "CD Projekt S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "cez",
+    "name": "CEZ, a. s.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "cfi",
+    "name": "CFI Holding S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "cig",
+    "name": "CI Games SE",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "cog",
+    "name": "Cognor Holding S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "cps",
+    "name": "Cyfrowy Polsat S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "crj",
+    "name": "Creepy Jar S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "dnp",
+    "name": "Dino Polska S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "dom",
+    "name": "Dom Development S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "eat",
+    "name": "AmRest Holdings SE",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "ebp",
+    "name": "Erste Bank Polska S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "ech",
+    "name": "Echo Investment S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "ena",
+    "name": "ENEA S.A.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "eur",
+    "name": "Eurocash S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "gpw",
+    "name": "Gielda Papierów Wartosciowych w Warszawie S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "gtc",
+    "name": "Globe Trade Centre S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "hub",
+    "name": "Hub.Tech SA",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "ims",
+    "name": "IMS S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "ing",
+    "name": "ING Bank Slaski S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "jrh",
+    "name": "JRH",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "jsw",
+    "name": "Jastrzebska Spólka Weglowa S.A.",
+    "sector": "Energy"
+  },
+  {
+    "ticker": "kci",
+    "name": "KCI Spolka Akcyjna",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "kgh",
+    "name": "KGHM Polska Miedz S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "kgl",
+    "name": "KGL SA",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "krk",
+    "name": "Krka, d. d.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "kru",
+    "name": "KRUK Spólka Akcyjna",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "kty",
+    "name": "Grupa Kety S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "lpp",
+    "name": "LPP SA",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "mab",
+    "name": "Mabion S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "mbk",
+    "name": "mBank S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "mci",
+    "name": "MCI Capital Alternatywna Spólka Inwestycyjna S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "mcr",
+    "name": "mcr Spolka Akcyjna",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "mfo",
+    "name": "MFO S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "mil",
+    "name": "Bank Millennium S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "mol",
+    "name": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság",
+    "sector": "Energy"
+  },
+  {
+    "ticker": "mrc",
+    "name": "Mercator Medical S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "opl",
+    "name": "Orange Polska S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "pcf",
+    "name": "PCF Group Spólka Akcyjna",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "pco",
+    "name": "Pepco Group N.V.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "pcr",
+    "name": "PCC Rokita SA",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "pcx",
+    "name": "PCC Exol S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "peo",
+    "name": "Bank Polska Kasa Opieki S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "pep",
+    "name": "Polenergia S.A.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "pge",
+    "name": "PGE Polska Grupa Energetyczna S.A.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "phn",
+    "name": "Polski Holding Nieruchomosci S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "pkn",
+    "name": "Orlen S.A.",
+    "sector": "Energy"
+  },
+  {
+    "ticker": "pko",
+    "name": "Powszechna Kasa Oszczednosci Bank Polski Spólka Akcyjna",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "pkp",
+    "name": "Pkp Cargo S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "plw",
+    "name": "PlayWay S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "pzu",
+    "name": "Powszechny Zaklad Ubezpieczen SA",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "rbw",
+    "name": "Rainbow Tours S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "rwl",
+    "name": "Rawlplug S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "snk",
+    "name": "Sanok Rubber Company Spólka Akcyjna",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "stf",
+    "name": "Stalprofil S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "stp",
+    "name": "Stalprodukt S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "tpe",
+    "name": "TAURON Polska Energia S.A.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "trk",
+    "name": "Trakcja S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "uni",
+    "name": "UNIBEP S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "vox",
+    "name": "Voxel S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "vrg",
+    "name": "VRG S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "wpl",
+    "name": "Wirtualna Polska Holding S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "xtb",
+    "name": "XTB S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "zep",
+    "name": "ZE PAK SA",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "zue",
+    "name": "ZUE S.A.",
+    "sector": "Industrials"
+  }
 ]

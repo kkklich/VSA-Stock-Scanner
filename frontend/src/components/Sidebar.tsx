@@ -1,8 +1,9 @@
 // Left navigation rail. On desktop (lg+) it is a static rail; on smaller
 // screens it becomes an off-canvas drawer toggled from the top bar.
+// Navigation uses react-router <Link>s; the active item is derived from the
+// current path.
 
 import {
-  BarChart3,
   LayoutDashboard,
   LineChart,
   LogOut,
@@ -10,30 +11,60 @@ import {
   SlidersHorizontal,
   Star,
   TrendingUp,
-  X,
 } from 'lucide-react'
-import type { PageId } from '../App'
+import { Link, useLocation } from 'react-router-dom'
 
-const navItems: { id: PageId; label: string; icon: React.ElementType }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'scanner', label: 'Scanner', icon: TrendingUp },
-  { id: 'watchlist', label: 'Watchlist', icon: Star },
-  { id: 'filters', label: 'Filters', icon: SlidersHorizontal },
-  { id: 'charts', label: 'Charts', icon: LineChart },
-  { id: 'stats', label: 'Stats', icon: BarChart3 },
+type NavItem = {
+  to: string
+  label: string
+  icon: React.ElementType
+  /** Returns true when this item should appear active for the given path. */
+  match: (pathname: string) => boolean
+}
+
+const navItems: NavItem[] = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
+  {
+    to: '/watchlist',
+    label: 'Watchlist',
+    icon: Star,
+    match: (p) => p.startsWith('/watchlist'),
+  },
+  {
+    to: '/scanner',
+    label: 'Scanner',
+    icon: TrendingUp,
+    match: (p) => p.startsWith('/scanner'),
+  },
+  {
+    to: '/stock/kgh',
+    label: 'Charts',
+    icon: LineChart,
+    match: (p) => p.startsWith('/stock'),
+  },
+  {
+    to: '/filters',
+    label: 'Filters',
+    icon: SlidersHorizontal,
+    match: (p) => p.startsWith('/filters'),
+  },
 ]
 
 export function Sidebar({
-  active,
   open,
-  onNavigate,
   onClose,
 }: {
-  active: PageId
   open: boolean
-  onNavigate: (id: PageId) => void
   onClose: () => void
 }) {
+  const { pathname } = useLocation()
+
+  const linkClass = (isActive: boolean) =>
+    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
+    (isActive
+      ? 'bg-slate-800/80 text-slate-100 ring-1 ring-inset ring-slate-700'
+      : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200')
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -53,37 +84,33 @@ export function Sidebar({
       >
         {/* Brand */}
         <div className="flex items-center justify-between px-5 py-5">
-          <div className="flex items-center gap-2.5">
+          <Link to="/" onClick={onClose} className="flex items-center gap-2.5">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-bold text-slate-950">
               S
             </div>
             <span className="text-base font-semibold tracking-tight text-slate-100">
               StockPilot
             </span>
-          </div>
+          </Link>
           <button
             onClick={onClose}
             className="text-slate-500 hover:text-slate-200 lg:hidden"
             aria-label="Close menu"
           >
-            <X size={20} />
+            <span className="text-xl leading-none">×</span>
           </button>
         </div>
 
         {/* Primary nav */}
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {navItems.map(({ id, label, icon: Icon }) => {
-            const isActive = active === id
+          {navItems.map(({ to, label, icon: Icon, match }) => {
+            const isActive = match(pathname)
             return (
-              <button
-                key={id}
-                onClick={() => onNavigate(id)}
-                className={
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
-                  (isActive
-                    ? 'bg-slate-800/80 text-slate-100 ring-1 ring-inset ring-slate-700'
-                    : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200')
-                }
+              <Link
+                key={to}
+                to={to}
+                onClick={onClose}
+                className={linkClass(isActive)}
               >
                 <Icon
                   className={isActive ? 'text-emerald-400' : ''}
@@ -91,20 +118,21 @@ export function Sidebar({
                   strokeWidth={2}
                 />
                 {label}
-              </button>
+              </Link>
             )
           })}
         </nav>
 
         {/* Bottom utility nav */}
         <div className="space-y-1 border-t border-slate-800 px-3 py-3">
-          <button
-            onClick={() => onNavigate('settings')}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800/40 hover:text-slate-200"
+          <Link
+            to="/settings"
+            onClick={onClose}
+            className={linkClass(pathname.startsWith('/settings'))}
           >
             <Settings size={18} />
             Settings
-          </button>
+          </Link>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800/40 hover:text-slate-200">
             <LogOut size={18} />
             Logout

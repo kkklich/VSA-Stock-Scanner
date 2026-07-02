@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Replace the domain with your real one once registered. Today the app is a
+  single-page app served at "/", so there is one URL. When real per-page routes
+  are added (e.g. /stock/KGH), list each one here so Google can index them.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://stockpilot.pl/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

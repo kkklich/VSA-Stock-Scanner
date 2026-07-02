@@ -1,15 +1,14 @@
 """Shared application objects and FastAPI dependency providers.
 
-These are the Python analogue of the .NET DI container registrations in
-``Program.cs``:
+Singletons created once in the app lifespan (``main.py``) and accessed here:
 
-    - ``GpwCompanyService``  → singleton (loads the seed JSON once).
-    - ``httpx.AsyncClient``  → one shared client with a cookie jar and a
-                               browser-like User-Agent (keeps the stooq auth
-                               cookie across calls), created/closed by the app
-                               lifespan in ``main.py``.
-    - ``StooqClient``        → wraps that shared client.
-    - ``TTLCache``           → process-local in-memory cache (≈ IMemoryCache).
+    GpwCompanyService   — company seed data (JSON file, read-only).
+    httpx.AsyncClient   — shared HTTP client for all stooq.pl traffic.
+    StooqClient         — wraps the shared HTTP client.
+    TTLCache × 2        — in-memory caches for per-ticker history and the
+                          full ranking list.
+    QuoteRepository     — optional persistence layer; None when no DATABASE_URL
+                          is configured (app falls back to live stooq.pl).
 """
 
 from __future__ import annotations
@@ -17,26 +16,35 @@ from __future__ import annotations
 import httpx
 
 from app.config import settings
-from app.models import StockHistoryResponse
+from app.db.repository import QuoteRepository
+from app.models import StockHistoryResponse, StockRankingItem
 from app.services.cache import TTLCache
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.stooq_client import StooqClient
+from app.services.yahoo_finance_client import YahooFinanceClient
 
-# A browser-like User-Agent avoids trivial blocks from stooq.pl.
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# Process-wide singletons. The AsyncClient is assigned by the app lifespan so its
-# sockets are opened and closed with the application.
+# ── Process-wide singletons ───────────────────────────────────────────────────
+
 gpw_company_service = GpwCompanyService()
-history_cache: TTLCache[StockHistoryResponse] = TTLCache()
+
+# Per-ticker OHLCV history, keyed "history:{ticker}:{from}:{to}".
+history_cache: TTLCache = TTLCache()
+
+# Pre-computed full ranking list.
+ranking_cache: TTLCache[list[StockRankingItem]] = TTLCache()
+
 _http_client: httpx.AsyncClient | None = None
+
+# Set during lifespan when DATABASE_URL is configured; None otherwise.
+_quote_repository: QuoteRepository | None = None
 
 
 def create_http_client() -> httpx.AsyncClient:
-    """Build the shared httpx client used for all stooq.pl traffic."""
     return httpx.AsyncClient(
         timeout=settings.stooq_timeout_seconds,
         headers={"User-Agent": _USER_AGENT},
@@ -45,23 +53,44 @@ def create_http_client() -> httpx.AsyncClient:
 
 
 def set_http_client(client: httpx.AsyncClient | None) -> None:
-    """Install (or clear) the process-wide httpx client. Called by the lifespan."""
     global _http_client
     _http_client = client
 
 
-# --- FastAPI dependency providers -----------------------------------------
+def set_quote_repository(repo: QuoteRepository | None) -> None:
+    """Install (or clear) the process-wide repository. Called by the lifespan."""
+    global _quote_repository
+    _quote_repository = repo
+
+
+# ── FastAPI dependency providers ──────────────────────────────────────────────
 
 
 def get_gpw_company_service() -> GpwCompanyService:
     return gpw_company_service
 
 
-def get_history_cache() -> TTLCache[StockHistoryResponse]:
+def get_history_cache() -> TTLCache:
     return history_cache
 
 
-def get_stooq_client() -> StooqClient:
-    if _http_client is None:  # pragma: no cover - guards against misconfiguration
-        raise RuntimeError("HTTP client is not initialized; is the app lifespan running?")
-    return StooqClient(_http_client)
+def get_ranking_cache() -> TTLCache[list[StockRankingItem]]:
+    return ranking_cache
+
+
+def get_stooq_client() -> YahooFinanceClient:
+    """Return the shared Yahoo Finance data client.
+
+    Named ``get_stooq_client`` for backwards compatibility; the stooq.pl
+    client is still available in ``app.services.stooq_client`` if needed.
+    """
+    return YahooFinanceClient()
+
+
+def get_quote_repository() -> QuoteRepository | None:
+    """Return the repository, or None when no DB is configured.
+
+    Callers that depend on the repo should check for None and fall back to
+    stooq.pl directly (the same behaviour as before DB was added).
+    """
+    return _quote_repository

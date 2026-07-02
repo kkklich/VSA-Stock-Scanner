@@ -1,0 +1,23 @@
+{
+  "name": "StockPilot — Skaner VSA dla GPW",
+  "short_name": "StockPilot",
+  "description": "Skaner Volume Spread Analysis (VSA) dla Giełdy Papierów Wartościowych (GPW).",
+  "lang": "pl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

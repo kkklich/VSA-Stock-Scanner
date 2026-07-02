@@ -1,13 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StockPilot — VSA Scanner</title>
+
+    <!--
+      ⚠️  IMPORTANT: replace every "https://stockpilot.pl" below with your real
+      domain once it is registered (see agent/DOCUMENTATION.md §10). The canonical
+      URL and the social-preview URLs must point at the live site for SEO to work.
+    -->
+
+    <!-- Primary SEO -->
+    <title>StockPilot — Skaner VSA dla GPW | Volume Spread Analysis</title>
+    <meta
+      name="description"
+      content="StockPilot to skaner Volume Spread Analysis (VSA) dla Giełdy Papierów Wartościowych (GPW). Ranking spółek według oceny VSA 0–100, interaktywne wykresy świecowe i sygnały: Spring, Upthrust, Test, SOS, SOW, No Demand."
+    />
+    <meta
+      name="keywords"
+      content="VSA, Volume Spread Analysis, GPW, skaner giełdowy, analiza techniczna, sygnały VSA, giełda papierów wartościowych, akcje GPW, Spring, Upthrust, Tom Williams, rating VSA"
+    />
+    <meta name="author" content="StockPilot" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#020617" />
+    <link rel="canonical" href="https://stockpilot.pl/" />
+
+    <!-- Icons / PWA -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph (Facebook, LinkedIn, Messenger, …) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="StockPilot" />
+    <meta property="og:locale" content="pl_PL" />
+    <meta
+      property="og:title"
+      content="StockPilot — Skaner VSA dla GPW"
+    />
+    <meta
+      property="og:description"
+      content="Ranking spółek GPW według oceny VSA 0–100, wykresy świecowe i sygnały Volume Spread Analysis (Spring, Upthrust, Test, SOS)."
+    />
+    <meta property="og:url" content="https://stockpilot.pl/" />
+    <meta property="og:image" content="https://stockpilot.pl/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="StockPilot — skaner VSA dla GPW" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="StockPilot — Skaner VSA dla GPW" />
+    <meta
+      name="twitter:description"
+      content="Ranking spółek GPW według oceny VSA 0–100, wykresy świecowe i sygnały Volume Spread Analysis."
+    />
+    <meta name="twitter:image" content="https://stockpilot.pl/og-image.png" />
+
+    <!-- Structured data: helps Google understand what the app is -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "StockPilot",
+        "url": "https://stockpilot.pl/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "pl-PL",
+        "description": "Skaner Volume Spread Analysis (VSA) dla Giełdy Papierów Wartościowych (GPW): ranking spółek według oceny VSA 0–100, interaktywne wykresy świecowe i wykrywanie sygnałów Spring, Upthrust, Test, SOS, SOW i No Demand.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "PLN"
+        }
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      The #root content below is replaced by React as soon as the app loads.
+      Until then (and for crawlers / readers without JavaScript) it provides a
+      meaningful, crawlable description of the application.
+    -->
+    <div id="root">
+      <main style="max-width: 680px; margin: 12vh auto; padding: 0 24px; font-family: system-ui, sans-serif; color: #e2e8f0;">
+        <h1 style="font-size: 1.9rem; margin-bottom: 0.5rem;">
+          StockPilot — skaner VSA dla GPW
+        </h1>
+        <p style="color: #94a3b8; line-height: 1.6;">
+          StockPilot analizuje spółki notowane na Giełdzie Papierów
+          Wartościowych (GPW) metodą Volume Spread Analysis (VSA). Aplikacja
+          tworzy ranking według oceny VSA (0–100), rysuje interaktywne wykresy
+          świecowe i wykrywa sygnały takie jak Spring, Upthrust, Test, SOS, SOW
+          oraz No Demand.
+        </p>
+        <p style="color: #64748b;">Ładowanie aplikacji…</p>
+        <noscript>
+          Ta aplikacja wymaga włączonej obsługi JavaScript. Włącz JavaScript w
+          przeglądarce, aby korzystać ze skanera VSA StockPilot.
+        </noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

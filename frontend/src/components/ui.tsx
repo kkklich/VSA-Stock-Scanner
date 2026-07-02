@@ -1,7 +1,94 @@
 // Small reusable presentational pieces used across pages.
 
+import { useState } from 'react'
+import { Info } from 'lucide-react'
 import type { SignalVerdict } from '../types'
 import { ratingTone } from '../lib/format'
+
+/**
+ * An info icon that reveals a plain-language explanation on hover or keyboard
+ * focus. Visibility is driven by React state (rather than CSS :hover) so it
+ * behaves consistently. `align` controls which edge the tooltip anchors to so
+ * it stays on screen (use 'right' near the right edge of a card).
+ */
+export function InfoTip({
+  text,
+  align = 'left',
+  className = '',
+}: {
+  text: string
+  align?: 'left' | 'center' | 'right'
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const pos =
+    align === 'right'
+      ? 'right-0'
+      : align === 'center'
+        ? 'left-1/2 -translate-x-1/2'
+        : 'left-0'
+  return (
+    <span
+      className={'relative inline-flex align-middle ' + className}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="More information"
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="text-slate-500 transition-colors hover:text-slate-300 focus:text-slate-300 focus:outline-none"
+      >
+        <Info size={14} />
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className={
+            'pointer-events-none absolute top-full z-40 mt-2 w-64 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-normal normal-case leading-relaxed tracking-normal text-slate-200 shadow-xl ' +
+            pos
+          }
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** Colored initial bubble standing in for a company logo. */
+export function TickerMark({
+  ticker,
+  size = 'md',
+}: {
+  ticker: string
+  size?: 'sm' | 'md'
+}) {
+  const palette = [
+    'from-sky-400 to-sky-600',
+    'from-violet-400 to-violet-600',
+    'from-amber-400 to-amber-600',
+    'from-emerald-400 to-emerald-600',
+    'from-rose-400 to-rose-600',
+    'from-indigo-400 to-indigo-600',
+  ]
+  const idx =
+    ticker.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length
+  const dims = size === 'sm' ? 'h-6 w-6 text-[9px]' : 'h-7 w-7 text-[10px]'
+  return (
+    <div
+      className={
+        'grid shrink-0 place-items-center rounded-full bg-gradient-to-br font-bold text-slate-950 ' +
+        dims +
+        ' ' +
+        palette[idx]
+      }
+    >
+      {ticker.slice(0, 1)}
+    </div>
+  )
+}
 
 /** Rounded panel/card container matching the dashboard surface. */
 export function Card({

@@ -1,86 +1,225 @@
-// Watchlist / ranking table page. The center "master" view of the master–detail
-// dashboard (DOCUMENTATION.md §3). Client-side search + sort over mock data.
-// Responsive: a full table on md+ screens, stacked cards on phones.
+// Watchlist / ranking table page — the app's home page ("/").
+// Backed by GET /api/stocks/ranking via the useRanking hook.
+// Favorites (stars) persist in localStorage, sort to the top, and can be
+// filtered to "favorites only". Clicking a row opens /stock/:ticker.
+//
+// Header actions (all functional):
+//   Add Stock — search dialog to add a stock to favorites
+//   Edit      — toggle edit mode to remove stocks from favorites
+//   Filter    — dropdown to filter by VSA rating / signal
+//   Refresh   — refetch the ranking
+//   Export    — download the current view as CSV
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownUp,
+  Check,
   Download,
+  Loader2,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   SlidersHorizontal,
   Star,
+  Trash2,
+  X,
 } from 'lucide-react'
-import { mockRanking } from '../data/mockData'
-import type { StockRankingItem } from '../types'
+import { useRanking } from '../hooks/useRanking'
+import type { SignalVerdict, StockRankingItem } from '../types'
 import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
-import { RatingMeter, SignalBadge, Sparkline } from '../components/ui'
+import { loadFavorites, saveFavorites } from '../lib/favorites'
+import { RatingMeter, SignalBadge, Sparkline, TickerMark } from '../components/ui'
 
-/** Colored initial bubble standing in for a company logo. */
-function TickerMark({ ticker }: { ticker: string }) {
-  const palette = [
-    'from-sky-400 to-sky-600',
-    'from-violet-400 to-violet-600',
-    'from-amber-400 to-amber-600',
-    'from-emerald-400 to-emerald-600',
-    'from-rose-400 to-rose-600',
-    'from-indigo-400 to-indigo-600',
-  ]
-  const idx =
-    ticker.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length
+/** Star toggle shown on each row (module-scope to avoid remount churn). */
+function FavoriteStar({
+  active,
+  onToggle,
+}: {
+  active: boolean
+  onToggle: () => void
+}) {
   return (
-    <div
-      className={
-        'grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br text-[10px] font-bold text-slate-950 ' +
-        palette[idx]
-      }
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+      className="text-slate-600 hover:text-amber-400"
+      aria-label="Toggle favorite"
     >
-      {ticker.slice(0, 1)}
+      <Star size={15} className={active ? 'fill-amber-400 text-amber-400' : ''} />
+    </button>
+  )
+}
+
+/** Remove (unstar) control shown in edit mode. */
+function RemoveFavorite({ onRemove }: { onRemove: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onRemove()
+      }}
+      className="text-rose-500 hover:text-rose-400"
+      aria-label="Remove from favorites"
+      title="Remove from favorites"
+    >
+      <Trash2 size={15} />
+    </button>
+  )
+}
+
+/** Full-page loading skeleton for the ranking table. */
+function LoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 py-24 text-slate-400">
+      <Loader2 size={36} className="animate-spin text-emerald-500" />
+      <div className="text-center">
+        <p className="font-medium text-slate-300">Computing VSA rankings…</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Fetching GPW data from stooq.pl — first load takes ~30 s. Subsequent loads are instant.
+        </p>
+      </div>
     </div>
   )
 }
 
-export function WatchlistPage({
-  onSelect,
-}: {
-  onSelect: (ticker: string) => void
-}) {
-  const [query, setQuery] = useState('')
-  const [stars, setStars] = useState<Record<string, boolean>>(
-    Object.fromEntries(mockRanking.map((s) => [s.ticker, s.starred]))
+/** Error banner shown when the API is unreachable or returns an error. */
+function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="mx-4 mt-4 flex items-center justify-between gap-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm sm:mx-6">
+      <span className="text-rose-300">
+        <span className="font-semibold">Backend error:</span> {message}
+      </span>
+      <button
+        onClick={onRetry}
+        className="flex shrink-0 items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500"
+      >
+        <RefreshCw size={13} /> Retry
+      </button>
+    </div>
   )
+}
+
+const SIGNAL_OPTIONS: (SignalVerdict | 'all')[] = [
+  'all',
+  'Strong Buy',
+  'Buy',
+  'Hold',
+  'Sell',
+  'Strong Sell',
+]
+const RATING_OPTIONS = [
+  { label: 'All ratings', value: 0 },
+  { label: '70+ (strong)', value: 70 },
+  { label: '90+ (elite)', value: 90 },
+]
+
+export function WatchlistPage() {
+  const navigate = useNavigate()
+  const { data, loading, error, refetch } = useRanking()
+
+  const [query, setQuery] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [minRating, setMinRating] = useState(0)
+  const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
+  const [showAdd, setShowAdd] = useState(false)
+
+  // Starred tickers, persisted across sessions in localStorage.
+  const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
+
+  useEffect(() => {
+    saveFavorites(stars)
+  }, [stars])
 
   const toggleStar = (ticker: string) =>
     setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
 
+  const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
+
+  // Map API response to the UI shape (adds the starred field).
+  const allRows = useMemo<StockRankingItem[]>(() => {
+    if (!data) return []
+    return data.map((item) => ({
+      ...item,
+      starred: stars[item.ticker] ?? false,
+    }))
+  }, [data, stars])
+
+  const favCount = useMemo(
+    () => allRows.filter((s) => s.starred).length,
+    [allRows],
+  )
+
+  // Edit mode implicitly scopes to favorites (you remove favorites there).
+  const effectiveFavoritesOnly = favoritesOnly || editMode
+  const filtersActive = minRating > 0 || signalFilter !== 'all'
+
   const rows = useMemo<StockRankingItem[]>(() => {
     const q = query.trim().toLowerCase()
-    const filtered = q
-      ? mockRanking.filter(
-          (s) =>
-            s.ticker.toLowerCase().includes(q) ||
-            s.name.toLowerCase().includes(q)
-        )
-      : mockRanking
-    return [...filtered].sort((a, b) => b.currentRating - a.currentRating)
-  }, [query])
+    let r = allRows
+    if (effectiveFavoritesOnly) r = r.filter((s) => s.starred)
+    if (minRating > 0) r = r.filter((s) => s.currentRating >= minRating)
+    if (signalFilter !== 'all') r = r.filter((s) => s.lastSignal === signalFilter)
+    if (q) {
+      r = r.filter(
+        (s) =>
+          s.ticker.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q),
+      )
+    }
+    // Favorites first; stable sort keeps rating order within each group.
+    return [...r].sort((a, b) => Number(b.starred) - Number(a.starred))
+  }, [allRows, query, effectiveFavoritesOnly, minRating, signalFilter])
 
-  const StarButton = ({ ticker }: { ticker: string }) => (
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        toggleStar(ticker)
-      }}
-      className="text-slate-600 hover:text-amber-400"
-      aria-label="Toggle watchlist"
-    >
-      <Star
-        size={15}
-        className={stars[ticker] ? 'fill-amber-400 text-amber-400' : ''}
-      />
-    </button>
-  )
+  const clearFilters = () => {
+    setMinRating(0)
+    setSignalFilter('all')
+  }
+
+  /** Download the current (filtered) view as a CSV file. */
+  const handleExport = () => {
+    const header = [
+      'Symbol',
+      'Name',
+      'Last Price (PLN)',
+      'Change %',
+      'VSA Rating',
+      'Last Signal',
+      'Days Since Signal',
+      'Favorite',
+    ]
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`
+    const lines = rows.map((s) =>
+      [
+        s.ticker,
+        esc(s.name),
+        s.lastPrice,
+        s.priceChangePct,
+        s.currentRating,
+        esc(s.lastSignal),
+        s.daysSinceSignal === 999 ? '' : s.daysSinceSignal,
+        s.starred ? 'yes' : 'no',
+      ].join(','),
+    )
+    const csv = [header.join(','), ...lines].join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `stockpilot-watchlist-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const btnBase =
+    'inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800'
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
@@ -88,7 +227,12 @@ export function WatchlistPage({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-baseline gap-2">
           <h2 className="text-lg font-semibold text-slate-100">Watchlist</h2>
-          <span className="text-sm text-slate-500">({rows.length} Stocks)</span>
+          {!loading && (
+            <span className="text-sm text-slate-500">
+              ({rows.length} stocks
+              {favCount > 0 && `, ${favCount} ★`})
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -104,165 +248,485 @@ export function WatchlistPage({
               className="w-full rounded-lg border border-slate-800 bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
             />
           </div>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500">
+
+          {/* Favorites-only toggle */}
+          <button
+            onClick={() => setFavoritesOnly((v) => !v)}
+            className={
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
+              (favoritesOnly
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
+            }
+            title="Show only favorites"
+          >
+            <Star
+              size={14}
+              className={favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}
+            />
+            <span className="hidden sm:inline">Favorites</span>
+          </button>
+
+          {/* Add Stock */}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+          >
             <Plus size={15} /> Add Stock
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800">
-            <Pencil size={14} /> <span className="hidden sm:inline">Edit</span>
+
+          {/* Edit favorites */}
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            className={
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
+              (editMode
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
+            }
+          >
+            {editMode ? <Check size={14} /> : <Pencil size={14} />}
+            <span className="hidden sm:inline">{editMode ? 'Done' : 'Edit'}</span>
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800">
-            <SlidersHorizontal size={14} />{' '}
-            <span className="hidden sm:inline">Filter</span>
+
+          {/* Filter dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className={
+                'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
+                (filtersActive
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                  : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
+              }
+            >
+              <SlidersHorizontal size={14} />
+              <span className="hidden sm:inline">Filter</span>
+              {filtersActive && (
+                <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              )}
+            </button>
+
+            {filterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setFilterOpen(false)}
+                />
+                <div className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-slate-800 bg-slate-900 p-3 shadow-xl">
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Minimum VSA rating
+                  </p>
+                  <div className="mb-3 flex flex-col gap-1">
+                    {RATING_OPTIONS.map((o) => (
+                      <button
+                        key={o.value}
+                        onClick={() => setMinRating(o.value)}
+                        className={
+                          'rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
+                          (minRating === o.value
+                            ? 'bg-emerald-500/15 text-emerald-300'
+                            : 'text-slate-300 hover:bg-slate-800')
+                        }
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Signal
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SIGNAL_OPTIONS.map((sig) => (
+                      <button
+                        key={sig}
+                        onClick={() => setSignalFilter(sig)}
+                        className={
+                          'rounded-md px-2 py-1 text-xs transition-colors ' +
+                          (signalFilter === sig
+                            ? 'bg-emerald-500/15 text-emerald-300'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700')
+                        }
+                      >
+                        {sig === 'all' ? 'All' : sig}
+                      </button>
+                    ))}
+                  </div>
+
+                  {filtersActive && (
+                    <button
+                      onClick={clearFilters}
+                      className="mt-3 w-full rounded-md border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Refresh */}
+          <button onClick={refetch} className={btnBase} title="Refresh ranking">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800">
-            <Download size={14} />{' '}
+
+          {/* Export CSV */}
+          <button
+            onClick={handleExport}
+            disabled={rows.length === 0}
+            className={btnBase + ' disabled:cursor-not-allowed disabled:opacity-50'}
+            title="Export current view to CSV"
+          >
+            <Download size={14} />
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
+      {/* Loading / error states */}
+      {loading && <LoadingSkeleton />}
+      {error && !loading && <ErrorBanner message={error} onRetry={refetch} />}
+
       {/* ── Desktop / tablet table (md+) ─────────────────────────────────── */}
-      <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3 font-medium">
-                  <span className="inline-flex items-center gap-1">
-                    Symbol <ArrowDownUp size={12} className="text-slate-600" />
-                  </span>
-                </th>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 text-right font-medium">Last Price</th>
-                <th className="px-4 py-3 font-medium">Rating (0–100)</th>
-                <th className="px-4 py-3 font-medium">Last Signal</th>
-                <th className="px-4 py-3 font-medium">Days Since Signal</th>
-                <th className="px-4 py-3 text-right font-medium">
-                  Change
-                  <span className="block text-[10px] normal-case text-slate-600">
-                    +/- % &amp; sparkline
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((s) => (
-                <tr
-                  key={s.ticker}
-                  onClick={() => onSelect(s.ticker)}
-                  className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/30"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <StarButton ticker={s.ticker} />
-                      <TickerMark ticker={s.ticker} />
-                      <span className="font-semibold text-slate-100">
-                        {s.ticker}
+      {!loading && !error && rows.length > 0 && (
+        <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 font-medium">
+                    <span className="inline-flex items-center gap-1">
+                      Symbol <ArrowDownUp size={12} className="text-slate-600" />
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 text-right font-medium">Last Price</th>
+                  <th className="px-4 py-3 font-medium">Rating (0–100)</th>
+                  <th className="px-4 py-3 font-medium">Last Signal</th>
+                  <th className="px-4 py-3 font-medium">Days Since Signal</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    Change
+                    <span className="block text-[10px] normal-case text-slate-600">
+                      +/- % &amp; sparkline
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((s) => (
+                  <tr
+                    key={s.ticker}
+                    onClick={() => openTicker(s.ticker)}
+                    tabIndex={0}
+                    aria-label={`${s.ticker} ${s.name}, open details`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openTicker(s.ticker)
+                      }
+                    }}
+                    className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/30 focus:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        {editMode ? (
+                          <RemoveFavorite onRemove={() => toggleStar(s.ticker)} />
+                        ) : (
+                          <FavoriteStar
+                            active={!!stars[s.ticker]}
+                            onToggle={() => toggleStar(s.ticker)}
+                          />
+                        )}
+                        <TickerMark ticker={s.ticker} />
+                        <span className="font-semibold text-slate-100">
+                          {s.ticker}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">{s.name}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-medium text-slate-200">
+                        {fmtPrice(s.lastPrice)} PLN
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">{s.name}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="font-medium text-slate-200">
-                      ${fmtPrice(s.lastPrice)}
-                    </span>
-                    <span
-                      className={'ml-2 text-xs ' + deltaTone(s.priceChangePct)}
-                    >
-                      {fmtPct(s.priceChangePct)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <RatingMeter rating={s.currentRating} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <SignalBadge verdict={s.lastSignal} />
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">
-                    {s.daysSinceSignal}{' '}
-                    {s.daysSinceSignal === 1 ? 'day' : 'days'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-3">
-                      <Sparkline data={s.sparkline} />
                       <span
-                        className={
-                          'w-14 text-right text-xs ' +
-                          deltaTone(s.priceChangePct)
-                        }
+                        className={'ml-2 text-xs ' + deltaTone(s.priceChangePct)}
                       >
                         {fmtPct(s.priceChangePct)}
                       </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <RatingMeter rating={s.currentRating} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <SignalBadge verdict={s.lastSignal} />
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {s.daysSinceSignal === 999
+                        ? '—'
+                        : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'}`}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-3">
+                        <Sparkline data={s.sparkline} />
+                        <span
+                          className={
+                            'w-16 text-right text-xs ' +
+                            deltaTone(s.priceChangePct)
+                          }
+                        >
+                          {fmtPct(s.priceChangePct)}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Pagination footer */}
-        <div className="flex items-center justify-end gap-1 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
-          <span className="mr-2">
-            1–{rows.length} of {rows.length}
-          </span>
-          <button className="grid h-7 w-7 place-items-center rounded-md bg-emerald-600 font-medium text-white">
-            1
-          </button>
-          <button className="grid h-7 w-7 place-items-center rounded-md hover:bg-slate-800">
-            2
-          </button>
-          <button className="grid h-7 w-7 place-items-center rounded-md hover:bg-slate-800">
-            3
-          </button>
+          <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
+            <span>{rows.length} stocks</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Mobile cards (below md) ──────────────────────────────────────── */}
-      <div className="space-y-3 md:hidden">
-        {rows.map((s) => (
-          <div
-            key={s.ticker}
-            onClick={() => onSelect(s.ticker)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onSelect(s.ticker)
-            }}
-            className="w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-left transition-colors hover:bg-slate-800/30"
+      {!loading && !error && rows.length > 0 && (
+        <div className="space-y-3 md:hidden">
+          {rows.map((s) => (
+            <div
+              key={s.ticker}
+              onClick={() => openTicker(s.ticker)}
+              role="button"
+              tabIndex={0}
+              aria-label={`${s.ticker} ${s.name}, open details`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openTicker(s.ticker)
+                }
+              }}
+              className="w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-left transition-colors hover:bg-slate-800/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  {editMode ? (
+                    <RemoveFavorite onRemove={() => toggleStar(s.ticker)} />
+                  ) : (
+                    <FavoriteStar
+                      active={!!stars[s.ticker]}
+                      onToggle={() => toggleStar(s.ticker)}
+                    />
+                  )}
+                  <TickerMark ticker={s.ticker} />
+                  <div>
+                    <div className="font-semibold text-slate-100">{s.ticker}</div>
+                    <div className="text-xs text-slate-500">{s.name}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-slate-200">
+                    {fmtPrice(s.lastPrice)} PLN
+                  </div>
+                  <div className={'text-xs ' + deltaTone(s.priceChangePct)}>
+                    {fmtPct(s.priceChangePct)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <RatingMeter rating={s.currentRating} />
+                <Sparkline data={s.sparkline} />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <SignalBadge verdict={s.lastSignal} />
+                <span className="text-xs text-slate-500">
+                  {s.daysSinceSignal === 999
+                    ? '—'
+                    : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'} ago`}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty states */}
+      {!loading && !error && rows.length === 0 && data && (
+        <div className="py-16 text-center text-slate-500">
+          {effectiveFavoritesOnly && favCount === 0 ? (
+            <>
+              <Star size={28} className="mx-auto mb-3 text-slate-600" />
+              <p>
+                No favorites yet — tap the{' '}
+                <Star
+                  size={13}
+                  className="inline -translate-y-px text-amber-400"
+                />{' '}
+                star on a stock, or use{' '}
+                <span className="text-slate-300">Add Stock</span>.
+              </p>
+            </>
+          ) : (
+            <>
+              No stocks match your search or filters.
+              {filtersActive && (
+                <button
+                  onClick={clearFilters}
+                  className="ml-2 text-emerald-400 hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Add-stock dialog */}
+      {showAdd && (
+        <AddStockDialog
+          stocks={allRows}
+          stars={stars}
+          onToggle={toggleStar}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Add-stock modal ────────────────────────────────────────────────────── */
+
+function AddStockDialog({
+  stocks,
+  stars,
+  onToggle,
+  onClose,
+}: {
+  stocks: StockRankingItem[]
+  stars: Record<string, boolean>
+  onToggle: (ticker: string) => void
+  onClose: () => void
+}) {
+  const [q, setQ] = useState('')
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    // Lock background scroll while the modal is open.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose])
+
+  const matches = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    const base = query
+      ? stocks.filter(
+          (s) =>
+            s.ticker.toLowerCase().includes(query) ||
+            s.name.toLowerCase().includes(query),
+        )
+      : stocks
+    return base.slice(0, 40)
+  }, [stocks, q])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[12vh]"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add stock to favorites"
+        className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+          <h3 className="text-sm font-semibold text-slate-100">
+            Add stock to favorites
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-slate-500 hover:text-slate-200"
+            aria-label="Close"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <StarButton ticker={s.ticker} />
-                <TickerMark ticker={s.ticker} />
-                <div>
-                  <div className="font-semibold text-slate-100">{s.ticker}</div>
-                  <div className="text-xs text-slate-500">{s.name}</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-medium text-slate-200">
-                  ${fmtPrice(s.lastPrice)}
-                </div>
-                <div className={'text-xs ' + deltaTone(s.priceChangePct)}>
-                  {fmtPct(s.priceChangePct)}
-                </div>
-              </div>
-            </div>
+            <X size={18} />
+          </button>
+        </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <RatingMeter rating={s.currentRating} />
-              <Sparkline data={s.sparkline} />
-            </div>
-
-            <div className="mt-3 flex items-center justify-between">
-              <SignalBadge verdict={s.lastSignal} />
-              <span className="text-xs text-slate-500">
-                {s.daysSinceSignal} {s.daysSinceSignal === 1 ? 'day' : 'days'} ago
-              </span>
-            </div>
+        <div className="p-4">
+          <div className="relative">
+            <Search
+              size={15}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by symbol or name…"
+              className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+            />
           </div>
-        ))}
+
+          <ul className="mt-3 max-h-72 space-y-1 overflow-y-auto">
+            {matches.map((s) => {
+              const starred = stars[s.ticker] ?? false
+              return (
+                <li
+                  key={s.ticker}
+                  className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-slate-800/50"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <TickerMark ticker={s.ticker} />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-100">
+                        {s.ticker}
+                      </div>
+                      <div className="truncate text-xs text-slate-500">
+                        {s.name}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onToggle(s.ticker)}
+                    className={
+                      'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ' +
+                      (starred
+                        ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-500')
+                    }
+                  >
+                    {starred ? (
+                      <>
+                        <Check size={13} /> Added
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={13} /> Add
+                      </>
+                    )}
+                  </button>
+                </li>
+              )
+            })}
+            {matches.length === 0 && (
+              <li className="px-2 py-6 text-center text-sm text-slate-500">
+                No stocks match “{q}”.
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
     </div>
   )
