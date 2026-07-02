@@ -13,6 +13,7 @@ This is a direct port of the .NET ``StooqClient``.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -79,7 +80,8 @@ class StooqClient:
 
             c = challenge.group("c")
             difficulty = int(challenge.group("d"))
-            n = _solve_proof_of_work(c, difficulty)
+            # Offload CPU-bound POW to a thread so the event loop stays free.
+            n = await asyncio.to_thread(_solve_proof_of_work, c, difficulty)
 
             verify_url = _verify_url_for(url)
             verify_response = await self._http.post(verify_url, data={"c": c, "n": str(n)})
