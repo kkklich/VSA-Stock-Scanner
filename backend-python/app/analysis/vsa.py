@@ -89,6 +89,15 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
     df["prior_low"] = df["low"].rolling(_LOOKBACK).min().shift(1)
     df["prior_high"] = df["high"].rolling(_LOOKBACK).max().shift(1)
 
+    # Previous-bar context. VSA defines an up-bar as a close *above the previous
+    # bar's close* (not above its own open) — Master the Markets p.31 — so every
+    # direction check below compares against prev_close.
+    df["prev_close"] = df["close"].shift(1)
+    df["prev_low"] = df["low"].shift(1)
+    # "Volume lower than the previous two bars" (TradeGuider criterion for
+    # No Demand / a Test) means lower than BOTH, i.e. below their minimum.
+    df["prev_vol_min2"] = df["volume"].rolling(2).min().shift(1)
+
     signals: list[VsaSignal] = []
 
     for i in range(_LOOKBACK + 1, len(df)):
@@ -105,22 +114,31 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
         vol = row["volume"]
         prior_low = row["prior_low"]
         prior_high = row["prior_high"]
+        prev_close = row["prev_close"]
+        prev_low = row["prev_low"]
+        prev_vol_min2 = row["prev_vol_min2"]
         d = row["date"]
 
         # ── Bullish patterns (evaluated highest-priority first) ───────────
 
-        # Spring (VSA "Shake-out") — wide-spread break below prior support on
-        # high volume that reverses to close back above it. Per the official
-        # source text: "a wide spread down, which then reverses to close on
-        # the highs, accompanied by high volume" — the high volume shows
-        # professional money absorbing the panic sellers it just shook out.
+        # Spring (VSA "Shake-out") — a break below prior support that reverses
+        # to close back above it, near the bar's high. Two valid volume
+        # regimes (Master the Markets "The Shake-out"; Wyckoff spring types):
+        #   * high volume + wide spread — professional money absorbing the
+        #     panic selling it just shook out (terminal shake-out);
+        #   * low volume — the break attracted no sellers at all ("no
+        #     supply"), the highest-probability spring; its spread is
+        #     usually modest, so no wide-spread requirement.
+        # Average, unremarkable volume shows no anomaly and does not qualify.
         if (
             prior_low > 0
             and row["low"] <= prior_low
             and row["close"] > prior_low
             and cp > 0.6
-            and spread > avg_sp * 1.2
-            and vol > avg_v * 1.2
+            and (
+                (spread > avg_sp * 1.2 and vol > avg_v * 1.2)
+                or vol < avg_v * 0.7
+            )
         ):
             signals.append(
                 VsaSignal(date=d, signal_name=SignalName.SPRING, type=SignalType.BULLISH, strength=0.9)
@@ -132,18 +150,24 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
             and spread > avg_sp * 1.5
             and vol > avg_v * 1.5
             and cp > 0.65
-            and row["close"] > row["open"]
+            and row["close"] > prev_close
         ):
             signals.append(
                 VsaSignal(date=d, signal_name=SignalName.SOS, type=SignalType.BULLISH, strength=1.0)
             )
 
-        # Successful Test — low-volume retest of support that fails to attract sellers.
+        # Successful Test ("no supply") — Master the Markets p.33: "Any
+        # down-move dipping into an area of previous selling, which then
+        # regains to close on, or near the high, on lower volume ... This is a
+        # successful test." The bar dips below the previous bar's low, finds
+        # no sellers, and closes near its high. Volume must be genuinely low:
+        # below the 20-bar average AND lower than both of the previous two
+        # bars (the standard TradeGuider criterion).
         elif (
-            prior_low > 0
-            and cp > 0.6
-            and vol < avg_v * 0.65
-            and abs(row["low"] - prior_low) / prior_low < 0.015
+            row["low"] < prev_low
+            and cp >= 0.65
+            and vol < avg_v * 0.7
+            and vol < prev_vol_min2
         ):
             signals.append(
                 VsaSignal(
@@ -157,19 +181,19 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
         # ── Bearish patterns ─────────────────────────────────────────────
 
         # Upthrust — bar spikes above resistance then closes back below it, on
-        # a wide spread (all sources agree on this part). Volume is the one
-        # point where sources diverge: TradeGuider's own trade-setup material
-        # repeatedly describes "an Upthrust on either high or low volume", and
-        # Anna Coulling's VPA independently describes upthrusts as a false
-        # break "on low volume" — high volume means real supply hit the
-        # breakout, low volume means it was a hollow fake-out with no genuine
-        # buying behind it either way. Either is a valid trap; only "average,
-        # unremarkable" volume is excluded, since that shows no anomaly at all.
+        # a wide spread, "on or very near the lows" (Master the Markets p.76:
+        # "the day must close on or very near the lows; the volume can be
+        # either low (no demand) or high (supply overcoming the demand)").
+        # High volume means real supply hit the breakout; low volume means a
+        # hollow fake-out with no genuine buying behind it. Either is a valid
+        # trap; only "average, unremarkable" volume is excluded — the book's
+        # own example (p.64) of an average-volume up-thrust sees the market
+        # simply continue upwards.
         elif (
             prior_high > 0
             and row["high"] >= prior_high
             and row["close"] < prior_high
-            and cp < 0.4
+            and cp < 0.3
             and spread > avg_sp * 1.2
             and (vol > avg_v * 1.3 or vol < avg_v * 0.7)
         ):
@@ -183,21 +207,24 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
             and spread > avg_sp * 1.5
             and vol > avg_v * 1.5
             and cp < 0.35
-            and row["close"] < row["open"]
+            and row["close"] < prev_close
         ):
             signals.append(
                 VsaSignal(date=d, signal_name=SignalName.SOW, type=SignalType.BEARISH, strength=1.0)
             )
 
-        # No Demand — narrow up-bar on low volume; professionals not participating.
-        # Official definition: "a narrow spread bar, on low volume, that closes
-        # in the middle or low" — a bar closing strongly on its own high isn't
-        # a No Demand bar even if narrow and quiet.
+        # No Demand — narrow up-bar on low volume; professionals not
+        # participating. Master the Markets p.30: "a low volume up-bar, on a
+        # narrow spread"; the TradeGuider criterion adds that the volume must
+        # be lower than both of the previous two bars and the close in the
+        # middle or low — a bar closing strongly on its own high isn't a
+        # No Demand bar even if narrow and quiet.
         elif (
             avg_sp > 0
-            and row["close"] >= row["open"]
+            and row["close"] > prev_close
             and spread < avg_sp * 0.7
             and vol < avg_v * 0.7
+            and vol < prev_vol_min2
             and cp < 0.65
         ):
             signals.append(
@@ -216,12 +243,14 @@ def compute_rating(
 
     Each signal contributes a positive (bullish) or negative (bearish) score
     weighted by exponential decay. The net score is then mapped to 0–100 via
-    tanh so extremes are never saturated but the scale is intuitive:
+    tanh (halved so a single signal never saturates the badge scale — VSA
+    treats isolated signals, especially No Demand, as needing confirmation):
 
-        net ≈  0  → rating ≈ 50  (neutral)
-        net ≈ +1  → rating ≈ 76  (mild bullish)
-        net ≈ -1  → rating ≈ 24  (mild bearish)
-        net ≈ +2  → rating ≈ 96  (strongly bullish)
+        net ≈  0    → rating ≈ 50  (neutral)
+        net ≈ -0.6  → rating ≈ 35  (one fresh No Demand — caution, not red)
+        net ≈ +1    → rating ≈ 73  (one fresh strong bullish signal)
+        net ≈ -1    → rating ≈ 27  (one fresh strong bearish signal)
+        net ≈ +3    → rating ≈ 95  (cluster of confirming bullish signals)
 
     ``half_life_days`` is the number of days after which a signal's influence
     is halved (default 30 ≈ one calendar month).
@@ -242,7 +271,7 @@ def compute_rating(
         else:
             net_score -= weight * s.strength
 
-    return max(0, min(100, round(50.0 + 50.0 * math.tanh(net_score))))
+    return max(0, min(100, round(50.0 + 50.0 * math.tanh(net_score / 2.0))))
 
 
 # ── Signal → UI verdict mapping ───────────────────────────────────────────────

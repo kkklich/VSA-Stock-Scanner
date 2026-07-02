@@ -80,7 +80,7 @@ class TestGetCompanies:
         assert resp.status_code == 200
         body = resp.json()
         assert isinstance(body, list)
-        assert len(body) == 79
+        assert len(body) == 151
 
     def test_kghm_is_present(self) -> None:
         with TestClient(app) as client:
@@ -167,7 +167,7 @@ class TestGetRanking:
 
         # one call per company on first load, then 0 calls on cache hit.
         first_load_calls = calls["count"]
-        assert first_load_calls == 79  # one call per company
+        assert first_load_calls == 151  # one call per company
 
 
 # ── GET /api/stocks/{ticker}/history ─────────────────────────────────────────

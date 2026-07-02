@@ -15,6 +15,8 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownUp,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Loader2,
   Pencil,
@@ -117,9 +119,13 @@ const RATING_OPTIONS = [
   { label: '90+ (elite)', value: 90 },
 ]
 
+const PAGE_SIZE = 50
+
 export function WatchlistPage() {
   const navigate = useNavigate()
-  const { data, loading, error, refetch } = useRanking()
+  // Fetch all companies in one shot; client-side pagination keeps search/filters
+  // working across the full list rather than just one backend page.
+  const { data, loading, error, refetch } = useRanking(1, 300)
 
   const [query, setQuery] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -128,6 +134,7 @@ export function WatchlistPage() {
   const [minRating, setMinRating] = useState(0)
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
   const [showAdd, setShowAdd] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Starred tickers, persisted across sessions in localStorage.
   const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
@@ -175,6 +182,14 @@ export function WatchlistPage() {
     // Favorites first; stable sort keeps rating order within each group.
     return [...r].sort((a, b) => Number(b.starred) - Number(a.starred))
   }, [allRows, query, effectiveFavoritesOnly, minRating, signalFilter])
+
+  // Reset to page 1 whenever filters/search change.
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, favoritesOnly, editMode, minRating, signalFilter])
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const pagedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const clearFilters = () => {
     setMinRating(0)
@@ -416,7 +431,7 @@ export function WatchlistPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((s) => (
+                {pagedRows.map((s) => (
                   <tr
                     key={s.ticker}
                     onClick={() => openTicker(s.ticker)}
@@ -487,8 +502,19 @@ export function WatchlistPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
-            <span>{rows.length} stocks</span>
+          <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
+            <span>
+              {rows.length === 0
+                ? '0 stocks'
+                : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, rows.length)} of ${rows.length} stocks`}
+            </span>
+            {totalPages > 1 && (
+              <Pagination
+                current={currentPage}
+                total={totalPages}
+                onChange={setCurrentPage}
+              />
+            )}
           </div>
         </div>
       )}
@@ -496,7 +522,7 @@ export function WatchlistPage() {
       {/* ── Mobile cards (below md) ──────────────────────────────────────── */}
       {!loading && !error && rows.length > 0 && (
         <div className="space-y-3 md:hidden">
-          {rows.map((s) => (
+          {pagedRows.map((s) => (
             <div
               key={s.ticker}
               onClick={() => openTicker(s.ticker)}
@@ -555,6 +581,17 @@ export function WatchlistPage() {
         </div>
       )}
 
+      {/* Mobile pagination */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pb-2 md:hidden">
+          <Pagination
+            current={currentPage}
+            total={totalPages}
+            onChange={setCurrentPage}
+          />
+        </div>
+      )}
+
       {/* Empty states */}
       {!loading && !error && rows.length === 0 && data && (
         <div className="py-16 text-center text-slate-500">
@@ -596,6 +633,76 @@ export function WatchlistPage() {
           onClose={() => setShowAdd(false)}
         />
       )}
+    </div>
+  )
+}
+
+/* ── Pagination bar ─────────────────────────────────────────────────────── */
+
+function Pagination({
+  current,
+  total,
+  onChange,
+}: {
+  current: number
+  total: number
+  onChange: (page: number) => void
+}) {
+  // Show up to 7 page numbers with ellipsis gaps when the list is long.
+  const pages: (number | '…')[] = []
+  if (total <= 7) {
+    for (let p = 1; p <= total; p++) pages.push(p)
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push('…')
+    for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p)
+    if (current < total - 2) pages.push('…')
+    pages.push(total)
+  }
+
+  const btn =
+    'flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-slate-800 bg-slate-900 px-2 text-xs text-slate-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40'
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        className={btn}
+        disabled={current === 1}
+        onClick={() => onChange(current - 1)}
+        aria-label="Previous page"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <span key={`ellipsis-${i}`} className="px-1 text-xs text-slate-600">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            className={
+              btn +
+              (p === current
+                ? ' border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : '')
+            }
+            onClick={() => onChange(p)}
+            aria-label={`Page ${p}`}
+            aria-current={p === current ? 'page' : undefined}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        className={btn}
+        disabled={current === total}
+        onClick={() => onChange(current + 1)}
+        aria-label="Next page"
+      >
+        <ChevronRight size={14} />
+      </button>
     </div>
   )
 }

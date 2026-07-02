@@ -5,14 +5,54 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "4ms",
+    "name": "4MASS",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "abe",
+    "name": "AB S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "abs",
+    "name": "Asseco Business Solutions S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "acg",
+    "name": "AC Spólka Akcyjna",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "acp",
     "name": "Asseco Poland S.A.",
     "sector": "Technology"
   },
   {
+    "ticker": "ago",
+    "name": "Agora S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "agt",
+    "name": "Agroton Public Limited",
+    "sector": "Consumer Defensive"
+  },
+  {
     "ticker": "ale",
     "name": "Allegro.eu S.A.",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "alg",
+    "name": "All in! Games S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "ali",
+    "name": "Altus S.A.",
+    "sector": "Financial Services"
   },
   {
     "ticker": "alr",
@@ -25,9 +65,24 @@
     "sector": "Consumer Defensive"
   },
   {
+    "ticker": "anr",
+    "name": "Answear.com S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "apl",
+    "name": "LC Spólka Akcyjna",
+    "sector": "Technology"
+  },
+  {
     "ticker": "apr",
     "name": "Auto Partner SA",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "apt",
+    "name": "Apator S.A.",
+    "sector": "Industrials"
   },
   {
     "ticker": "arh",
@@ -45,6 +100,31 @@
     "sector": "Consumer Defensive"
   },
   {
+    "ticker": "atc",
+    "name": "Arctic Paper S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "atd",
+    "name": "Atende S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "atg",
+    "name": "ATM Grupa S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "atp",
+    "name": "Atlanta Poland S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "atr",
+    "name": "Atrem S.A.",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "att",
     "name": "Grupa Azoty S.A.",
     "sector": "Basic Materials"
@@ -60,6 +140,11 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "bmw",
+    "name": "Bayerische Motoren Werke Aktiengesellschaft",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "bnp",
     "name": "BNP Paribas Bank Polska S.A.",
     "sector": "Financial Services"
@@ -70,9 +155,24 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "bow",
+    "name": "Bowim S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "bra",
+    "name": "Braster S.A.",
+    "sector": null
+  },
+  {
     "ticker": "brs",
     "name": "Boryszew S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "cdl",
+    "name": "CDRL S.A.",
+    "sector": "Consumer Cyclical"
   },
   {
     "ticker": "cdr",
@@ -95,9 +195,24 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "cln",
+    "name": "Celon Pharma S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "cmp",
+    "name": "Comp S.A.",
+    "sector": "Technology"
+  },
+  {
     "ticker": "cog",
     "name": "Cognor Holding S.A.",
     "sector": "Basic Materials"
+  },
+  {
+    "ticker": "cpl",
+    "name": "Comperia.pl S.A.",
+    "sector": "Communication Services"
   },
   {
     "ticker": "cps",
@@ -110,6 +225,11 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "dbc",
+    "name": "Tire Company Debica S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "dnp",
     "name": "Dino Polska S.A.",
     "sector": "Consumer Defensive"
@@ -117,6 +237,11 @@
   {
     "ticker": "dom",
     "name": "Dom Development S.A.",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "dvl",
+    "name": "Develia S.A.",
     "sector": "Real Estate"
   },
   {
@@ -135,14 +260,49 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "edi",
+    "name": "ED Invest Spólka Akcyjna",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "ekp",
+    "name": "Elkop Estonia SE",
+    "sector": "Real Estate"
+  },
+  {
+    "ticker": "elt",
+    "name": "Elektrotim S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "emp",
+    "name": "Emplocity Spolka Akcyjna",
+    "sector": null
+  },
+  {
     "ticker": "ena",
     "name": "ENEA S.A.",
     "sector": "Utilities"
   },
   {
+    "ticker": "eng",
+    "name": "Energa SA",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "ent",
+    "name": "Enter Air S.A.",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "eur",
     "name": "Eurocash S.A.",
     "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "fro",
+    "name": "FERRO S.A.",
+    "sector": "Industrials"
   },
   {
     "ticker": "gpw",
@@ -153,6 +313,16 @@
     "ticker": "gtc",
     "name": "Globe Trade Centre S.A.",
     "sector": "Real Estate"
+  },
+  {
+    "ticker": "gtn",
+    "name": "Getin Holding S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "hrs",
+    "name": "Herkules S.A.",
+    "sector": "Industrials"
   },
   {
     "ticker": "hub",
@@ -170,6 +340,16 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "ink",
+    "name": "Instal Kraków S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "ipo",
+    "name": "Intersport Polska S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "jrh",
     "name": "JRH",
     "sector": "Financial Services"
@@ -185,6 +365,11 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "ker",
+    "name": "Kernel Holding S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
     "ticker": "kgh",
     "name": "KGHM Polska Miedz S.A.",
     "sector": "Basic Materials"
@@ -193,6 +378,11 @@
     "ticker": "kgl",
     "name": "KGL SA",
     "sector": "Basic Materials"
+  },
+  {
+    "ticker": "kgn",
+    "name": "Zespól Elektrocieplowni Wroclawskich KOGENERACJA S.A.",
+    "sector": "Utilities"
   },
   {
     "ticker": "krk",
@@ -220,6 +410,16 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "mak",
+    "name": "Makarony Polskie S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "man",
+    "name": "ManyDev Studio SE",
+    "sector": "Communication Services"
+  },
+  {
     "ticker": "mbk",
     "name": "mBank S.A.",
     "sector": "Financial Services"
@@ -233,6 +433,11 @@
     "ticker": "mcr",
     "name": "mcr Spolka Akcyjna",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "mdi",
+    "name": "MDI Energia S.A.",
+    "sector": "Utilities"
   },
   {
     "ticker": "mfo",
@@ -250,9 +455,29 @@
     "sector": "Energy"
   },
   {
+    "ticker": "mrb",
+    "name": "Mirbud S.A.",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "mrc",
     "name": "Mercator Medical S.A.",
     "sector": "Healthcare"
+  },
+  {
+    "ticker": "mur",
+    "name": "Murapol S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "neu",
+    "name": "NEUCA S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "nwg",
+    "name": "Newag S.A.",
+    "sector": "Industrials"
   },
   {
     "ticker": "opl",
@@ -320,6 +545,36 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "pps",
+    "name": "Pepees S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "pre",
+    "name": "President Studio S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "pri",
+    "name": "Pragma Inkaso S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "prm",
+    "name": "Prochem S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "prt",
+    "name": "Protektor S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "pxm",
+    "name": "Polimex-Mostostal S.A.",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "pzu",
     "name": "Powszechny Zaklad Ubezpieczen SA",
     "sector": "Financial Services"
@@ -330,9 +585,54 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "rdn",
+    "name": "Redan S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "rpc",
+    "name": "Zaklady Magnezytowe ROPCZYCE S.A.",
+    "sector": "Basic Materials"
+  },
+  {
     "ticker": "rwl",
     "name": "Rawlplug S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "san",
+    "name": "Banco Santander, S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "sap",
+    "name": "SAP SE",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "sar",
+    "name": "Digitree Group S.A.",
+    "sector": null
+  },
+  {
+    "ticker": "ska",
+    "name": "Fabryka Farb i Lakierów Sniezka SA",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "skh",
+    "name": "Skarbiec Holding S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "skl",
+    "name": "Skyline Investment S.A.",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "slv",
+    "name": "Selvita S.A.",
+    "sector": "Healthcare"
   },
   {
     "ticker": "snk",
@@ -350,6 +650,31 @@
     "sector": "Basic Materials"
   },
   {
+    "ticker": "sts",
+    "name": "Satis Group S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "stx",
+    "name": "Stalexport Autostrady S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "ten",
+    "name": "Ten Square Games S.A.",
+    "sector": "Communication Services"
+  },
+  {
+    "ticker": "tor",
+    "name": "Torpol S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "tow",
+    "name": "Tower Investments S.A.",
+    "sector": "Real Estate"
+  },
+  {
     "ticker": "tpe",
     "name": "TAURON Polska Energia S.A.",
     "sector": "Utilities"
@@ -357,6 +682,11 @@
   {
     "ticker": "trk",
     "name": "Trakcja S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "trn",
+    "name": "Trans Polonia S.A.",
     "sector": "Industrials"
   },
   {
@@ -375,6 +705,11 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "was",
+    "name": "Wasko S.A.",
+    "sector": "Communication Services"
+  },
+  {
     "ticker": "wpl",
     "name": "Wirtualna Polska Holding S.A.",
     "sector": "Communication Services"
@@ -383,6 +718,31 @@
     "ticker": "xtb",
     "name": "XTB S.A.",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "xtp",
+    "name": "XTPL S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "yan",
+    "name": "Yanosik S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "zab",
+    "name": "Zabka Group S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "zal",
+    "name": "Zalando SE",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "zap",
+    "name": "Zaklady Azotowe Pulawy S.A.",
+    "sector": "Basic Materials"
   },
   {
     "ticker": "zep",

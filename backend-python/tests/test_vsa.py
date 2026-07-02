@@ -151,12 +151,50 @@ class TestDetectSignals:
         names = [s.signal_name for s in signals]
         assert SignalName.SPRING in names
 
+    def test_spring_detected_on_low_volume_no_supply_variant(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0)
+
+        # Low-volume spring: barely breaks support (99) on light volume and
+        # closes back above it near the high — the "no supply" spring, which
+        # per the Wyckoff literature is the highest-probability variant.
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=100.0, low=98.6, close=99.9, volume=20_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SPRING in names
+
+    def test_successful_test_detected_on_low_volume_dip(self) -> None:
+        # Older, deeper support zone at ~97 so the dip below the *previous*
+        # bar's low does not also break the 20-day low (that would be a Spring).
+        start = date(2026, 1, 2)
+        bars: list[StooqDailyQuote] = []
+        for i in range(10):
+            d = (start + timedelta(days=i)).isoformat()
+            bars.append(_bar(d, 97.0, 98.0, 96.0, 97.0, 50_000))
+        for i in range(10, 25):
+            d = (start + timedelta(days=i)).isoformat()
+            bars.append(_bar(d, 100.0, 101.0, 99.0, 100.0, 50_000))
+
+        # Test bar: dips below the previous bar's low (99) into the old selling
+        # area, regains to close near its high, on volume well below both of
+        # the previous two bars — a Successful Test ("no supply").
+        bars.append(
+            _bar("2026-01-27", open_=100.0, high=100.5, low=98.7, close=100.4, volume=18_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SUCCESSFUL_TEST in names
+
     def test_no_demand_on_narrow_up_bar_low_volume(self) -> None:
         bars = _normal_bars(n=25, base_price=100.0, base_vol=50_000)
 
-        # No Demand: up bar, narrow spread, low volume.
-        # Keep low well away from prior support (99) to avoid the Successful Test rule
-        # (higher priority) — Successful Test triggers when low ≈ prior low.
+        # No Demand: up bar (close above previous close), narrow spread, low
+        # volume (below both of the previous two bars), close mid-or-low.
+        # Keep the low above the previous bar's low to avoid the Successful
+        # Test rule (higher priority), which triggers on a dip below it.
         bars.append(
             _bar("2026-01-27", open_=103.0, high=103.3, low=102.8, close=103.1, volume=15_000)
         )
@@ -164,6 +202,36 @@ class TestDetectSignals:
         signals = detect_signals(bars)
         names = [s.signal_name for s in signals]
         assert SignalName.NO_DEMAND in names
+
+    def test_no_demand_requires_close_above_previous_close(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0, base_vol=50_000)
+
+        # Narrow, quiet bar with close above its *open* (99.6 > 99.3) but
+        # below the previous bar's *close* (100). VSA defines an up-bar
+        # against the previous close, so this is not a No Demand bar.
+        bars.append(
+            _bar("2026-01-27", open_=99.3, high=99.9, low=99.3, close=99.6, volume=15_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.NO_DEMAND not in names
+
+    def test_no_demand_requires_volume_below_previous_two_bars(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0, base_vol=50_000)
+        # Make the immediately preceding bar even quieter than the candidate.
+        bars[24] = _bar("2026-01-26", open_=100.0, high=101.0, low=99.0, close=100.0, volume=10_000)
+
+        # Candidate is narrow, quiet vs the 20-bar average (12k < 0.7 × ~48k),
+        # but NOT below both of the previous two bars (12k > 10k) — per the
+        # TradeGuider criterion this is not a No Demand bar.
+        bars.append(
+            _bar("2026-01-27", open_=103.0, high=103.3, low=102.8, close=103.1, volume=12_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.NO_DEMAND not in names
 
     def test_signals_are_chronological(self) -> None:
         bars = _normal_bars(n=25)
@@ -248,7 +316,8 @@ class TestComputeRating:
         )
         old_rating = compute_rating([old_signal], self.TODAY, half_life_days=half_life)
         recent_rating = compute_rating([recent_signal], self.TODAY, half_life_days=half_life)
-        # Recover the net_score from the rating via atanh (inverse of the final tanh).
+        # Recover a value proportional to the net score via atanh (inverse of
+        # the final tanh; the /2 scaling inside cancels out in the ratio).
         # This tests the decay in score-space, where the relationship is exact.
         old_score = math.atanh((old_rating - 50) / 50)
         recent_score = math.atanh((recent_rating - 50) / 50)
