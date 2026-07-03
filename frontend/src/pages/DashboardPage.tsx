@@ -19,7 +19,13 @@ import {
 import { useRanking } from '../hooks/useRanking'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
 import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
-import { RatingMeter, SignalBadge, Sparkline, TickerMark } from '../components/ui'
+import {
+  InfoTip,
+  RatingMeter,
+  SignalBadge,
+  Sparkline,
+  TickerMark,
+} from '../components/ui'
 import type { StockRankingItem } from '../types'
 
 type ViewId = 'best' | 'winners' | 'losers' | 'favorites'
@@ -97,7 +103,10 @@ export function DashboardPage() {
       {/* Header + view switcher */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">{copy.title}</h2>
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
+            {copy.title}
+            <InfoTip text="Stocks are ranked by their VSA rating (0–100): the volume-spread patterns of professional buying and selling, with recent signals weighted more. Configure the detection rules on the Scanner page — this list follows your settings." />
+          </h2>
           <p className="text-sm text-slate-500">{copy.subtitle}</p>
         </div>
 

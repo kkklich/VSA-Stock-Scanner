@@ -1,7 +1,10 @@
 // Custom hook: fetch signals + OHLCV for a single ticker.
+// The user's saved Scanner settings are sent along so the chart overlay is
+// detected with the same VSA rules the user configured.
 
 import { useEffect, useState } from 'react'
 import { fetchSignals, type ApiStockSignals } from '../api/stocksApi'
+import { settingsQueryValue } from '../lib/vsaSettings'
 
 export interface UseStockDetailResult {
   data: ApiStockSignals | null
@@ -25,7 +28,7 @@ export function useStockDetail(ticker: string | null): UseStockDetailResult {
     setError(null)
     setData(null)
 
-    fetchSignals(ticker)
+    fetchSignals(ticker, undefined, undefined, settingsQueryValue())
       .then((result) => {
         if (!cancelled) {
           setData(result)

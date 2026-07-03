@@ -11,7 +11,9 @@ from app.models.stocks import (
     StockRankingItem,
     StockSignalsResponse,
     StooqDailyQuote,
+    VsaSettings,
     VsaSignalResponse,
+    VsaSignalSettings,
 )
 
 __all__ = [
@@ -25,5 +27,7 @@ __all__ = [
     "StockRankingItem",
     "StockSignalsResponse",
     "StooqDailyQuote",
+    "VsaSettings",
     "VsaSignalResponse",
+    "VsaSignalSettings",
 ]

@@ -9,14 +9,16 @@ and the Tom Williams reference text in the agent/ folder.
 from __future__ import annotations
 
 import enum
+import hashlib
+import json
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 
 import pandas as pd
 
-from app.models import StooqDailyQuote
+from app.models import StooqDailyQuote, VsaSettings
 
 
 class SignalType(str, enum.Enum):
@@ -48,21 +50,158 @@ class VsaSignal:
     strength: float = field(default=1.0)
 
 
-# Minimum bars required for meaningful signal detection (lookback + buffer).
-_MIN_BARS = 25
-_LOOKBACK = 20
+# ── Detection configuration ───────────────────────────────────────────────────
 
 
-def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
+@dataclass(frozen=True)
+class SignalParams:
+    """Detection thresholds for one VSA pattern.
+
+    The multipliers are interpreted per pattern (see the rules in
+    ``detect_signals``):
+
+    - ``spread_mult`` — bar spread vs. the rolling average spread. A *minimum*
+      for wide-spread patterns (Spring, SOS, Upthrust, SOW) and a *maximum*
+      for No Demand (which needs a narrow bar). Unused by Successful Test.
+    - ``vol_mult`` — bar volume vs. the rolling average volume. A *minimum*
+      for high-volume patterns (SOS, SOW, and the high-volume legs of Spring
+      and Upthrust) and a *maximum* for the quiet patterns (Successful Test,
+      No Demand).
+    - ``close_pos`` — where the close must sit within the bar's range,
+      0.0 = low, 1.0 = high. A minimum for bullish patterns, a maximum for
+      bearish ones.
+    - ``lookback`` — how many prior sessions define the rolling context
+      (average spread/volume and the support/resistance levels).
+    """
+
+    enabled: bool = True
+    spread_mult: float = 1.5
+    vol_mult: float = 1.5
+    close_pos: float = 0.65
+    lookback: int = 20
+
+
+# Default thresholds per signal — these reproduce the original hardcoded rules.
+DEFAULT_SIGNAL_PARAMS: dict[SignalName, SignalParams] = {
+    SignalName.SPRING: SignalParams(spread_mult=1.2, vol_mult=1.2, close_pos=0.6),
+    SignalName.SOS: SignalParams(spread_mult=1.5, vol_mult=1.5, close_pos=0.65),
+    SignalName.SUCCESSFUL_TEST: SignalParams(spread_mult=1.0, vol_mult=0.7, close_pos=0.65),
+    SignalName.UPTHRUST: SignalParams(spread_mult=1.2, vol_mult=1.3, close_pos=0.3),
+    SignalName.SOW: SignalParams(spread_mult=1.5, vol_mult=1.5, close_pos=0.35),
+    SignalName.NO_DEMAND: SignalParams(spread_mult=0.7, vol_mult=0.7, close_pos=0.65),
+}
+
+# "Low volume" for the quiet legs of Spring and Upthrust (fixed, not tunable —
+# Master the Markets treats "low" simply as clearly below average).
+_LOW_VOL_MULT = 0.7
+
+
+@dataclass(frozen=True)
+class VsaConfig:
+    """Complete detection configuration: per-signal thresholds and toggles."""
+
+    params: Mapping[SignalName, SignalParams] = field(
+        default_factory=lambda: dict(DEFAULT_SIGNAL_PARAMS)
+    )
+
+    @classmethod
+    def default(cls) -> VsaConfig:
+        return cls()
+
+    def for_signal(self, name: SignalName) -> SignalParams:
+        return self.params.get(name, DEFAULT_SIGNAL_PARAMS[name])
+
+    def is_default(self) -> bool:
+        return all(
+            self.for_signal(name) == DEFAULT_SIGNAL_PARAMS[name] for name in SignalName
+        )
+
+    def cache_suffix(self) -> str:
+        """Stable short hash for cache keys; empty string for the default config.
+
+        Keeping the default suffix empty means existing cache keys (and the
+        nightly pre-warmed ranking) keep working unchanged.
+        """
+        if self.is_default():
+            return ""
+        canonical = json.dumps(
+            {
+                name.value: [
+                    p.enabled, p.spread_mult, p.vol_mult, p.close_pos, p.lookback,
+                ]
+                for name in SignalName
+                for p in [self.for_signal(name)]
+            },
+            sort_keys=True,
+        )
+        return ":" + hashlib.md5(canonical.encode()).hexdigest()[:10]
+
+
+# Minimum warm-up buffer beyond the rolling lookback before signals may fire.
+_WARMUP_BARS = 5
+
+# Maps the Scanner page rule ids (API payload keys) to engine signal names.
+_SETTINGS_KEY_TO_SIGNAL: dict[str, SignalName] = {
+    "spring": SignalName.SPRING,
+    "sos": SignalName.SOS,
+    "test": SignalName.SUCCESSFUL_TEST,
+    "upthrust": SignalName.UPTHRUST,
+    "nodemand": SignalName.NO_DEMAND,
+    "sow": SignalName.SOW,
+}
+
+
+def config_from_settings(settings: VsaSettings | None) -> VsaConfig:
+    """Build a ``VsaConfig`` from the API settings payload.
+
+    Missing signals or fields keep their defaults, so a partial payload only
+    overrides what the user actually changed. ``close_pos`` arrives as a
+    percentage (0–100) and is converted to the 0.0–1.0 fraction used here.
+    """
+    if settings is None:
+        return VsaConfig.default()
+
+    params = dict(DEFAULT_SIGNAL_PARAMS)
+    for key, name in _SETTINGS_KEY_TO_SIGNAL.items():
+        s = getattr(settings, key)
+        if s is None:
+            continue
+        d = DEFAULT_SIGNAL_PARAMS[name]
+        params[name] = SignalParams(
+            enabled=s.enabled,
+            spread_mult=s.spread_mult if s.spread_mult is not None else d.spread_mult,
+            vol_mult=s.vol_mult if s.vol_mult is not None else d.vol_mult,
+            close_pos=s.close_pos / 100.0 if s.close_pos is not None else d.close_pos,
+            lookback=s.lookback if s.lookback is not None else d.lookback,
+        )
+    return VsaConfig(params=params)
+
+
+def detect_signals(
+    bars: Sequence[StooqDailyQuote],
+    config: VsaConfig | None = None,
+) -> list[VsaSignal]:
     """Scan a chronological OHLCV series for VSA patterns and return them in date order.
 
     Each rule matches at most one pattern per bar (highest priority wins), so a bar
     cannot simultaneously be a Spring and a No-Demand bar.
 
-    Requires at least 25 bars (20 for the rolling context + 5 as a warm-up buffer).
-    Returns an empty list when there is not enough history.
+    ``config`` supplies per-signal thresholds and on/off toggles (the Scanner
+    page settings); when omitted, the documented default rules apply.
+
+    Requires at least ``lookback + 5`` bars for the smallest enabled lookback
+    (rolling context + warm-up buffer). Returns an empty list when there is
+    not enough history or every signal is disabled.
     """
-    if len(bars) < _MIN_BARS:
+    cfg = config or VsaConfig.default()
+    active: dict[SignalName, SignalParams] = {
+        name: cfg.for_signal(name) for name in SignalName if cfg.for_signal(name).enabled
+    }
+    if not active:
+        return []
+
+    min_lookback = min(p.lookback for p in active.values())
+    if len(bars) < min_lookback + _WARMUP_BARS:
         return []
 
     df = pd.DataFrame(
@@ -83,11 +222,13 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
     df["spread"] = df["high"] - df["low"]
     df["close_pos"] = (df["close"] - df["low"]) / (df["spread"].clip(lower=1e-9))
 
-    # Rolling context (shift(1) so each bar sees *prior* bars only, no lookahead).
-    df["avg_spread"] = df["spread"].rolling(_LOOKBACK).mean().shift(1)
-    df["avg_vol"] = df["volume"].rolling(_LOOKBACK).mean().shift(1)
-    df["prior_low"] = df["low"].rolling(_LOOKBACK).min().shift(1)
-    df["prior_high"] = df["high"].rolling(_LOOKBACK).max().shift(1)
+    # Rolling context, one set of columns per distinct lookback in use
+    # (shift(1) so each bar sees *prior* bars only, no lookahead).
+    for lb in {p.lookback for p in active.values()}:
+        df[f"avg_spread_{lb}"] = df["spread"].rolling(lb).mean().shift(1)
+        df[f"avg_vol_{lb}"] = df["volume"].rolling(lb).mean().shift(1)
+        df[f"prior_low_{lb}"] = df["low"].rolling(lb).min().shift(1)
+        df[f"prior_high_{lb}"] = df["high"].rolling(lb).max().shift(1)
 
     # Previous-bar context. VSA defines an up-bar as a close *above the previous
     # bar's close* (not above its own open) — Master the Markets p.31 — so every
@@ -98,26 +239,27 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
     # No Demand / a Test) means lower than BOTH, i.e. below their minimum.
     df["prev_vol_min2"] = df["volume"].rolling(2).min().shift(1)
 
+    def ctx(row: pd.Series, lb: int) -> tuple[float, float, float, float] | None:
+        """Rolling context for one lookback, or None when not yet available."""
+        avg_v = row[f"avg_vol_{lb}"]
+        if pd.isna(avg_v) or avg_v < 1:
+            return None
+        return (row[f"avg_spread_{lb}"], avg_v, row[f"prior_low_{lb}"], row[f"prior_high_{lb}"])
+
     signals: list[VsaSignal] = []
 
-    for i in range(_LOOKBACK + 1, len(df)):
+    for i in range(min_lookback + 1, len(df)):
         row = df.iloc[i]
 
-        # Skip bars where rolling context is not yet available.
-        if pd.isna(row["avg_vol"]) or row["avg_vol"] < 1:
-            continue
-
-        avg_sp = row["avg_spread"]
-        avg_v = row["avg_vol"]
         cp = row["close_pos"]
         spread = row["spread"]
         vol = row["volume"]
-        prior_low = row["prior_low"]
-        prior_high = row["prior_high"]
         prev_close = row["prev_close"]
         prev_low = row["prev_low"]
         prev_vol_min2 = row["prev_vol_min2"]
         d = row["date"]
+
+        matched: VsaSignal | None = None
 
         # ── Bullish patterns (evaluated highest-priority first) ───────────
 
@@ -130,53 +272,66 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
         #     supply"), the highest-probability spring; its spread is
         #     usually modest, so no wide-spread requirement.
         # Average, unremarkable volume shows no anomaly and does not qualify.
-        if (
-            prior_low > 0
-            and row["low"] <= prior_low
-            and row["close"] > prior_low
-            and cp > 0.6
-            and (
-                (spread > avg_sp * 1.2 and vol > avg_v * 1.2)
-                or vol < avg_v * 0.7
-            )
-        ):
-            signals.append(
-                VsaSignal(date=d, signal_name=SignalName.SPRING, type=SignalType.BULLISH, strength=0.9)
-            )
+        if matched is None and SignalName.SPRING in active:
+            p = active[SignalName.SPRING]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                avg_sp, avg_v, prior_low, _ = c
+                if (
+                    prior_low > 0
+                    and row["low"] <= prior_low
+                    and row["close"] > prior_low
+                    and cp > p.close_pos
+                    and (
+                        (spread > avg_sp * p.spread_mult and vol > avg_v * p.vol_mult)
+                        or vol < avg_v * _LOW_VOL_MULT
+                    )
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.SPRING,
+                        type=SignalType.BULLISH, strength=0.9,
+                    )
 
         # SOS — wide up-bar on high volume closing near the high.
-        elif (
-            avg_sp > 0
-            and spread > avg_sp * 1.5
-            and vol > avg_v * 1.5
-            and cp > 0.65
-            and row["close"] > prev_close
-        ):
-            signals.append(
-                VsaSignal(date=d, signal_name=SignalName.SOS, type=SignalType.BULLISH, strength=1.0)
-            )
+        if matched is None and SignalName.SOS in active:
+            p = active[SignalName.SOS]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                avg_sp, avg_v, _, _ = c
+                if (
+                    avg_sp > 0
+                    and spread > avg_sp * p.spread_mult
+                    and vol > avg_v * p.vol_mult
+                    and cp > p.close_pos
+                    and row["close"] > prev_close
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.SOS,
+                        type=SignalType.BULLISH, strength=1.0,
+                    )
 
         # Successful Test ("no supply") — Master the Markets p.33: "Any
         # down-move dipping into an area of previous selling, which then
         # regains to close on, or near the high, on lower volume ... This is a
         # successful test." The bar dips below the previous bar's low, finds
         # no sellers, and closes near its high. Volume must be genuinely low:
-        # below the 20-bar average AND lower than both of the previous two
-        # bars (the standard TradeGuider criterion).
-        elif (
-            row["low"] < prev_low
-            and cp >= 0.65
-            and vol < avg_v * 0.7
-            and vol < prev_vol_min2
-        ):
-            signals.append(
-                VsaSignal(
-                    date=d,
-                    signal_name=SignalName.SUCCESSFUL_TEST,
-                    type=SignalType.BULLISH,
-                    strength=0.75,
-                )
-            )
+        # below the rolling average (× vol_mult) AND lower than both of the
+        # previous two bars (the standard TradeGuider criterion).
+        if matched is None and SignalName.SUCCESSFUL_TEST in active:
+            p = active[SignalName.SUCCESSFUL_TEST]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                _, avg_v, _, _ = c
+                if (
+                    row["low"] < prev_low
+                    and cp >= p.close_pos
+                    and vol < avg_v * p.vol_mult
+                    and vol < prev_vol_min2
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.SUCCESSFUL_TEST,
+                        type=SignalType.BULLISH, strength=0.75,
+                    )
 
         # ── Bearish patterns ─────────────────────────────────────────────
 
@@ -189,29 +344,41 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
         # trap; only "average, unremarkable" volume is excluded — the book's
         # own example (p.64) of an average-volume up-thrust sees the market
         # simply continue upwards.
-        elif (
-            prior_high > 0
-            and row["high"] >= prior_high
-            and row["close"] < prior_high
-            and cp < 0.3
-            and spread > avg_sp * 1.2
-            and (vol > avg_v * 1.3 or vol < avg_v * 0.7)
-        ):
-            signals.append(
-                VsaSignal(date=d, signal_name=SignalName.UPTHRUST, type=SignalType.BEARISH, strength=0.85)
-            )
+        if matched is None and SignalName.UPTHRUST in active:
+            p = active[SignalName.UPTHRUST]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                avg_sp, avg_v, _, prior_high = c
+                if (
+                    prior_high > 0
+                    and row["high"] >= prior_high
+                    and row["close"] < prior_high
+                    and cp < p.close_pos
+                    and spread > avg_sp * p.spread_mult
+                    and (vol > avg_v * p.vol_mult or vol < avg_v * _LOW_VOL_MULT)
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.UPTHRUST,
+                        type=SignalType.BEARISH, strength=0.85,
+                    )
 
         # SOW — wide down-bar on high volume closing near the low.
-        elif (
-            avg_sp > 0
-            and spread > avg_sp * 1.5
-            and vol > avg_v * 1.5
-            and cp < 0.35
-            and row["close"] < prev_close
-        ):
-            signals.append(
-                VsaSignal(date=d, signal_name=SignalName.SOW, type=SignalType.BEARISH, strength=1.0)
-            )
+        if matched is None and SignalName.SOW in active:
+            p = active[SignalName.SOW]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                avg_sp, avg_v, _, _ = c
+                if (
+                    avg_sp > 0
+                    and spread > avg_sp * p.spread_mult
+                    and vol > avg_v * p.vol_mult
+                    and cp < p.close_pos
+                    and row["close"] < prev_close
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.SOW,
+                        type=SignalType.BEARISH, strength=1.0,
+                    )
 
         # No Demand — narrow up-bar on low volume; professionals not
         # participating. Master the Markets p.30: "a low volume up-bar, on a
@@ -219,17 +386,26 @@ def detect_signals(bars: Sequence[StooqDailyQuote]) -> list[VsaSignal]:
         # be lower than both of the previous two bars and the close in the
         # middle or low — a bar closing strongly on its own high isn't a
         # No Demand bar even if narrow and quiet.
-        elif (
-            avg_sp > 0
-            and row["close"] > prev_close
-            and spread < avg_sp * 0.7
-            and vol < avg_v * 0.7
-            and vol < prev_vol_min2
-            and cp < 0.65
-        ):
-            signals.append(
-                VsaSignal(date=d, signal_name=SignalName.NO_DEMAND, type=SignalType.BEARISH, strength=0.6)
-            )
+        if matched is None and SignalName.NO_DEMAND in active:
+            p = active[SignalName.NO_DEMAND]
+            c = ctx(row, p.lookback)
+            if c is not None:
+                avg_sp, avg_v, _, _ = c
+                if (
+                    avg_sp > 0
+                    and row["close"] > prev_close
+                    and spread < avg_sp * p.spread_mult
+                    and vol < avg_v * p.vol_mult
+                    and vol < prev_vol_min2
+                    and cp < p.close_pos
+                ):
+                    matched = VsaSignal(
+                        date=d, signal_name=SignalName.NO_DEMAND,
+                        type=SignalType.BEARISH, strength=0.6,
+                    )
+
+        if matched is not None:
+            signals.append(matched)
 
     return signals
 

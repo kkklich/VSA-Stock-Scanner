@@ -96,28 +96,14 @@ async def lifespan(_app: FastAPI):
                 await engine.dispose()
                 engine = None
             else:
-                # Only create tables if this is a brand-new empty database (dev
-                # convenience). In production, run: alembic upgrade head
-                async with engine.connect() as conn:
-                    result = await conn.execute(
-                        text(
-                            "SELECT COUNT(*) FROM information_schema.tables "
-                            "WHERE table_schema = 'public' AND table_name = 'daily_quotes'"
-                        )
-                    )
-                    table_exists = result.scalar() > 0
-
-                if not table_exists:
-                    logger.info(
-                        "No tables found — running create_all for initial setup (dev mode)."
-                    )
-                    async with engine.begin() as conn:
-                        await conn.run_sync(Base.metadata.create_all)
-                else:
-                    logger.info(
-                        "Tables already exist — skipping create_all. "
-                        "Run 'alembic upgrade head' for schema changes."
-                    )
+                # create_all is idempotent: it only creates tables that are
+                # missing and never alters existing ones. Running it on every
+                # startup means tables added in newer versions (e.g.
+                # company_fundamentals) appear automatically on an older DB.
+                # Column-level schema changes still need: alembic upgrade head
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                logger.info("Database schema verified (missing tables created).")
 
                 repo = PostgresQuoteRepository(session_factory)
                 set_quote_repository(repo)

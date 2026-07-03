@@ -1,4 +1,6 @@
 // Custom hook: fetch scanner back-test stats and manage loading / error state.
+// Re-fetches whenever the serialized VSA settings change, so the effectiveness
+// table always reflects the thresholds currently configured in the tuner.
 
 import { useEffect, useState } from 'react'
 import { fetchScannerStats, type ApiSignalEffectiveness } from '../api/stocksApi'
@@ -9,7 +11,7 @@ export interface UseScannerStatsResult {
   error: string | null
 }
 
-export function useScannerStats(): UseScannerStatsResult {
+export function useScannerStats(settings?: string): UseScannerStatsResult {
   const [data, setData] = useState<ApiSignalEffectiveness[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,7 @@ export function useScannerStats(): UseScannerStatsResult {
     setLoading(true)
     setError(null)
 
-    fetchScannerStats()
+    fetchScannerStats(settings)
       .then((items) => {
         if (!cancelled) {
           setData(items)
@@ -36,7 +38,7 @@ export function useScannerStats(): UseScannerStatsResult {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [settings])
 
   return { data, loading, error }
 }

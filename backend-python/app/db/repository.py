@@ -13,18 +13,21 @@ SQLAlchemy async + asyncpg.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Protocol, runtime_checkable
-
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import CompanyFundamentalsRow, CompanyQuarterlyRow, CompanyRow, DailyQuoteRow
-from app.models import CompanyFundamentalsResponse, FinancialMetrics, GpwCompany, QuarterlyReport, StooqDailyQuote
-
+from app.models import (
+    CompanyFundamentalsResponse,
+    FinancialMetrics,
+    GpwCompany,
+    QuarterlyReport,
+    StooqDailyQuote,
+)
 
 # ── Abstract interface ────────────────────────────────────────────────────────
 
@@ -152,7 +155,7 @@ class PostgresQuoteRepository:
             return (await session.execute(stmt)).scalar() is not None
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         values = {
             "ticker": ticker,
             "updated_at": now,

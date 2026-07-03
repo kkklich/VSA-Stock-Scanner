@@ -23,8 +23,14 @@ from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import ValidationError
 
-from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
+from app.analysis.vsa import (
+    VsaConfig,
+    compute_rating,
+    config_from_settings,
+    detect_signals,
+)
 from app.config import settings
 from app.db.repository import QuoteRepository
 from app.dependencies import (
@@ -43,6 +49,7 @@ from app.models import (
     StockRankingItem,
     StockSignalsResponse,
     StooqDailyQuote,
+    VsaSettings,
     VsaSignalResponse,
 )
 from app.services.cache import TTLCache
@@ -61,6 +68,26 @@ _SIGNALS_DEFAULT_DAYS = 365
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _parse_vsa_settings(raw: str | None) -> VsaConfig:
+    """Parse the optional ``settings`` query parameter (URL-encoded JSON).
+
+    The Scanner page sends its saved VSA engine configuration here so the
+    detection thresholds and signal toggles actually drive the calculation.
+    Returns the default config when the parameter is absent; raises 400 on
+    malformed input so a broken client can't poison the cache.
+    """
+    if not raw or not raw.strip():
+        return VsaConfig.default()
+    try:
+        payload = VsaSettings.model_validate_json(raw)
+    except ValidationError as exc:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid 'settings' parameter: {exc.error_count()} validation error(s).",
+        ) from exc
+    return config_from_settings(payload)
 
 
 async def _get_quotes(
@@ -126,14 +153,16 @@ async def get_companies(
 )
 async def get_ranking(
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100, alias="pageSize")] = 25,
+    page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
 ) -> list[StockRankingItem]:
-    cache_key = "ranking:full"
+    config = _parse_vsa_settings(vsa_settings)
+    cache_key = f"ranking:full{config.cache_suffix()}"
     full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
 
     if full_ranking is None:
@@ -144,6 +173,7 @@ async def get_ranking(
             history_cache=history_cache,
             history_cache_ttl=settings.history_cache_seconds,
             repo=repo,
+            config=config,
         )
         cache.set(cache_key, full_ranking, settings.history_cache_seconds)
         logger.info("Ranking ready: %d stocks passed pre-filters.", len(full_ranking))
@@ -162,13 +192,15 @@ async def get_ranking(
     summary="Back-test effectiveness stats for each VSA signal type",
 )
 async def get_scanner_stats(
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
 ) -> list[SignalEffectiveness]:
-    cache_key = "scanner:stats"
+    config = _parse_vsa_settings(vsa_settings)
+    cache_key = f"scanner:stats{config.cache_suffix()}"
     cached: list[SignalEffectiveness] | None = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -180,6 +212,7 @@ async def get_scanner_stats(
         history_cache=history_cache,
         history_cache_ttl=settings.history_cache_seconds,
         repo=repo,
+        config=config,
     )
     result = [
         SignalEffectiveness(
@@ -274,11 +307,16 @@ async def get_signals(
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
     from_date: Annotated[date | None, Query(alias="fromDate")] = None,
     to_date: Annotated[date | None, Query(alias="toDate")] = None,
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
 ) -> StockSignalsResponse:
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
     if from_date is not None and to_date is not None and from_date > to_date:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "'fromDate' must not be later than 'toDate'.")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "'fromDate' must not be later than 'toDate'."
+        )
+
+    config = _parse_vsa_settings(vsa_settings)
 
     normalized = ticker.strip().casefold()
     if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
@@ -299,7 +337,7 @@ async def get_signals(
 
     company = companies.find(normalized)
 
-    signals = detect_signals(quotes)
+    signals = detect_signals(quotes, config)
     today = date.today()
     rating = compute_rating(signals, today)
     rating_change = rating - compute_rating(signals, today - timedelta(days=1))

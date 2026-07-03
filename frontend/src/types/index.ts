@@ -20,6 +20,10 @@ export interface StockRankingItem {
   daysSinceSignal: number
   /** Tiny price series used to draw the row sparkline. */
   sparkline: number[]
+  /** 20-session median volume, in shares. */
+  volume: number
+  /** Sector from the GPW company list. */
+  sector: string | null
   /** Whether the ticker is starred into the watchlist. */
   starred: boolean
 }

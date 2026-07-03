@@ -10,6 +10,14 @@ export const fmtPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)
 /** Signed integer, e.g. +2 / -1. */
 export const fmtSigned = (n: number): string => `${n >= 0 ? '+' : ''}${n}`
 
+/** Large PLN amounts in compact Polish form, e.g. "3.42 mld" / "319 mln". */
+export const fmtCompactPln = (n: number): string => {
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} mld`
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(0)} mln`
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)} tys.`
+  return n.toLocaleString('pl-PL')
+}
+
 /**
  * VSA rating badge color band (per DOCUMENTATION.md §4):
  *  > 70 green, < 30 red, otherwise neutral slate.

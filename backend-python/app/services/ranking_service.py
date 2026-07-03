@@ -18,7 +18,12 @@ import logging
 from datetime import date, timedelta
 
 from app.analysis.statistics import median_volume_pln
-from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
+from app.analysis.vsa import (
+    VsaConfig,
+    compute_rating,
+    detect_signals,
+    verdict_from_signals,
+)
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StockRankingItem, StooqDailyQuote
 from app.services.cache import TTLCache
@@ -29,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 _HISTORY_DAYS = 120
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
+_MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
 _SPARKLINE_BARS = 10
 
@@ -40,6 +46,7 @@ async def compute_ranking(
     history_cache_ttl: int,
     repo: QuoteRepository | None = None,
     today: date | None = None,
+    config: VsaConfig | None = None,
 ) -> list[StockRankingItem]:
     """Fetch history for all companies, run VSA analysis, apply pre-filters, rank.
 
@@ -50,6 +57,7 @@ async def compute_ranking(
         history_cache_ttl:  Seconds before cache entries expire.
         repo:               Persistent quote repository; ``None`` = no DB.
         today:              Override "today" (used in tests).
+        config:             VSA detection settings; ``None`` = defaults.
     """
     if today is None:
         today = date.today()
@@ -94,6 +102,13 @@ async def compute_ranking(
         return quotes or []
 
     async def fetch_and_analyse(company: GpwCompany) -> StockRankingItem | None:
+        # Capitalisation floor (blueprint §5): market cap must exceed 100M PLN.
+        # Applied only when the value is known, so missing metadata never
+        # silently hides a company from the ranking.
+        if company.market_cap is not None and company.market_cap < _MIN_MARKET_CAP_PLN:
+            logger.debug("Skipping %s: market cap below floor.", company.ticker)
+            return None
+
         quotes = await fetch_quotes(company.ticker)
         if not quotes or len(quotes) < 25:
             logger.debug("Skipping %s: insufficient history (%d bars).",
@@ -107,7 +122,7 @@ async def compute_ranking(
                 logger.debug("Skipping %s: below liquidity threshold.", company.ticker)
                 return None
 
-            signals = detect_signals(quotes)
+            signals = detect_signals(quotes, config)
             rating_today = compute_rating(signals, today)
             rating_yesterday = compute_rating(signals, today - timedelta(days=1))
             rating_change = rating_today - rating_yesterday

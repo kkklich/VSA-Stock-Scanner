@@ -32,7 +32,13 @@ import { useRanking } from '../hooks/useRanking'
 import type { SignalVerdict, StockRankingItem } from '../types'
 import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
-import { RatingMeter, SignalBadge, Sparkline, TickerMark } from '../components/ui'
+import {
+  InfoTip,
+  RatingMeter,
+  SignalBadge,
+  Sparkline,
+  TickerMark,
+} from '../components/ui'
 
 /** Star toggle shown on each row (module-scope to avoid remount churn). */
 function FavoriteStar({
@@ -81,7 +87,8 @@ function LoadingSkeleton() {
       <div className="text-center">
         <p className="font-medium text-slate-300">Computing VSA rankings…</p>
         <p className="mt-1 text-sm text-slate-500">
-          Fetching GPW data from stooq.pl — first load takes ~30 s. Subsequent loads are instant.
+          Fetching GPW data from Yahoo Finance — the first load can take a few
+          minutes. Subsequent loads are instant.
         </p>
       </div>
     </div>
@@ -419,9 +426,24 @@ export function WatchlistPage() {
                   </th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 text-right font-medium">Last Price</th>
-                  <th className="px-4 py-3 font-medium">Rating (0–100)</th>
-                  <th className="px-4 py-3 font-medium">Last Signal</th>
-                  <th className="px-4 py-3 font-medium">Days Since Signal</th>
+                  <th className="px-4 py-3 font-medium">
+                    <span className="inline-flex items-center gap-1">
+                      Rating (0–100)
+                      <InfoTip text="VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution). Computed with your Scanner settings." />
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    <span className="inline-flex items-center gap-1">
+                      Last Signal
+                      <InfoTip text="Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell. No recent pattern → Hold." />
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    <span className="inline-flex items-center gap-1">
+                      Days Since Signal
+                      <InfoTip text="How many days ago the last VSA pattern fired. Fresh signals (0–5 days) matter most — their influence fades over time (time decay)." />
+                    </span>
+                  </th>
                   <th className="px-4 py-3 text-right font-medium">
                     Change
                     <span className="block text-[10px] normal-case text-slate-600">

@@ -11,9 +11,8 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -44,6 +43,8 @@ class GpwCompany(BaseModel):
     employees: int | None = None
     website: str | None = None
     country: str | None = None
+    # Market capitalisation in PLN — feeds the ranking pre-filter (> 100M PLN).
+    market_cap: int | None = None
 
 
 class StooqDailyQuote(BaseModel):
@@ -175,6 +176,38 @@ class CompanyFundamentalsResponse(_CamelModel):
     country: str | None = None
     metrics: FinancialMetrics | None = None
     quarterly_reports: list[QuarterlyReport] = []
+
+
+# ── New models: VSA detection settings (Scanner page → engine) ───────────────
+
+
+class VsaSignalSettings(_CamelModel):
+    """Detection thresholds for one VSA signal, as sent by the Scanner page.
+
+    All fields are optional — omitted values fall back to the signal's
+    documented defaults. ``close_pos`` is a percentage (0–100) in the API for
+    slider-friendliness; the engine converts it to a 0.0–1.0 fraction.
+    """
+
+    enabled: bool = True
+    spread_mult: float | None = Field(default=None, ge=0.0, le=10.0)
+    vol_mult: float | None = Field(default=None, ge=0.0, le=10.0)
+    close_pos: float | None = Field(default=None, ge=0.0, le=100.0)
+    lookback: int | None = Field(default=None, ge=5, le=60)
+
+
+class VsaSettings(_CamelModel):
+    """Full VSA engine configuration (``settings`` query parameter, JSON).
+
+    Keys match the Scanner page rule ids. Missing signals keep their defaults.
+    """
+
+    spring: VsaSignalSettings | None = None
+    sos: VsaSignalSettings | None = None
+    test: VsaSignalSettings | None = None
+    upthrust: VsaSignalSettings | None = None
+    nodemand: VsaSignalSettings | None = None
+    sow: VsaSignalSettings | None = None
 
 
 # ── New models: scanner stats endpoint ───────────────────────────────────────

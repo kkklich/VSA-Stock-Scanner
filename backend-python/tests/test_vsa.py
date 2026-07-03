@@ -9,15 +9,18 @@ from decimal import Decimal
 import pytest
 
 from app.analysis.vsa import (
+    DEFAULT_SIGNAL_PARAMS,
     SignalName,
+    SignalParams,
     SignalType,
+    VsaConfig,
     VsaSignal,
     compute_rating,
+    config_from_settings,
     detect_signals,
     verdict_from_signals,
 )
-from app.models import StooqDailyQuote
-
+from app.models import StooqDailyQuote, VsaSettings, VsaSignalSettings
 
 # ── Fixtures / helpers ────────────────────────────────────────────────────────
 
@@ -357,3 +360,108 @@ class TestVerdictFromSignals:
         verdict, days = verdict_from_signals([older, newer], self.TODAY)
         assert verdict == "Strong Buy"
         assert days == 0
+
+
+# ── VsaConfig: configurable detection ────────────────────────────────────────
+
+
+class TestVsaConfig:
+    """The Scanner page settings must actually change what the engine detects."""
+
+    def _sos_bars(self) -> list[StooqDailyQuote]:
+        """25 bland bars + the known-good SOS bar from TestDetectSignals."""
+        bars = _normal_bars(n=25)
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000)
+        )
+        return bars
+
+    def test_default_config_matches_no_config(self) -> None:
+        bars = self._sos_bars()
+        assert detect_signals(bars) == detect_signals(bars, VsaConfig.default())
+
+    def test_disabling_a_signal_suppresses_it(self) -> None:
+        bars = self._sos_bars()
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(enabled=False)
+        signals = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS not in {s.signal_name for s in signals}
+
+    def test_all_signals_disabled_returns_empty(self) -> None:
+        bars = self._sos_bars()
+        params = {name: SignalParams(enabled=False) for name in SignalName}
+        assert detect_signals(bars, VsaConfig(params=params)) == []
+
+    def test_stricter_volume_threshold_suppresses_sos(self) -> None:
+        bars = self._sos_bars()
+        # The SOS bar has volume 120k vs. 50k average (2.4×). Requiring 3×
+        # average volume must make the same bar fail the SOS rule.
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(spread_mult=1.5, vol_mult=3.0, close_pos=0.65)
+        signals = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS not in {s.signal_name for s in signals}
+
+    def test_looser_volume_threshold_keeps_sos(self) -> None:
+        bars = self._sos_bars()
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(spread_mult=1.5, vol_mult=1.1, close_pos=0.65)
+        signals = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS in {s.signal_name for s in signals}
+
+    def test_custom_lookback_is_respected(self) -> None:
+        # With lookback 40 there is not enough history (26 bars) for SOS
+        # context, so nothing should fire; lookback 10 still detects it.
+        bars = self._sos_bars()
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(
+            spread_mult=1.5, vol_mult=1.5, close_pos=0.65, lookback=40
+        )
+        long_lb = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS not in {s.signal_name for s in long_lb}
+
+        params[SignalName.SOS] = SignalParams(
+            spread_mult=1.5, vol_mult=1.5, close_pos=0.65, lookback=10
+        )
+        short_lb = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS in {s.signal_name for s in short_lb}
+
+    def test_cache_suffix_empty_for_default(self) -> None:
+        assert VsaConfig.default().cache_suffix() == ""
+
+    def test_cache_suffix_stable_and_distinct(self) -> None:
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(vol_mult=2.0)
+        a = VsaConfig(params=dict(params))
+        b = VsaConfig(params=dict(params))
+        assert a.cache_suffix() == b.cache_suffix() != ""
+
+        params[SignalName.SOS] = SignalParams(vol_mult=2.5)
+        c = VsaConfig(params=dict(params))
+        assert c.cache_suffix() != a.cache_suffix()
+
+
+# ── config_from_settings: API payload → engine config ────────────────────────
+
+
+class TestConfigFromSettings:
+    def test_none_yields_default(self) -> None:
+        assert config_from_settings(None).is_default()
+
+    def test_partial_payload_overrides_only_named_signal(self) -> None:
+        payload = VsaSettings(sos=VsaSignalSettings(volMult=2.0))
+        cfg = config_from_settings(payload)
+        assert cfg.for_signal(SignalName.SOS).vol_mult == 2.0
+        # Untouched fields fall back to the SOS defaults.
+        assert cfg.for_signal(SignalName.SOS).spread_mult == 1.5
+        # Other signals keep their full defaults.
+        assert cfg.for_signal(SignalName.SPRING) == DEFAULT_SIGNAL_PARAMS[SignalName.SPRING]
+
+    def test_close_pos_percent_converted_to_fraction(self) -> None:
+        payload = VsaSettings(spring=VsaSignalSettings(closePos=75))
+        cfg = config_from_settings(payload)
+        assert cfg.for_signal(SignalName.SPRING).close_pos == pytest.approx(0.75)
+
+    def test_disabled_flag_maps_through(self) -> None:
+        payload = VsaSettings(nodemand=VsaSignalSettings(enabled=False))
+        cfg = config_from_settings(payload)
+        assert cfg.for_signal(SignalName.NO_DEMAND).enabled is False

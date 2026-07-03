@@ -3,12 +3,27 @@
 
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ChevronDown, ChevronUp, Loader2, MoreHorizontal, RotateCcw } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  MoreHorizontal,
+  RotateCcw,
+} from 'lucide-react'
 import { StockChart } from '../components/StockChart'
 import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
+import { useFundamentals } from '../hooks/useFundamentals'
 import type { Candle, SignalFlag, VsaSignal } from '../types'
-import { deltaTone, fmtPct, fmtPrice, fmtSigned, ratingTone } from '../lib/format'
+import {
+  deltaTone,
+  fmtCompactPln,
+  fmtPct,
+  fmtPrice,
+  fmtSigned,
+  ratingTone,
+} from '../lib/format'
 
 // ── Signal filtering (driven by the detection-settings panel) ─────────────────
 
@@ -125,14 +140,20 @@ function SignalChecklist({
 }) {
   return (
     <Card className="flex flex-col">
-      <CardTitle>Siła rynku</CardTitle>
+      <CardTitle>
+        Siła rynku{' '}
+        <InfoTip text="Bullish VSA patterns detected for this stock in the shown period, with the date each last fired. ✓ = detected, ✕ = not present. Spring = trapped sellers below support; Successful Test = quiet retest of lows; SOS = strong buying bar." />
+      </CardTitle>
       <ul className="px-4 pb-3">
         {strength.map((f) => (
           <SignalRow key={f.name} flag={f} />
         ))}
       </ul>
       <div className="border-t border-slate-800" />
-      <CardTitle>Słabość rynku</CardTitle>
+      <CardTitle>
+        Słabość rynku{' '}
+        <InfoTip text="Bearish VSA patterns detected for this stock. Upthrust = trapped buyers above resistance; No Demand = quiet up-bar without professional interest; SOW = strong selling bar." />
+      </CardTitle>
       <ul className="px-4 pb-4">
         {weakness.map((f) => (
           <SignalRow key={f.name} flag={f} />
@@ -231,18 +252,79 @@ function DetectionSettings({
   )
 }
 
-function FundamentalsCard({ sector }: { sector: string | null }) {
-  const rows = [['Sector', sector ?? '—']]
+function FundamentalsCard({
+  ticker,
+  sector,
+}: {
+  ticker: string
+  sector: string | null
+}) {
+  const { data, loading } = useFundamentals(ticker)
+  const m = data?.metrics
+
+  // Yahoo returns the dividend yield either as a fraction (0.056) or as a
+  // percentage (5.6) depending on the data vintage — normalise to percent.
+  const divYield =
+    m?.dividendYield == null
+      ? null
+      : m.dividendYield < 1
+        ? m.dividendYield * 100
+        : m.dividendYield
+
+  const rows: [string, string][] = [
+    ['Sektor', data?.sector ?? sector ?? '—'],
+    ['Branża', data?.industry ?? '—'],
+    ['Kapitalizacja', m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
+    ['C/Z (P/E)', m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
+    ['EPS', m?.eps != null ? m.eps.toFixed(2) : '—'],
+    ['Stopa dywidendy', divYield != null ? `${divYield.toFixed(2)}%` : '—'],
+    ['Zatrudnienie', data?.employees != null ? data.employees.toLocaleString('pl-PL') : '—'],
+  ]
+
   return (
     <Card>
-      <CardTitle>Dane podstawowe</CardTitle>
+      <CardTitle>
+        Dane podstawowe{' '}
+        <InfoTip text="Company fundamentals from Yahoo Finance, refreshed daily. Kapitalizacja = market value of all shares; C/Z (P/E) = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Stopa dywidendy = yearly dividend as % of the price." />
+      </CardTitle>
       <dl className="space-y-2 px-4 pb-4 text-sm">
-        {rows.map(([k, v]) => (
-          <div key={k} className="flex justify-between">
-            <dt className="text-slate-500">{k}</dt>
-            <dd className="font-medium text-slate-200">{v}</dd>
+        {loading && !data ? (
+          <div className="flex items-center gap-2 py-2 text-slate-500">
+            <Loader2 size={14} className="animate-spin" /> Loading…
           </div>
-        ))}
+        ) : (
+          <>
+            {rows.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-slate-500">{k}</dt>
+                <dd className="text-right font-medium text-slate-200">{v}</dd>
+              </div>
+            ))}
+            {data?.website && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">WWW</dt>
+                <dd className="text-right font-medium">
+                  <a
+                    href={data.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
+                  >
+                    {data.website.replace(/^https?:\/\/(www\.)?/, '')}
+                    <ExternalLink size={12} />
+                  </a>
+                </dd>
+              </div>
+            )}
+            {data?.description && (
+              <p className="border-t border-slate-800 pt-3 text-xs leading-relaxed text-slate-400">
+                {data.description.length > 260
+                  ? data.description.slice(0, 260) + '…'
+                  : data.description}
+              </p>
+            )}
+          </>
+        )}
       </dl>
     </Card>
   )
@@ -259,7 +341,8 @@ function RatingCard({
   return (
     <Card>
       <CardTitle right={<MoreHorizontal size={16} className="text-slate-600" />}>
-        Ocena VSA
+        Ocena VSA{' '}
+        <InfoTip text="0–100 score built from all detected VSA signals with time decay: recent signals count more, old ones fade out (half impact after ~30 days). Above 70 = strong accumulation (green), around 50 = neutral, below 30 = distribution (red)." />
       </CardTitle>
       <div className="px-4 pb-4">
         <div className="flex items-end gap-2">
@@ -396,7 +479,7 @@ export function ChartsPage() {
 
         {/* Right: fundamentals / rating */}
         <div className="flex flex-col gap-4">
-          <FundamentalsCard sector={data.sector} />
+          <FundamentalsCard ticker={ticker} sector={data.sector} />
           <RatingCard
             currentRating={data.currentRating}
             ratingChange={data.ratingChange}

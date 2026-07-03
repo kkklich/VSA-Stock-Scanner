@@ -22,11 +22,10 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-from app.analysis.vsa import SignalType, detect_signals
+from app.analysis.vsa import SignalType, VsaConfig, detect_signals
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
-from app.services.exceptions import StooqAccessError
 from app.services.stooq_client import StooqClient
 
 logger = logging.getLogger(__name__)
@@ -75,6 +74,7 @@ async def compute_scanner_stats(
     history_cache_ttl: int,
     repo: QuoteRepository | None = None,
     today: date | None = None,
+    config: VsaConfig | None = None,
 ) -> list[SignalEffStats]:
     """Back-test all VSA signals across tracked companies and return per-signal stats."""
     if today is None:
@@ -100,7 +100,7 @@ async def compute_scanner_stats(
         async with semaphore:
             try:
                 rows = await stooq.get_daily_history(ticker, from_date=from_date)
-            except (StooqAccessError, Exception) as exc:
+            except Exception as exc:  # noqa: BLE001 — includes StooqAccessError
                 logger.debug("Scanner: skip %s — %s", ticker, exc)
                 rows = []
             if repo is not None and rows:
@@ -117,7 +117,7 @@ async def compute_scanner_stats(
         if not quotes or len(quotes) < 25:
             return
 
-        signals = detect_signals(quotes)
+        signals = detect_signals(quotes, config)
         if not signals:
             return
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Date, DateTime, Float, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Date, DateTime, Float, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base

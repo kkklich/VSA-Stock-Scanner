@@ -17,7 +17,6 @@ from app.main import app
 from app.models import StooqDailyQuote
 from app.services.exceptions import StooqAccessError
 
-
 # ── Test fixtures ─────────────────────────────────────────────────────────────
 
 
@@ -165,9 +164,11 @@ class TestGetRanking:
             client.get("/api/stocks/ranking")
             client.get("/api/stocks/ranking")
 
-        # one call per company on first load, then 0 calls on cache hit.
+        # One call per company on first load, then 0 calls on cache hit.
+        # Companies whose known market cap is below the 100M PLN floor are
+        # skipped before any data is fetched (5 of the 151 seed companies).
         first_load_calls = calls["count"]
-        assert first_load_calls == 151  # one call per company
+        assert first_load_calls == 146
 
 
 # ── GET /api/stocks/{ticker}/history ─────────────────────────────────────────
@@ -369,3 +370,88 @@ class TestStooqClientHelpers:
         quotes = _parse_daily_csv(csv, "kgh")
         assert len(quotes) == 1
         assert quotes[0].close == Decimal("144.50")
+
+
+# ── VSA settings query parameter ─────────────────────────────────────────────
+
+
+class TestVsaSettingsParam:
+    """The Scanner page settings must flow through the API into the engine."""
+
+    def test_ranking_accepts_valid_settings(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking",
+                params={"settings": '{"sos": {"volMult": 3.0}}'},
+            )
+        assert resp.status_code == 200
+
+    def test_ranking_rejects_malformed_settings(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking", params={"settings": "not-json"}
+            )
+        assert resp.status_code == 400
+
+    def test_ranking_rejects_out_of_range_settings(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking",
+                params={"settings": '{"sos": {"lookback": 500}}'},
+            )
+        assert resp.status_code == 400
+
+    def test_all_signals_disabled_yields_neutral_ranking(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        disabled = (
+            '{"spring":{"enabled":false},"sos":{"enabled":false},'
+            '"test":{"enabled":false},"upthrust":{"enabled":false},'
+            '"nodemand":{"enabled":false},"sow":{"enabled":false}}'
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking", params={"settings": disabled, "pageSize": 5}
+            ).json()
+        assert len(body) > 0
+        # No signals can fire → every stock is neutral 50 / Hold.
+        assert all(item["currentRating"] == 50 for item in body)
+        assert all(item["lastSignal"] == "Hold" for item in body)
+
+    def test_settings_use_separate_cache_entries(self) -> None:
+        calls = {"count": 0}
+
+        class _CountingClient(_FakeStooqClient):
+            async def get_daily_history(self, ticker, from_date=None, to_date=None):
+                calls["count"] += 1
+                return _rich_quotes()
+
+        app.dependency_overrides[get_stooq_client] = lambda: _CountingClient()
+        custom = '{"sos": {"volMult": 2.5}}'
+        with TestClient(app) as client:
+            client.get("/api/stocks/ranking")
+            default_calls = calls["count"]
+            # A different config must recompute the ranking (fresh cache entry),
+            # but reuses the per-ticker history cache → no new history fetches.
+            client.get("/api/stocks/ranking", params={"settings": custom})
+            assert calls["count"] == default_calls
+            # Same custom config again → served from its own ranking cache.
+            resp = client.get("/api/stocks/ranking", params={"settings": custom})
+            assert resp.status_code == 200
+
+    def test_signals_endpoint_accepts_settings(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/kgh/signals",
+                params={"settings": '{"nodemand": {"enabled": false}}'},
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert all(s["signalName"] != "No Demand" for s in body["vsaSignals"])

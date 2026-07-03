@@ -17,10 +17,9 @@ import httpx
 
 from app.config import settings
 from app.db.repository import QuoteRepository
-from app.models import StockHistoryResponse, StockRankingItem
+from app.models import StockRankingItem
 from app.services.cache import TTLCache
 from app.services.gpw_company_service import GpwCompanyService
-from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
 
 _USER_AGENT = (

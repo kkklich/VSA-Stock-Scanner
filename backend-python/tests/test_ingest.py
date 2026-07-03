@@ -6,14 +6,11 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 
-import pytest
-
 from app.db.repository import InMemoryQuoteRepository
 from app.jobs.daily_ingest import IngestService
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
-
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 

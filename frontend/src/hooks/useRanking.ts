@@ -1,7 +1,10 @@
 // Custom hook: fetch the VSA ranking and manage loading / error state.
+// The user's saved Scanner settings are sent along so the backend ranks
+// with the same VSA rules the user configured.
 
 import { useEffect, useState } from 'react'
 import { fetchRanking, type ApiRankingItem } from '../api/stocksApi'
+import { settingsQueryValue } from '../lib/vsaSettings'
 
 export interface UseRankingResult {
   data: ApiRankingItem[] | null
@@ -22,7 +25,7 @@ export function useRanking(page = 1, pageSize = 50): UseRankingResult {
     setLoading(true)
     setError(null)
 
-    fetchRanking(page, pageSize)
+    fetchRanking(page, pageSize, settingsQueryValue())
       .then((items) => {
         if (!cancelled) {
           setData(items)

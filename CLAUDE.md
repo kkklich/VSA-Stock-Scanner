@@ -35,10 +35,13 @@ agent/      ALL project documentation & reference material lives here:
 
 ## API contract (do not change without updating DOCUMENTATION.md)
 
-- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize`. Cached in-process (`cachetools` TTL), recomputed after daily ingestion.
-- `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[] }`. Supports `fromDate`, `toDate` (default last 6–12 months).
+- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`. Cached in-process per settings hash, recomputed after daily ingestion.
+- `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[] }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`.
+- `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type. Supports `settings`.
+- `GET /api/stocks/{ticker}/fundamentals` — company description + financial ratios + quarterly reports.
+- `settings` (optional, on the three analysis endpoints) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
 
-Mandatory ranking pre-filters: 20-session median volume > 100,000 PLN; market cap (Close × shares outstanding) > 100M PLN.
+Mandatory ranking pre-filters: 20-session median turnover > 100,000 PLN; market cap > 100M PLN (applied when known from `company-details.json`).
 
 ## Conventions
 
@@ -61,24 +64,26 @@ Mandatory ranking pre-filters: 20-session median volume > 100,000 PLN; market ca
 
 ## Current status
 
-Frontend layout scaffolded (mock-first). The Vite React+TS app now renders the
-three core screens from the `agent/` mockups against local mock data:
+**The full as-built state lives in `agent/CODEBASE-OVERVIEW.md` — read that for
+details.** Summary (2026-07-03):
 
-- **Sidebar + top bar** shell (`components/Sidebar.tsx`, `components/TopBar.tsx`) with strict dark mode, market status, and last-EOD-sync label.
-- **Watchlist** (`pages/WatchlistPage.tsx`) — ranking table: symbol/star, name, price + change, VSA rating meter, signal badge, days-since-signal, sparkline; search + pagination.
-- **Stock detail / Charts** (`pages/ChartsPage.tsx`) — Siła/Słabość-rynku signal checklist, detection-settings strip, TradingView Lightweight Charts candlestick + volume + VSA markers (`components/StockChart.tsx`), and Dane podstawowe / Ocena VSA / Watchlista cards.
-- **Scanner GPW** (`pages/ScannerPage.tsx`) — Silnik VSA rule toggles, signal tuner sliders, effectiveness donut + table.
-
-Styling via **Tailwind CSS v4** (`@tailwindcss/vite`); icons via `lucide-react`; mock data in `src/data/mockData.ts`; shared types in `src/types/index.ts`. Navigation is state-based in `App.tsx` (swap for a router later). `npm run build` passes.
-
-The layout is **responsive**: the sidebar collapses into a hamburger-toggled drawer below `lg`, and the watchlist table switches to stacked cards below `md`; pages use `p-4 sm:p-6` and the chart scales down on phones.
-
-**Backends (two, same JSON contract):**
-
-- `backend/` — ASP.NET Core / .NET 8 (the original). Endpoints: `GET /api/stocks`, `GET /api/stocks/{ticker}/history`. Runs on port 5123. Launch: `run-backend.bat`.
-- `backend-python/` — **Python / FastAPI port** (added 2026-06-29). Same two endpoints, same payloads, same stooq.pl proof-of-work client, 6h in-memory TTL cache. Runs on port 5111 (so both backends can run side by side). Launch: `run-backend-python.bat`. Tests: `pytest` (11 passing). Future **statistics** and **VSA calculation** modules live in `backend-python/app/analysis/` (`statistics.py`, `vsa.py` — documented stubs today), kept isolated from the web/data layers for easy unit testing. See `backend-python/README.md`.
-
-Next planned step: implement the `app/analysis/` statistics + VSA logic and add the `/api/stocks/ranking` and `/api/stocks/{ticker}/signals` endpoints, then wire the frontend `api/` layer to replace the mock data.
+- **Fully live, no mock data.** All pages (Dashboard, Watchlist, Scanner,
+  Stock detail/Charts) run against the Python backend. The legacy C# `backend/`
+  has been removed; `backend-python/` (port 5111, `run-backend-python.bat`) is
+  the only backend.
+- **Data:** Yahoo Finance (`.WA` tickers) is the primary source, stooq.pl the
+  fallback. PostgreSQL stores EOD bars (optional — app runs stateless without
+  it); APScheduler ingests nightly at 18:00 Europe/Warsaw.
+- **VSA engine is configurable:** the Scanner page's toggles + per-signal
+  sliders are the real engine configuration, sent via the `settings` query
+  parameter and applied by `app/analysis/vsa.py` (`VsaConfig`). Ranking,
+  chart overlays and back-test stats all follow the user's settings.
+- **Fundamentals:** the stock-detail page shows live market cap / P/E / EPS /
+  dividend yield via `GET /api/stocks/{ticker}/fundamentals`.
+- **Tests:** backend `pytest` — 110 passing; frontend `npm run build` passes.
+  Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
+- **Known gaps:** Filters & Settings pages are placeholders; favorites are
+  localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
 
 ---
-*Last updated: 2026-06-29.*
+*Last updated: 2026-07-03.*

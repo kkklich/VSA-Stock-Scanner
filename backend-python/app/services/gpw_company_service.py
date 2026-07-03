@@ -77,6 +77,7 @@ class GpwCompanyService:
                         employees=extra.get("employees"),
                         website=extra.get("website"),
                         country=extra.get("country"),
+                        market_cap=extra.get("marketCap"),
                     )
                 )
 
