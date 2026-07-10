@@ -1,7 +1,7 @@
 // Scanner configuration page ("VSA Scanner GPW"). Three columns:
-//   1. Silnik VSA — toggleable strength/weakness rules (click a rule to tune it).
-//   2. Detekcja sygnału — per-signal tuning sliders.
-//   3. Statystyki skuteczności — effectiveness donut + sortable table.
+//   1. VSA Engine — toggleable strength/weakness rules (click a rule to tune it).
+//   2. Selected signal — per-signal tuning sliders.
+//   3. Effectiveness — effectiveness donut + sortable table.
 //
 // These settings are THE live engine configuration: they are persisted to
 // localStorage and sent to the backend with every ranking / chart / stats
@@ -14,11 +14,15 @@ import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useScannerStats } from '../hooks/useScannerStats'
 import type { ApiSignalEffectiveness } from '../api/stocksApi'
 import {
+  HORIZON_IDS,
   SIGNAL_DEFAULTS,
   SIGNAL_IDS,
   loadVsaSettings,
+  matchHorizon,
+  presetSettings,
   saveVsaSettings,
   settingsQueryValue,
+  type HorizonId,
   type SignalId,
   type SignalSettings,
   type VsaSettings,
@@ -28,41 +32,41 @@ import {
 
 const SIGNAL_META: Record<
   SignalId,
-  { name: string; side: 'Siła' | 'Słabość'; blurb: string }
+  { name: string; side: 'Strength' | 'Weakness'; blurb: string }
 > = {
   spring: {
     name: 'Spring',
-    side: 'Siła',
+    side: 'Strength',
     blurb:
       'Price breaks below recent support but closes back above it — sellers were trapped. Valid on high volume (absorption) or very low volume (no supply).',
   },
   sos: {
     name: 'Sign of Strength',
-    side: 'Siła',
+    side: 'Strength',
     blurb:
       'A wide up-bar on high volume closing near its high — professional buying pushing the price up.',
   },
   test: {
     name: 'Successful Test',
-    side: 'Siła',
+    side: 'Strength',
     blurb:
       'A dip below the previous low that finds no sellers: very low volume and a close near the high. Confirms earlier strength.',
   },
   upthrust: {
     name: 'Upthrust',
-    side: 'Słabość',
+    side: 'Weakness',
     blurb:
       'Price spikes above recent resistance but closes back below it near the low — buyers were trapped. Valid on high or unusually low volume.',
   },
   nodemand: {
     name: 'No Demand',
-    side: 'Słabość',
+    side: 'Weakness',
     blurb:
       'A narrow up-bar on very low volume — professionals are not interested in higher prices.',
   },
   sow: {
     name: 'Sign of Weakness',
-    side: 'Słabość',
+    side: 'Weakness',
     blurb:
       'A wide down-bar on high volume closing near its low — professional selling pressing the price down.',
   },
@@ -71,6 +75,26 @@ const SIGNAL_META: Record<
 const NAME_TO_ID: Record<string, SignalId> = Object.fromEntries(
   SIGNAL_IDS.map((id) => [SIGNAL_META[id].name, id]),
 ) as Record<string, SignalId>
+
+/* ── Horizon presets ────────────────────────────────────────────────────── */
+
+const HORIZON_META: Record<HorizonId, { label: string; hint: string }> = {
+  short: {
+    label: 'Short',
+    hint:
+      'Short term (swing, days–2 weeks): 10-session context — signals react to local support/resistance, more of them, quicker but noisier.',
+  },
+  mid: {
+    label: 'Mid',
+    hint:
+      'Mid term (weeks–2 months): 20-session context — the standard engine defaults.',
+  },
+  long: {
+    label: 'Long',
+    hint:
+      'Long term (position, months+): 40-session context with stricter volume/spread thresholds — only the strongest signals qualify.',
+  },
+}
 
 /* ── Per-signal slider metadata ─────────────────────────────────────────── */
 
@@ -173,14 +197,14 @@ function EngineList({
           </span>
         }
       >
-        Silnik VSA{' '}
+        VSA Engine{' '}
         <InfoTip text="Turn individual VSA signals on or off. Disabled signals disappear everywhere: the ranking, the charts and the stats. Click a signal's name to load its detection thresholds into the tuner." />
       </CardTitle>
       <ul className="px-2 pb-2">
         {SIGNAL_IDS.map((id) => {
           const meta = SIGNAL_META[id]
           const enabled = settings[id].enabled
-          const strong = meta.side === 'Siła'
+          const strong = meta.side === 'Strength'
           const isSelected = id === selected
           return (
             <li key={id}>
@@ -297,7 +321,7 @@ function SignalTuner({
       <div className="mb-4 flex items-end gap-2">
         <div className="flex-1">
           <label className="mb-1 flex items-center gap-1.5 text-xs text-slate-500">
-            Detekcja wybranego sygnału
+            Selected signal
             <InfoTip text="These thresholds control how strictly the selected signal is detected — they are sent to the backend and change the real calculation everywhere in the app. Tighter thresholds = fewer but cleaner signals; looser = more but noisier." />
           </label>
           <select
@@ -435,7 +459,7 @@ function EffectivenessDonut({ profit }: { profit: number }) {
       </svg>
       <div className="absolute text-center">
         <div className="text-2xl font-bold text-emerald-400">{profit}%</div>
-        <div className="text-xs text-slate-500">Zysk</div>
+        <div className="text-xs text-slate-500">Win</div>
       </div>
     </div>
   )
@@ -525,10 +549,10 @@ function EffectivenessStats({
           )
         }
       >
-        Statystyki skuteczności{' '}
+        Effectiveness{' '}
         <InfoTip
           align="right"
-          text="Historical hit-rate and reward/risk for each VSA signal on the GPW, from a 10-session back-test over the last 120 sessions — recomputed with YOUR current thresholds. The donut shows the average success rate across your enabled signals. Skut.% = success rate, Z/R = reward-to-risk, Trans. = number of occurrences."
+          text="Historical hit-rate and reward/risk for each VSA signal on the GPW, from a 10-session back-test over the last 120 sessions — recomputed with YOUR current thresholds. The donut shows the average success rate across your enabled signals. Success% = success rate, R/R = reward-to-risk, Trades = number of occurrences."
         />
       </CardTitle>
 
@@ -536,10 +560,10 @@ function EffectivenessStats({
         <EffectivenessDonut profit={avg} />
         <div className="mt-2 flex justify-center gap-5 text-xs">
           <span className="flex items-center gap-1.5 text-slate-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Zysk {avg}%
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Win {avg}%
           </span>
           <span className="flex items-center gap-1.5 text-slate-400">
-            <span className="h-2 w-2 rounded-full bg-slate-700" /> Strata{' '}
+            <span className="h-2 w-2 rounded-full bg-slate-700" /> Loss{' '}
             {100 - avg}%
           </span>
         </div>
@@ -555,25 +579,25 @@ function EffectivenessStats({
               className="cursor-pointer select-none px-4 py-2 font-medium hover:text-slate-300"
               onClick={() => toggleSort('signal')}
             >
-              Sygnał{arrow('signal')}
+              Signal{arrow('signal')}
             </th>
             <th
               className="cursor-pointer select-none px-2 py-2 text-right font-medium hover:text-slate-300"
               onClick={() => toggleSort('successPct')}
             >
-              Skut.%{arrow('successPct')}
+              Success%{arrow('successPct')}
             </th>
             <th
               className="cursor-pointer select-none px-2 py-2 text-right font-medium hover:text-slate-300"
               onClick={() => toggleSort('rewardRisk')}
             >
-              Z/R{arrow('rewardRisk')}
+              R/R{arrow('rewardRisk')}
             </th>
             <th
               className="cursor-pointer select-none px-4 py-2 text-right font-medium hover:text-slate-300"
               onClick={() => toggleSort('count')}
             >
-              Trans.{arrow('count')}
+              Trades{arrow('count')}
             </th>
           </tr>
         </thead>
@@ -695,6 +719,9 @@ export function ScannerPage() {
     setSelected('spring')
   }
 
+  const applyHorizon = (h: HorizonId) => setSettings(presetSettings(h))
+  const activeHorizon = useMemo(() => matchHorizon(settings), [settings])
+
   const saveNow = () => {
     saveVsaSettings(settings)
     setSavedAt(Date.now())
@@ -723,7 +750,32 @@ export function ScannerPage() {
             whole app · auto-saved
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            Horizon
+            <InfoTip text="One-click default settings per investment horizon. Short = 10-session lookback (swing), Mid = 20 sessions (the app defaults), Long = 40 sessions with stricter thresholds (position trading). Applies to the whole app; you can still fine-tune any slider afterwards." />
+          </span>
+          <div
+            role="group"
+            aria-label="Investment horizon"
+            className="flex items-center rounded-lg border border-slate-800 bg-slate-900 p-0.5"
+          >
+            {HORIZON_IDS.map((h) => (
+              <button
+                key={h}
+                onClick={() => applyHorizon(h)}
+                title={HORIZON_META[h].hint}
+                className={
+                  'rounded-md px-2.5 py-1.5 text-sm transition-colors ' +
+                  (activeHorizon === h
+                    ? 'bg-emerald-600 font-medium text-white'
+                    : 'text-slate-400 hover:text-slate-200')
+                }
+              >
+                {HORIZON_META[h].label}
+              </button>
+            ))}
+          </div>
           {savedAt && (
             <span className="text-xs text-emerald-400">Saved ✓</span>
           )}

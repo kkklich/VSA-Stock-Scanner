@@ -162,25 +162,26 @@ class IngestService:
 
 
 def build_scheduler(
-    ingest_service: IngestService,
+    refresh_service,  # RefreshService (duck-typed to avoid a circular import)
     hour: int = 18,
     minute: int = 0,
 ) -> AsyncIOScheduler:
-    """Create (but don't start) the nightly ingestion scheduler.
+    """Create (but don't start) the nightly refresh scheduler.
 
-    The scheduler fires a *daily, incremental* ingest. The bootstrap (full)
-    ingest is handled separately in the app lifespan.
+    The scheduler fires the full *daily* refresh pipeline (incremental Yahoo
+    ingest → ranking recompute → rating snapshots). The bootstrap (full)
+    refresh is handled separately in the app lifespan.
     """
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
-        ingest_service.run,
+        refresh_service.run,
         trigger=CronTrigger(
             hour=hour,
             minute=minute,
             timezone="Europe/Warsaw",
         ),
         id="daily_ingest",
-        name="GPW daily EOD ingestion",
+        name="GPW daily data refresh (ingest + ranking + rating snapshots)",
         replace_existing=True,
         # If the server was down at trigger time, run the missed job within 1 h.
         misfire_grace_time=3_600,

@@ -20,12 +20,19 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.db.models import CompanyFundamentalsRow, CompanyQuarterlyRow, CompanyRow, DailyQuoteRow
+from app.db.models import (
+    CompanyFundamentalsRow,
+    CompanyQuarterlyRow,
+    CompanyRow,
+    DailyQuoteRow,
+    RatingSnapshotRow,
+)
 from app.models import (
     CompanyFundamentalsResponse,
     FinancialMetrics,
     GpwCompany,
     QuarterlyReport,
+    RatingPoint,
     StooqDailyQuote,
 )
 
@@ -66,6 +73,19 @@ class QuoteRepository(Protocol):
 
     async def get_fundamentals(self, ticker: str) -> CompanyFundamentalsResponse | None:
         """Return the stored fundamentals for a ticker, or None if not yet ingested."""
+        ...
+
+    async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
+        """Insert or update daily VSA rating snapshots for a ticker."""
+        ...
+
+    async def get_rating_history(
+        self,
+        ticker: str,
+        from_date: date,
+        to_date: date | None = None,
+    ) -> list[RatingPoint]:
+        """Return stored rating snapshots for ``ticker`` in date order."""
         ...
 
 
@@ -201,6 +221,55 @@ class PostgresQuoteRepository:
             )
             await session.execute(stmt)
 
+    async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
+        if not points:
+            return
+        rows = [
+            {
+                "ticker": ticker,
+                "date": p.date,
+                "rating": p.rating,
+                "verdict": p.verdict,
+                "close": p.close,
+            }
+            for p in points
+        ]
+        async with self._sf() as session, session.begin():
+            stmt = pg_insert(RatingSnapshotRow).values(rows).on_conflict_do_update(
+                constraint="uq_rating_snapshot",
+                set_={
+                    "rating": pg_insert(RatingSnapshotRow).excluded.rating,
+                    "verdict": pg_insert(RatingSnapshotRow).excluded.verdict,
+                    "close": pg_insert(RatingSnapshotRow).excluded.close,
+                },
+            )
+            await session.execute(stmt)
+
+    async def get_rating_history(
+        self,
+        ticker: str,
+        from_date: date,
+        to_date: date | None = None,
+    ) -> list[RatingPoint]:
+        async with self._sf() as session:
+            stmt = (
+                select(RatingSnapshotRow)
+                .where(RatingSnapshotRow.ticker == ticker, RatingSnapshotRow.date >= from_date)
+                .order_by(RatingSnapshotRow.date)
+            )
+            if to_date is not None:
+                stmt = stmt.where(RatingSnapshotRow.date <= to_date)
+            rows = (await session.execute(stmt)).scalars().all()
+            return [
+                RatingPoint(
+                    date=row.date,
+                    rating=row.rating,
+                    verdict=row.verdict,
+                    close=float(row.close) if row.close is not None else None,
+                )
+                for row in rows
+            ]
+
     async def get_fundamentals(self, ticker: str) -> CompanyFundamentalsResponse | None:
         async with self._sf() as session:
             fund_row = (
@@ -263,6 +332,7 @@ class InMemoryQuoteRepository:
         self._companies: list[GpwCompany] = []
         self._fundamentals: dict[str, FinancialMetrics] = {}
         self._quarterly: dict[str, list[QuarterlyReport]] = {}
+        self._ratings: dict[str, dict[date, RatingPoint]] = {}
 
     async def upsert_companies(self, companies: list[GpwCompany]) -> None:
         by_ticker = {c.ticker: c for c in self._companies}
@@ -296,6 +366,23 @@ class InMemoryQuoteRepository:
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
         self._quarterly[ticker] = reports
+
+    async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
+        bucket = self._ratings.setdefault(ticker, {})
+        for p in points:
+            bucket[p.date] = p
+
+    async def get_rating_history(
+        self,
+        ticker: str,
+        from_date: date,
+        to_date: date | None = None,
+    ) -> list[RatingPoint]:
+        rows = [
+            p for p in self._ratings.get(ticker, {}).values()
+            if p.date >= from_date and (to_date is None or p.date <= to_date)
+        ]
+        return sorted(rows, key=lambda p: p.date)
 
     async def get_fundamentals(self, ticker: str) -> CompanyFundamentalsResponse | None:
         metrics = self._fundamentals.get(ticker)

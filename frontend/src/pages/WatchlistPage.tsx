@@ -7,13 +7,12 @@
 //   Add Stock — search dialog to add a stock to favorites
 //   Edit      — toggle edit mode to remove stocks from favorites
 //   Filter    — dropdown to filter by VSA rating / signal
-//   Refresh   — refetch the ranking
+//   Refresh   — run the backend refresh pipeline (Yahoo → ratings → DB), then refetch
 //   Export    — download the current view as CSV
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowDownUp,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -28,17 +27,26 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useRanking } from '../hooks/useRanking'
+import { useRanking, type RankingParams } from '../hooks/useRanking'
+import { useCompanies } from '../hooks/useCompanies'
+import {
+  fetchRanking,
+  type RankingSortKey,
+  type SortDir,
+} from '../api/stocksApi'
 import type { SignalVerdict, StockRankingItem } from '../types'
 import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
+import { settingsQueryValue } from '../lib/vsaSettings'
+import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
-  InfoTip,
   RatingMeter,
   SignalBadge,
+  SortHeader,
   Sparkline,
   TickerMark,
 } from '../components/ui'
+import { RefreshButton } from '../components/RefreshButton'
 
 /** Star toggle shown on each row (module-scope to avoid remount churn). */
 function FavoriteStar({
@@ -112,29 +120,14 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
   )
 }
 
-const SIGNAL_OPTIONS: (SignalVerdict | 'all')[] = [
-  'all',
-  'Strong Buy',
-  'Buy',
-  'Hold',
-  'Sell',
-  'Strong Sell',
-]
-const RATING_OPTIONS = [
-  { label: 'All ratings', value: 0 },
-  { label: '70+ (strong)', value: 70 },
-  { label: '90+ (elite)', value: 90 },
-]
-
 const PAGE_SIZE = 50
 
 export function WatchlistPage() {
   const navigate = useNavigate()
-  // Fetch all companies in one shot; client-side pagination keeps search/filters
-  // working across the full list rather than just one backend page.
-  const { data, loading, error, refetch } = useRanking(1, 300)
 
   const [query, setQuery] = useState('')
+  // Debounced search text — avoids firing a request on every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
@@ -142,6 +135,11 @@ export function WatchlistPage() {
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
   const [showAdd, setShowAdd] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
+
+  // Sort state — every column header drives these, sent to the backend.
+  const [sortBy, setSortBy] = useState<RankingSortKey>('currentRating')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   // Starred tickers, persisted across sessions in localStorage.
   const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
@@ -150,94 +148,157 @@ export function WatchlistPage() {
     saveFavorites(stars)
   }, [stars])
 
+  // Debounce the search box (300 ms) before it becomes a query parameter.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(query.trim()), 300)
+    return () => clearTimeout(t)
+  }, [query])
+
   const toggleStar = (ticker: string) =>
     setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
 
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
 
-  // Map API response to the UI shape (adds the starred field).
-  const allRows = useMemo<StockRankingItem[]>(() => {
-    if (!data) return []
-    return data.map((item) => ({
-      ...item,
-      starred: stars[item.ticker] ?? false,
-    }))
-  }, [data, stars])
-
-  const favCount = useMemo(
-    () => allRows.filter((s) => s.starred).length,
-    [allRows],
+  // Tickers currently starred — the allow-list sent to the backend when the
+  // "favorites only" (or edit) view is active.
+  const favTickers = useMemo(
+    () => Object.keys(stars).filter((t) => stars[t]),
+    [stars],
   )
+  const favCount = favTickers.length
 
   // Edit mode implicitly scopes to favorites (you remove favorites there).
   const effectiveFavoritesOnly = favoritesOnly || editMode
   const filtersActive = minRating > 0 || signalFilter !== 'all'
 
-  const rows = useMemo<StockRankingItem[]>(() => {
-    const q = query.trim().toLowerCase()
-    let r = allRows
-    if (effectiveFavoritesOnly) r = r.filter((s) => s.starred)
-    if (minRating > 0) r = r.filter((s) => s.currentRating >= minRating)
-    if (signalFilter !== 'all') r = r.filter((s) => s.lastSignal === signalFilter)
-    if (q) {
-      r = r.filter(
-        (s) =>
-          s.ticker.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q),
-      )
-    }
-    // Favorites first; stable sort keeps rating order within each group.
-    return [...r].sort((a, b) => Number(b.starred) - Number(a.starred))
-  }, [allRows, query, effectiveFavoritesOnly, minRating, signalFilter])
+  // Everything below is computed by the backend — this hook just requests the
+  // right page with the right sort/filter/search.
+  const rankingParams = useMemo<RankingParams>(
+    () => ({
+      page: currentPage,
+      pageSize: PAGE_SIZE,
+      sortBy,
+      sortDir,
+      q: debouncedSearch || undefined,
+      minRating: minRating || undefined,
+      signal: signalFilter,
+      tickers: effectiveFavoritesOnly ? favTickers : undefined,
+    }),
+    [
+      currentPage,
+      sortBy,
+      sortDir,
+      debouncedSearch,
+      minRating,
+      signalFilter,
+      effectiveFavoritesOnly,
+      favTickers,
+    ],
+  )
 
-  // Reset to page 1 whenever filters/search change.
+  const { data, total, loading, error, refetch } = useRanking(rankingParams)
+
+  // Companies list backs the "Add Stock" picker — it stays available even when
+  // the ranking feed is filtered down to a single page.
+  const { companies } = useCompanies()
+
+  // Overlay the client-only "starred" flag onto the current page of results.
+  const rows = useMemo<StockRankingItem[]>(
+    () =>
+      (data ?? []).map((item) => ({
+        ...item,
+        starred: stars[item.ticker] ?? false,
+      })),
+    [data, stars],
+  )
+
+  // Reset to the first page whenever the query shape changes.
   useEffect(() => {
     setCurrentPage(1)
-  }, [query, favoritesOnly, editMode, minRating, signalFilter])
+  }, [debouncedSearch, favoritesOnly, editMode, minRating, signalFilter, sortBy, sortDir])
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
-  const pagedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const onSort = (col: RankingSortKey) => {
+    if (col === sortBy) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(col)
+      // Text columns read best ascending; metrics best descending.
+      setSortDir(col === 'ticker' || col === 'name' ? 'asc' : 'desc')
+    }
+  }
 
   const clearFilters = () => {
     setMinRating(0)
     setSignalFilter('all')
   }
 
-  /** Download the current (filtered) view as a CSV file. */
-  const handleExport = () => {
-    const header = [
-      'Symbol',
-      'Name',
-      'Last Price (PLN)',
-      'Change %',
-      'VSA Rating',
-      'Last Signal',
-      'Days Since Signal',
-      'Favorite',
-    ]
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`
-    const lines = rows.map((s) =>
-      [
-        s.ticker,
-        esc(s.name),
-        s.lastPrice,
-        s.priceChangePct,
-        s.currentRating,
-        esc(s.lastSignal),
-        s.daysSinceSignal === 999 ? '' : s.daysSinceSignal,
-        s.starred ? 'yes' : 'no',
-      ].join(','),
-    )
-    const csv = [header.join(','), ...lines].join('\r\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `stockpilot-watchlist-${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
+  /** Download the current (filtered + sorted) view as a CSV file. Fetches all
+   *  matching rows from the backend, not just the visible page. */
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      // The backend caps pageSize at 500 — keep fetching pages until every
+      // matching row is in, so large exports aren't silently truncated.
+      const baseQuery = {
+        pageSize: 500,
+        sortBy,
+        sortDir,
+        q: debouncedSearch || undefined,
+        minRating: minRating || undefined,
+        signal: signalFilter,
+        tickers: effectiveFavoritesOnly ? favTickers : undefined,
+        settings: settingsQueryValue(),
+      }
+      const first = await fetchRanking({ ...baseQuery, page: 1 })
+      const items = [...first.items]
+      let page = 2
+      while (items.length < first.total) {
+        const next = await fetchRanking({ ...baseQuery, page })
+        if (next.items.length === 0) break // safety: never loop forever
+        items.push(...next.items)
+        page += 1
+      }
+      const header = [
+        'Symbol',
+        'Name',
+        'Last Price (PLN)',
+        'Change %',
+        'VSA Rating',
+        'Last Signal',
+        'Days Since Signal',
+        'Favorite',
+      ]
+      // Quote-escape, and prefix leading =, +, -, @ with ' so spreadsheet
+      // apps don't execute cell values as formulas.
+      const esc = (v: string) =>
+        `"${(/^[=+\-@]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`
+      const lines = items.map((s) =>
+        [
+          s.ticker,
+          esc(s.name),
+          s.lastPrice,
+          s.priceChangePct,
+          s.currentRating,
+          esc(s.lastSignal),
+          s.daysSinceSignal === 999 ? '' : s.daysSinceSignal,
+          stars[s.ticker] ? 'yes' : 'no',
+        ].join(','),
+      )
+      const csv = [header.join(','), ...lines].join('\r\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `stockpilot-watchlist-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const btnBase =
@@ -251,7 +312,7 @@ export function WatchlistPage() {
           <h2 className="text-lg font-semibold text-slate-100">Watchlist</h2>
           {!loading && (
             <span className="text-sm text-slate-500">
-              ({rows.length} stocks
+              ({total} stocks
               {favCount > 0 && `, ${favCount} ★`})
             </span>
           )}
@@ -389,20 +450,21 @@ export function WatchlistPage() {
             )}
           </div>
 
-          {/* Refresh */}
-          <button onClick={refetch} className={btnBase} title="Refresh ranking">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+          {/* Refresh — runs the full backend pipeline (Yahoo → ratings → DB) */}
+          <RefreshButton onRefreshed={refetch} />
 
           {/* Export CSV */}
           <button
             onClick={handleExport}
-            disabled={rows.length === 0}
+            disabled={total === 0 || exporting}
             className={btnBase + ' disabled:cursor-not-allowed disabled:opacity-50'}
             title="Export current view to CSV"
           >
-            <Download size={14} />
+            {exporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
@@ -416,44 +478,77 @@ export function WatchlistPage() {
       {!loading && !error && rows.length > 0 && (
         <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[1300px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-48" />
+                <col />
+                <col className="w-48" />
+                <col className="w-48" />
+                <col className="w-40" />
+                <col className="w-36" />
+                <col className="w-48" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                  <th className="px-4 py-3 font-medium">
-                    <span className="inline-flex items-center gap-1">
-                      Symbol <ArrowDownUp size={12} className="text-slate-600" />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 text-right font-medium">Last Price</th>
-                  <th className="px-4 py-3 font-medium">
-                    <span className="inline-flex items-center gap-1">
-                      Rating (0–100)
-                      <InfoTip text="VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution). Computed with your Scanner settings." />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 font-medium">
-                    <span className="inline-flex items-center gap-1">
-                      Last Signal
-                      <InfoTip text="Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell. No recent pattern → Hold." />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 font-medium">
-                    <span className="inline-flex items-center gap-1">
-                      Days Since Signal
-                      <InfoTip text="How many days ago the last VSA pattern fired. Fresh signals (0–5 days) matter most — their influence fades over time (time decay)." />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium">
-                    Change
-                    <span className="block text-[10px] normal-case text-slate-600">
-                      +/- % &amp; sparkline
-                    </span>
-                  </th>
+                  <SortHeader
+                    label="Symbol"
+                    col="ticker"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label="Name"
+                    col="name"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label="Last Price"
+                    col="lastPrice"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    align="right"
+                  />
+                  <SortHeader
+                    label="Rating (0–100)"
+                    col="currentRating"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    info="VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution). Computed with your Scanner settings."
+                  />
+                  <SortHeader
+                    label="Last Signal"
+                    col="lastSignal"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    info="Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell. No recent pattern → Hold."
+                  />
+                  <SortHeader
+                    label="Days Since Signal"
+                    col="daysSinceSignal"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    info="How many days ago the last VSA pattern fired. Fresh signals (0–5 days) matter most — their influence fades over time (time decay)."
+                  />
+                  <SortHeader
+                    label="Change"
+                    col="priceChangePct"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    align="right"
+                    subLabel="+/- % & sparkline"
+                  />
                 </tr>
               </thead>
               <tbody>
-                {pagedRows.map((s) => (
+                {rows.map((s) => (
                   <tr
                     key={s.ticker}
                     onClick={() => openTicker(s.ticker)}
@@ -483,7 +578,11 @@ export function WatchlistPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-400">{s.name}</td>
+                    <td className="px-4 py-3 text-slate-400">
+                      <span className="block truncate" title={s.name}>
+                        {s.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span className="font-medium text-slate-200">
                         {fmtPrice(s.lastPrice)} PLN
@@ -526,9 +625,9 @@ export function WatchlistPage() {
 
           <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
             <span>
-              {rows.length === 0
+              {total === 0
                 ? '0 stocks'
-                : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, rows.length)} of ${rows.length} stocks`}
+                : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} of ${total} stocks`}
             </span>
             {totalPages > 1 && (
               <Pagination
@@ -544,7 +643,7 @@ export function WatchlistPage() {
       {/* ── Mobile cards (below md) ──────────────────────────────────────── */}
       {!loading && !error && rows.length > 0 && (
         <div className="space-y-3 md:hidden">
-          {pagedRows.map((s) => (
+          {rows.map((s) => (
             <div
               key={s.ticker}
               onClick={() => openTicker(s.ticker)}
@@ -649,7 +748,7 @@ export function WatchlistPage() {
       {/* Add-stock dialog */}
       {showAdd && (
         <AddStockDialog
-          stocks={allRows}
+          stocks={companies}
           stars={stars}
           onToggle={toggleStar}
           onClose={() => setShowAdd(false)}
@@ -737,7 +836,7 @@ function AddStockDialog({
   onToggle,
   onClose,
 }: {
-  stocks: StockRankingItem[]
+  stocks: { ticker: string; name: string }[]
   stars: Record<string, boolean>
   onToggle: (ticker: string) => void
   onClose: () => void

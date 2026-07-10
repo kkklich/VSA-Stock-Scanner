@@ -36,6 +36,71 @@ export const SIGNAL_DEFAULTS: VsaSettings = {
 
 export const SIGNAL_IDS = Object.keys(SIGNAL_DEFAULTS) as SignalId[]
 
+/* ── Horizon presets ─────────────────────────────────────────────────────── */
+
+export type HorizonId = 'short' | 'mid' | 'long'
+
+// Preset bundles for the three investment horizons. The horizon dial is the
+// lookback — how much history defines "average" spread/volume and the
+// support/resistance levels a signal must break:
+//   short ≈ 10 sessions (~2 weeks)  — swing trading; reacts to local structure,
+//                                     slightly looser volume/spread thresholds;
+//   mid   ≈ 20 sessions (~1 month)  — the documented engine defaults;
+//   long  ≈ 40 sessions (~2 months) — position trading; stricter thresholds so
+//                                     only bars that stand out against months
+//                                     of context qualify (fewer, stronger).
+export const HORIZON_PRESETS: Record<HorizonId, VsaSettings> = {
+  short: {
+    spring:   { enabled: true, spreadMult: 1.2, volMult: 1.2, closePos: 60, lookback: 10 },
+    sos:      { enabled: true, spreadMult: 1.4, volMult: 1.4, closePos: 65, lookback: 10 },
+    test:     { enabled: true, spreadMult: 1.0, volMult: 0.7, closePos: 65, lookback: 10 },
+    upthrust: { enabled: true, spreadMult: 1.2, volMult: 1.3, closePos: 30, lookback: 10 },
+    sow:      { enabled: true, spreadMult: 1.4, volMult: 1.4, closePos: 35, lookback: 10 },
+    nodemand: { enabled: true, spreadMult: 0.7, volMult: 0.7, closePos: 65, lookback: 10 },
+  },
+  // Mid term IS the default configuration — when active, the settings
+  // parameter is omitted and the backend serves its pre-warmed cache.
+  mid: SIGNAL_DEFAULTS,
+  long: {
+    spring:   { enabled: true, spreadMult: 1.3, volMult: 1.4, closePos: 65, lookback: 40 },
+    sos:      { enabled: true, spreadMult: 1.7, volMult: 1.8, closePos: 70, lookback: 40 },
+    test:     { enabled: true, spreadMult: 1.0, volMult: 0.6, closePos: 70, lookback: 40 },
+    upthrust: { enabled: true, spreadMult: 1.3, volMult: 1.5, closePos: 25, lookback: 40 },
+    sow:      { enabled: true, spreadMult: 1.7, volMult: 1.8, closePos: 30, lookback: 40 },
+    nodemand: { enabled: true, spreadMult: 0.6, volMult: 0.6, closePos: 65, lookback: 40 },
+  },
+}
+
+export const HORIZON_IDS: HorizonId[] = ['short', 'mid', 'long']
+
+/** Deep-cloned settings for a horizon preset, safe to mutate in state. */
+export function presetSettings(horizon: HorizonId): VsaSettings {
+  const src = HORIZON_PRESETS[horizon]
+  return Object.fromEntries(
+    SIGNAL_IDS.map((id) => [id, { ...src[id] }]),
+  ) as VsaSettings
+}
+
+function sameSignal(a: SignalSettings, b: SignalSettings): boolean {
+  return (
+    a.enabled === b.enabled &&
+    a.spreadMult === b.spreadMult &&
+    a.volMult === b.volMult &&
+    a.closePos === b.closePos &&
+    a.lookback === b.lookback
+  )
+}
+
+/** Which horizon preset the settings exactly match, or null for custom. */
+export function matchHorizon(settings: VsaSettings): HorizonId | null {
+  for (const h of HORIZON_IDS) {
+    if (SIGNAL_IDS.every((id) => sameSignal(settings[id], HORIZON_PRESETS[h][id]))) {
+      return h
+    }
+  }
+  return null
+}
+
 const STORAGE_KEY = 'stockpilot:vsa-settings:v2'
 // Pre-v2 keys (scanner settings that never reached the backend) — cleaned up on load.
 const LEGACY_KEYS = ['stockpilot:scanner:rules', 'stockpilot:scanner:params']
@@ -72,17 +137,7 @@ export function saveVsaSettings(settings: VsaSettings): void {
 }
 
 export function isDefaultSettings(settings: VsaSettings): boolean {
-  return SIGNAL_IDS.every((id) => {
-    const a = settings[id]
-    const b = SIGNAL_DEFAULTS[id]
-    return (
-      a.enabled === b.enabled &&
-      a.spreadMult === b.spreadMult &&
-      a.volMult === b.volMult &&
-      a.closePos === b.closePos &&
-      a.lookback === b.lookback
-    )
-  })
+  return SIGNAL_IDS.every((id) => sameSignal(settings[id], SIGNAL_DEFAULTS[id]))
 }
 
 /**

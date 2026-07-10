@@ -65,6 +65,11 @@
     "sector": "Consumer Defensive"
   },
   {
+    "ticker": "amc",
+    "name": "Amica S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "anr",
     "name": "Answear.com S.A.",
     "sector": "Consumer Cyclical"
@@ -170,6 +175,11 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "ccc",
+    "name": "CCC S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "cdl",
     "name": "CDRL S.A.",
     "sector": "Consumer Cyclical"
@@ -223,6 +233,11 @@
     "ticker": "crj",
     "name": "Creepy Jar S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "cbf",
+    "name": "Cyber_Folks S.A.",
+    "sector": "Technology"
   },
   {
     "ticker": "dbc",
@@ -300,14 +315,39 @@
     "sector": "Consumer Defensive"
   },
   {
+    "ticker": "fmg",
+    "name": "Wise Energy S.A.",
+    "sector": "Financial Services"
+  },
+  {
     "ticker": "fro",
     "name": "FERRO S.A.",
     "sector": "Industrials"
   },
   {
+    "ticker": "fte",
+    "name": "Fabryki Mebli FORTE S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "gpw",
     "name": "Gielda Papierów Wartosciowych w Warszawie S.A.",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "gre",
+    "name": "MVA Green Energy SA",
+    "sector": null
+  },
+  {
+    "ticker": "grn",
+    "name": "Grodno Spólka Akcyjna",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "grx",
+    "name": "GreenX Metals Limited",
+    "sector": "Basic Materials"
   },
   {
     "ticker": "gtc",
@@ -330,6 +370,11 @@
     "sector": "Technology"
   },
   {
+    "ticker": "hug",
+    "name": "Huuuge, Inc.",
+    "sector": "Communication Services"
+  },
+  {
     "ticker": "ims",
     "name": "IMS S.A.",
     "sector": "Communication Services"
@@ -345,8 +390,23 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "inp",
+    "name": "Inpro S.A.",
+    "sector": "Real Estate"
+  },
+  {
     "ticker": "ipo",
     "name": "Intersport Polska S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "itb",
+    "name": "Interbud-Lublin S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "itx",
+    "name": "Industria de Diseño Textil, S.A.",
     "sector": "Consumer Cyclical"
   },
   {
@@ -405,6 +465,16 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "lug",
+    "name": "LUG S.A.",
+    "sector": null
+  },
+  {
+    "ticker": "txt",
+    "name": "Text S.A.",
+    "sector": "Technology"
+  },
+  {
     "ticker": "mab",
     "name": "Mabion S.A.",
     "sector": "Healthcare"
@@ -440,6 +510,11 @@
     "sector": "Utilities"
   },
   {
+    "ticker": "mex",
+    "name": "Mex Polska S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "mfo",
     "name": "MFO S.A.",
     "sector": "Industrials"
@@ -450,9 +525,29 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "moc",
+    "name": "Molecure S.A.",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "moj",
+    "name": "MOJ",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "mol",
     "name": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság",
     "sector": "Energy"
+  },
+  {
+    "ticker": "mon",
+    "name": "Monnari Trade S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "mov",
+    "name": "Movie Games S.A.",
+    "sector": "Communication Services"
   },
   {
     "ticker": "mrb",
@@ -480,9 +575,24 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "opg",
+    "name": "CPI FIM SA",
+    "sector": null
+  },
+  {
     "ticker": "opl",
     "name": "Orange Polska S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "opm",
+    "name": "OPTeam Spólka Akcyjna",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "opn",
+    "name": "Oponeo.pl S.A.",
+    "sector": "Consumer Cyclical"
   },
   {
     "ticker": "pcf",
@@ -615,6 +725,21 @@
     "sector": null
   },
   {
+    "ticker": "sek",
+    "name": "Seko S.A.",
+    "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "sel",
+    "name": "Selena FM S.A.",
+    "sector": "Basic Materials"
+  },
+  {
+    "ticker": "swg",
+    "name": "Seco/Warwick S.A.",
+    "sector": "Industrials"
+  },
+  {
     "ticker": "ska",
     "name": "Fabryka Farb i Lakierów Sniezka SA",
     "sector": "Basic Materials"
@@ -640,6 +765,31 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "son",
+    "name": "Sonel S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "snt",
+    "name": "Synektik Spólka Akcyjna",
+    "sector": "Healthcare"
+  },
+  {
+    "ticker": "snw",
+    "name": "Sanwil Holding Spólka Akcyjna",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "snx",
+    "name": "Sunex S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "spl",
+    "name": "Santander Bank Polska S.A.",
+    "sector": "Financial Services"
+  },
+  {
     "ticker": "stf",
     "name": "Stalprofil S.A.",
     "sector": "Industrials"
@@ -658,6 +808,11 @@
     "ticker": "stx",
     "name": "Stalexport Autostrady S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "tar",
+    "name": "Tarczynski S.A.",
+    "sector": "Consumer Defensive"
   },
   {
     "ticker": "ten",
@@ -690,14 +845,54 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "tsg",
+    "name": "Tesgas S.A.",
+    "sector": "Utilities"
+  },
+  {
+    "ticker": "unf",
+    "name": "Unfold.vc ASI S.A.",
+    "sector": "Financial Services"
+  },
+  {
     "ticker": "uni",
     "name": "UNIBEP S.A.",
     "sector": "Industrials"
   },
   {
+    "ticker": "unt",
+    "name": "Unimot S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "voi",
+    "name": "Vee SA",
+    "sector": null
+  },
+  {
+    "ticker": "vot",
+    "name": "Votum S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "vow",
+    "name": "Volkswagen AG",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "vox",
     "name": "Voxel S.A.",
     "sector": "Healthcare"
+  },
+  {
+    "ticker": "vrc",
+    "name": "Vercom S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "vrf",
+    "name": "VR Factory Games SA",
+    "sector": null
   },
   {
     "ticker": "vrg",
@@ -710,9 +905,24 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "wlt",
+    "name": "Wielton S.A.",
+    "sector": "Industrials"
+  },
+  {
+    "ticker": "woj",
+    "name": "Wojas S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "wpl",
     "name": "Wirtualna Polska Holding S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "wwl",
+    "name": "Wawel S.A.",
+    "sector": "Consumer Defensive"
   },
   {
     "ticker": "xtb",

@@ -17,6 +17,7 @@ import asyncio
 import logging
 from datetime import date, timedelta
 
+from app.analysis.ai_insight import analyze_stock
 from app.analysis.statistics import median_volume_pln
 from app.analysis.vsa import (
     VsaConfig,
@@ -129,6 +130,17 @@ async def compute_ranking(
 
             verdict, days_since = verdict_from_signals(signals, today)
 
+            # Local AI-insight second opinion — reuses the quotes/signals/rating
+            # already computed above (no extra I/O). We only surface its
+            # confidence here; the full narrative lives on the detail endpoint.
+            ai = analyze_stock(
+                ticker=company.ticker,
+                name=company.name,
+                quotes=quotes,
+                signals=signals,
+                rating=rating_today,
+            )
+
             last_close = float(quotes[-1].close)
             prev_close = float(quotes[-2].close) if len(quotes) >= 2 else last_close
             price_change_pct = (
@@ -157,6 +169,7 @@ async def compute_ranking(
                 days_since_signal=days_since,
                 sparkline=sparkline,
                 volume=median_vol_shares,
+                ai_confidence=ai.confidence,
             )
         except Exception:  # noqa: BLE001
             logger.exception("Skipping %s: analysis failed.", company.ticker)

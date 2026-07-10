@@ -12,6 +12,7 @@ import { WatchlistPage } from './pages/WatchlistPage'
 import { ChartsPage } from './pages/ChartsPage'
 import { ScannerPage } from './pages/ScannerPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { HelpPage } from './pages/HelpPage'
 import { usePageSeo } from './lib/seo'
 
 /** Human-readable top-bar title for the current path. */
@@ -22,6 +23,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith('/stock/')) return 'Stock Detail'
   if (pathname.startsWith('/filters')) return 'Filters'
   if (pathname.startsWith('/settings')) return 'Settings'
+  if (pathname.startsWith('/help')) return 'How to use StockPilot'
   return 'StockPilot'
 }
 
@@ -63,6 +65,7 @@ export default function App() {
         <Route path="stock/:ticker" element={<ChartsPage />} />
         <Route path="filters" element={<PlaceholderPage title="Filters" />} />
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="help" element={<HelpPage />} />
         {/* Unknown paths fall back to the home page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

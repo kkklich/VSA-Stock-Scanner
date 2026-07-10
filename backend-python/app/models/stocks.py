@@ -95,6 +95,8 @@ class StockRankingItem(_CamelModel):
     volume: int
     # Sector from the GPW company list.
     sector: str | None = None
+    # Confidence (0–100) of the built-in AI-insight engine's verdict.
+    ai_confidence: int = 0
 
 
 # ── New models: signals endpoint ──────────────────────────────────────────────
@@ -208,6 +210,92 @@ class VsaSettings(_CamelModel):
     upthrust: VsaSignalSettings | None = None
     nodemand: VsaSignalSettings | None = None
     sow: VsaSignalSettings | None = None
+
+
+# ── New models: AI analysis endpoint ─────────────────────────────────────────
+
+
+class AiSignalAssessment(_CamelModel):
+    """The insight engine's second opinion on one rule-detected VSA signal."""
+
+    date: date
+    # Signal display name, e.g. "Spring", "SOS".
+    signal_name: str
+    # Whether the chart context supports the signal.
+    agreement: Literal["confirm", "reject", "uncertain"]
+    # One-sentence justification in plain language.
+    comment: str
+
+
+class AiAnalysisResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/ai-analysis``.
+
+    Produced locally by ``app/analysis/ai_insight.py`` from the same OHLCV
+    history and rule-detected signals the charts use — an interpretive layer
+    on top of the rule engine, never a replacement for it. No external
+    services involved.
+    """
+
+    ticker: str
+    # Trading day of the last bar the analysis is based on.
+    as_of: date
+    # The engine's overall read of the chart.
+    verdict: Literal["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"]
+    # How confident the engine is in its verdict, 0–100.
+    confidence: int = Field(ge=0, le=100)
+    # Plain-language narrative of what the price/volume action shows.
+    summary: str
+    # Per-signal agreement with the rule engine (recent signals only).
+    signal_assessments: list[AiSignalAssessment] = []
+    # Short bullet observations (trend, volume behaviour, support/resistance).
+    key_observations: list[str] = []
+    # Identifier of the built-in engine that produced the analysis.
+    engine: str
+
+
+# ── New models: rating history + refresh endpoints ───────────────────────────
+
+
+class RatingPoint(_CamelModel):
+    """One stored VSA rating snapshot (one per ticker per trading day)."""
+
+    date: date
+    # VSA rating 0–100, computed with the DEFAULT engine settings so points
+    # from different days are comparable.
+    rating: int = Field(ge=0, le=100)
+    # Verdict badge on that day, e.g. "Strong Buy" / "Hold".
+    verdict: str
+    # Closing price that day (PLN); lets the UI plot rating vs price.
+    close: float | None = None
+
+
+class RatingHistoryResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/rating-history``."""
+
+    ticker: str
+    name: str | None = None
+    # Chronological (oldest → newest) rating snapshots.
+    points: list[RatingPoint] = []
+    # "db" when served from stored snapshots, "computed" when derived
+    # on-the-fly (no database configured / no snapshots yet).
+    source: Literal["db", "computed"] = "db"
+
+
+class RefreshStatusResponse(_CamelModel):
+    """Status of the data-refresh pipeline (``/api/stocks/refresh``)."""
+
+    # "running" while a refresh (ingest + ranking + snapshots) is in flight.
+    state: Literal["idle", "running"]
+    # When the last refresh started / successfully finished (ISO datetimes).
+    last_started_at: str | None = None
+    last_refresh_at: str | None = None
+    # Error message of the last failed run, if any.
+    last_error: str | None = None
+    # How many stocks passed the pre-filters in the last completed run.
+    stocks_ranked: int | None = None
+    # False when the app runs without PostgreSQL — ratings are then
+    # recalculated but not stored, so no history accumulates.
+    db_enabled: bool = False
 
 
 # ── New models: scanner stats endpoint ───────────────────────────────────────

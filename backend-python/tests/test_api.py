@@ -79,7 +79,7 @@ class TestGetCompanies:
         assert resp.status_code == 200
         body = resp.json()
         assert isinstance(body, list)
-        assert len(body) == 151
+        assert len(body) == 193
 
     def test_kghm_is_present(self) -> None:
         with TestClient(app) as client:
@@ -140,6 +140,109 @@ class TestGetRanking:
         assert resp.status_code == 200
         assert len(resp.json()) <= 5
 
+    def test_total_count_header_reflects_full_result(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/ranking?pageSize=5")
+        assert resp.status_code == 200
+        total = int(resp.headers["X-Total-Count"])
+        # The header counts every matching row, not just the returned page.
+        assert total > 5
+        assert len(resp.json()) == 5
+
+    def test_sort_by_ticker_ascending(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"sortBy": "ticker", "sortDir": "asc", "pageSize": 500},
+            ).json()
+        tickers = [item["ticker"] for item in body]
+        assert tickers == sorted(tickers)
+
+    def test_sort_by_last_price_descending(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"sortBy": "lastPrice", "sortDir": "desc", "pageSize": 500},
+            ).json()
+        prices = [item["lastPrice"] for item in body]
+        assert prices == sorted(prices, reverse=True)
+
+    def test_sort_by_ai_confidence_descending(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"sortBy": "aiConfidence", "sortDir": "desc", "pageSize": 500},
+            ).json()
+        confidences = [item["aiConfidence"] for item in body]
+        assert confidences == sorted(confidences, reverse=True)
+
+    def test_search_filters_by_ticker_or_name(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking", params={"q": "kgh", "pageSize": 500}
+            )
+        body = resp.json()
+        assert int(resp.headers["X-Total-Count"]) == len(body)
+        assert body  # "kgh" matches KGHM
+        assert all(
+            "kgh" in item["ticker"].lower() or "kgh" in item["name"].lower()
+            for item in body
+        )
+
+    def test_tickers_allow_list_restricts_results(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"tickers": "kgh,peo", "pageSize": 500},
+            ).json()
+        returned = {item["ticker"].lower() for item in body}
+        assert returned <= {"kgh", "peo"}
+
+    def test_min_rating_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"minRating": 40, "pageSize": 500},
+            ).json()
+        assert all(item["currentRating"] >= 40 for item in body)
+
+    def test_invalid_sort_by_rejected(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/ranking", params={"sortBy": "bogus"})
+        assert resp.status_code == 400
+
+    def test_invalid_sort_dir_rejected(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/ranking", params={"sortDir": "sideways"})
+        assert resp.status_code == 422
+
     def test_camel_case_fields_in_response(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()
@@ -166,9 +269,9 @@ class TestGetRanking:
 
         # One call per company on first load, then 0 calls on cache hit.
         # Companies whose known market cap is below the 100M PLN floor are
-        # skipped before any data is fetched (5 of the 151 seed companies).
+        # skipped before any data is fetched (5 of the 193 seed companies).
         first_load_calls = calls["count"]
-        assert first_load_calls == 146
+        assert first_load_calls == 188  # 193 companies - 5 skipped
 
 
 # ── GET /api/stocks/{ticker}/history ─────────────────────────────────────────

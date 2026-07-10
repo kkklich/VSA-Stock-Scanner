@@ -38,8 +38,11 @@ from app.dependencies import (
     ranking_cache,
     set_http_client,
     set_quote_repository,
+    set_refresh_service,
 )
 from app.routers import stocks
+from app.services.refresh_service import RefreshService
+from app.services.yahoo_finance_client import YahooFinanceClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,7 +65,6 @@ async def lifespan(_app: FastAPI):
             from app.db.base import Base, build_engine, build_session_factory
             from app.db.repository import PostgresQuoteRepository
             from app.jobs.daily_ingest import IngestService, build_scheduler
-            from app.services.yahoo_finance_client import YahooFinanceClient
 
             engine = build_engine(settings.database_url)
             session_factory = build_session_factory(engine)
@@ -119,29 +121,34 @@ async def lifespan(_app: FastAPI):
                     ranking_cache=ranking_cache,
                 )
 
-                # ── 3. Bootstrap ingest ───────────────────────────────────────
+                # Full pipeline: ingest → ranking → rating snapshots. Used by
+                # the bootstrap, the nightly job and the manual Refresh button.
+                refresh_svc = RefreshService(
+                    companies=companies,
+                    stooq=stooq,
+                    history_cache=history_cache,
+                    ranking_cache=ranking_cache,
+                    repo=repo,
+                    ingest=ingest_svc,
+                )
+                set_refresh_service(refresh_svc)
+
+                # ── 3. Bootstrap refresh ──────────────────────────────────────
                 if await ingest_svc.needs_bootstrap():
-                    logger.info("DB has no data for today — starting bootstrap ingest.")
-                    task = asyncio.create_task(
-                        ingest_svc.run(full=True), name="bootstrap_ingest"
-                    )
-                    task.add_done_callback(
-                        lambda t: logger.error("Bootstrap ingest failed: %s", t.exception())
-                        if not t.cancelled() and t.exception()
-                        else None
-                    )
+                    logger.info("DB has no data for today — starting bootstrap refresh.")
+                    refresh_svc.start(full=True)
                 else:
                     logger.info("DB bootstrap not needed — today's data already present.")
 
                 # ── 4. Nightly scheduler ──────────────────────────────────────
                 scheduler = build_scheduler(
-                    ingest_svc,
+                    refresh_svc,
                     hour=settings.ingest_hour,
                     minute=settings.ingest_minute,
                 )
                 scheduler.start()
                 logger.info(
-                    "Scheduler started — next ingest at %02d:%02d Europe/Warsaw.",
+                    "Scheduler started — next refresh at %02d:%02d Europe/Warsaw.",
                     settings.ingest_hour,
                     settings.ingest_minute,
                 )
@@ -149,6 +156,17 @@ async def lifespan(_app: FastAPI):
             logger.info(
                 "STOCKPILOT_DATABASE_URL not set — running without DB persistence. "
                 "Set it in .env to enable daily caching."
+            )
+            # Refresh still works without a DB: it clears the caches and
+            # recomputes the ranking from a fresh Yahoo fetch. Rating history
+            # is not persisted in this mode.
+            set_refresh_service(
+                RefreshService(
+                    companies=gpw_company_service.get_companies(),
+                    stooq=YahooFinanceClient(),
+                    history_cache=history_cache,
+                    ranking_cache=ranking_cache,
+                )
             )
 
         yield
@@ -161,6 +179,7 @@ async def lifespan(_app: FastAPI):
             await engine.dispose()
         set_http_client(None)
         set_quote_repository(None)
+        set_refresh_service(None)
         await client.aclose()
 
 
@@ -175,8 +194,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET"],
+    # POST is needed only by /api/stocks/refresh (the manual Refresh button).
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    # Let the browser read the pagination total the ranking endpoint sets.
+    expose_headers=["X-Total-Count"],
 )
 
 app.include_router(stocks.router)

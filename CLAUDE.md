@@ -35,11 +35,14 @@ agent/      ALL project documentation & reference material lives here:
 
 ## API contract (do not change without updating DOCUMENTATION.md)
 
-- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`. Cached in-process per settings hash, recomputed after daily ingestion.
+- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating` (0–100), `signal` (verdict filter), `tickers` (comma-separated allow-list, e.g. favorites). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
 - `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[] }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`.
 - `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type. Supports `settings`.
 - `GET /api/stocks/{ticker}/fundamentals` — company description + financial ratios + quarterly reports.
-- `settings` (optional, on the three analysis endpoints) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
+- `GET /api/stocks/{ticker}/ai-analysis` — AI insight: second opinion on the rule-detected signals, computed **locally** by the built-in expert-system engine (`app/analysis/ai_insight.py`) — no external AI services or API keys. Returns `{ ticker, asOf, verdict, confidence, summary, signalAssessments[], keyObservations[], engine }`. Supports `settings`.
+- `POST /api/stocks/refresh` — starts the **data-refresh pipeline** in the background (Yahoo ingest → ranking recompute with DEFAULT settings → daily rating snapshots saved to DB); returns 202 + status. This and the nightly 18:00 job are the ONLY triggers that pull fresh data from Yahoo. `GET /api/stocks/refresh/status` — same payload `{ state, lastStartedAt, lastRefreshAt, lastError, stocksRanked, dbEnabled }` for polling.
+- `GET /api/stocks/{ticker}/rating-history` — stored daily rating snapshots `{ ticker, points[{date, rating, verdict, close}], source }` (the "attractiveness over time" chart). Supports `fromDate`, `toDate` (default last 12 months). Snapshots always use DEFAULT engine settings; when none exist yet the history is computed on the fly (`source: "computed"`).
+- `settings` (optional, on the four analysis endpoints) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
 
 Mandatory ranking pre-filters: 20-session median turnover > 100,000 PLN; market cap > 100M PLN (applied when known from `company-details.json`).
 
@@ -72,18 +75,25 @@ details.** Summary (2026-07-03):
   has been removed; `backend-python/` (port 5111, `run-backend-python.bat`) is
   the only backend.
 - **Data:** Yahoo Finance (`.WA` tickers) is the primary source, stooq.pl the
-  fallback. PostgreSQL stores EOD bars (optional — app runs stateless without
-  it); APScheduler ingests nightly at 18:00 Europe/Warsaw.
+  fallback. PostgreSQL stores EOD bars + daily rating snapshots (optional —
+  app runs stateless without it). Yahoo is queried **only** by the nightly
+  18:00 refresh or the UI Refresh button (`RefreshService`,
+  `app/services/refresh_service.py`); requests are served from DB/cache.
 - **VSA engine is configurable:** the Scanner page's toggles + per-signal
   sliders are the real engine configuration, sent via the `settings` query
   parameter and applied by `app/analysis/vsa.py` (`VsaConfig`). Ranking,
   chart overlays and back-test stats all follow the user's settings.
 - **Fundamentals:** the stock-detail page shows live market cap / P/E / EPS /
   dividend yield via `GET /api/stocks/{ticker}/fundamentals`.
-- **Tests:** backend `pytest` — 110 passing; frontend `npm run build` passes.
+- **Rating history (added 2026-07-10):** every refresh stores one VSA rating
+  per (ticker, day) in `rating_snapshots`; the stock-detail page charts it
+  ("Rating history" card) so the owner can see attractiveness change over time.
+- **Tests:** backend `pytest` — 143 passing; frontend `npm run build` passes.
   Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
 - **Known gaps:** Filters & Settings pages are placeholders; favorites are
   localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
+- **Feature checklist:** `agent/FEATURE-CHECKLIST.md` — done/not-done list of
+  all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-07-03.*
+*Last updated: 2026-07-10.*

@@ -24,6 +24,8 @@ export interface StockRankingItem {
   volume: number
   /** Sector from the GPW company list. */
   sector: string | null
+  /** AI-insight engine confidence, 0–100. */
+  aiConfidence: number
   /** Whether the ticker is starred into the watchlist. */
   starred: boolean
 }
@@ -56,7 +58,7 @@ export interface SignalFlag {
   date: string
 }
 
-/** Fundamentals shown in the "Dane podstawowe" card. */
+/** Fundamentals shown in the "Fundamentals" card. */
 export interface StockFundamentals {
   sector: string
   industry: string
@@ -81,8 +83,8 @@ export interface StockDetail {
 /** A toggleable rule in the scanner's VSA engine list. */
 export interface EngineRule {
   id: string
-  /** 'Siła' (strength) or 'Słabość' (weakness). */
-  side: 'Siła' | 'Słabość'
+  /** 'Strength' or 'Weakness'. */
+  side: 'Strength' | 'Weakness'
   name: string
   enabled: boolean
 }

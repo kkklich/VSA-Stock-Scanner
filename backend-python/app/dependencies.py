@@ -42,6 +42,10 @@ _http_client: httpx.AsyncClient | None = None
 # Set during lifespan when DATABASE_URL is configured; None otherwise.
 _quote_repository: QuoteRepository | None = None
 
+# The refresh pipeline (Yahoo ingest → ranking → rating snapshots). Created in
+# the lifespan; typed loosely to avoid importing RefreshService at module load.
+_refresh_service = None
+
 
 def create_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
@@ -60,6 +64,12 @@ def set_quote_repository(repo: QuoteRepository | None) -> None:
     """Install (or clear) the process-wide repository. Called by the lifespan."""
     global _quote_repository
     _quote_repository = repo
+
+
+def set_refresh_service(service) -> None:
+    """Install (or clear) the process-wide refresh service. Called by the lifespan."""
+    global _refresh_service
+    _refresh_service = service
 
 
 # ── FastAPI dependency providers ──────────────────────────────────────────────
@@ -93,3 +103,8 @@ def get_quote_repository() -> QuoteRepository | None:
     stooq.pl directly (the same behaviour as before DB was added).
     """
     return _quote_repository
+
+
+def get_refresh_service():
+    """Return the RefreshService, or None before the lifespan installed it."""
+    return _refresh_service

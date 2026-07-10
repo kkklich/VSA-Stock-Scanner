@@ -10,12 +10,12 @@ export const fmtPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)
 /** Signed integer, e.g. +2 / -1. */
 export const fmtSigned = (n: number): string => `${n >= 0 ? '+' : ''}${n}`
 
-/** Large PLN amounts in compact Polish form, e.g. "3.42 mld" / "319 mln". */
+/** Large PLN amounts in compact form, e.g. "3.42 B" / "319 M". */
 export const fmtCompactPln = (n: number): string => {
-  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} mld`
-  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(0)} mln`
-  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)} tys.`
-  return n.toLocaleString('pl-PL')
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} B`
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(0)} M`
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)} K`
+  return n.toLocaleString('en-US')
 }
 
 /**
@@ -44,6 +44,21 @@ export function ratingTone(rating: number): {
     bar: 'bg-slate-400',
     badge: 'bg-slate-500/15 text-slate-300 ring-slate-500/30',
   }
+}
+
+/** Compact timestamp for the refresh status: "today 18:02" or "12.07 18:02". */
+export const fmtRefreshTime = (iso: string): string => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const time = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  const today = new Date()
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  if (sameDay) return `today ${time}`
+  const day = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' })
+  return `${day} ${time}`
 }
 
 /** Directional text color for a numeric delta. */

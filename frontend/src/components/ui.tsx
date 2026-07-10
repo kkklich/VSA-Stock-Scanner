@@ -1,7 +1,7 @@
 // Small reusable presentational pieces used across pages.
 
 import { useState } from 'react'
-import { Info } from 'lucide-react'
+import { ArrowDown, ArrowDownUp, ArrowUp, Info } from 'lucide-react'
 import type { SignalVerdict } from '../types'
 import { ratingTone } from '../lib/format'
 
@@ -165,6 +165,69 @@ export function SignalBadge({ verdict }: { verdict: SignalVerdict }) {
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
       {verdict}
     </span>
+  )
+}
+
+/**
+ * A clickable table header that drives sorting for one column. Generic over
+ * the column-key type so both server-side (Watchlist) and client-side
+ * (Dashboard) sortable tables can share it.
+ */
+export function SortHeader<T extends string>({
+  label,
+  col,
+  sortBy,
+  sortDir,
+  onSort,
+  align = 'left',
+  info,
+  subLabel,
+}: {
+  label: string
+  col: T
+  sortBy: T
+  sortDir: 'asc' | 'desc'
+  onSort: (col: T) => void
+  align?: 'left' | 'right'
+  info?: string
+  subLabel?: string
+}) {
+  const active = sortBy === col
+  const Icon = !active ? ArrowDownUp : sortDir === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <th
+      className="px-4 py-3 font-medium"
+      aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+    >
+      <span
+        className={
+          'inline-flex items-center gap-1 ' +
+          (align === 'right' ? 'justify-end' : '')
+        }
+      >
+        <button
+          type="button"
+          onClick={() => onSort(col)}
+          aria-label={`Sort by ${label}`}
+          className={
+            'inline-flex items-center gap-1 transition-colors hover:text-slate-200 ' +
+            (active ? 'text-slate-200' : '')
+          }
+        >
+          {label}
+          <Icon
+            size={12}
+            className={active ? 'text-emerald-400' : 'text-slate-600'}
+          />
+        </button>
+        {info && <InfoTip text={info} />}
+      </span>
+      {subLabel && (
+        <span className="block text-[10px] normal-case text-slate-600">
+          {subLabel}
+        </span>
+      )}
+    </th>
   )
 }
 

@@ -1,11 +1,16 @@
 """Pydantic models describing the API contract (see agent/DOCUMENTATION.md §5)."""
 
 from app.models.stocks import (
+    AiAnalysisResponse,
+    AiSignalAssessment,
     CandleBar,
     CompanyFundamentalsResponse,
     FinancialMetrics,
     GpwCompany,
     QuarterlyReport,
+    RatingHistoryResponse,
+    RatingPoint,
+    RefreshStatusResponse,
     SignalEffectiveness,
     StockHistoryResponse,
     StockRankingItem,
@@ -17,11 +22,16 @@ from app.models.stocks import (
 )
 
 __all__ = [
+    "AiAnalysisResponse",
+    "AiSignalAssessment",
     "CandleBar",
     "CompanyFundamentalsResponse",
     "FinancialMetrics",
     "GpwCompany",
     "QuarterlyReport",
+    "RatingHistoryResponse",
+    "RatingPoint",
+    "RefreshStatusResponse",
     "SignalEffectiveness",
     "StockHistoryResponse",
     "StockRankingItem",

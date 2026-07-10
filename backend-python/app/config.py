@@ -22,8 +22,11 @@ class Settings(BaseSettings):
     # CORS — origins allowed to call the API (the Vite dev server defaults to 5173).
     cors_allowed_origins: list[str] = ["http://localhost:5173"]
 
-    # How long per-ticker stooq history stays cached, in seconds (6h, matching .NET).
-    history_cache_seconds: int = 6 * 60 * 60
+    # How long per-ticker history and the computed ranking stay cached, in
+    # seconds. 24h: market data changes once per day (after the GPW close), so
+    # outside the nightly job / manual Refresh nothing needs recomputing. The
+    # refresh pipeline clears these caches explicitly when new data arrives.
+    history_cache_seconds: int = 24 * 60 * 60
 
     # Outbound HTTP timeout for stooq.pl requests, in seconds.
     stooq_timeout_seconds: float = 30.0

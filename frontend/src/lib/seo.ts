@@ -10,49 +10,49 @@ const BRAND = 'StockPilot'
 type SeoEntry = { title: string; description: string }
 
 const DEFAULT_ENTRY: SeoEntry = {
-  title: 'Skaner VSA dla GPW',
+  title: 'VSA Scanner for the GPW',
   description:
-    'Skaner Volume Spread Analysis (VSA) dla Giełdy Papierów Wartościowych (GPW): ranking spółek, wykresy i sygnały.',
+    'Volume Spread Analysis (VSA) scanner for the Warsaw Stock Exchange (GPW): stock ranking, charts and signals.',
 }
 
 const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
   {
     test: (p) => p === '/',
     entry: {
-      title: 'Pulpit VSA — GPW',
+      title: 'VSA Dashboard — GPW',
       description:
-        'Najlepsze spółki GPW według metody VSA, dzienni liderzy wzrostów i spadków oraz Twoje ulubione spółki — w jednym pulpicie StockPilot.',
+        'The best GPW stocks by the VSA method, the day\'s top gainers and losers, and your favorite stocks — in one StockPilot dashboard.',
     },
   },
   {
     test: (p) => p.startsWith('/watchlist'),
     entry: {
-      title: 'Watchlista GPW — ranking VSA',
+      title: 'GPW Watchlist — VSA ranking',
       description:
-        'Twoja watchlista i ranking spółek GPW według oceny VSA 0–100: cena, sygnał, dni od sygnału i zmiana. Skaner Volume Spread Analysis StockPilot.',
+        'Your watchlist and the GPW stock ranking by VSA rating 0–100: price, signal, days since signal and change. StockPilot Volume Spread Analysis scanner.',
     },
   },
   {
     test: (p) => p.startsWith('/scanner'),
     entry: {
-      title: 'Skaner VSA GPW',
+      title: 'GPW VSA Scanner',
       description:
-        'Konfiguruj silnik VSA i progi detekcji sygnałów (Spring, Upthrust, No Demand, SOS) oraz sprawdź statystyki skuteczności na GPW.',
+        'Configure the VSA engine and signal-detection thresholds (Spring, Upthrust, No Demand, SOS) and review effectiveness statistics on the GPW.',
     },
   },
   {
     test: (p) => p.startsWith('/filters'),
     entry: {
-      title: 'Filtry',
+      title: 'Filters',
       description:
-        'Filtry skanera VSA: płynność, kapitalizacja i inne kryteria doboru spółek GPW.',
+        'VSA scanner filters: liquidity, market cap and other criteria for selecting GPW stocks.',
     },
   },
   {
     test: (p) => p.startsWith('/settings'),
     entry: {
-      title: 'Ustawienia',
-      description: 'Ustawienia aplikacji StockPilot — skanera VSA dla GPW.',
+      title: 'Settings',
+      description: 'StockPilot settings — the VSA scanner for the GPW.',
     },
   },
 ]
@@ -100,10 +100,10 @@ export function usePageSeo(pathname: string) {
       // Per-ticker stock detail page.
       const ticker = (pathname.split('/')[2] ?? '').toUpperCase()
       entry = {
-        title: ticker ? `${ticker} — wykres i sygnały VSA` : 'Wykres i sygnały VSA',
+        title: ticker ? `${ticker} — VSA chart and signals` : 'VSA chart and signals',
         description: ticker
-          ? `Wykres świecowy ${ticker} z wolumenem i sygnałami Volume Spread Analysis (VSA) — ocena VSA i historia sygnałów na GPW.`
-          : 'Interaktywny wykres świecowy z sygnałami Volume Spread Analysis (VSA) dla spółki z GPW.',
+          ? `${ticker} candlestick chart with volume and Volume Spread Analysis (VSA) signals — VSA rating and signal history on the GPW.`
+          : 'Interactive candlestick chart with Volume Spread Analysis (VSA) signals for a GPW stock.',
       }
     } else {
       entry = STATIC_ENTRIES.find((e) => e.test(pathname))?.entry ?? DEFAULT_ENTRY

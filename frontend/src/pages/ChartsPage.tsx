@@ -12,6 +12,9 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { StockChart } from '../components/StockChart'
+import { CompanyPicker } from '../components/CompanyPicker'
+import { AiAnalysisCard } from '../components/AiAnalysisCard'
+import { RatingHistoryCard } from '../components/RatingHistoryCard'
 import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
 import { useFundamentals } from '../hooks/useFundamentals'
@@ -141,7 +144,7 @@ function SignalChecklist({
   return (
     <Card className="flex flex-col">
       <CardTitle>
-        Siła rynku{' '}
+        Market strength{' '}
         <InfoTip text="Bullish VSA patterns detected for this stock in the shown period, with the date each last fired. ✓ = detected, ✕ = not present. Spring = trapped sellers below support; Successful Test = quiet retest of lows; SOS = strong buying bar." />
       </CardTitle>
       <ul className="px-4 pb-3">
@@ -151,7 +154,7 @@ function SignalChecklist({
       </ul>
       <div className="border-t border-slate-800" />
       <CardTitle>
-        Słabość rynku{' '}
+        Market weakness{' '}
         <InfoTip text="Bearish VSA patterns detected for this stock. Upthrust = trapped buyers above resistance; No Demand = quiet up-bar without professional interest; SOW = strong selling bar." />
       </CardTitle>
       <ul className="px-4 pb-4">
@@ -190,7 +193,7 @@ function DetectionSettings({
           <span className="text-sm font-medium text-slate-300">
             Adjust context for signal-detection sensitivity
           </span>
-          <InfoTip text="Filters which VSA signals appear on the chart and in the Siła / Słabość checklist. Sensitivity: higher reveals more (and weaker) signals; lower shows only the strongest. Context window: only signals from the last N trading sessions are shown." />
+          <InfoTip text="Filters which VSA signals appear on the chart and in the Strength / Weakness checklist. Sensitivity: higher reveals more (and weaker) signals; lower shows only the strongest. Context window: only signals from the last N trading sessions are shown." />
         </div>
         <button
           onClick={() => setCollapsed((c) => !c)}
@@ -272,20 +275,20 @@ function FundamentalsCard({
         : m.dividendYield
 
   const rows: [string, string][] = [
-    ['Sektor', data?.sector ?? sector ?? '—'],
-    ['Branża', data?.industry ?? '—'],
-    ['Kapitalizacja', m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
-    ['C/Z (P/E)', m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
+    ['Sector', data?.sector ?? sector ?? '—'],
+    ['Industry', data?.industry ?? '—'],
+    ['Market cap', m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
+    ['P/E', m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
     ['EPS', m?.eps != null ? m.eps.toFixed(2) : '—'],
-    ['Stopa dywidendy', divYield != null ? `${divYield.toFixed(2)}%` : '—'],
-    ['Zatrudnienie', data?.employees != null ? data.employees.toLocaleString('pl-PL') : '—'],
+    ['Dividend yield', divYield != null ? `${divYield.toFixed(2)}%` : '—'],
+    ['Employees', data?.employees != null ? data.employees.toLocaleString('en-US') : '—'],
   ]
 
   return (
     <Card>
       <CardTitle>
-        Dane podstawowe{' '}
-        <InfoTip text="Company fundamentals from Yahoo Finance, refreshed daily. Kapitalizacja = market value of all shares; C/Z (P/E) = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Stopa dywidendy = yearly dividend as % of the price." />
+        Fundamentals{' '}
+        <InfoTip text="Company fundamentals from Yahoo Finance, refreshed daily. Market cap = market value of all shares; P/E = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Dividend yield = yearly dividend as % of the price." />
       </CardTitle>
       <dl className="space-y-2 px-4 pb-4 text-sm">
         {loading && !data ? (
@@ -341,7 +344,7 @@ function RatingCard({
   return (
     <Card>
       <CardTitle right={<MoreHorizontal size={16} className="text-slate-600" />}>
-        Ocena VSA{' '}
+        VSA Rating{' '}
         <InfoTip text="0–100 score built from all detected VSA signals with time decay: recent signals count more, old ones fade out (half impact after ~30 days). Above 70 = strong accumulation (green), around 50 = neutral, below 30 = distribution (red)." />
       </CardTitle>
       <div className="px-4 pb-4">
@@ -353,7 +356,7 @@ function RatingCard({
         </div>
         <div className="mt-3 space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">Zmiana ratingu</span>
+            <span className="text-slate-500">Rating change</span>
             <span className={deltaTone(ratingChange)}>
               {fmtSigned(ratingChange)}
             </span>
@@ -422,10 +425,7 @@ export function ChartsPage() {
     <div className="flex flex-col gap-4 p-4 sm:p-6">
       {/* Asset header */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h2 className="text-xl font-bold text-slate-100">
-          {data.name ?? ticker.toUpperCase()}{' '}
-          <span className="text-slate-500">({data.ticker})</span>
-        </h2>
+        <CompanyPicker ticker={data.ticker} name={data.name} />
         <span className="text-xl font-semibold text-slate-200">
           {fmtPrice(data.lastPrice)} PLN
         </span>
@@ -475,15 +475,17 @@ export function ChartsPage() {
               <StockChart candles={data.history} signals={visibleSignals} />
             </div>
           </Card>
+          <RatingHistoryCard ticker={ticker} />
         </div>
 
-        {/* Right: fundamentals / rating */}
+        {/* Right: fundamentals / rating / AI insight */}
         <div className="flex flex-col gap-4">
           <FundamentalsCard ticker={ticker} sector={data.sector} />
           <RatingCard
             currentRating={data.currentRating}
             ratingChange={data.ratingChange}
           />
+          <AiAnalysisCard ticker={ticker} />
         </div>
       </div>
     </div>

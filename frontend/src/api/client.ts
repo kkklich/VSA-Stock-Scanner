@@ -15,7 +15,12 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+/** Like {@link apiFetch} but also returns the raw response headers — needed by
+ *  endpoints that carry pagination metadata (e.g. `X-Total-Count`). */
+export async function apiFetchWithHeaders<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<{ data: T; headers: Headers }> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...init,
@@ -32,5 +37,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new ApiError(response.status, message)
   }
 
-  return response.json() as Promise<T>
+  const data = (await response.json()) as T
+  return { data, headers: response.headers }
+}
+
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const { data } = await apiFetchWithHeaders<T>(path, init)
+  return data
 }

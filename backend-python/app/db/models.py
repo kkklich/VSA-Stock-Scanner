@@ -5,9 +5,12 @@ Tables:
   * ``daily_quotes``               — one row per (ticker, date) OHLCV bar
   * ``company_fundamentals``       — financial ratios snapshot (market cap, PE, EPS …)
   * ``company_quarterly_financials`` — quarterly income-statement history
+  * ``rating_snapshots``           — one VSA rating per (ticker, date), written by
+                                     the refresh pipeline so the rating's evolution
+                                     over time can be charted
 
-VSA signals and ratings are NOT stored here; they are computed on-the-fly
-from the raw OHLCV bars every request (and cached in-process).
+Per-request VSA signals are still computed on-the-fly from the raw OHLCV bars
+(and cached in-process); only the daily rating snapshot is persisted.
 """
 
 from __future__ import annotations
@@ -15,7 +18,16 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Date, DateTime, Float, Numeric, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -70,6 +82,28 @@ class CompanyFundamentalsRow(Base):
     total_revenue: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     net_income: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     shares_outstanding: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class RatingSnapshotRow(Base):
+    """One VSA rating snapshot for a (ticker, date) pair.
+
+    Written by the refresh pipeline (nightly job or the manual Refresh button)
+    using the DEFAULT engine settings, so the stored history is comparable
+    across days regardless of the user's current Scanner configuration.
+    """
+
+    __tablename__ = "rating_snapshots"
+    __table_args__ = (UniqueConstraint("ticker", "date", name="uq_rating_snapshot"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    # VSA rating 0–100 (default engine settings).
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Verdict badge derived from the most recent signal, e.g. "Strong Buy".
+    verdict: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Closing price on that day, for plotting rating vs price together.
+    close: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
 
 
 class CompanyQuarterlyRow(Base):

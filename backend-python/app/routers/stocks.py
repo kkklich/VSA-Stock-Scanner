@@ -20,11 +20,12 @@ from __future__ import annotations
 import logging
 import re
 from datetime import date, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 
+from app.analysis.ai_insight import analyze_stock
 from app.analysis.vsa import (
     VsaConfig,
     compute_rating,
@@ -38,12 +39,16 @@ from app.dependencies import (
     get_history_cache,
     get_quote_repository,
     get_ranking_cache,
+    get_refresh_service,
     get_stooq_client,
 )
 from app.models import (
+    AiAnalysisResponse,
     CandleBar,
     CompanyFundamentalsResponse,
     GpwCompany,
+    RatingHistoryResponse,
+    RefreshStatusResponse,
     SignalEffectiveness,
     StockHistoryResponse,
     StockRankingItem,
@@ -56,6 +61,7 @@ from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.ranking_service import compute_ranking
+from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
@@ -68,6 +74,82 @@ _SIGNALS_DEFAULT_DAYS = 365
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Sortable ranking columns: camelCase key (as the frontend sends it) → the
+# StockRankingItem attribute name. Anything outside this whitelist is rejected
+# so a bad client can't probe arbitrary attributes.
+_RANKING_SORT_KEYS: dict[str, str] = {
+    "ticker": "ticker",
+    "name": "name",
+    "lastPrice": "last_price",
+    "priceChangePct": "price_change_pct",
+    "currentRating": "current_rating",
+    "ratingChange": "rating_change",
+    "lastSignal": "last_signal",
+    "daysSinceSignal": "days_since_signal",
+    "volume": "volume",
+    "sector": "sector",
+    "aiConfidence": "ai_confidence",
+}
+
+# Verdict ordering so "Last Signal" sorts by conviction (Strong Buy → Strong
+# Sell) rather than alphabetically.
+_SIGNAL_RANK: dict[str, int] = {
+    "Strong Buy": 5,
+    "Buy": 4,
+    "Hold": 3,
+    "Sell": 2,
+    "Strong Sell": 1,
+}
+
+
+def _sort_value(item: StockRankingItem, attr: str) -> object:
+    """Return a type-consistent, comparable key for one column."""
+    if attr == "last_signal":
+        return _SIGNAL_RANK.get(item.last_signal, 0)
+    value = getattr(item, attr)
+    if value is None:  # e.g. sector may be missing
+        return ""
+    if isinstance(value, str):
+        return value.casefold()
+    return value
+
+
+def _query_ranking(
+    items: list[StockRankingItem],
+    *,
+    q: str | None,
+    min_rating: int,
+    signal: str | None,
+    tickers: set[str] | None,
+    sort_by: str,
+    sort_dir: str,
+) -> list[StockRankingItem]:
+    """Filter → search → sort the full ranking (pagination is applied later).
+
+    Kept pure and separate from the endpoint so it is trivially unit-testable
+    and so the expensive ranking computation stays fully cached: only this cheap
+    in-memory pass runs per request.
+    """
+    rows = items
+    if tickers is not None:
+        rows = [r for r in rows if r.ticker.casefold() in tickers]
+    if q:
+        needle = q.strip().casefold()
+        if needle:
+            rows = [
+                r
+                for r in rows
+                if needle in r.ticker.casefold() or needle in r.name.casefold()
+            ]
+    if min_rating > 0:
+        rows = [r for r in rows if r.current_rating >= min_rating]
+    if signal and signal.casefold() != "all":
+        rows = [r for r in rows if r.last_signal == signal]
+
+    attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
+    reverse = sort_dir.casefold() != "asc"
+    return sorted(rows, key=lambda r: _sort_value(r, attr), reverse=reverse)
 
 
 def _parse_vsa_settings(raw: str | None) -> VsaConfig:
@@ -152,8 +234,15 @@ async def get_companies(
     responses={status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"}},
 )
 async def get_ranking(
+    response: Response,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
+    sort_by: Annotated[str, Query(alias="sortBy")] = "currentRating",
+    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    q: Annotated[str | None, Query(max_length=64)] = None,
+    min_rating: Annotated[int, Query(alias="minRating", ge=0, le=100)] = 0,
+    signal: Annotated[str | None, Query(max_length=32)] = None,
+    tickers: Annotated[str | None, Query(max_length=4000)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
@@ -161,6 +250,15 @@ async def get_ranking(
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
 ) -> list[StockRankingItem]:
+    if sort_by not in _RANKING_SORT_KEYS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid 'sortBy' value '{sort_by}'. "
+                f"Allowed: {', '.join(_RANKING_SORT_KEYS)}."
+            ),
+        )
+
     config = _parse_vsa_settings(vsa_settings)
     cache_key = f"ranking:full{config.cache_suffix()}"
     full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
@@ -178,8 +276,77 @@ async def get_ranking(
         cache.set(cache_key, full_ranking, settings.history_cache_seconds)
         logger.info("Ranking ready: %d stocks passed pre-filters.", len(full_ranking))
 
+    # Optional allow-list of tickers (used by the "favorites only" view).
+    ticker_set: set[str] | None = None
+    if tickers is not None:
+        ticker_set = {t.strip().casefold() for t in tickers.split(",") if t.strip()}
+
+    filtered = _query_ranking(
+        full_ranking,
+        q=q,
+        min_rating=min_rating,
+        signal=signal,
+        tickers=ticker_set,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+
+    # Total matching rows before pagination — the frontend reads this to build
+    # its pager. Exposed to the browser via CORS (see main.py).
+    response.headers["X-Total-Count"] = str(len(filtered))
+
     start = (page - 1) * page_size
-    return full_ranking[start : start + page_size]
+    return filtered[start : start + page_size]
+
+
+# ── Endpoints: manual data refresh ────────────────────────────────────────────
+
+
+@router.post(
+    "/refresh",
+    response_model=RefreshStatusResponse,
+    response_model_by_alias=True,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start a data refresh (Yahoo ingest → ranking → rating snapshots)",
+)
+async def trigger_refresh(
+    refresh: Annotated[RefreshService | None, Depends(get_refresh_service)],
+) -> RefreshStatusResponse:
+    """Kick off the refresh pipeline in the background and return its status.
+
+    This is the only way (besides the nightly 18:00 job) that fresh data is
+    pulled from Yahoo Finance. If a refresh is already running, the in-flight
+    run is kept and its status is returned — pressing the button twice never
+    starts two downloads.
+    """
+    if refresh is None:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Refresh service not initialised yet — try again in a moment.",
+        )
+    started = refresh.start()
+    if started:
+        logger.info("Manual refresh triggered via POST /api/stocks/refresh.")
+    else:
+        logger.info("Manual refresh requested but one is already running.")
+    return refresh.status()
+
+
+@router.get(
+    "/refresh/status",
+    response_model=RefreshStatusResponse,
+    response_model_by_alias=True,
+    summary="Status of the data-refresh pipeline",
+)
+async def get_refresh_status(
+    refresh: Annotated[RefreshService | None, Depends(get_refresh_service)],
+) -> RefreshStatusResponse:
+    if refresh is None:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Refresh service not initialised yet — try again in a moment.",
+        )
+    return refresh.status()
 
 
 # ── Endpoint 3: scanner back-test statistics ─────────────────────────────────
@@ -382,7 +549,150 @@ async def get_signals(
     )
 
 
-# ── Endpoint 6: company fundamentals ─────────────────────────────────────────
+# ── Endpoint: VSA rating history ─────────────────────────────────────────────
+
+
+@router.get(
+    "/{ticker}/rating-history",
+    response_model=RatingHistoryResponse,
+    response_model_by_alias=True,
+    summary="Stored daily VSA rating snapshots for a ticker",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker or date range"},
+    },
+)
+async def get_rating_history(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    from_date: Annotated[date | None, Query(alias="fromDate")] = None,
+    to_date: Annotated[date | None, Query(alias="toDate")] = None,
+) -> RatingHistoryResponse:
+    """How the stock's VSA rating (its "attractiveness") evolved over time.
+
+    Primary source: the ``rating_snapshots`` table, written by the refresh
+    pipeline (one point per trading day, DEFAULT engine settings). When no
+    snapshots exist yet — first run, or the app has no database — the history
+    is derived on-the-fly from the stored OHLCV bars instead, so the chart
+    always has data.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+    if from_date is not None and to_date is not None and from_date > to_date:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "'fromDate' must not be later than 'toDate'."
+        )
+
+    normalized = ticker.strip().casefold()
+    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+
+    company = companies.find(normalized)
+    effective_from = from_date or (date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS))
+
+    # 1. Stored snapshots (the persisted "attractiveness" history).
+    if repo is not None:
+        try:
+            points = await repo.get_rating_history(normalized, effective_from, to_date)
+        except Exception:
+            logger.exception("Rating-history DB lookup failed for %s.", normalized)
+            points = []
+        if points:
+            return RatingHistoryResponse(
+                ticker=normalized.upper(),
+                name=company.name if company else None,
+                points=points,
+                source="db",
+            )
+
+    # 2. Fallback: derive the history from the OHLCV bars on the fly.
+    quotes = await _get_quotes(
+        normalized,
+        from_date=effective_from,
+        to_date=to_date,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    return RatingHistoryResponse(
+        ticker=normalized.upper(),
+        name=company.name if company else None,
+        points=build_rating_points(quotes),
+        source="computed",
+    )
+
+
+# ── Endpoint 6: AI second-opinion analysis ───────────────────────────────────
+
+
+@router.get(
+    "/{ticker}/ai-analysis",
+    response_model=AiAnalysisResponse,
+    response_model_by_alias=True,
+    summary="AI insight analysis of the stock's VSA picture",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+        status.HTTP_404_NOT_FOUND: {"description": "No price history for this ticker"},
+        status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
+    },
+)
+async def get_ai_analysis(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+) -> AiAnalysisResponse:
+    """Chart-context second opinion on the rule-detected VSA signals.
+
+    Computed locally by the built-in insight engine (``app/analysis/ai_insight``)
+    from the same data the chart uses — no external AI services involved. The
+    rule engine stays the source of truth for detection; this endpoint judges
+    each signal by its follow-through, volume behaviour, trend background and
+    historical track record on this stock, then explains it in plain language.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = ticker.strip().casefold()
+    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+
+    config = _parse_vsa_settings(vsa_settings)
+
+    quotes = await _get_quotes(
+        normalized,
+        from_date=date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS),
+        to_date=None,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    if not quotes:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"No price history available for '{normalized}'.",
+        )
+
+    signals = detect_signals(quotes, config)
+    rating = compute_rating(signals, date.today())
+    company = companies.find(normalized)
+
+    return analyze_stock(
+        ticker=normalized,
+        name=company.name if company else None,
+        quotes=quotes,
+        signals=signals,
+        rating=rating,
+    )
+
+
+# ── Endpoint 7: company fundamentals ─────────────────────────────────────────
 
 
 @router.get(

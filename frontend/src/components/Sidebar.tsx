@@ -4,11 +4,10 @@
 // current path.
 
 import {
+  BookOpen,
   LayoutDashboard,
   LineChart,
-  LogOut,
   Settings,
-  SlidersHorizontal,
   Star,
   TrendingUp,
 } from 'lucide-react'
@@ -41,12 +40,6 @@ const navItems: NavItem[] = [
     label: 'Charts',
     icon: LineChart,
     match: (p) => p.startsWith('/stock'),
-  },
-  {
-    to: '/filters',
-    label: 'Filters',
-    icon: SlidersHorizontal,
-    match: (p) => p.startsWith('/filters'),
   },
 ]
 
@@ -126,6 +119,14 @@ export function Sidebar({
         {/* Bottom utility nav */}
         <div className="space-y-1 border-t border-slate-800 px-3 py-3">
           <Link
+            to="/help"
+            onClick={onClose}
+            className={linkClass(pathname.startsWith('/help'))}
+          >
+            <BookOpen size={18} />
+            Help
+          </Link>
+          <Link
             to="/settings"
             onClick={onClose}
             className={linkClass(pathname.startsWith('/settings'))}
@@ -133,10 +134,6 @@ export function Sidebar({
             <Settings size={18} />
             Settings
           </Link>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800/40 hover:text-slate-200">
-            <LogOut size={18} />
-            Logout
-          </button>
         </div>
       </aside>
     </>
