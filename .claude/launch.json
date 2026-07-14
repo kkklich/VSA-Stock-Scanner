@@ -35,6 +35,25 @@
       ],
       "port": 5176,
       "autoPort": true
+    },
+    {
+      "name": "backend-verify-b",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d backend-python && .venv\\Scripts\\python.exe -m uvicorn app.main:app --port 5113"
+      ],
+      "port": 5113
+    },
+    {
+      "name": "frontend-verify-b",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_API_PROXY=http://127.0.0.1:5113&& npm run dev --prefix frontend"
+      ],
+      "port": 5177,
+      "autoPort": true
     }
   ]
 }

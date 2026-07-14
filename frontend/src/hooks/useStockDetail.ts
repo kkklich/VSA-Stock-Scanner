@@ -2,7 +2,7 @@
 // The user's saved Scanner settings are sent along so the chart overlay is
 // detected with the same VSA rules the user configured.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchSignals, type ApiStockSignals } from '../api/stocksApi'
 import { settingsQueryValue } from '../lib/vsaSettings'
 
@@ -12,10 +12,14 @@ export interface UseStockDetailResult {
   error: string | null
 }
 
-export function useStockDetail(ticker: string | null): UseStockDetailResult {
+export function useStockDetail(
+  ticker: string | null,
+  fromDate?: string,
+): UseStockDetailResult {
   const [data, setData] = useState<ApiStockSignals | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const lastTickerRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!ticker) {
@@ -26,9 +30,14 @@ export function useStockDetail(ticker: string | null): UseStockDetailResult {
     let cancelled = false
     setLoading(true)
     setError(null)
-    setData(null)
+    // Clear the chart only when switching companies; when only the time range
+    // changes, keep the current chart on screen while the new one loads.
+    if (lastTickerRef.current !== ticker) {
+      lastTickerRef.current = ticker
+      setData(null)
+    }
 
-    fetchSignals(ticker, undefined, undefined, settingsQueryValue())
+    fetchSignals(ticker, fromDate, undefined, settingsQueryValue())
       .then((result) => {
         if (!cancelled) {
           setData(result)
@@ -45,7 +54,7 @@ export function useStockDetail(ticker: string | null): UseStockDetailResult {
     return () => {
       cancelled = true
     }
-  }, [ticker])
+  }, [ticker, fromDate])
 
   return { data, loading, error }
 }

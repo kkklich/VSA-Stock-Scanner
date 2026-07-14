@@ -41,6 +41,14 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
+    test: (p) => p.startsWith('/heatmap'),
+    entry: {
+      title: 'GPW Sector Heatmap',
+      description:
+        'Finviz-style sector heatmap of GPW stocks: tile size = market cap, color = VSA rating or price change over 1 day, 1 month, 1 year or the full history.',
+    },
+  },
+  {
     test: (p) => p.startsWith('/filters'),
     entry: {
       title: 'Filters',

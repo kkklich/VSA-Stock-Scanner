@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
-from datetime import date
+import asyncio
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.repository import InMemoryQuoteRepository
 from app.dependencies import (
+    get_quote_repository,
     get_stooq_client,
     history_cache,
     ranking_cache,
 )
 from app.main import app
 from app.models import StooqDailyQuote
+from app.routers.stocks import _backfill_attempted
 from app.services.exceptions import StooqAccessError
 
 # ── Test fixtures ─────────────────────────────────────────────────────────────
@@ -62,10 +66,12 @@ class _FakeStooqClient:
 def _clear_caches_and_overrides():
     history_cache.clear()
     ranking_cache.clear()
+    _backfill_attempted.clear()
     app.dependency_overrides.clear()
     yield
     history_cache.clear()
     ranking_cache.clear()
+    _backfill_attempted.clear()
     app.dependency_overrides.clear()
 
 
@@ -398,6 +404,75 @@ class TestGetSignals:
         assert "lastPrice" in body
         assert "vsaSignals" in body
         assert "last_price" not in body
+
+
+# ── Signals: stooq backfill of history older than the stored bars ────────────
+
+
+def _recent_quotes(days: int) -> list[StooqDailyQuote]:
+    """One bar per day for the last ``days`` days, oldest first."""
+    return [
+        _make_quote((date.today() - timedelta(days=i)).isoformat())
+        for i in range(days, 0, -1)
+    ]
+
+
+class TestSignalsBackfill:
+    def test_backfills_older_history_from_stooq(self) -> None:
+        # DB only has the last 30 days; stooq has 2 years.
+        repo = InMemoryQuoteRepository()
+        asyncio.run(repo.upsert_quotes("kgh", _recent_quotes(30)))
+        full_history = _recent_quotes(700)
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=full_history
+        )
+        app.dependency_overrides[get_quote_repository] = lambda: repo
+
+        from_ = (date.today() - timedelta(days=730)).isoformat()
+        with TestClient(app) as client:
+            resp = client.get(f"/api/stocks/kgh/signals?fromDate={from_}")
+
+        assert resp.status_code == 200
+        assert len(resp.json()["history"]) == 700
+        # The older bars were persisted, so the DB now covers the full range.
+        stored = asyncio.run(
+            repo.get_quotes("kgh", date.today() - timedelta(days=730))
+        )
+        assert len(stored) == 700
+
+    def test_covered_range_is_served_from_db_without_stooq(self) -> None:
+        # DB covers the requested range → stooq (which would fail) is not hit.
+        repo = InMemoryQuoteRepository()
+        asyncio.run(repo.upsert_quotes("kgh", _recent_quotes(40)))
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            error=StooqAccessError("should not be called")
+        )
+        app.dependency_overrides[get_quote_repository] = lambda: repo
+
+        from_ = (date.today() - timedelta(days=35)).isoformat()
+        with TestClient(app) as client:
+            resp = client.get(f"/api/stocks/kgh/signals?fromDate={from_}")
+
+        assert resp.status_code == 200
+        # Only the bars inside the requested range come back — and the request
+        # succeeded, proving the failing stooq client was never consulted.
+        assert len(resp.json()["history"]) == 35
+
+    def test_backfill_failure_falls_back_to_stored_history(self) -> None:
+        # Backfill needed but stooq is down → serve the shorter stored history.
+        repo = InMemoryQuoteRepository()
+        asyncio.run(repo.upsert_quotes("kgh", _recent_quotes(30)))
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            error=StooqAccessError("Odmowa dostępu")
+        )
+        app.dependency_overrides[get_quote_repository] = lambda: repo
+
+        from_ = (date.today() - timedelta(days=730)).isoformat()
+        with TestClient(app) as client:
+            resp = client.get(f"/api/stocks/kgh/signals?fromDate={from_}")
+
+        assert resp.status_code == 200
+        assert len(resp.json()["history"]) == 30
 
 
 # ── GET /api/stocks/{ticker}/fundamentals ─────────────────────────────────────

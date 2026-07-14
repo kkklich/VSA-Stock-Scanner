@@ -463,6 +463,11 @@ _SIGNAL_VERDICT: dict[SignalName, str] = {
 }
 
 
+def verdict_for_signal(name: SignalName) -> str:
+    """The UI verdict badge one signal maps to (e.g. SOS → "Strong Buy")."""
+    return _SIGNAL_VERDICT.get(name, "Hold")
+
+
 def verdict_from_signals(signals: Sequence[VsaSignal], as_of: date) -> tuple[str, int]:
     """Return (verdict_label, days_since_last_signal) from the most recent signal.
 

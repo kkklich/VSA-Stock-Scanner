@@ -478,15 +478,15 @@ export function WatchlistPage() {
       {!loading && !error && rows.length > 0 && (
         <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1300px] table-fixed text-sm">
+            <table className="w-full min-w-[1100px] table-fixed text-sm">
               <colgroup>
-                <col className="w-48" />
-                <col />
-                <col className="w-48" />
-                <col className="w-48" />
                 <col className="w-40" />
+                <col />
+                <col className="w-40" />
+                <col className="w-44" />
                 <col className="w-36" />
-                <col className="w-48" />
+                <col className="w-32" />
+                <col className="w-40" />
               </colgroup>
               <thead>
                 <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">

@@ -17,6 +17,7 @@ ingest completes.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import date, timedelta
@@ -26,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.trust_score import compute_trust_score
 from app.analysis.vsa import (
     VsaConfig,
     compute_rating,
@@ -47,6 +49,7 @@ from app.models import (
     CandleBar,
     CompanyFundamentalsResponse,
     GpwCompany,
+    HeatmapResponse,
     RatingHistoryResponse,
     RefreshStatusResponse,
     SignalEffectiveness,
@@ -54,12 +57,14 @@ from app.models import (
     StockRankingItem,
     StockSignalsResponse,
     StooqDailyQuote,
+    TrustScoreResponse,
     VsaSettings,
     VsaSignalResponse,
 )
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
+from app.services.heatmap_service import compute_heatmap
 from app.services.ranking_service import compute_ranking
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
@@ -172,6 +177,15 @@ def _parse_vsa_settings(raw: str | None) -> VsaConfig:
     return config_from_settings(payload)
 
 
+# Stored history counts as covering a request when its first bar is at most
+# this many days after the requested from_date (weekends / market holidays).
+_BACKFILL_TOLERANCE_DAYS = 14
+# (ticker, from_date) pairs already backfilled from stooq in this process, so
+# stocks whose full history simply starts later (listed after from_date) are
+# not re-fetched on every request.
+_backfill_attempted: set[tuple[str, date]] = set()
+
+
 async def _get_quotes(
     ticker: str,
     from_date: date,
@@ -181,29 +195,58 @@ async def _get_quotes(
     repo: QuoteRepository | None,
     stooq: StooqClient,
 ) -> list[StooqDailyQuote]:
-    """Fetch OHLCV for a single ticker using the cache → repo → stooq priority."""
-    cache_key = f"history:{ticker}:{from_date}:{to_date}"
-    quotes: list[StooqDailyQuote] | None = cache.get(cache_key)
-    if quotes is not None:
-        return quotes
+    """Fetch OHLCV for a single ticker using the cache → repo → stooq priority.
 
+    When the stored history starts later than ``from_date`` (the ingest only
+    bootstraps ~400 days), the missing older bars are fetched from stooq once
+    and persisted, permanently backfilling the DB for that ticker.
+    """
+    cache_key = f"history:{ticker}:{from_date}:{to_date}"
+    cached: list[StooqDailyQuote] | None = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    stored: list[StooqDailyQuote] = []
     if repo is not None:
-        quotes = await repo.get_quotes(ticker, from_date, to_date)
-        if quotes:
-            cache.set(cache_key, quotes, cache_ttl)
-            return quotes
+        stored = await repo.get_quotes(ticker, from_date, to_date)
+    covers_range = (
+        bool(stored) and (stored[0].date - from_date).days <= _BACKFILL_TOLERANCE_DAYS
+    )
+    if stored and (covers_range or (ticker, from_date) in _backfill_attempted):
+        cache.set(cache_key, stored, cache_ttl)
+        return stored
 
     try:
-        quotes = await stooq.get_daily_history(ticker, from_date, to_date)
+        fetched = await stooq.get_daily_history(ticker, from_date, to_date)
     except StooqAccessError as exc:
+        if stored:
+            logger.warning(
+                "stooq.pl backfill for %s failed (%s); serving stored history.",
+                ticker,
+                exc,
+            )
+            cache.set(cache_key, stored, cache_ttl)
+            return stored
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             detail=f"Upstream data provider (stooq.pl) unavailable: {exc}",
         ) from exc
 
-    if repo is not None and quotes:
+    if repo is not None:
+        _backfill_attempted.add((ticker, from_date))
+
+    # Keep the ingested (Yahoo) bars where the ranges overlap; stooq only
+    # supplies the older prefix the DB does not have yet.
+    if stored:
+        new_bars = [q for q in fetched if q.date < stored[0].date]
+        quotes = new_bars + stored
+    else:
+        new_bars = fetched
+        quotes = fetched
+
+    if repo is not None and new_bars:
         try:
-            await repo.upsert_quotes(ticker, quotes)
+            await repo.upsert_quotes(ticker, new_bars)
         except Exception:
             logger.exception(
                 "Failed to persist %s quotes to DB; serving live data.", ticker
@@ -394,6 +437,69 @@ async def get_scanner_stats(
     cache.set(cache_key, result, settings.history_cache_seconds)
     logger.info("Scanner stats ready: %d signal types.", len(result))
     return result
+
+
+# ── Endpoint: sector heatmap ──────────────────────────────────────────────────
+
+# One in-flight computation per heatmap cache key: a cold heatmap is the most
+# expensive request in the app (full-universe history fetch), so concurrent
+# misses wait for the first computation instead of each starting their own.
+# Bounded by the number of distinct settings hashes seen since startup.
+_heatmap_locks: dict[str, asyncio.Lock] = {}
+
+
+@router.get(
+    "/heatmap",
+    response_model=HeatmapResponse,
+    response_model_by_alias=True,
+    summary="Sector heatmap tiles (market cap, VSA rating, price changes)",
+)
+async def get_heatmap(
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
+    cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
+    history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+) -> HeatmapResponse:
+    """Data behind the Sector heatmap page (Finviz-style treemap).
+
+    One tile per stock that passes the ranking pre-filters: tile size comes
+    from the market cap, tile colour from the VSA rating or from the price
+    change over the selected horizon (1D / 1M / 1Y / MAX of stored history).
+    """
+    config = _parse_vsa_settings(vsa_settings)
+    cache_key = f"heatmap{config.cache_suffix()}"
+    cached: HeatmapResponse | None = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    lock = _heatmap_locks.setdefault(cache_key, asyncio.Lock())
+    async with lock:
+        # A concurrent request may have finished computing while we waited.
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        generation = cache.generation
+        logger.info("Heatmap cache cold — computing.")
+        result = await compute_heatmap(
+            companies=companies.get_companies(),
+            stooq=stooq,
+            history_cache=history_cache,
+            history_cache_ttl=settings.history_cache_seconds,
+            repo=repo,
+            config=config,
+        )
+        # If the nightly ingest cleared the cache while we were computing,
+        # this result was built from pre-refresh data — serve it to this
+        # caller but don't cache it, or it would look fresh for hours.
+        if not cache.set_if_generation(
+            cache_key, result, settings.history_cache_seconds, generation
+        ):
+            logger.info("Heatmap cache invalidated during computation — not cached.")
+        logger.info("Heatmap ready: %d tiles.", len(result.items))
+        return result
 
 
 # ── Endpoint 4: raw EOD history ───────────────────────────────────────────────
@@ -689,6 +795,71 @@ async def get_ai_analysis(
         quotes=quotes,
         signals=signals,
         rating=rating,
+    )
+
+
+# ── Endpoint: VSA trust score (prediction accuracy) ──────────────────────────
+
+
+@router.get(
+    "/{ticker}/trust-score",
+    response_model=TrustScoreResponse,
+    response_model_by_alias=True,
+    summary="Prediction-accuracy (trust) score of the VSA engine on this stock",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+        status.HTTP_404_NOT_FOUND: {"description": "No price history for this ticker"},
+        status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
+    },
+)
+async def get_trust_score(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+) -> TrustScoreResponse:
+    """How trustworthy the VSA engine's strong calls have been on this stock.
+
+    Runs the same signal detection as the chart, then back-tests every
+    historical Strong Buy / Strong Sell verdict (forward return over the next
+    10 sessions vs. the stock's own baseline move) and folds the results into
+    a single 0–100 trust score. Computed locally by
+    ``app/analysis/trust_score.py``; deterministic, no external services.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = ticker.strip().casefold()
+    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+
+    config = _parse_vsa_settings(vsa_settings)
+
+    quotes = await _get_quotes(
+        normalized,
+        from_date=date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS),
+        to_date=None,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    if not quotes:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"No price history available for '{normalized}'.",
+        )
+
+    signals = detect_signals(quotes, config)
+    company = companies.find(normalized)
+
+    return compute_trust_score(
+        ticker=normalized,
+        name=company.name if company else None,
+        quotes=quotes,
+        signals=signals,
     )
 
 

@@ -14,6 +14,7 @@ import {
 import { StockChart } from '../components/StockChart'
 import { CompanyPicker } from '../components/CompanyPicker'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
+import { TrustScoreCard } from '../components/TrustScoreCard'
 import { RatingHistoryCard } from '../components/RatingHistoryCard'
 import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
@@ -32,6 +33,34 @@ import {
 
 const DEFAULT_SENSITIVITY = 60
 const DEFAULT_CONTEXT_WINDOW = 120
+
+// ── Chart time ranges ─────────────────────────────────────────────────────────
+
+/**
+ * Selectable chart horizons. `months` drives the API `fromDate` (null = as far
+ * back as stored data goes); `sessions` is the matching signal context window
+ * (~21 trading sessions per month) applied when the user picks the range.
+ */
+const RANGE_OPTIONS = [
+  { key: '3M', months: 3, sessions: 63 },
+  { key: '6M', months: 6, sessions: 126 },
+  { key: '1Y', months: 12, sessions: 252 },
+  { key: '2Y', months: 24, sessions: 504 },
+  { key: 'MAX', months: null, sessions: 2520 },
+] as const
+
+type RangeKey = (typeof RANGE_OPTIONS)[number]['key']
+
+const DEFAULT_RANGE: RangeKey = '1Y'
+
+/** API `fromDate` (YYYY-MM-DD) for a range; MAX asks far enough back for everything. */
+function rangeFromDate(key: RangeKey): string {
+  const opt = RANGE_OPTIONS.find((r) => r.key === key)
+  const d = new Date()
+  if (opt?.months == null) return '2000-01-01'
+  d.setMonth(d.getMonth() - opt.months)
+  return d.toISOString().slice(0, 10)
+}
 
 /**
  * Relative "strength" of each VSA signal, 0–100. Used by the sensitivity
@@ -395,12 +424,24 @@ function ErrorState({ message, ticker }: { message: string; ticker: string }) {
 
 export function ChartsPage() {
   const { ticker = 'kgh' } = useParams<{ ticker: string }>()
-  const { data, loading, error } = useStockDetail(ticker)
+
+  // Chart time range — drives the fromDate sent to the signals endpoint.
+  const [range, setRange] = useState<RangeKey>(DEFAULT_RANGE)
+  const fromDate = useMemo(() => rangeFromDate(range), [range])
+  const { data, loading, error } = useStockDetail(ticker, fromDate)
 
   // Detection-settings state — drives which signals are shown on the chart
   // and in the strength/weakness checklist.
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY)
   const [contextWindow, setContextWindow] = useState(DEFAULT_CONTEXT_WINDOW)
+
+  // Picking a range also widens the signal context window to cover it, so
+  // markers appear across the whole visible chart, not just the recent part.
+  function selectRange(key: RangeKey) {
+    setRange(key)
+    const opt = RANGE_OPTIONS.find((r) => r.key === key)
+    if (opt) setContextWindow(opt.sessions)
+  }
 
   const visibleSignals = useMemo(
     () =>
@@ -415,7 +456,7 @@ export function ChartsPage() {
     [visibleSignals],
   )
 
-  if (loading) return <LoadingState />
+  if (loading && !data) return <LoadingState />
   if (error) return <ErrorState message={error} ticker={ticker} />
   if (!data) return null
 
@@ -463,13 +504,42 @@ export function ChartsPage() {
             }}
           />
           <Card className="p-3">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-sm font-medium text-slate-300">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
                 {data.ticker} · 1D
+                <span className="text-xs font-normal text-slate-500">
+                  {data.history.length} sessions
+                </span>
+                {loading && (
+                  <Loader2 size={14} className="animate-spin text-slate-500" />
+                )}
               </span>
-              <span className="text-xs text-slate-500">
-                TradingView Lightweight Charts · {data.history.length} sessions
-              </span>
+              <div
+                role="group"
+                aria-label="Chart time range"
+                className="flex overflow-hidden rounded-lg border border-slate-700"
+              >
+                {RANGE_OPTIONS.map(({ key }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => selectRange(key)}
+                    title={
+                      key === 'MAX'
+                        ? 'All stored history'
+                        : `Last ${key.replace('M', ' months').replace('Y', ' year(s)')}`
+                    }
+                    className={
+                      'px-2.5 py-1 text-xs font-medium transition-colors ' +
+                      (range === key
+                        ? 'bg-slate-700 text-slate-100'
+                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200')
+                    }
+                  >
+                    {key}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="h-[300px] w-full sm:h-[420px]">
               <StockChart candles={data.history} signals={visibleSignals} />
@@ -486,6 +556,7 @@ export function ChartsPage() {
             ratingChange={data.ratingChange}
           />
           <AiAnalysisCard ticker={ticker} />
+          <TrustScoreCard ticker={ticker} />
         </div>
       </div>
     </div>

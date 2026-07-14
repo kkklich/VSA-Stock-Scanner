@@ -6,6 +6,7 @@
 import {
   BookOpen,
   LayoutDashboard,
+  LayoutGrid,
   LineChart,
   Settings,
   Star,
@@ -34,6 +35,12 @@ const navItems: NavItem[] = [
     label: 'Scanner',
     icon: TrendingUp,
     match: (p) => p.startsWith('/scanner'),
+  },
+  {
+    to: '/heatmap',
+    label: 'Sector heatmap',
+    icon: LayoutGrid,
+    match: (p) => p.startsWith('/heatmap'),
   },
   {
     to: '/stock/kgh',

@@ -97,6 +97,18 @@ async def lifespan(_app: FastAPI):
             if not db_connected:
                 await engine.dispose()
                 engine = None
+                # Degrade gracefully: without this fallback the Refresh button
+                # and /api/stocks/refresh/status would stay broken ("service
+                # not initialised") until the backend is restarted with the
+                # database reachable.
+                set_refresh_service(
+                    RefreshService(
+                        companies=gpw_company_service.get_companies(),
+                        stooq=YahooFinanceClient(),
+                        history_cache=history_cache,
+                        ranking_cache=ranking_cache,
+                    )
+                )
             else:
                 # create_all is idempotent: it only creates tables that are
                 # missing and never alters existing ones. Running it on every

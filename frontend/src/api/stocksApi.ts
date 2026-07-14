@@ -109,6 +109,40 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   return { items: data, total: Number.isFinite(total) ? total : data.length }
 }
 
+// ── GET /api/stocks/heatmap ───────────────────────────────────────────────────
+
+export interface ApiHeatmapItem {
+  ticker: string
+  name: string
+  sector: string | null
+  /** Market capitalisation in PLN (tile size); null when not known. */
+  marketCap: number | null
+  lastPrice: number
+  /** VSA rating 0–100 (tile color in the default view). */
+  currentRating: number
+  lastSignal: string
+  /** % changes per horizon; null when stored history is too short. */
+  change1D: number | null
+  change1M: number | null
+  change1Y: number | null
+  /** Change vs the oldest stored bar (full stored history). */
+  changeMax: number | null
+}
+
+export interface ApiHeatmapResponse {
+  /** Trading day of the newest bar across all tiles. */
+  asOf: string | null
+  /** Tiles sorted by market cap, largest first. */
+  items: ApiHeatmapItem[]
+}
+
+export async function fetchHeatmap(settings?: string): Promise<ApiHeatmapResponse> {
+  const params = new URLSearchParams()
+  if (settings) params.set('settings', settings)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiHeatmapResponse>(`/api/stocks/heatmap${qs}`)
+}
+
 // ── POST /api/stocks/refresh + GET /api/stocks/refresh/status ────────────────
 
 export interface ApiRefreshStatus {
@@ -247,6 +281,63 @@ export async function fetchAiAnalysis(
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiAiAnalysis>(
     `/api/stocks/${encodeURIComponent(ticker)}/ai-analysis${qs}`,
+  )
+}
+
+// ── GET /api/stocks/{ticker}/trust-score ─────────────────────────────────────
+
+export interface ApiTrustScoreEvent {
+  date: string
+  signalName: string
+  /** The verdict the signal mapped to when it fired. */
+  verdict: 'Strong Buy' | 'Strong Sell'
+  /** Actual % move over the sessions after the signal. */
+  forwardReturnPct: number
+  /** The stock's typical (median) move over the same horizon, %. */
+  baselineReturnPct: number
+  /** Edge vs. baseline in the signal's direction, percentage points. */
+  excessReturnPct: number
+  /** True when the signal beat the baseline in its direction. */
+  goodEntry: boolean
+}
+
+export interface ApiTrustScore {
+  ticker: string
+  /** Trading day of the last bar the back-test is based on. */
+  asOf: string
+  /** 0–100 trust score; null when no strong signal is old enough to judge. */
+  score: number | null
+  grade: 'high' | 'medium' | 'low' | 'insufficient'
+  /** Sessions a paper entry is held before it is judged. */
+  horizonSessions: number
+  /** Strong signals old enough to judge / of those, good entries. */
+  evaluatedCount: number
+  goodCount: number
+  /** Strong signals too recent to judge yet. */
+  freshCount: number
+  buyEvaluated: number
+  buyGood: number
+  sellEvaluated: number
+  sellGood: number
+  baselineReturnPct: number | null
+  avgExcessReturnPct: number | null
+  /** Plain-language explanation of the track record. */
+  summary: string
+  /** Back-tested strong signals, newest first. */
+  events: ApiTrustScoreEvent[]
+  /** Built-in engine identifier, e.g. "stockpilot-trust-1". */
+  engine: string
+}
+
+export async function fetchTrustScore(
+  ticker: string,
+  settings?: string,
+): Promise<ApiTrustScore> {
+  const params = new URLSearchParams()
+  if (settings) params.set('settings', settings)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiTrustScore>(
+    `/api/stocks/${encodeURIComponent(ticker)}/trust-score${qs}`,
   )
 }
 

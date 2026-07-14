@@ -17,7 +17,6 @@ import httpx
 
 from app.config import settings
 from app.db.repository import QuoteRepository
-from app.models import StockRankingItem
 from app.services.cache import TTLCache
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.yahoo_finance_client import YahooFinanceClient
@@ -34,8 +33,10 @@ gpw_company_service = GpwCompanyService()
 # Per-ticker OHLCV history, keyed "history:{ticker}:{from}:{to}".
 history_cache: TTLCache = TTLCache()
 
-# Pre-computed full ranking list.
-ranking_cache: TTLCache[list[StockRankingItem]] = TTLCache()
+# Pre-computed analysis results, keyed by endpoint + settings hash: the full
+# ranking list ("ranking…"), scanner stats ("scanner:stats…") and the heatmap
+# ("heatmap…") all live here so the nightly refresh invalidates them together.
+ranking_cache: TTLCache = TTLCache()
 
 _http_client: httpx.AsyncClient | None = None
 
@@ -83,7 +84,7 @@ def get_history_cache() -> TTLCache:
     return history_cache
 
 
-def get_ranking_cache() -> TTLCache[list[StockRankingItem]]:
+def get_ranking_cache() -> TTLCache:
     return ranking_cache
 
 

@@ -110,32 +110,38 @@ class PostgresQuoteRepository:
             )
             await session.execute(stmt)
 
+    # asyncpg caps a statement at 32,767 bind parameters; at 7 columns per row
+    # that is ~4,600 rows, so multi-year backfills must be written in chunks.
+    _QUOTE_CHUNK_ROWS = 2000
+
     async def upsert_quotes(self, ticker: str, quotes: list[StooqDailyQuote]) -> None:
         if not quotes:
             return
         async with self._sf() as session, session.begin():
-            stmt = pg_insert(DailyQuoteRow).values([
-                {
-                    "ticker": ticker,
-                    "date": q.date,
-                    "open": q.open,
-                    "high": q.high,
-                    "low": q.low,
-                    "close": q.close,
-                    "volume": q.volume,
-                }
-                for q in quotes
-            ]).on_conflict_do_update(
-                constraint="uq_daily_quote",
-                set_={
-                    "open": pg_insert(DailyQuoteRow).excluded.open,
-                    "high": pg_insert(DailyQuoteRow).excluded.high,
-                    "low": pg_insert(DailyQuoteRow).excluded.low,
-                    "close": pg_insert(DailyQuoteRow).excluded.close,
-                    "volume": pg_insert(DailyQuoteRow).excluded.volume,
-                },
-            )
-            await session.execute(stmt)
+            for start in range(0, len(quotes), self._QUOTE_CHUNK_ROWS):
+                chunk = quotes[start : start + self._QUOTE_CHUNK_ROWS]
+                stmt = pg_insert(DailyQuoteRow).values([
+                    {
+                        "ticker": ticker,
+                        "date": q.date,
+                        "open": q.open,
+                        "high": q.high,
+                        "low": q.low,
+                        "close": q.close,
+                        "volume": q.volume,
+                    }
+                    for q in chunk
+                ]).on_conflict_do_update(
+                    constraint="uq_daily_quote",
+                    set_={
+                        "open": pg_insert(DailyQuoteRow).excluded.open,
+                        "high": pg_insert(DailyQuoteRow).excluded.high,
+                        "low": pg_insert(DailyQuoteRow).excluded.low,
+                        "close": pg_insert(DailyQuoteRow).excluded.close,
+                        "volume": pg_insert(DailyQuoteRow).excluded.volume,
+                    },
+                )
+                await session.execute(stmt)
 
     async def get_quotes(
         self,

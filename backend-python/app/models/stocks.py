@@ -99,6 +99,45 @@ class StockRankingItem(_CamelModel):
     ai_confidence: int = 0
 
 
+# ── New models: sector heatmap endpoint ───────────────────────────────────────
+
+class HeatmapItem(_CamelModel):
+    """One tile in the sector heatmap (``GET /api/stocks/heatmap``).
+
+    Percentage changes are ``None`` when the stored history is too short to
+    compute them (e.g. a recently listed company has no bar from a year ago).
+    """
+
+    ticker: str
+    name: str
+    sector: str | None = None
+    # Market capitalisation in PLN (tile size); None when not known.
+    market_cap: int | None = None
+    # Last EOD closing price in PLN.
+    last_price: float
+    # Computed VSA rating 0–100 (tile colour in the default view).
+    current_rating: int
+    # Verdict derived from the most recent VSA signal (tooltip).
+    last_signal: str
+    # Close-to-close change over the last session, percent.
+    change_1d: float | None = None
+    # Change vs the close ~1 calendar month ago, percent.
+    change_1m: float | None = None
+    # Change vs the close ~1 year ago, percent.
+    change_1y: float | None = None
+    # Change vs the oldest stored bar (full stored history), percent.
+    change_max: float | None = None
+
+
+class HeatmapResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/heatmap``."""
+
+    # Trading day of the newest bar across all tiles.
+    as_of: date | None = None
+    # Tiles sorted by market cap (largest first, unknown caps last).
+    items: list[HeatmapItem] = []
+
+
 # ── New models: signals endpoint ──────────────────────────────────────────────
 
 class CandleBar(_CamelModel):
@@ -250,6 +289,69 @@ class AiAnalysisResponse(_CamelModel):
     # Short bullet observations (trend, volume behaviour, support/resistance).
     key_observations: list[str] = []
     # Identifier of the built-in engine that produced the analysis.
+    engine: str
+
+
+# ── New models: trust-score endpoint ─────────────────────────────────────────
+
+
+class TrustScoreEvent(_CamelModel):
+    """One back-tested historical strong signal (a "paper trade")."""
+
+    date: date
+    # Signal display name, e.g. "Spring", "SOS".
+    signal_name: str
+    # The verdict the signal mapped to when it fired.
+    verdict: Literal["Strong Buy", "Strong Sell"]
+    # Actual close-to-close move over the sessions after the signal, percent.
+    forward_return_pct: float
+    # The stock's typical (median) move over the same horizon, percent.
+    baseline_return_pct: float
+    # Edge vs. the baseline in the signal's direction, percentage points
+    # (positive = the signal was a better entry than a random day).
+    excess_return_pct: float
+    # True when the signal beat the baseline in its direction.
+    good_entry: bool
+
+
+class TrustScoreResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/trust-score``.
+
+    A prediction-accuracy score for the VSA engine on this particular stock:
+    every historical Strong Buy / Strong Sell signal old enough to judge is
+    back-tested (forward return vs. the stock's own baseline) and the results
+    are folded into a single 0–100 trust score. Computed locally by
+    ``app/analysis/trust_score.py``; deterministic, no external services.
+    """
+
+    ticker: str
+    # Trading day of the last bar the back-test is based on.
+    as_of: date
+    # 0–100 trust score; None when no strong signal is old enough to judge.
+    score: int | None = Field(default=None, ge=0, le=100)
+    # Qualitative bucket for the score (drives the badge label/colour).
+    grade: Literal["high", "medium", "low", "insufficient"]
+    # Sessions a paper entry is held before it is judged.
+    horizon_sessions: int
+    # Strong signals with enough forward data to judge / of those, good entries.
+    evaluated_count: int
+    good_count: int
+    # Strong signals too recent to judge yet (fewer forward sessions than the horizon).
+    fresh_count: int
+    # Per-direction breakdown of the evaluated signals.
+    buy_evaluated: int
+    buy_good: int
+    sell_evaluated: int
+    sell_good: int
+    # The stock's median forward return over the horizon, percent.
+    baseline_return_pct: float | None = None
+    # Mean edge vs. baseline across the evaluated signals, percentage points.
+    avg_excess_return_pct: float | None = None
+    # Plain-language explanation of the track record.
+    summary: str
+    # Back-tested strong signals, newest first (capped; counts cover all).
+    events: list[TrustScoreEvent] = []
+    # Identifier of the built-in engine that produced the score.
     engine: str
 
 

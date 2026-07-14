@@ -11,6 +11,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { ChartsPage } from './pages/ChartsPage'
 import { ScannerPage } from './pages/ScannerPage'
+import { SectorHeatmapPage } from './pages/SectorHeatmapPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { HelpPage } from './pages/HelpPage'
 import { usePageSeo } from './lib/seo'
@@ -20,6 +21,7 @@ function titleForPath(pathname: string): string {
   if (pathname === '/') return 'Dashboard'
   if (pathname.startsWith('/watchlist')) return 'Watchlist'
   if (pathname.startsWith('/scanner')) return 'VSA Scanner — GPW'
+  if (pathname.startsWith('/heatmap')) return 'Sector Heatmap'
   if (pathname.startsWith('/stock/')) return 'Stock Detail'
   if (pathname.startsWith('/filters')) return 'Filters'
   if (pathname.startsWith('/settings')) return 'Settings'
@@ -62,6 +64,7 @@ export default function App() {
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="scanner" element={<ScannerPage />} />
+        <Route path="heatmap" element={<SectorHeatmapPage />} />
         <Route path="stock/:ticker" element={<ChartsPage />} />
         <Route path="filters" element={<PlaceholderPage title="Filters" />} />
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
