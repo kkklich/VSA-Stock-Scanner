@@ -44,7 +44,8 @@ agent/      ALL project documentation & reference material lives here:
 - `POST /api/stocks/refresh` — starts the **data-refresh pipeline** in the background (Yahoo ingest → ranking recompute with DEFAULT settings → daily rating snapshots saved to DB); returns 202 + status. This and the nightly 18:00 job are the ONLY triggers that pull fresh data from Yahoo. `GET /api/stocks/refresh/status` — same payload `{ state, lastStartedAt, lastRefreshAt, lastError, stocksRanked, dbEnabled }` for polling.
 - `GET /api/stocks/{ticker}/rating-history` — stored daily rating snapshots `{ ticker, points[{date, rating, verdict, close}], source }` (the "attractiveness over time" chart). Supports `fromDate`, `toDate` (default last 12 months). Snapshots always use DEFAULT engine settings; when none exist yet the history is computed on the fly (`source: "computed"`).
 - `GET /api/stocks/heatmap` — Sector heatmap feed (`/heatmap` page, Finviz-style treemap). Returns `{ asOf, items[] }`; each item: `ticker, name, sector, marketCap, lastPrice, currentRating, lastSignal, change1D, change1M, change1Y, changeMax` (percent changes, `null` when stored history is too short or too gappy — a 1M/1Y baseline may be at most 2× the horizon old; MAX = full stored history). Same pre-filters as the ranking, evaluated on the same 120-day window (stale/suspended stocks are excluded); rating computed on that window too. Supports `settings`; cached per settings hash with a per-key lock (concurrent cold requests share one computation) and a generation guard (a result computed while the nightly refresh cleared the cache is served but not cached).
-- `settings` (optional, on the analysis endpoints: ranking, signals, scanner/stats, ai-analysis, trust-score, heatmap) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
+- `GET /api/stocks/volume-surge` — **unusual-volume scanner** (`/volume-surge` page). Finds stocks whose average volume over the last `recentDays` sessions (1–10, default 3) is at least `minRatio` (1–10, default 1.5) times their own average over the `baselineDays` sessions (10–60, default 20) immediately before — multi-day **relative volume (RVOL)**; the baseline excludes the recent window so a surge can't inflate its own reference. Server-side sorting + pagination: `sortBy` (one of ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal; default `volumeRatio`), `sortDir` (`asc`|`desc`, default `desc`), `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, recentDays, baselineDays, minRatio, scannedCount, totalCount, items[] }` (`totalCount` = matching rows before pagination); each item: `ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal`. Same pre-filters and 120-day window as the ranking (shares its per-ticker history cache). Supports `settings`; the full scan is cached per (screen params, settings hash) with a per-key lock and generation guard like the heatmap — sorting/pagination is a cheap per-request pass. Computed by `app/services/volume_surge_service.py`.
+- `settings` (optional, on the analysis endpoints: ranking, signals, scanner/stats, ai-analysis, trust-score, heatmap, volume-surge) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
 
 Mandatory ranking pre-filters: 20-session median turnover > 100,000 PLN; market cap > 100M PLN (applied when known from `company-details.json`).
 
@@ -97,7 +98,13 @@ details.** Summary (2026-07-03):
   "Signal Trust Score" card next to AI Insight — a back-test of this stock's
   own historical Strong Buy/Sell signals rolled into a 0–100 accuracy score
   (`GET /api/stocks/{ticker}/trust-score`, `app/analysis/trust_score.py`).
-- **Tests:** backend `pytest` — 177 passing; frontend `npm run build` passes.
+- **Volume surge scanner (added 2026-07-15):** `/volume-surge` page in the
+  sidebar — stocks trading on unusually high volume right now, found by
+  multi-day relative volume (RVOL: last few sessions' average volume vs the
+  stock's own baseline average before them), shown with the price move over
+  the surge window and the VSA rating/verdict for context
+  (`GET /api/stocks/volume-surge`, `app/services/volume_surge_service.py`).
+- **Tests:** backend `pytest` — 200 passing; frontend `npm run build` passes.
   Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
 - **Known gaps:** Filters & Settings pages are placeholders; favorites are
   localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
@@ -105,4 +112,4 @@ details.** Summary (2026-07-03):
   all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-07-13.*
+*Last updated: 2026-07-15.*

@@ -138,6 +138,56 @@ class HeatmapResponse(_CamelModel):
     items: list[HeatmapItem] = []
 
 
+# ── New models: volume-surge endpoint ─────────────────────────────────────────
+
+class VolumeSurgeItem(_CamelModel):
+    """One surging stock in ``GET /api/stocks/volume-surge``.
+
+    "Surging" means the average volume of the last few sessions is well above
+    the stock's own baseline average (multi-day relative volume, RVOL).
+    """
+
+    ticker: str
+    name: str
+    sector: str | None = None
+    # Last EOD closing price in PLN.
+    last_price: float
+    # Average daily volume over the recent window (shares).
+    recent_avg_volume: int
+    # Average daily volume over the baseline window before it (shares).
+    baseline_avg_volume: int
+    # recent avg ÷ baseline avg — the multi-day relative volume. >= minRatio.
+    volume_ratio: float
+    # Latest single session's volume ÷ baseline avg (classic RVOL).
+    last_day_ratio: float
+    # Recent sessions whose volume individually beat the baseline average.
+    days_above_baseline: int
+    # Close-to-close price change across the recent window, percent — the
+    # price "result" of the volume "effort" (VSA reads the two together).
+    price_change_pct: float
+    # Computed VSA rating 0–100 (same window/settings as the ranking).
+    current_rating: int
+    # Verdict derived from the most recent VSA signal.
+    last_signal: str
+
+
+class VolumeSurgeResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/volume-surge``."""
+
+    # Trading day of the newest bar across the surging stocks.
+    as_of: date | None = None
+    # Echo of the screen parameters the results were computed with.
+    recent_days: int
+    baseline_days: int
+    min_ratio: float
+    # Stocks that passed the pre-filters and had enough history to score.
+    scanned_count: int = 0
+    # Surging stocks matching the screen, before pagination (the pager total).
+    total_count: int = 0
+    # One page of surging stocks (server-side sorted; default: ratio desc).
+    items: list[VolumeSurgeItem] = []
+
+
 # ── New models: signals endpoint ──────────────────────────────────────────────
 
 class CandleBar(_CamelModel):

@@ -1,7 +1,14 @@
 // Small reusable presentational pieces used across pages.
 
 import { useState } from 'react'
-import { ArrowDown, ArrowDownUp, ArrowUp, Info } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowDownUp,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from 'lucide-react'
 import type { SignalVerdict } from '../types'
 import { ratingTone } from '../lib/format'
 
@@ -182,6 +189,7 @@ export function SortHeader<T extends string>({
   align = 'left',
   info,
   subLabel,
+  className = '',
 }: {
   label: string
   col: T
@@ -191,12 +199,14 @@ export function SortHeader<T extends string>({
   align?: 'left' | 'right'
   info?: string
   subLabel?: string
+  /** Extra classes on the <th> (e.g. responsive visibility). */
+  className?: string
 }) {
   const active = sortBy === col
   const Icon = !active ? ArrowDownUp : sortDir === 'asc' ? ArrowUp : ArrowDown
   return (
     <th
-      className="px-4 py-3 font-medium"
+      className={'px-4 py-3 font-medium ' + className}
       aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
     >
       <span
@@ -228,6 +238,78 @@ export function SortHeader<T extends string>({
         </span>
       )}
     </th>
+  )
+}
+
+/**
+ * Numbered pagination bar with prev/next arrows. Shows up to 7 page numbers
+ * with ellipsis gaps when the list is long. (Shared by Watchlist and
+ * Volume Surge.)
+ */
+export function Pagination({
+  current,
+  total,
+  onChange,
+}: {
+  current: number
+  total: number
+  onChange: (page: number) => void
+}) {
+  const pages: (number | '…')[] = []
+  if (total <= 7) {
+    for (let p = 1; p <= total; p++) pages.push(p)
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push('…')
+    for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p)
+    if (current < total - 2) pages.push('…')
+    pages.push(total)
+  }
+
+  const btn =
+    'flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-slate-800 bg-slate-900 px-2 text-xs text-slate-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40'
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        className={btn}
+        disabled={current === 1}
+        onClick={() => onChange(current - 1)}
+        aria-label="Previous page"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <span key={`ellipsis-${i}`} className="px-1 text-xs text-slate-600">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            className={
+              btn +
+              (p === current
+                ? ' border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : '')
+            }
+            onClick={() => onChange(p)}
+            aria-label={`Page ${p}`}
+            aria-current={p === current ? 'page' : undefined}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        className={btn}
+        disabled={current === total}
+        onClick={() => onChange(current + 1)}
+        aria-label="Next page"
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
   )
 }
 

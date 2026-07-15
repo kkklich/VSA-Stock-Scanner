@@ -143,6 +143,92 @@ export async function fetchHeatmap(settings?: string): Promise<ApiHeatmapRespons
   return apiFetch<ApiHeatmapResponse>(`/api/stocks/heatmap${qs}`)
 }
 
+// ── GET /api/stocks/volume-surge ──────────────────────────────────────────────
+
+export interface ApiVolumeSurgeItem {
+  ticker: string
+  name: string
+  sector: string | null
+  lastPrice: number
+  /** Average daily volume over the recent window (shares). */
+  recentAvgVolume: number
+  /** Average daily volume over the baseline window before it (shares). */
+  baselineAvgVolume: number
+  /** Recent avg ÷ baseline avg — the multi-day relative volume (RVOL). */
+  volumeRatio: number
+  /** Latest single session's volume ÷ baseline avg (classic RVOL). */
+  lastDayRatio: number
+  /** Recent sessions whose volume individually beat the baseline average. */
+  daysAboveBaseline: number
+  /** Price change across the recent window, % (the "result" of the effort). */
+  priceChangePct: number
+  /** VSA rating 0–100 (same window/settings as the ranking). */
+  currentRating: number
+  lastSignal: string
+}
+
+export interface ApiVolumeSurgeResponse {
+  /** Trading day of the newest bar across the surging stocks. */
+  asOf: string | null
+  /** Echo of the screen parameters the results were computed with. */
+  recentDays: number
+  baselineDays: number
+  minRatio: number
+  /** Stocks that passed the pre-filters and had enough history to score. */
+  scannedCount: number
+  /** Surging stocks matching the screen, before pagination (pager total). */
+  totalCount: number
+  /** One page of surging stocks (server-side sorted). */
+  items: ApiVolumeSurgeItem[]
+}
+
+/** Columns the volume-surge endpoint can sort by (backend whitelist). */
+export type VolumeSurgeSortKey =
+  | 'ticker'
+  | 'name'
+  | 'sector'
+  | 'lastPrice'
+  | 'recentAvgVolume'
+  | 'baselineAvgVolume'
+  | 'volumeRatio'
+  | 'lastDayRatio'
+  | 'daysAboveBaseline'
+  | 'priceChangePct'
+  | 'currentRating'
+  | 'lastSignal'
+
+export interface VolumeSurgeQuery {
+  /** Sessions in the "now" window (1–10, default 3). */
+  recentDays?: number
+  /** Sessions in the reference window before it (10–60, default 20). */
+  baselineDays?: number
+  /** Minimum RVOL ratio to include a stock (1–10, default 1.5). */
+  minRatio?: number
+  page?: number
+  pageSize?: number
+  /** Sort column (default volumeRatio). */
+  sortBy?: VolumeSurgeSortKey
+  sortDir?: SortDir
+  /** URL-encoded VSA settings JSON from the Scanner page. */
+  settings?: string
+}
+
+export async function fetchVolumeSurge(
+  query: VolumeSurgeQuery = {},
+): Promise<ApiVolumeSurgeResponse> {
+  const params = new URLSearchParams()
+  if (query.recentDays) params.set('recentDays', String(query.recentDays))
+  if (query.baselineDays) params.set('baselineDays', String(query.baselineDays))
+  if (query.minRatio) params.set('minRatio', String(query.minRatio))
+  if (query.page) params.set('page', String(query.page))
+  if (query.pageSize) params.set('pageSize', String(query.pageSize))
+  if (query.sortBy) params.set('sortBy', query.sortBy)
+  if (query.sortDir) params.set('sortDir', query.sortDir)
+  if (query.settings) params.set('settings', query.settings)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiVolumeSurgeResponse>(`/api/stocks/volume-surge${qs}`)
+}
+
 // ── POST /api/stocks/refresh + GET /api/stocks/refresh/status ────────────────
 
 export interface ApiRefreshStatus {

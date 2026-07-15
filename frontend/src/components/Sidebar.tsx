@@ -4,6 +4,7 @@
 // current path.
 
 import {
+  Activity,
   BookOpen,
   LayoutDashboard,
   LayoutGrid,
@@ -41,6 +42,12 @@ const navItems: NavItem[] = [
     label: 'Sector heatmap',
     icon: LayoutGrid,
     match: (p) => p.startsWith('/heatmap'),
+  },
+  {
+    to: '/volume-surge',
+    label: 'Volume surge',
+    icon: Activity,
+    match: (p) => p.startsWith('/volume-surge'),
   },
   {
     to: '/stock/kgh',

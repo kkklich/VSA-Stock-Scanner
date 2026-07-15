@@ -58,6 +58,7 @@ from app.models import (
     StockSignalsResponse,
     StooqDailyQuote,
     TrustScoreResponse,
+    VolumeSurgeResponse,
     VsaSettings,
     VsaSignalResponse,
 )
@@ -69,6 +70,12 @@ from app.services.ranking_service import compute_ranking
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
+from app.services.volume_surge_service import (
+    DEFAULT_BASELINE_DAYS,
+    DEFAULT_MIN_RATIO,
+    DEFAULT_RECENT_DAYS,
+    compute_volume_surge,
+)
 from app.services.yahoo_finance_client import YahooFinanceClient
 
 logger = logging.getLogger(__name__)
@@ -108,11 +115,15 @@ _SIGNAL_RANK: dict[str, int] = {
 }
 
 
-def _sort_value(item: StockRankingItem, attr: str) -> object:
-    """Return a type-consistent, comparable key for one column."""
-    if attr == "last_signal":
-        return _SIGNAL_RANK.get(item.last_signal, 0)
+def _sort_value(item: object, attr: str) -> object:
+    """Return a type-consistent, comparable key for one column.
+
+    Shared by the ranking and volume-surge feeds (both carry ``last_signal``,
+    optional ``sector`` and otherwise numeric/string columns).
+    """
     value = getattr(item, attr)
+    if attr == "last_signal":
+        return _SIGNAL_RANK.get(value, 0)
     if value is None:  # e.g. sector may be missing
         return ""
     if isinstance(value, str):
@@ -500,6 +511,129 @@ async def get_heatmap(
             logger.info("Heatmap cache invalidated during computation — not cached.")
         logger.info("Heatmap ready: %d tiles.", len(result.items))
         return result
+
+
+# ── Endpoint: volume-surge scanner ────────────────────────────────────────────
+
+# Same in-flight/staleness discipline as the heatmap: one computation per cache
+# key at a time, and a result computed while the nightly refresh cleared the
+# cache is served but not cached (unlike the ranking, nothing re-warms this
+# cache after a refresh, so a stale write would look fresh for hours).
+_volume_surge_locks: dict[str, asyncio.Lock] = {}
+
+# Sortable volume-surge columns: camelCase key (as the frontend sends it) →
+# the VolumeSurgeItem attribute name (same whitelist idea as the ranking).
+_SURGE_SORT_KEYS: dict[str, str] = {
+    "ticker": "ticker",
+    "name": "name",
+    "sector": "sector",
+    "lastPrice": "last_price",
+    "recentAvgVolume": "recent_avg_volume",
+    "baselineAvgVolume": "baseline_avg_volume",
+    "volumeRatio": "volume_ratio",
+    "lastDayRatio": "last_day_ratio",
+    "daysAboveBaseline": "days_above_baseline",
+    "priceChangePct": "price_change_pct",
+    "currentRating": "current_rating",
+    "lastSignal": "last_signal",
+}
+
+
+@router.get(
+    "/volume-surge",
+    response_model=VolumeSurgeResponse,
+    response_model_by_alias=True,
+    summary="Stocks trading on unusually high volume (multi-day relative volume)",
+)
+async def get_volume_surge(
+    recent_days: Annotated[int, Query(alias="recentDays", ge=1, le=10)] = (
+        DEFAULT_RECENT_DAYS
+    ),
+    baseline_days: Annotated[int, Query(alias="baselineDays", ge=10, le=60)] = (
+        DEFAULT_BASELINE_DAYS
+    ),
+    min_ratio: Annotated[float, Query(alias="minRatio", ge=1.0, le=10.0)] = (
+        DEFAULT_MIN_RATIO
+    ),
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
+    sort_by: Annotated[str, Query(alias="sortBy")] = "volumeRatio",
+    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
+    cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
+    history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+) -> VolumeSurgeResponse:
+    """Companies whose recent trading volume is unusually high.
+
+    Multi-day relative volume (RVOL): the average volume of the last
+    ``recentDays`` sessions divided by the average of the ``baselineDays``
+    sessions before them. Stocks at or above ``minRatio`` are returned, each
+    with its VSA rating and verdict so the surge can be read in VSA terms
+    (effort vs result). Server-side sorted (default: strongest surge first)
+    and paginated; ``totalCount`` carries the matching-row total.
+    """
+    if sort_by not in _SURGE_SORT_KEYS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid 'sortBy' value '{sort_by}'. "
+                f"Allowed: {', '.join(_SURGE_SORT_KEYS)}."
+            ),
+        )
+
+    config = _parse_vsa_settings(vsa_settings)
+    cache_key = (
+        f"volume-surge:{recent_days}:{baseline_days}:{min_ratio}"
+        f"{config.cache_suffix()}"
+    )
+    full: VolumeSurgeResponse | None = cache.get(cache_key)
+
+    if full is None:
+        lock = _volume_surge_locks.setdefault(cache_key, asyncio.Lock())
+        async with lock:
+            # A concurrent request may have finished computing while we waited.
+            full = cache.get(cache_key)
+            if full is None:
+                generation = cache.generation
+                logger.info("Volume-surge cache cold — computing.")
+                full = await compute_volume_surge(
+                    companies=companies.get_companies(),
+                    stooq=stooq,
+                    history_cache=history_cache,
+                    history_cache_ttl=settings.history_cache_seconds,
+                    repo=repo,
+                    config=config,
+                    recent_days=recent_days,
+                    baseline_days=baseline_days,
+                    min_ratio=min_ratio,
+                )
+                if not cache.set_if_generation(
+                    cache_key, full, settings.history_cache_seconds, generation
+                ):
+                    logger.info(
+                        "Volume-surge cache invalidated during computation — not cached."
+                    )
+                logger.info(
+                    "Volume surge ready: %d of %d scanned stocks above ratio %.2f.",
+                    len(full.items),
+                    full.scanned_count,
+                    min_ratio,
+                )
+
+    # Cheap per-request pass over the cached full scan — same split as the
+    # ranking: the expensive computation stays fully cached, only this
+    # in-memory sort + slice runs per request.
+    attr = _SURGE_SORT_KEYS[sort_by]
+    ordered = sorted(
+        full.items,
+        key=lambda i: _sort_value(i, attr),
+        reverse=sort_dir != "asc",
+    )
+    start = (page - 1) * page_size
+    return full.model_copy(update={"items": ordered[start : start + page_size]})
 
 
 # ── Endpoint 4: raw EOD history ───────────────────────────────────────────────

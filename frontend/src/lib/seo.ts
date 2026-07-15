@@ -49,6 +49,14 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
+    test: (p) => p.startsWith('/volume-surge'),
+    entry: {
+      title: 'GPW Volume Surge — unusual volume scanner',
+      description:
+        'GPW stocks trading on unusually high volume: relative volume (RVOL) over the last sessions vs the stock\'s own baseline, with VSA rating and signal context.',
+    },
+  },
+  {
     test: (p) => p.startsWith('/filters'),
     entry: {
       title: 'Filters',
