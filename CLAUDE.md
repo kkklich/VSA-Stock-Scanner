@@ -35,7 +35,7 @@ agent/      ALL project documentation & reference material lives here:
 
 ## API contract (do not change without updating DOCUMENTATION.md)
 
-- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating` (0–100), `signal` (verdict filter), `tickers` (comma-separated allow-list, e.g. favorites). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
+- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (PLN), `minVolume` (20-session median volume, shares), `tickers` (comma-separated allow-list, e.g. favorites). All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
 - `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[] }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`.
 - `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type. Supports `settings`.
 - `GET /api/stocks/{ticker}/fundamentals` — company description + financial ratios + quarterly reports.
@@ -104,10 +104,15 @@ details.** Summary (2026-07-03):
   stock's own baseline average before them), shown with the price move over
   the surge window and the VSA rating/verdict for context
   (`GET /api/stocks/volume-surge`, `app/services/volume_surge_service.py`).
-- **Tests:** backend `pytest` — 200 passing; frontend `npm run build` passes.
+- **Filters page / stock screener (added 2026-07-15):** `/filters` page in the
+  sidebar — screen the ranking by sector, VSA rating band, signal + signal
+  age, price range and minimum volume (all applied server-side by the ranking
+  endpoint's filter params), with **named filter presets** saved in
+  localStorage and re-runnable in one click.
+- **Tests:** backend `pytest` — 205 passing; frontend `npm run build` passes.
   Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
-- **Known gaps:** Filters & Settings pages are placeholders; favorites are
-  localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
+- **Known gaps:** Settings page is a placeholder; favorites & filter presets
+  are localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
 - **Feature checklist:** `agent/FEATURE-CHECKLIST.md` — done/not-done list of
   all features, incl. planned "popular scanner" additions (2026-07-09).
 

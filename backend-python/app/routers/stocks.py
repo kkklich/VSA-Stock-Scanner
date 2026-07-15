@@ -136,7 +136,13 @@ def _query_ranking(
     *,
     q: str | None,
     min_rating: int,
+    max_rating: int = 100,
     signal: str | None,
+    sector: str | None = None,
+    max_days_since_signal: int | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    min_volume: int | None = None,
     tickers: set[str] | None,
     sort_by: str,
     sort_dir: str,
@@ -160,8 +166,23 @@ def _query_ranking(
             ]
     if min_rating > 0:
         rows = [r for r in rows if r.current_rating >= min_rating]
+    if max_rating < 100:
+        rows = [r for r in rows if r.current_rating <= max_rating]
     if signal and signal.casefold() != "all":
         rows = [r for r in rows if r.last_signal == signal]
+    if sector and sector.casefold() != "all":
+        wanted = sector.strip().casefold()
+        rows = [r for r in rows if (r.sector or "").casefold() == wanted]
+    if max_days_since_signal is not None:
+        # days_since_signal is 999 when no signal ever fired, so a recency
+        # filter naturally drops signal-less stocks too.
+        rows = [r for r in rows if r.days_since_signal <= max_days_since_signal]
+    if min_price is not None:
+        rows = [r for r in rows if r.last_price >= min_price]
+    if max_price is not None:
+        rows = [r for r in rows if r.last_price <= max_price]
+    if min_volume is not None:
+        rows = [r for r in rows if r.volume >= min_volume]
 
     attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
     reverse = sort_dir.casefold() != "asc"
@@ -295,7 +316,15 @@ async def get_ranking(
     sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
     q: Annotated[str | None, Query(max_length=64)] = None,
     min_rating: Annotated[int, Query(alias="minRating", ge=0, le=100)] = 0,
+    max_rating: Annotated[int, Query(alias="maxRating", ge=0, le=100)] = 100,
     signal: Annotated[str | None, Query(max_length=32)] = None,
+    sector: Annotated[str | None, Query(max_length=64)] = None,
+    max_days_since_signal: Annotated[
+        int | None, Query(alias="maxDaysSinceSignal", ge=0, le=999)
+    ] = None,
+    min_price: Annotated[float | None, Query(alias="minPrice", ge=0)] = None,
+    max_price: Annotated[float | None, Query(alias="maxPrice", ge=0)] = None,
+    min_volume: Annotated[int | None, Query(alias="minVolume", ge=0)] = None,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -339,7 +368,13 @@ async def get_ranking(
         full_ranking,
         q=q,
         min_rating=min_rating,
+        max_rating=max_rating,
         signal=signal,
+        sector=sector,
+        max_days_since_signal=max_days_since_signal,
+        min_price=min_price,
+        max_price=max_price,
+        min_volume=min_volume,
         tickers=ticker_set,
         sort_by=sort_by,
         sort_dir=sort_dir,

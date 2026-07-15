@@ -13,6 +13,7 @@ import { ChartsPage } from './pages/ChartsPage'
 import { ScannerPage } from './pages/ScannerPage'
 import { SectorHeatmapPage } from './pages/SectorHeatmapPage'
 import { VolumeSurgePage } from './pages/VolumeSurgePage'
+import { FiltersPage } from './pages/FiltersPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { HelpPage } from './pages/HelpPage'
 import { usePageSeo } from './lib/seo'
@@ -69,7 +70,7 @@ export default function App() {
         <Route path="heatmap" element={<SectorHeatmapPage />} />
         <Route path="volume-surge" element={<VolumeSurgePage />} />
         <Route path="stock/:ticker" element={<ChartsPage />} />
-        <Route path="filters" element={<PlaceholderPage title="Filters" />} />
+        <Route path="filters" element={<FiltersPage />} />
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
         <Route path="help" element={<HelpPage />} />
         {/* Unknown paths fall back to the home page */}

@@ -233,6 +233,63 @@ class TestGetRanking:
             ).json()
         assert all(item["currentRating"] >= 40 for item in body)
 
+    def test_max_rating_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"maxRating": 60, "pageSize": 500},
+            ).json()
+        assert all(item["currentRating"] <= 60 for item in body)
+
+    def test_sector_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"sector": "Basic Materials", "pageSize": 500},
+            ).json()
+        assert body  # KGHM et al. are Basic Materials
+        assert all(item["sector"] == "Basic Materials" for item in body)
+
+    def test_max_days_since_signal_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"maxDaysSinceSignal": 10, "pageSize": 500},
+            ).json()
+        # 999 marks "no signal ever" — the recency filter must drop those too.
+        assert all(item["daysSinceSignal"] <= 10 for item in body)
+
+    def test_price_range_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"minPrice": 10, "maxPrice": 200, "pageSize": 500},
+            ).json()
+        assert all(10 <= item["lastPrice"] <= 200 for item in body)
+
+    def test_min_volume_filter(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"minVolume": 50_000, "pageSize": 500},
+            ).json()
+        assert all(item["volume"] >= 50_000 for item in body)
+
     def test_invalid_sort_by_rejected(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()

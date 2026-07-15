@@ -59,9 +59,9 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
   {
     test: (p) => p.startsWith('/filters'),
     entry: {
-      title: 'Filters',
+      title: 'GPW Stock Screener — filters and saved presets',
       description:
-        'VSA scanner filters: liquidity, market cap and other criteria for selecting GPW stocks.',
+        'Screen GPW stocks by sector, VSA rating band, signal and its age, price range and liquidity — and save filter combinations as one-click presets.',
     },
   },
   {

@@ -63,8 +63,19 @@ export interface RankingQuery {
   q?: string
   /** Minimum VSA rating (0 = no filter). */
   minRating?: number
+  /** Maximum VSA rating (100 = no filter). */
+  maxRating?: number
   /** Signal verdict filter, or 'all'/undefined for no filter. */
   signal?: SignalVerdict | 'all'
+  /** Exact sector name, or 'all'/undefined for no filter. */
+  sector?: string
+  /** Only stocks whose last signal fired at most this many sessions ago. */
+  maxDaysSinceSignal?: number
+  /** Price range in PLN (either bound optional). */
+  minPrice?: number
+  maxPrice?: number
+  /** Minimum 20-session median volume, shares. */
+  minVolume?: number
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
   /** URL-encoded VSA settings JSON from the Scanner page. */
@@ -85,7 +96,13 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     sortDir,
     q,
     minRating,
+    maxRating,
     signal,
+    sector,
+    maxDaysSinceSignal,
+    minPrice,
+    maxPrice,
+    minVolume,
     tickers,
     settings,
   } = query
@@ -98,7 +115,19 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (sortDir) params.set('sortDir', sortDir)
   if (q && q.trim()) params.set('q', q.trim())
   if (minRating && minRating > 0) params.set('minRating', String(minRating))
+  if (maxRating !== undefined && maxRating < 100) {
+    params.set('maxRating', String(maxRating))
+  }
   if (signal && signal !== 'all') params.set('signal', signal)
+  if (sector && sector !== 'all') params.set('sector', sector)
+  if (maxDaysSinceSignal !== undefined) {
+    params.set('maxDaysSinceSignal', String(maxDaysSinceSignal))
+  }
+  if (minPrice !== undefined && minPrice > 0) params.set('minPrice', String(minPrice))
+  if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice))
+  if (minVolume !== undefined && minVolume > 0) {
+    params.set('minVolume', String(minVolume))
+  }
   if (tickers) params.set('tickers', tickers.join(','))
   if (settings) params.set('settings', settings)
 
