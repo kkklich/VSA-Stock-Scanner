@@ -4,7 +4,7 @@
 // Volume is the "effort" side of VSA, so each row also shows the price change
 // over the surge window (the "result") and the stock's VSA rating/verdict.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import {
@@ -115,6 +115,12 @@ export function VolumeSurgePage() {
   const totalCount = data?.totalCount ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
+  // If the result set shrank under us (e.g. after a data refresh) and the
+  // current page no longer exists, step back to the last real page.
+  useEffect(() => {
+    if (!loading && page > totalPages) setPage(totalPages)
+  }, [loading, page, totalPages])
+
   /** Change a screen parameter and jump back to the first page. */
   const applyParam = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v)
@@ -208,7 +214,7 @@ export function VolumeSurgePage() {
             Retry
           </button>
         </div>
-      ) : items.length === 0 ? (
+      ) : totalCount === 0 ? (
         <div className="py-24 text-center text-sm text-slate-400">
           No stock currently trades at {minRatio}× its normal volume. Try a
           lower minimum ratio or a shorter surge window.
