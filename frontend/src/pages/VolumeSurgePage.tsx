@@ -4,18 +4,18 @@
 // Volume is the "effort" side of VSA, so each row also shows the price change
 // over the surge window (the "result") and the stock's VSA rating/verdict.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import {
   Card,
   InfoTip,
-  Pagination,
   SignalBadge,
   SortHeader,
   TickerMark,
 } from '../components/ui'
 import { useVolumeSurge } from '../hooks/useVolumeSurge'
+import { usePersistentState } from '../hooks/usePersistentState'
 import type {
   ApiVolumeSurgeItem,
   SortDir,
@@ -94,34 +94,61 @@ function ButtonGroup<T extends number>({
 
 export function VolumeSurgePage() {
   const navigate = useNavigate()
-  const [recentDays, setRecentDays] = useState(3)
-  const [baselineDays, setBaselineDays] = useState(20)
-  const [minRatio, setMinRatio] = useState(1.5)
+  const [recentDays, setRecentDays] = usePersistentState(
+    'stockpilot:volume-surge:recentDays',
+    3,
+  )
+  const [baselineDays, setBaselineDays] = usePersistentState(
+    'stockpilot:volume-surge:baselineDays',
+    20,
+  )
+  const [minRatio, setMinRatio] = usePersistentState(
+    'stockpilot:volume-surge:minRatio',
+    1.5,
+  )
   const [sortBy, setSortBy] = useState<VolumeSurgeSortKey>('volumeRatio')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
 
-  const { data, loading, error, refetch } = useVolumeSurge({
-    recentDays,
-    baselineDays,
-    minRatio,
-    page,
-    pageSize: PAGE_SIZE,
-    sortBy,
-    sortDir,
-  })
+  const { items, meta, loading, loadingMore, error, hasMore, refetch } =
+    useVolumeSurge({
+      recentDays,
+      baselineDays,
+      minRatio,
+      page,
+      pageSize: PAGE_SIZE,
+      sortBy,
+      sortDir,
+    })
 
-  const items = data?.items ?? []
-  const totalCount = data?.totalCount ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const totalCount = meta?.totalCount ?? 0
 
-  // If the result set shrank under us (e.g. after a data refresh) and the
-  // current page no longer exists, step back to the last real page.
+  // Infinite scroll: when the sentinel row below the table scrolls into view
+  // (a little before it's actually visible, via rootMargin) and there are more
+  // rows to fetch, advance to the next page — the hook appends the results.
+  const loadMore = useCallback(() => {
+    if (loading || loadingMore || !hasMore) return
+    // Derive the next page from how many rows are already loaded rather than
+    // from the previous page number: if the observer fires twice before React
+    // re-renders, both calls compute the same page, so no page can be skipped.
+    setPage(Math.floor(items.length / PAGE_SIZE) + 1)
+  }, [loading, loadingMore, hasMore, items.length])
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    if (!loading && page > totalPages) setPage(totalPages)
-  }, [loading, page, totalPages])
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore()
+      },
+      { rootMargin: '300px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [loadMore])
 
-  /** Change a screen parameter and jump back to the first page. */
+  /** Change a screen parameter and start a fresh list from page 1. */
   const applyParam = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v)
     setPage(1)
@@ -156,8 +183,8 @@ export function VolumeSurgePage() {
             change alongside it is the <em>result</em>.
           </p>
         </div>
-        {data?.asOf && (
-          <span className="text-xs text-slate-500">Data as of {data.asOf}</span>
+        {meta?.asOf && (
+          <span className="text-xs text-slate-500">Data as of {meta.asOf}</span>
         )}
       </div>
 
@@ -190,9 +217,9 @@ export function VolumeSurgePage() {
             onChange={applyParam(setMinRatio)}
           />
         </div>
-        {data && !loading && (
+        {meta && !loading && (
           <span className="ml-auto text-xs text-slate-500">
-            {totalCount} of {data.scannedCount} scanned stocks
+            {totalCount} of {meta.scannedCount} scanned stocks
           </span>
         )}
       </Card>
@@ -203,7 +230,7 @@ export function VolumeSurgePage() {
           <Loader2 className="animate-spin" size={18} />
           Scanning volume across the GPW…
         </div>
-      ) : error ? (
+      ) : error && items.length === 0 ? (
         <div className="py-24 text-center text-sm text-rose-400">
           Failed to load: {error}{' '}
           <button
@@ -313,7 +340,7 @@ export function VolumeSurgePage() {
                   <SurgeRow
                     key={item.ticker}
                     item={item}
-                    recentDays={data?.recentDays ?? recentDays}
+                    recentDays={meta?.recentDays ?? recentDays}
                     onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
                   />
                 ))}
@@ -321,15 +348,37 @@ export function VolumeSurgePage() {
             </table>
           </Card>
 
-          {/* Pager */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+          {/* Infinite-scroll footer */}
+          <div className="flex flex-col items-center gap-3 pb-2">
             <span className="text-xs text-slate-500">
-              Showing {(page - 1) * PAGE_SIZE + 1}–
-              {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount} surging
-              stocks
+              Showing {items.length} of {totalCount} surging stocks
             </span>
-            {totalPages > 1 && (
-              <Pagination current={page} total={totalPages} onChange={setPage} />
+
+            {/* Sentinel: scrolling this into view loads the next page. */}
+            <div ref={sentinelRef} className="h-px w-full" />
+
+            {loadingMore && (
+              <span className="flex items-center gap-2 text-xs text-slate-400">
+                <Loader2 className="animate-spin" size={14} />
+                Loading more…
+              </span>
+            )}
+
+            {error && items.length > 0 && !loadingMore && (
+              <span className="text-xs text-rose-400">
+                Couldn’t load more: {error}{' '}
+                <button
+                  type="button"
+                  onClick={refetch}
+                  className="ml-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:bg-slate-800"
+                >
+                  Retry
+                </button>
+              </span>
+            )}
+
+            {!hasMore && !loadingMore && !error && (
+              <span className="text-xs text-slate-600">End of results</span>
             )}
           </div>
         </>

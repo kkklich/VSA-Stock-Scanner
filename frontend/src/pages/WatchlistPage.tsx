@@ -4,8 +4,6 @@
 // filtered to "favorites only". Clicking a row opens /stock/:ticker.
 //
 // Header actions (all functional):
-//   Add Stock — search dialog to add a stock to favorites
-//   Edit      — toggle edit mode to remove stocks from favorites
 //   Filter    — dropdown to filter by VSA rating / signal
 //   Refresh   — run the backend refresh pipeline (Yahoo → ratings → DB), then refetch
 //   Export    — download the current view as CSV
@@ -13,20 +11,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Check,
   Download,
   Loader2,
-  Pencil,
-  Plus,
   RefreshCw,
   Search,
   SlidersHorizontal,
   Star,
-  Trash2,
-  X,
 } from 'lucide-react'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
-import { useCompanies } from '../hooks/useCompanies'
 import {
   fetchRanking,
   type RankingSortKey,
@@ -65,23 +57,6 @@ function FavoriteStar({
       aria-label="Toggle favorite"
     >
       <Star size={15} className={active ? 'fill-amber-400 text-amber-400' : ''} />
-    </button>
-  )
-}
-
-/** Remove (unstar) control shown in edit mode. */
-function RemoveFavorite({ onRemove }: { onRemove: () => void }) {
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        onRemove()
-      }}
-      className="text-rose-500 hover:text-rose-400"
-      aria-label="Remove from favorites"
-      title="Remove from favorites"
-    >
-      <Trash2 size={15} />
     </button>
   )
 }
@@ -128,11 +103,9 @@ export function WatchlistPage() {
   // Debounced search text — avoids firing a request on every keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [editMode, setEditMode] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [minRating, setMinRating] = useState(0)
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
-  const [showAdd, setShowAdd] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [exporting, setExporting] = useState(false)
 
@@ -166,8 +139,6 @@ export function WatchlistPage() {
   )
   const favCount = favTickers.length
 
-  // Edit mode implicitly scopes to favorites (you remove favorites there).
-  const effectiveFavoritesOnly = favoritesOnly || editMode
   const filtersActive = minRating > 0 || signalFilter !== 'all'
 
   // Everything below is computed by the backend — this hook just requests the
@@ -181,7 +152,7 @@ export function WatchlistPage() {
       q: debouncedSearch || undefined,
       minRating: minRating || undefined,
       signal: signalFilter,
-      tickers: effectiveFavoritesOnly ? favTickers : undefined,
+      tickers: favoritesOnly ? favTickers : undefined,
     }),
     [
       currentPage,
@@ -190,16 +161,12 @@ export function WatchlistPage() {
       debouncedSearch,
       minRating,
       signalFilter,
-      effectiveFavoritesOnly,
+      favoritesOnly,
       favTickers,
     ],
   )
 
   const { data, total, loading, error, refetch } = useRanking(rankingParams)
-
-  // Companies list backs the "Add Stock" picker — it stays available even when
-  // the ranking feed is filtered down to a single page.
-  const { companies } = useCompanies()
 
   // Overlay the client-only "starred" flag onto the current page of results.
   const rows = useMemo<StockRankingItem[]>(
@@ -214,7 +181,7 @@ export function WatchlistPage() {
   // Reset to the first page whenever the query shape changes.
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearch, favoritesOnly, editMode, minRating, signalFilter, sortBy, sortDir])
+  }, [debouncedSearch, favoritesOnly, minRating, signalFilter, sortBy, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -247,7 +214,7 @@ export function WatchlistPage() {
         q: debouncedSearch || undefined,
         minRating: minRating || undefined,
         signal: signalFilter,
-        tickers: effectiveFavoritesOnly ? favTickers : undefined,
+        tickers: favoritesOnly ? favTickers : undefined,
         settings: settingsQueryValue(),
       }
       const first = await fetchRanking({ ...baseQuery, page: 1 })
@@ -347,28 +314,6 @@ export function WatchlistPage() {
               className={favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}
             />
             <span className="hidden sm:inline">Favorites</span>
-          </button>
-
-          {/* Add Stock */}
-          <button
-            onClick={() => setShowAdd(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
-          >
-            <Plus size={15} /> Add Stock
-          </button>
-
-          {/* Edit favorites */}
-          <button
-            onClick={() => setEditMode((v) => !v)}
-            className={
-              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
-              (editMode
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
-            }
-          >
-            {editMode ? <Check size={14} /> : <Pencil size={14} />}
-            <span className="hidden sm:inline">{editMode ? 'Done' : 'Edit'}</span>
           </button>
 
           {/* Filter dropdown */}
@@ -563,14 +508,10 @@ export function WatchlistPage() {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        {editMode ? (
-                          <RemoveFavorite onRemove={() => toggleStar(s.ticker)} />
-                        ) : (
-                          <FavoriteStar
-                            active={!!stars[s.ticker]}
-                            onToggle={() => toggleStar(s.ticker)}
-                          />
-                        )}
+                        <FavoriteStar
+                          active={!!stars[s.ticker]}
+                          onToggle={() => toggleStar(s.ticker)}
+                        />
                         <TickerMark ticker={s.ticker} />
                         <span className="font-semibold text-slate-100">
                           {s.ticker}
@@ -659,14 +600,10 @@ export function WatchlistPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  {editMode ? (
-                    <RemoveFavorite onRemove={() => toggleStar(s.ticker)} />
-                  ) : (
-                    <FavoriteStar
-                      active={!!stars[s.ticker]}
-                      onToggle={() => toggleStar(s.ticker)}
-                    />
-                  )}
+                  <FavoriteStar
+                    active={!!stars[s.ticker]}
+                    onToggle={() => toggleStar(s.ticker)}
+                  />
                   <TickerMark ticker={s.ticker} />
                   <div>
                     <div className="font-semibold text-slate-100">{s.ticker}</div>
@@ -715,7 +652,7 @@ export function WatchlistPage() {
       {/* Empty states */}
       {!loading && !error && rows.length === 0 && data && (
         <div className="py-16 text-center text-slate-500">
-          {effectiveFavoritesOnly && favCount === 0 ? (
+          {favoritesOnly && favCount === 0 ? (
             <>
               <Star size={28} className="mx-auto mb-3 text-slate-600" />
               <p>
@@ -724,8 +661,7 @@ export function WatchlistPage() {
                   size={13}
                   className="inline -translate-y-px text-amber-400"
                 />{' '}
-                star on a stock, or use{' '}
-                <span className="text-slate-300">Add Stock</span>.
+                star on a stock to add it.
               </p>
             </>
           ) : (
@@ -743,148 +679,6 @@ export function WatchlistPage() {
           )}
         </div>
       )}
-
-      {/* Add-stock dialog */}
-      {showAdd && (
-        <AddStockDialog
-          stocks={companies}
-          stars={stars}
-          onToggle={toggleStar}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
-    </div>
-  )
-}
-
-/* ── Add-stock modal ────────────────────────────────────────────────────── */
-
-function AddStockDialog({
-  stocks,
-  stars,
-  onToggle,
-  onClose,
-}: {
-  stocks: { ticker: string; name: string }[]
-  stars: Record<string, boolean>
-  onToggle: (ticker: string) => void
-  onClose: () => void
-}) {
-  const [q, setQ] = useState('')
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    // Lock background scroll while the modal is open.
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [onClose])
-
-  const matches = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    const base = query
-      ? stocks.filter(
-          (s) =>
-            s.ticker.toLowerCase().includes(query) ||
-            s.name.toLowerCase().includes(query),
-        )
-      : stocks
-    return base.slice(0, 40)
-  }, [stocks, q])
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[12vh]"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Add stock to favorites"
-        className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h3 className="text-sm font-semibold text-slate-100">
-            Add stock to favorites
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-slate-500 hover:text-slate-200"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-4">
-          <div className="relative">
-            <Search
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-            />
-            <input
-              autoFocus
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by symbol or name…"
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
-            />
-          </div>
-
-          <ul className="mt-3 max-h-72 space-y-1 overflow-y-auto">
-            {matches.map((s) => {
-              const starred = stars[s.ticker] ?? false
-              return (
-                <li
-                  key={s.ticker}
-                  className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-slate-800/50"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <TickerMark ticker={s.ticker} />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-100">
-                        {s.ticker}
-                      </div>
-                      <div className="truncate text-xs text-slate-500">
-                        {s.name}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => onToggle(s.ticker)}
-                    className={
-                      'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ' +
-                      (starred
-                        ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-500')
-                    }
-                  >
-                    {starred ? (
-                      <>
-                        <Check size={13} /> Added
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={13} /> Add
-                      </>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-            {matches.length === 0 && (
-              <li className="px-2 py-6 text-center text-sm text-slate-500">
-                No stocks match “{q}”.
-              </li>
-            )}
-          </ul>
-        </div>
-      </div>
     </div>
   )
 }

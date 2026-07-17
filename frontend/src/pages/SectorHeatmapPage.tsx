@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { InfoTip } from '../components/ui'
 import { useHeatmap } from '../hooks/useHeatmap'
+import { usePersistentState } from '../hooks/usePersistentState'
 import type { ApiHeatmapItem } from '../api/stocksApi'
 import { fmtCompactPln, fmtPct } from '../lib/format'
 
@@ -279,7 +280,10 @@ function HeatmapTooltip({
 
 export function SectorHeatmapPage() {
   const { data, loading, error, refetch } = useHeatmap()
-  const [mode, setMode] = useState<ColorMode>('rating')
+  const [mode, setMode] = usePersistentState<ColorMode>(
+    'stockpilot:heatmap:colorMode',
+    'rating',
+  )
   const [tip, setTip] = useState<TooltipState | null>(null)
   const navigate = useNavigate()
 
