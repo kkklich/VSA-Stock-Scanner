@@ -45,6 +45,10 @@ _RATING_WINDOW_DAYS = 120
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
 _MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
+# Recency pre-filter, same as the ranking: drop tickers whose last bar lags
+# the newest session across the scan by more than this many calendar days
+# (suspended/stale listings), while tolerating holidays and long weekends.
+_MAX_SESSION_LAG_DAYS = 10
 
 
 def _pct_change(last_close: float, baseline: float) -> float | None:
@@ -184,10 +188,12 @@ async def compute_heatmap(
                 return None
 
             # Rating on the same 120-day slice the ranking uses, so both pages
-            # show identical numbers for the same stock.
+            # show identical numbers for the same stock. As-of the last
+            # session date (not the calendar day), matching the ranking.
             signals = detect_signals(recent, config)
-            rating = compute_rating(signals, today)
-            verdict, _ = verdict_from_signals(signals, today)
+            as_of = recent[-1].date
+            rating = compute_rating(signals, as_of)
+            verdict, _ = verdict_from_signals(signals, as_of)
 
             change_1d, change_1m, change_1y, change_max = compute_changes(quotes)
 
@@ -212,8 +218,22 @@ async def compute_heatmap(
     results = await asyncio.gather(
         *(build_tile(c) for c in companies), return_exceptions=True
     )
+    # An exception that escaped build_tile's guard (e.g. the DB dying
+    # mid-scan) must be logged, or a broken run would look like an empty map.
+    for company, result in zip(companies, results):
+        if isinstance(result, BaseException):
+            logger.error("Heatmap: skipping %s: %s", company.ticker, result)
     tiles = [r for r in results if isinstance(r, tuple)]
-    items = [item for item, _ in tiles]
-    items.sort(key=lambda i: (i.market_cap is None, -(i.market_cap or 0)))
+
+    # Recency pre-filter (see _MAX_SESSION_LAG_DAYS): no tile for a ticker
+    # whose last session lags the newest one in this run — its "current"
+    # price and rating would be months stale. Dataset-global max, not
+    # wall-clock, so cached results stay deterministic.
     as_of = max((d for _, d in tiles), default=None)
+    items = [
+        item
+        for item, last_bar in tiles
+        if as_of is None or (as_of - last_bar).days <= _MAX_SESSION_LAG_DAYS
+    ]
+    items.sort(key=lambda i: (i.market_cap is None, -(i.market_cap or 0)))
     return HeatmapResponse(as_of=as_of, items=items)

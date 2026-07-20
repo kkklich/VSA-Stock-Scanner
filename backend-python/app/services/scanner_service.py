@@ -5,10 +5,17 @@ last 120 sessions:
 
 - ``count``        — total signal occurrences (excluding the most recent
                      *_FORWARD_SESSIONS* bars, which cannot yet be evaluated).
-- ``success_pct``  — % of occurrences where price moved in the expected
-                     direction over the next *_FORWARD_SESSIONS* trading days
-                     (up for bullish signals, down for bearish ones).
-- ``reward_risk``  — average winner magnitude ÷ average loser magnitude.
+- ``success_pct``  — % of occurrences where the forward return over the next
+                     *_FORWARD_SESSIONS* trading days beat the stock's own
+                     baseline (its median forward return over the same
+                     horizon) in the signal's direction. Comparing against
+                     the stock's baseline rather than zero means the stat
+                     measures signal skill, not overall market drift.
+- ``reward_risk``  — average winner magnitude ÷ average loser magnitude,
+                     where magnitude is the excess over the baseline (the
+                     same frame the win/loss classification uses). ``None``
+                     when the ratio is undefined: wins but no losses, or no
+                     judged occurrences at all.
 - ``active_count`` — stocks whose most recent signal is this type right now.
 
 These stats are computed entirely from the same OHLCV history the ranking
@@ -21,6 +28,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from statistics import median
 
 from app.analysis.vsa import SignalType, VsaConfig, detect_signals
 from app.db.repository import QuoteRepository
@@ -52,7 +60,9 @@ class SignalEffStats:
     signal: str
     count: int = 0
     success_pct: float = 0.0
-    reward_risk: float = 0.0
+    # None when the ratio is undefined: no judged occurrences at all, or
+    # wins but no losses (division by zero is not "the worst score").
+    reward_risk: float | None = None
     active_count: int = 0
 
 
@@ -135,6 +145,20 @@ async def compute_scanner_stats(
         dates = [q.date for q in quotes_sorted]
         closes = [float(q.close) for q in quotes_sorted]
 
+        # Baseline: this stock's own typical (median) forward return over the
+        # horizon, measured from every bar in the window — what a random-day
+        # entry would have done. Success must beat this baseline in the
+        # signal's direction, otherwise the stat just measures market drift
+        # (same idea as the trust-score back-test).
+        forward_returns = [
+            (closes[i + _FORWARD_SESSIONS] - closes[i]) / closes[i] * 100
+            for i in range(len(closes) - _FORWARD_SESSIONS)
+            if closes[i] > 0
+        ]
+        if not forward_returns:
+            return
+        baseline = median(forward_returns)
+
         for sig in signals:
             if sig.date > eval_cutoff:
                 continue  # not enough future data
@@ -160,8 +184,13 @@ async def compute_scanner_stats(
 
             pct = (exit_ - entry) / entry * 100
             bullish = sig.type == SignalType.BULLISH
-            success = pct > 0 if bullish else pct < 0
-            magnitude = abs(pct)
+            # Beat the stock's own baseline drift, not just zero.
+            success = pct > baseline if bullish else pct < baseline
+            # Magnitude in the same baseline-excess frame the classification
+            # uses: |pct| would credit a bearish "win" at +2.9% vs a +3.0%
+            # baseline with 2.9pp of reward although the short barely edged
+            # out the drift (and mirror-image for bullish "losses").
+            magnitude = abs(pct - baseline)
 
             bucket = acc[display]
             bucket.total += 1
@@ -171,7 +200,14 @@ async def compute_scanner_stats(
             else:
                 bucket.loss_mag.append(magnitude)
 
-    await asyncio.gather(*(process(c) for c in companies), return_exceptions=True)
+    results = await asyncio.gather(
+        *(process(c) for c in companies), return_exceptions=True
+    )
+    # A ticker whose task raised (e.g. the DB dying mid-scan) silently
+    # contributes nothing to the stats — log it so the gap is visible.
+    for company, result in zip(companies, results):
+        if isinstance(result, BaseException):
+            logger.error("Scanner stats: skipping %s: %s", company.ticker, result)
 
     result: list[SignalEffStats] = []
     for display_name, bucket in acc.items():
@@ -182,7 +218,16 @@ async def compute_scanner_stats(
         success_pct = round(bucket.wins / bucket.total * 100, 1)
         avg_win = (sum(bucket.win_mag) / len(bucket.win_mag)) if bucket.win_mag else 0.0
         avg_loss = (sum(bucket.loss_mag) / len(bucket.loss_mag)) if bucket.loss_mag else 0.0
-        rr = round(avg_win / avg_loss, 2) if avg_loss > 0 else 0.0
+        if avg_loss > 0:
+            rr: float | None = round(avg_win / avg_loss, 2)
+        elif bucket.win_mag:
+            # Wins but zero losses: the ratio is undefined (division by
+            # zero), not 0 — report None instead of the worst possible score.
+            rr = None
+        else:
+            # No wins either: all judged occurrences were losses of zero
+            # baseline-excess magnitude — a defined (and worst) ratio of 0.
+            rr = 0.0
 
         result.append(SignalEffStats(
             signal=display_name,

@@ -75,6 +75,16 @@ class _CountingStooqClient(_FakeStooqClient):
         return self._quotes
 
 
+class _PerTickerStooqClient:
+    """Fake client returning a different canned series per ticker."""
+
+    def __init__(self, by_ticker: dict[str, list[StooqDailyQuote]]) -> None:
+        self._by_ticker = by_ticker
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        return self._by_ticker.get(ticker, [])
+
+
 class _FakeCompanyService:
     def __init__(self, companies: list[GpwCompany]) -> None:
         self._companies = companies
@@ -262,6 +272,26 @@ class TestHeatmapPreFilters:
         with TestClient(app) as client:
             body = client.get("/api/stocks/heatmap").json()
         assert body["items"] == []
+
+    def test_listing_lagging_the_market_excluded(self) -> None:
+        # A recently suspended stock still has plenty of bars inside the
+        # 120-day window, but its last session lags the newest one in the
+        # scan by 15 days — the recency pre-filter must drop its tile rather
+        # than show its frozen price/rating as current.
+        fresh = _daily_series(60)
+        stale = _daily_series(60, end=date.today() - timedelta(days=15))
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService(
+                [_company("frs", "Fresh SA"), _company("stl", "Stale SA")]
+            )
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"frs": fresh, "stl": stale}
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/heatmap").json()
+        assert [i["ticker"] for i in body["items"]] == ["FRS"]
+        assert body["asOf"] == date.today().isoformat()
 
 
 # ── Caching behaviour ─────────────────────────────────────────────────────────

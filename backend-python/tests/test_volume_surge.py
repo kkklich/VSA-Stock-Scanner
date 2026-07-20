@@ -165,10 +165,23 @@ class TestComputeSurgeMetrics:
         assert m.volume_ratio == 3.0
 
     def test_price_change_measured_over_recent_window(self) -> None:
+        # Bars older than the entry bar sit at 90, so an off-by-one that
+        # anchors the change on anything but the close immediately before the
+        # window would not produce +10 %.
         # Close before the window = 100, last close = 110 → +10 %.
-        closes = [100.0] * 27 + [104.0, 108.0, 110.0]
+        closes = [90.0] * 26 + [100.0, 104.0, 108.0, 110.0]
         m = compute_surge_metrics(_series([100_000] * 30, closes=closes))
         assert m is not None
+        assert m.price_change_pct == 10.0
+
+    def test_history_exactly_window_length(self) -> None:
+        # 23 bars = recent 3 + baseline 20 exactly: still scorable, and the
+        # entry close is the last baseline bar (no IndexError at the boundary).
+        volumes = [100_000] * 20 + [300_000] * 3
+        closes = [100.0] * 20 + [104.0, 108.0, 110.0]
+        m = compute_surge_metrics(_series(volumes, closes=closes))
+        assert m is not None
+        assert m.volume_ratio == 3.0
         assert m.price_change_pct == 10.0
 
     def test_insufficient_history_returns_none(self) -> None:
@@ -323,6 +336,28 @@ class TestGetVolumeSurge:
             body = client.get("/api/stocks/volume-surge").json()
         assert body["items"] == []
         assert body["scannedCount"] == 0
+
+    def test_listing_lagging_the_market_excluded(self) -> None:
+        # A suspended stock's last "surge" is months-old news: when its last
+        # bar lags the newest session across the scanned tickers by 15 days,
+        # the recency pre-filter must drop it even though its own RVOL ratio
+        # clears the screen.
+        volumes = [100_000] * 57 + [300_000] * 3
+        fresh = _series(volumes)
+        stale = _series(volumes, end=date.today() - timedelta(days=15))
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService(
+                [_company("frs", "Fresh SA"), _company("stl", "Stale SA")]
+            )
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"frs": fresh, "stl": stale}
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/volume-surge").json()
+        assert [i["ticker"] for i in body["items"]] == ["FRS"]
+        assert body["totalCount"] == 1
+        assert body["asOf"] == date.today().isoformat()
 
     def test_market_cap_below_floor_excluded(self) -> None:
         app.dependency_overrides[get_gpw_company_service] = lambda: (

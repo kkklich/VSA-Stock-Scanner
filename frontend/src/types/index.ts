@@ -93,7 +93,8 @@ export interface EngineRule {
 export interface EffectivenessRow {
   signal: string
   successPct: number
-  rewardRisk: number
+  /** null = undefined ratio (wins with no losses, or no judged trades). */
+  rewardRisk: number | null
   /** Historical sample size the stats are computed from. */
   trades: number
 }

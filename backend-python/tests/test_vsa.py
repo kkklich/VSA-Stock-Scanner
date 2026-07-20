@@ -181,15 +181,180 @@ class TestDetectSignals:
             bars.append(_bar(d, 100.0, 101.0, 99.0, 100.0, 50_000))
 
         # Test bar: dips below the previous bar's low (99) into the old selling
-        # area, regains to close near its high, on volume well below both of
-        # the previous two bars — a Successful Test ("no supply").
+        # area near the bottom of the recent range (low 97.0, well inside the
+        # lower quartile of the 96–101 lookback range), regains to close near
+        # its high, on volume well below both of the previous two bars — a
+        # Successful Test ("no supply"). The low stays above the 20-day low
+        # (96), so this is not a Spring.
+        bars.append(
+            _bar("2026-01-27", open_=100.0, high=100.5, low=97.0, close=100.4, volume=18_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SUCCESSFUL_TEST in names
+
+    def test_successful_test_requires_dip_into_lower_range(self) -> None:
+        # Same setup, but the dip only reaches 98.7 — below the previous bar's
+        # low, yet still in the upper part of the 96–101 range, far from the
+        # old selling area. Master the Markets p.35 requires the dip to enter
+        # "an area of previous selling (previous high volume level)", so a
+        # shallow dip high in the range must NOT qualify as a Test.
+        start = date(2026, 1, 2)
+        bars: list[StooqDailyQuote] = []
+        for i in range(10):
+            d = (start + timedelta(days=i)).isoformat()
+            bars.append(_bar(d, 97.0, 98.0, 96.0, 97.0, 50_000))
+        for i in range(10, 25):
+            d = (start + timedelta(days=i)).isoformat()
+            bars.append(_bar(d, 100.0, 101.0, 99.0, 100.0, 50_000))
         bars.append(
             _bar("2026-01-27", open_=100.0, high=100.5, low=98.7, close=100.4, volume=18_000)
         )
 
         signals = detect_signals(bars)
         names = [s.signal_name for s in signals]
-        assert SignalName.SUCCESSFUL_TEST in names
+        assert SignalName.SUCCESSFUL_TEST not in names
+
+    def test_sos_not_detected_on_excessive_volume(self) -> None:
+        bars = _normal_bars(n=25)
+
+        # Same wide up-bar shape as the SOS fixture, but volume is 5× the
+        # average (> _EXCESSIVE_VOL_MULT = 4×). Master the Markets: volume on
+        # an up-bar "should not be excessive, as this is indicative of supply
+        # in the background" — a potential buying climax, not an SOS.
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=250_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SOS not in names
+
+    def test_spring_not_detected_on_excessive_volume(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0)
+
+        # The known-good high-volume Spring shape, but with climactic volume
+        # (5× average > the 4× cap) — the same "not excessive" rule applies.
+        bars.append(
+            _bar("2026-01-27", open_=100.0, high=101.5, low=98.5, close=101.2, volume=250_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SPRING not in names
+
+    def test_low_volume_spring_requires_shallow_penetration(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0)
+
+        # Low volume, but the dip goes 1.5 below support (avg spread is 2.0,
+        # so the shallow-penetration cap is 0.5 × 2.0 = 1.0). The canonical
+        # low-volume Wyckoff spring penetrates support only shallowly — this
+        # deep break on no volume is not a Spring.
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=100.0, low=97.5, close=99.9, volume=20_000)
+        )
+
+        signals = detect_signals(bars)
+        names = [s.signal_name for s in signals]
+        assert SignalName.SPRING not in names
+        # ...and the rejected Spring must not fall through to any other
+        # bullish reading either — the Successful Test shares the same
+        # shallow-penetration limit, so a deep low-volume break below
+        # support yields no bullish signal at all.
+        assert not any(s.type == SignalType.BULLISH for s in signals)
+
+    def test_deep_low_volume_break_is_not_read_as_bullish(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0)
+
+        # Collapses 5 points below the whole 20-day range (support at 99) on
+        # low volume, then closes back inside it. Far too deep for a Spring
+        # AND for a Successful Test (both share _SHALLOW_PENETRATION_SPREADS):
+        # a collapsing low-volume breakdown is not a bullish test of supply.
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=100.0, low=94.0, close=99.8, volume=20_000)
+        )
+
+        signals = detect_signals(bars)
+        assert not any(s.type == SignalType.BULLISH for s in signals)
+
+    def test_climax_cap_boundary_is_inclusive(self) -> None:
+        # Volume at exactly _EXCESSIVE_VOL_MULT × average (4 × 50k) is the
+        # last value that still qualifies as an SOS (the cap is <=, not <);
+        # one share more crosses into climax territory.
+        bars = _normal_bars(n=25)
+        at_cap = bars + [
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=200_000)
+        ]
+        names = [s.signal_name for s in detect_signals(at_cap)]
+        assert SignalName.SOS in names
+
+        above_cap = bars + [
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=200_001)
+        ]
+        names = [s.signal_name for s in detect_signals(above_cap)]
+        assert SignalName.SOS not in names
+
+    def test_climax_cap_adapts_to_high_vol_mult(self) -> None:
+        # With the SOS volume slider raised to 5.0× a fixed 4.0× cap would
+        # make the rule unsatisfiable (vol > 5×avg and vol <= 4×avg never
+        # holds) and SOS would silently disappear. The cap adapts to
+        # 1.5 × vol_mult, so a 6×-average-volume SOS bar still fires.
+        bars = _normal_bars(n=25)
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=300_000)
+        )
+        params = dict(DEFAULT_SIGNAL_PARAMS)
+        params[SignalName.SOS] = SignalParams(spread_mult=1.5, vol_mult=5.0, close_pos=0.65)
+        signals = detect_signals(bars, VsaConfig(params=params))
+        assert SignalName.SOS in {s.signal_name for s in signals}
+
+    def test_sow_not_detected_on_excessive_volume(self) -> None:
+        # Mirror of the SOS cap: a 6×-average-volume wide down bar closing on
+        # its low is potential "stopping volume" (climactic selling being
+        # absorbed by professional money), not a clean SOW — while the same
+        # bar on merely high volume still is one.
+        bars = _normal_bars(n=25)
+        climactic = bars + [
+            _bar("2026-01-27", open_=100.0, high=100.5, low=88.0, close=89.5, volume=300_000)
+        ]
+        names = [s.signal_name for s in detect_signals(climactic)]
+        assert SignalName.SOW not in names
+
+        normal_high = bars + [
+            _bar("2026-01-27", open_=100.0, high=100.5, low=88.0, close=89.5, volume=130_000)
+        ]
+        names = [s.signal_name for s in detect_signals(normal_high)]
+        assert SignalName.SOW in names
+
+    def test_zero_spread_bar_emits_no_signal(self) -> None:
+        bars = _normal_bars(n=25, base_price=100.0)
+
+        # A frozen bar (high == low == close) above the previous close on low
+        # volume. close_pos is undefined (NaN) on a zero-spread bar, so no
+        # rule — in particular No Demand — may fire.
+        bars.append(
+            _bar("2026-01-27", open_=100.5, high=100.5, low=100.5, close=100.5, volume=15_000)
+        )
+
+        signals = detect_signals(bars)
+        assert signals == []
+
+    def test_frozen_history_then_wide_bar_emits_no_signal(self) -> None:
+        # 30 zero-spread bars (e.g. a trading suspension): the average spread
+        # is 0, so a wide resumption bar must not trivially satisfy the
+        # wide-spread conditions and fire a false Spring/Upthrust.
+        start = date(2026, 1, 2)
+        bars = [
+            _bar((start + timedelta(days=i)).isoformat(), 100.0, 100.0, 100.0, 100.0, 50_000)
+            for i in range(30)
+        ]
+        bars.append(
+            _bar("2026-02-01", open_=100.0, high=103.0, low=97.0, close=102.5, volume=60_000)
+        )
+
+        signals = detect_signals(bars)
+        assert signals == []
 
     def test_no_demand_on_narrow_up_bar_low_volume(self) -> None:
         bars = _normal_bars(n=25, base_price=100.0, base_vol=50_000)
@@ -332,6 +497,8 @@ class TestComputeRating:
 
 
 class TestVerdictFromSignals:
+    """The verdict comes from the same decayed net score as the rating."""
+
     TODAY = date(2026, 6, 30)
 
     def test_no_signals_returns_hold(self) -> None:
@@ -339,18 +506,35 @@ class TestVerdictFromSignals:
         assert verdict == "Hold"
         assert days == 999
 
-    def test_sos_maps_to_strong_buy(self) -> None:
+    def test_single_fresh_sos_maps_to_buy(self) -> None:
+        # One fresh SOS (strength 1.0) → net 1.0: a Buy lean, not yet a
+        # Strong Buy — a single signal needs confirmation in VSA.
         signals = [VsaSignal(date=self.TODAY, signal_name=SignalName.SOS, type=SignalType.BULLISH)]
+        verdict, days = verdict_from_signals(signals, self.TODAY)
+        assert verdict == "Buy"
+        assert days == 0
+
+    def test_single_fresh_sow_maps_to_sell(self) -> None:
+        signals = [VsaSignal(date=self.TODAY, signal_name=SignalName.SOW, type=SignalType.BEARISH)]
+        verdict, days = verdict_from_signals(signals, self.TODAY)
+        assert verdict == "Sell"
+
+    def test_confirming_cluster_maps_to_strong_buy(self) -> None:
+        signals = [
+            VsaSignal(
+                date=self.TODAY - timedelta(days=i),
+                signal_name=SignalName.SOS,
+                type=SignalType.BULLISH,
+            )
+            for i in range(3)
+        ]
         verdict, days = verdict_from_signals(signals, self.TODAY)
         assert verdict == "Strong Buy"
         assert days == 0
 
-    def test_sow_maps_to_strong_sell(self) -> None:
-        signals = [VsaSignal(date=self.TODAY, signal_name=SignalName.SOW, type=SignalType.BEARISH)]
-        verdict, days = verdict_from_signals(signals, self.TODAY)
-        assert verdict == "Strong Sell"
-
-    def test_most_recent_signal_wins(self) -> None:
+    def test_opposing_recent_signals_net_out_to_hold(self) -> None:
+        # A fresh SOS against a 5-day-old SOW nearly cancel: the verdict must
+        # reflect the balance of evidence, not just the most recent signal.
         older = VsaSignal(
             date=self.TODAY - timedelta(days=5),
             signal_name=SignalName.SOW,
@@ -358,8 +542,53 @@ class TestVerdictFromSignals:
         )
         newer = VsaSignal(date=self.TODAY, signal_name=SignalName.SOS, type=SignalType.BULLISH)
         verdict, days = verdict_from_signals([older, newer], self.TODAY)
-        assert verdict == "Strong Buy"
+        assert verdict == "Hold"
         assert days == 0
+
+    def test_custom_half_life_keeps_verdict_in_sync_with_rating(self) -> None:
+        # Two strong bullish signals 30 days old: at the default 30-day
+        # half-life they have decayed to net 1.0 → "Buy"; a caller computing
+        # the rating with a 90-day half-life must be able to pass the same
+        # value here (net ≈ 1.59 → "Strong Buy"), or rating and verdict
+        # would silently drift apart again.
+        signals = [
+            VsaSignal(
+                date=self.TODAY - timedelta(days=30),
+                signal_name=SignalName.SOS,
+                type=SignalType.BULLISH,
+            )
+            for _ in range(2)
+        ]
+        assert verdict_from_signals(signals, self.TODAY)[0] == "Buy"
+        assert (
+            verdict_from_signals(signals, self.TODAY, half_life_days=90)[0]
+            == "Strong Buy"
+        )
+
+    def test_verdict_consistent_with_rating(self) -> None:
+        # The audit's contradiction case: 5 recent SOS + 1 No Demand
+        # yesterday used to yield rating ≈ 97 (deep green) with a "Sell"
+        # badge. The verdict must now agree with the bullish rating.
+        signals = [
+            VsaSignal(
+                date=self.TODAY - timedelta(days=2 + i),
+                signal_name=SignalName.SOS,
+                type=SignalType.BULLISH,
+            )
+            for i in range(5)
+        ]
+        signals.append(
+            VsaSignal(
+                date=self.TODAY - timedelta(days=1),
+                signal_name=SignalName.NO_DEMAND,
+                type=SignalType.BEARISH,
+                strength=0.6,
+            )
+        )
+        rating = compute_rating(signals, self.TODAY)
+        verdict, _ = verdict_from_signals(signals, self.TODAY)
+        assert rating > 70
+        assert verdict == "Strong Buy"
 
 
 # ── VsaConfig: configurable detection ────────────────────────────────────────

@@ -95,6 +95,35 @@ DEFAULT_SIGNAL_PARAMS: dict[SignalName, SignalParams] = {
 # Master the Markets treats "low" simply as clearly below average).
 _LOW_VOL_MULT = 0.7
 
+# Upper volume bound for the wide-spread climax-prone patterns (SOS, the
+# high-volume Spring, SOW). Master the Markets: volume on an up-bar "should not
+# be excessive, as this is indicative of supply in the background" — at
+# ultra-high volume a wide up-bar is a potential buying climax (a sign of
+# weakness), and the mirror image holds for a wide down-bar, where climactic
+# volume is potential "stopping volume" (professional buying into the panic —
+# budding strength). Volume above this multiple of the average therefore
+# disqualifies the pattern's straightforward reading.
+_EXCESSIVE_VOL_MULT = 4.0
+
+# Maximum penetration below support, in units of the average spread, for the
+# quiet bullish dips: the low-volume Spring and the Successful Test. The
+# canonical low-volume spring penetrates support only SHALLOWLY; a deeper
+# low-volume break below support is a breakdown, not a bullish test of supply.
+# Shared by both rules so they meet without a gap between them.
+_SHALLOW_PENETRATION_SPREADS = 0.5
+
+
+def _excessive_cap(p: SignalParams) -> float:
+    """Effective climax-volume cap for one rule, as a multiple of average volume.
+
+    The fixed 4.0× default must never fall below the rule's own high-volume
+    threshold: with a user-raised ``vol_mult`` at or above 4.0 a fixed cap
+    would make ``vol > avg × vol_mult and vol <= avg × 4.0`` unsatisfiable and
+    the signal would silently disappear, so the cap stays at least 1.5× above
+    ``vol_mult`` (default settings keep the plain 4.0 behaviour).
+    """
+    return max(_EXCESSIVE_VOL_MULT, p.vol_mult * 1.5)
+
 
 @dataclass(frozen=True)
 class VsaConfig:
@@ -220,7 +249,10 @@ def detect_signals(
 
     # Per-bar derived columns.
     df["spread"] = df["high"] - df["low"]
-    df["close_pos"] = (df["close"] - df["low"]) / (df["spread"].clip(lower=1e-9))
+    # The close's position is undefined on a zero-spread (frozen) bar: leave it
+    # NaN so every rule's close_pos comparison fails closed. Mirrors
+    # ``statistics.close_position``, which returns None when high == low.
+    df["close_pos"] = ((df["close"] - df["low"]) / df["spread"]).where(df["spread"] > 0)
 
     # Rolling context, one set of columns per distinct lookback in use
     # (shift(1) so each bar sees *prior* bars only, no lookahead).
@@ -240,11 +272,19 @@ def detect_signals(
     df["prev_vol_min2"] = df["volume"].rolling(2).min().shift(1)
 
     def ctx(row: pd.Series, lb: int) -> tuple[float, float, float, float] | None:
-        """Rolling context for one lookback, or None when not yet available."""
+        """Rolling context for one lookback, or None when not yet available.
+
+        Also fails closed when the rolling average spread is NaN or <= 0
+        (e.g. after a run of frozen zero-spread bars during a suspension):
+        every rule compares the bar's spread against ``avg_sp``, and a zero
+        average would make the wide-spread conditions trivially true, so a
+        resumption bar would fire false Springs/Upthrusts.
+        """
         avg_v = row[f"avg_vol_{lb}"]
-        if pd.isna(avg_v) or avg_v < 1:
+        avg_sp = row[f"avg_spread_{lb}"]
+        if pd.isna(avg_v) or avg_v < 1 or pd.isna(avg_sp) or avg_sp <= 0:
             return None
-        return (row[f"avg_spread_{lb}"], avg_v, row[f"prior_low_{lb}"], row[f"prior_high_{lb}"])
+        return (avg_sp, avg_v, row[f"prior_low_{lb}"], row[f"prior_high_{lb}"])
 
     signals: list[VsaSignal] = []
 
@@ -263,14 +303,22 @@ def detect_signals(
 
         # ── Bullish patterns (evaluated highest-priority first) ───────────
 
-        # Spring (VSA "Shake-out") — a break below prior support that reverses
-        # to close back above it, near the bar's high. Two valid volume
-        # regimes (Master the Markets "The Shake-out"; Wyckoff spring types):
+        # Spring — a break below prior support that reverses to close back
+        # above it, near the bar's high. Two valid volume regimes:
         #   * high volume + wide spread — professional money absorbing the
-        #     panic selling it just shook out (terminal shake-out);
+        #     panic selling it just shook out. This is Master the Markets'
+        #     "Shake-out", which the book describes as an explicitly
+        #     HIGH-volume event. Volume must still not be excessive
+        #     (_excessive_cap): the book warns that excessive volume on
+        #     an up-move indicates supply in the background (climactic
+        #     action), which negates the bullish reading.
         #   * low volume — the break attracted no sellers at all ("no
-        #     supply"), the highest-probability spring; its spread is
-        #     usually modest, so no wide-spread requirement.
+        #     supply"). This variant is Wyckoff canon (the classic shallow
+        #     spring), NOT Master the Markets' shake-out; the canonical
+        #     low-volume spring penetrates support only SHALLOWLY, so the
+        #     dip below support is capped at _SHALLOW_PENETRATION_SPREADS
+        #     average spreads. Its spread is usually modest, so no
+        #     wide-spread requirement.
         # Average, unremarkable volume shows no anomaly and does not qualify.
         if matched is None and SignalName.SPRING in active:
             p = active[SignalName.SPRING]
@@ -283,8 +331,16 @@ def detect_signals(
                     and row["close"] > prior_low
                     and cp > p.close_pos
                     and (
-                        (spread > avg_sp * p.spread_mult and vol > avg_v * p.vol_mult)
-                        or vol < avg_v * _LOW_VOL_MULT
+                        (
+                            spread > avg_sp * p.spread_mult
+                            and vol > avg_v * p.vol_mult
+                            and vol <= avg_v * _excessive_cap(p)
+                        )
+                        or (
+                            vol < avg_v * _LOW_VOL_MULT
+                            and (prior_low - row["low"])
+                            <= _SHALLOW_PENETRATION_SPREADS * avg_sp
+                        )
                     )
                 ):
                     matched = VsaSignal(
@@ -292,16 +348,20 @@ def detect_signals(
                         type=SignalType.BULLISH, strength=0.9,
                     )
 
-        # SOS — wide up-bar on high volume closing near the high.
+        # SOS — wide up-bar on high volume closing near the high. High but NOT
+        # excessive: Master the Markets says volume on an up-bar "should not
+        # be excessive, as this is indicative of supply in the background" —
+        # at ultra-high volume a wide up-bar is a potential buying climax
+        # (weakness), so volume is capped at _excessive_cap × average.
         if matched is None and SignalName.SOS in active:
             p = active[SignalName.SOS]
             c = ctx(row, p.lookback)
             if c is not None:
                 avg_sp, avg_v, _, _ = c
                 if (
-                    avg_sp > 0
-                    and spread > avg_sp * p.spread_mult
+                    spread > avg_sp * p.spread_mult
                     and vol > avg_v * p.vol_mult
+                    and vol <= avg_v * _excessive_cap(p)
                     and cp > p.close_pos
                     and row["close"] > prev_close
                 ):
@@ -310,20 +370,33 @@ def detect_signals(
                         type=SignalType.BULLISH, strength=1.0,
                     )
 
-        # Successful Test ("no supply") — Master the Markets p.33: "Any
-        # down-move dipping into an area of previous selling, which then
-        # regains to close on, or near the high, on lower volume ... This is a
-        # successful test." The bar dips below the previous bar's low, finds
-        # no sellers, and closes near its high. Volume must be genuinely low:
-        # below the rolling average (× vol_mult) AND lower than both of the
-        # previous two bars (the standard TradeGuider criterion).
+        # Successful Test ("no supply") — Master the Markets p.35: "Any
+        # down-move dipping into an area of previous selling (previous high
+        # volume level), which then regains to close on, or near the high, on
+        # lower volume ... This is a successful test." The bar dips below the
+        # previous bar's low, finds no sellers, and closes near its high.
+        # "Area of previous selling" is approximated by requiring the dip to
+        # reach the lower quartile of the recent lookback range — an
+        # engineering proxy, since the exact prior high-volume price levels
+        # are not tracked; without it a shallow dip anywhere on the chart
+        # would qualify. The dip is also bounded from below with the same
+        # _SHALLOW_PENETRATION_SPREADS limit the low-volume Spring uses: a
+        # test dips INTO old selling, it does not collapse through support —
+        # a deep low-volume break below the range is a breakdown and must
+        # not be read as bullish. Volume must be genuinely low: below the
+        # rolling average (× vol_mult) AND lower than both of the previous
+        # two bars (the standard TradeGuider criterion).
         if matched is None and SignalName.SUCCESSFUL_TEST in active:
             p = active[SignalName.SUCCESSFUL_TEST]
             c = ctx(row, p.lookback)
             if c is not None:
-                _, avg_v, _, _ = c
+                avg_sp, avg_v, prior_low, prior_high = c
                 if (
                     row["low"] < prev_low
+                    and prior_high > prior_low
+                    and row["low"] <= prior_low + 0.25 * (prior_high - prior_low)
+                    and (prior_low - row["low"])
+                    <= _SHALLOW_PENETRATION_SPREADS * avg_sp
                     and cp >= p.close_pos
                     and vol < avg_v * p.vol_mult
                     and vol < prev_vol_min2
@@ -336,13 +409,13 @@ def detect_signals(
         # ── Bearish patterns ─────────────────────────────────────────────
 
         # Upthrust — bar spikes above resistance then closes back below it, on
-        # a wide spread, "on or very near the lows" (Master the Markets p.76:
+        # a wide spread, "on or very near the lows" (Master the Markets p.78:
         # "the day must close on or very near the lows; the volume can be
         # either low (no demand) or high (supply overcoming the demand)").
         # High volume means real supply hit the breakout; low volume means a
         # hollow fake-out with no genuine buying behind it. Either is a valid
         # trap; only "average, unremarkable" volume is excluded — the book's
-        # own example (p.64) of an average-volume up-thrust sees the market
+        # own example (p.66) of an average-volume up-thrust sees the market
         # simply continue upwards.
         if matched is None and SignalName.UPTHRUST in active:
             p = active[SignalName.UPTHRUST]
@@ -362,16 +435,21 @@ def detect_signals(
                         type=SignalType.BEARISH, strength=0.85,
                     )
 
-        # SOW — wide down-bar on high volume closing near the low.
+        # SOW — wide down-bar on high volume closing near the low. High but
+        # NOT excessive, mirroring SOS: at ultra-high volume a wide down-bar
+        # is potential "stopping volume" — professional money buying into the
+        # capitulation (budding strength) — so the same climax cap applies.
+        # (The Upthrust is deliberately NOT capped: an upthrust on ultra-high
+        # volume — a buying climax — is still legitimately bearish.)
         if matched is None and SignalName.SOW in active:
             p = active[SignalName.SOW]
             c = ctx(row, p.lookback)
             if c is not None:
                 avg_sp, avg_v, _, _ = c
                 if (
-                    avg_sp > 0
-                    and spread > avg_sp * p.spread_mult
+                    spread > avg_sp * p.spread_mult
                     and vol > avg_v * p.vol_mult
+                    and vol <= avg_v * _excessive_cap(p)
                     and cp < p.close_pos
                     and row["close"] < prev_close
                 ):
@@ -381,7 +459,7 @@ def detect_signals(
                     )
 
         # No Demand — narrow up-bar on low volume; professionals not
-        # participating. Master the Markets p.30: "a low volume up-bar, on a
+        # participating. Master the Markets p.32: "a low volume up-bar, on a
         # narrow spread"; the TradeGuider criterion adds that the volume must
         # be lower than both of the previous two bars and the close in the
         # middle or low — a bar closing strongly on its own high isn't a
@@ -392,8 +470,7 @@ def detect_signals(
             if c is not None:
                 avg_sp, avg_v, _, _ = c
                 if (
-                    avg_sp > 0
-                    and row["close"] > prev_close
+                    row["close"] > prev_close
                     and spread < avg_sp * p.spread_mult
                     and vol < avg_v * p.vol_mult
                     and vol < prev_vol_min2
@@ -408,6 +485,30 @@ def detect_signals(
             signals.append(matched)
 
     return signals
+
+
+def _net_score(
+    signals: Sequence[VsaSignal],
+    as_of: date,
+    half_life_days: int = 30,
+) -> float:
+    """Time-decayed net signal score: > 0 = net bullish, < 0 = net bearish.
+
+    Each signal contributes its strength weighted by exponential decay
+    (halved every ``half_life_days``); bearish signals contribute negatively.
+    Future-dated signals are ignored. Shared by ``compute_rating`` and
+    ``verdict_from_signals`` so the rating and the verdict badge can never
+    contradict each other.
+    """
+    lam = math.log(2) / half_life_days
+    net = 0.0
+    for s in signals:
+        days_ago = (as_of - s.date).days
+        if days_ago < 0:
+            continue  # future-dated signal; skip
+        weight = math.exp(-lam * days_ago) * s.strength
+        net += weight if s.type == SignalType.BULLISH else -weight
+    return net
 
 
 def compute_rating(
@@ -434,25 +535,16 @@ def compute_rating(
     if not signals:
         return 50
 
-    lam = math.log(2) / half_life_days
-    net_score = 0.0
-
-    for s in signals:
-        days_ago = (as_of - s.date).days
-        if days_ago < 0:
-            continue  # future-dated signal; skip
-        weight = math.exp(-lam * days_ago)
-        if s.type == SignalType.BULLISH:
-            net_score += weight * s.strength
-        else:
-            net_score -= weight * s.strength
-
+    net_score = _net_score(signals, as_of, half_life_days)
     return max(0, min(100, round(50.0 + 50.0 * math.tanh(net_score / 2.0))))
 
 
 # ── Signal → UI verdict mapping ───────────────────────────────────────────────
 
-# Maps the most recent VSA signal to the 5-level verdict badge used by the UI.
+# Maps one VSA signal to the 5-level verdict badge — used for per-signal
+# labels (chart overlays, trust-score event selection), NOT for the stock's
+# overall verdict, which comes from the decayed net score (see
+# ``verdict_from_signals``).
 _SIGNAL_VERDICT: dict[SignalName, str] = {
     SignalName.SOS: "Strong Buy",
     SignalName.SPRING: "Strong Buy",
@@ -468,15 +560,51 @@ def verdict_for_signal(name: SignalName) -> str:
     return _SIGNAL_VERDICT.get(name, "Hold")
 
 
-def verdict_from_signals(signals: Sequence[VsaSignal], as_of: date) -> tuple[str, int]:
-    """Return (verdict_label, days_since_last_signal) from the most recent signal.
+# Net-score boundaries for the overall verdict. A single fresh strong signal
+# (strength 1.0) lands in "Buy"/"Sell"; "Strong" requires either a cluster of
+# confirming signals or unusually strong recent evidence — consistent with the
+# rating scale, where net 1.2 ≈ rating 77 and net 0.45 ≈ rating 61.
+_VERDICT_STRONG_NET = 1.2
+_VERDICT_LEAN_NET = 0.45
 
-    Falls back to ("Hold", 999) when there are no signals.
+
+def verdict_from_signals(
+    signals: Sequence[VsaSignal],
+    as_of: date,
+    half_life_days: int = 30,
+) -> tuple[str, int]:
+    """Return (verdict_label, days_since_last_signal) for the stock overall.
+
+    The verdict is derived from the same time-decayed net score that drives
+    ``compute_rating`` (via the shared ``_net_score`` helper), so the badge is
+    always consistent with the rating — a stock rated deep green can never
+    carry a "Sell" badge just because its single most recent signal happened
+    to be bearish. A caller that passes a custom ``half_life_days`` to
+    ``compute_rating`` must pass the same value here, or the two drift apart
+    again. Mapping:
+
+        net >=  1.2  → "Strong Buy"      net <= -1.2  → "Strong Sell"
+        net >=  0.45 → "Buy"             net <= -0.45 → "Sell"
+        otherwise    → "Hold"
+
+    ``days_since`` is the age (in days) of the most recent signal of any
+    type. Falls back to ("Hold", 999) when there are no signals.
     """
     if not signals:
         return "Hold", 999
 
     latest = max(signals, key=lambda s: s.date)
-    days_since = (as_of - latest.date).days
-    verdict = _SIGNAL_VERDICT.get(latest.signal_name, "Hold")
-    return verdict, max(0, days_since)
+    days_since = max(0, (as_of - latest.date).days)
+
+    net = _net_score(signals, as_of, half_life_days)
+    if net >= _VERDICT_STRONG_NET:
+        verdict = "Strong Buy"
+    elif net >= _VERDICT_LEAN_NET:
+        verdict = "Buy"
+    elif net <= -_VERDICT_STRONG_NET:
+        verdict = "Strong Sell"
+    elif net <= -_VERDICT_LEAN_NET:
+        verdict = "Sell"
+    else:
+        verdict = "Hold"
+    return verdict, days_since

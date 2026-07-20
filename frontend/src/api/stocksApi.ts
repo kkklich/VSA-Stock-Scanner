@@ -320,7 +320,13 @@ export interface ApiSignalEffectiveness {
   signal: string
   count: number
   successPct: number
-  rewardRisk: number
+  /**
+   * Reward/risk ratio (baseline-excess frame). `null` means the ratio is
+   * undefined: either the back-test found wins but no losses (the best
+   * possible outcome — render as "—", sort as +Infinity) or there were no
+   * judged occurrences at all (count is 0 in that case).
+   */
+  rewardRisk: number | null
   activeCount: number
 }
 

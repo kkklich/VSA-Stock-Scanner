@@ -498,8 +498,14 @@ function EffectivenessStats({
   const sorted = useMemo(() => {
     const rows = [...stats]
     rows.sort((a, b) => {
-      const av = a[sortKey as keyof ApiSignalEffectiveness]
-      const bv = b[sortKey as keyof ApiSignalEffectiveness]
+      let av = a[sortKey as keyof ApiSignalEffectiveness]
+      let bv = b[sortKey as keyof ApiSignalEffectiveness]
+      // A null rewardRisk means wins with no losses — the best possible
+      // ratio, so it sorts above every finite value.
+      if (sortKey === 'rewardRisk') {
+        av = av ?? Infinity
+        bv = bv ?? Infinity
+      }
       const cmp =
         typeof av === 'number' && typeof bv === 'number'
           ? av - bv
@@ -626,10 +632,23 @@ function EffectivenessStats({
                 <td
                   className={
                     'px-2 py-2 text-right tabular-nums ' +
-                    (r.rewardRisk >= 1 ? 'text-emerald-400' : r.rewardRisk > 0 ? 'text-rose-400' : 'text-slate-500')
+                    (r.count === 0
+                      ? 'text-slate-500'
+                      : r.rewardRisk === null || r.rewardRisk >= 1
+                        ? 'text-emerald-400'
+                        : r.rewardRisk > 0
+                          ? 'text-rose-400'
+                          : 'text-slate-500')
+                  }
+                  title={
+                    r.count > 0 && r.rewardRisk === null
+                      ? 'Wins only — no losing signals to divide by'
+                      : undefined
                   }
                 >
-                  {r.count > 0 ? r.rewardRisk.toFixed(1) : '—'}
+                  {r.count > 0 && r.rewardRisk !== null
+                    ? r.rewardRisk.toFixed(1)
+                    : '—'}
                 </td>
                 <td className="px-4 py-2 text-right tabular-nums text-slate-500">
                   {r.count}

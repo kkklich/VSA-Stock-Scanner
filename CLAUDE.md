@@ -37,17 +37,17 @@ agent/      ALL project documentation & reference material lives here:
 
 - `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (PLN), `minVolume` (20-session median volume, shares), `tickers` (comma-separated allow-list, e.g. favorites). All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
 - `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[] }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`.
-- `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type. Supports `settings`.
+- `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type ("success" = beating the stock's own median forward move; winner/loser magnitudes use the same baseline-excess frame). `rewardRisk` is `null` when undefined (wins with no losses, or nothing judged) — the Scanner page renders that as an emerald "—" (best case) and sorts it first. Supports `settings`.
 - `GET /api/stocks/{ticker}/fundamentals` — company description + financial ratios + quarterly reports.
 - `GET /api/stocks/{ticker}/ai-analysis` — AI insight: second opinion on the rule-detected signals, computed **locally** by the built-in expert-system engine (`app/analysis/ai_insight.py`) — no external AI services or API keys. Returns `{ ticker, asOf, verdict, confidence, summary, signalAssessments[], keyObservations[], engine }`. Supports `settings`.
-- `GET /api/stocks/{ticker}/trust-score` — VSA **prediction-accuracy ("trust") score** for one stock: every historical Strong Buy/Strong Sell signal old enough to judge is back-tested (forward return over the next 10 sessions vs. the stock's own median 10-session move as baseline) and folded into a single 0–100 score, shrunk toward the neutral 50 when there are few cases so one lucky signal never scores 100. Returns `{ ticker, asOf, score, grade, horizonSessions, evaluatedCount, goodCount, freshCount, buyEvaluated, buyGood, sellEvaluated, sellGood, baselineReturnPct, avgExcessReturnPct, summary, events[], engine }` (`score` is `null` / `grade: "insufficient"` when no strong signal is old enough to judge). Computed locally by `app/analysis/trust_score.py`; shown in the "Signal Trust Score" card next to AI Insight on the stock-detail page. Supports `settings`.
+- `GET /api/stocks/{ticker}/trust-score` — VSA **prediction-accuracy ("trust") score** for one stock: every historical Strong Buy/Strong Sell signal old enough to judge is back-tested (forward return over the next 10 sessions vs. the stock's own median 10-session move as baseline) and folded into a single 0–100 score, shrunk toward the neutral 50 when there are few cases so one lucky signal never scores 100. Returns `{ ticker, asOf, score, grade, horizonSessions, evaluatedCount, goodCount, freshCount, buyEvaluated, buyGood, sellEvaluated, sellGood, baselineReturnPct, avgExcessReturnPct, summary, events[], engine }` (`score` is `null` / `grade: "insufficient"` when fewer than 8 strong signals are old enough to judge). Computed locally by `app/analysis/trust_score.py`; shown in the "Signal Trust Score" card next to AI Insight on the stock-detail page. Supports `settings`.
 - `POST /api/stocks/refresh` — starts the **data-refresh pipeline** in the background (Yahoo ingest → ranking recompute with DEFAULT settings → daily rating snapshots saved to DB); returns 202 + status. This and the nightly 18:00 job are the ONLY triggers that pull fresh data from Yahoo. `GET /api/stocks/refresh/status` — same payload `{ state, lastStartedAt, lastRefreshAt, lastError, stocksRanked, dbEnabled }` for polling.
 - `GET /api/stocks/{ticker}/rating-history` — stored daily rating snapshots `{ ticker, points[{date, rating, verdict, close}], source }` (the "attractiveness over time" chart). Supports `fromDate`, `toDate` (default last 12 months). Snapshots always use DEFAULT engine settings; when none exist yet the history is computed on the fly (`source: "computed"`).
 - `GET /api/stocks/heatmap` — Sector heatmap feed (`/heatmap` page, Finviz-style treemap). Returns `{ asOf, items[] }`; each item: `ticker, name, sector, marketCap, lastPrice, currentRating, lastSignal, change1D, change1M, change1Y, changeMax` (percent changes, `null` when stored history is too short or too gappy — a 1M/1Y baseline may be at most 2× the horizon old; MAX = full stored history). Same pre-filters as the ranking, evaluated on the same 120-day window (stale/suspended stocks are excluded); rating computed on that window too. Supports `settings`; cached per settings hash with a per-key lock (concurrent cold requests share one computation) and a generation guard (a result computed while the nightly refresh cleared the cache is served but not cached).
 - `GET /api/stocks/volume-surge` — **unusual-volume scanner** (`/volume-surge` page). Finds stocks whose average volume over the last `recentDays` sessions (1–10, default 3) is at least `minRatio` (1–10, default 1.5) times their own average over the `baselineDays` sessions (10–60, default 20) immediately before — multi-day **relative volume (RVOL)**; the baseline excludes the recent window so a surge can't inflate its own reference. Server-side sorting + pagination: `sortBy` (one of ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal; default `volumeRatio`), `sortDir` (`asc`|`desc`, default `desc`), `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, recentDays, baselineDays, minRatio, scannedCount, totalCount, items[] }` (`totalCount` = matching rows before pagination); each item: `ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal`. Same pre-filters and 120-day window as the ranking (shares its per-ticker history cache). Supports `settings`; the full scan is cached per (screen params, settings hash) with a per-key lock and generation guard like the heatmap — sorting/pagination is a cheap per-request pass. Computed by `app/services/volume_surge_service.py`.
 - `settings` (optional, on the analysis endpoints: ranking, signals, scanner/stats, ai-analysis, trust-score, heatmap, volume-surge) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
 
-Mandatory ranking pre-filters: 20-session median turnover > 100,000 PLN; market cap > 100M PLN (applied when known from `company-details.json`).
+Mandatory ranking pre-filters: 20-session median turnover > 100,000 PLN; market cap > 100M PLN (applied when known from `company-details.json`); recency — a ticker whose last bar lags the scan's newest session by more than 10 calendar days (suspended/stale listing) is excluded. The heatmap and volume-surge scans apply the same pre-filters.
 
 ## Conventions
 
@@ -109,7 +109,28 @@ details.** Summary (2026-07-03):
   age, price range and minimum volume (all applied server-side by the ranking
   endpoint's filter params), with **named filter presets** saved in
   localStorage and re-runnable in one click.
-- **Tests:** backend `pytest` — 205 passing; frontend `npm run build` passes.
+- **VSA engine review (2026-07-18, follow-ups 2026-07-19):** correctness pass
+  verified against the VSA source texts. The verdict badge is now derived
+  from the same decayed net score as the rating (no more "rating 97 + Sell"
+  contradictions); zero-spread and suspended-stock guards stop phantom
+  signals; SOS, the high-volume Spring and SOW reject excessive (climactic)
+  volume via an adaptive cap (`max(4×, 1.5 × vol_mult)`, so a raised volume
+  slider can never make the rules unsatisfiable; the Upthrust is deliberately
+  uncapped); the Successful Test must dip into the lower part of the recent
+  range ("area of previous selling") and shares the low-volume Spring's
+  shallow-penetration limit, so a deep low-volume breakdown is never read as
+  bullish; a recency pre-filter drops suspended/stale listings (last bar
+  > 10 days behind the scan's newest session) from ranking, heatmap and
+  volume-surge; scanner back-test stats are baseline-adjusted (beat the
+  stock's own median move, not zero) with magnitudes in the same
+  baseline-excess frame, and reward/risk is null when undefined (shown as
+  "—", best case, in the UI); the trust score uses the median edge, stronger
+  shrinkage and needs ≥ 8 judged signals for a numeric score; ratings/verdicts
+  are keyed to the last session date instead of the calendar day (no weekend
+  decay). KNOWN LIMITATION: signals are still detected without full
+  background/phase (trend-context) analysis, which the VSA source texts
+  consider essential — planned follow-up (see `agent/ROADMAP.md`).
+- **Tests:** backend `pytest` — 226 passing; frontend `npm run build` passes.
   Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
 - **Known gaps:** Settings page is a placeholder; favorites & filter presets
   are localStorage-only; no frontend unit tests; see `agent/ROADMAP.md`.
@@ -117,4 +138,4 @@ details.** Summary (2026-07-03):
   all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-07-15.*
+*Last updated: 2026-07-19.*

@@ -607,8 +607,9 @@ async def get_volume_surge(
     ``recentDays`` sessions divided by the average of the ``baselineDays``
     sessions before them. Stocks at or above ``minRatio`` are returned, each
     with its VSA rating and verdict so the surge can be read in VSA terms
-    (effort vs result). Server-side sorted (default: strongest surge first)
-    and paginated; ``totalCount`` carries the matching-row total.
+    (the price move alone is only a rough effort-vs-result cue; the verdict
+    carries the bar-level reading). Server-side sorted (default: strongest
+    surge first) and paginated; ``totalCount`` carries the matching-row total.
     """
     if sort_by not in _SURGE_SORT_KEYS:
         raise HTTPException(
@@ -780,9 +781,21 @@ async def get_signals(
     company = companies.find(normalized)
 
     signals = detect_signals(quotes, config)
-    today = date.today()
-    rating = compute_rating(signals, today)
-    rating_change = rating - compute_rating(signals, today - timedelta(days=1))
+
+    # Ratings are keyed to the last session date, not the wall-clock date, so
+    # identical data yields identical ratings regardless of when it is viewed;
+    # ratingChange measures what the newest session changed (see ranking).
+    if quotes:
+        as_of = quotes[-1].date
+        rating = compute_rating(signals, as_of)
+        if len(quotes) >= 2:
+            prior_signals = [s for s in signals if s.date < as_of]
+            rating_change = rating - compute_rating(prior_signals, quotes[-2].date)
+        else:
+            rating_change = 0
+    else:
+        rating = 50
+        rating_change = 0
 
     last_close = float(quotes[-1].close) if quotes else 0.0
     prev_close = float(quotes[-2].close) if len(quotes) >= 2 else last_close
@@ -955,7 +968,8 @@ async def get_ai_analysis(
         )
 
     signals = detect_signals(quotes, config)
-    rating = compute_rating(signals, date.today())
+    # Keyed to the last session date (not the calendar day) — see /signals.
+    rating = compute_rating(signals, quotes[-1].date)
     company = companies.find(normalized)
 
     return analyze_stock(

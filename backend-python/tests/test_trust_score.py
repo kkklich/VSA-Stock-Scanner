@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.analysis.trust_score import (
@@ -57,9 +58,14 @@ class _FakeStooqClient:
 
 
 class TestComputeTrustScore:
+    # Signal indices used by the two aggregate tests below: 4 entries just
+    # before each of the two rallies/slumps = 8 evaluated signals, enough for
+    # a numeric score (_MIN_EVALUATED = 8).
+    _SIGNAL_IDXS = (16, 17, 18, 19, 48, 49, 50, 51)
+
     def test_good_buy_entries_score_above_neutral(self) -> None:
-        # Mostly flat with two rallies, each starting right on a Strong Buy
-        # signal — the signals clearly beat the flat baseline.
+        # Mostly flat with two rallies; Strong Buy signals cluster right
+        # before each rally — the signals clearly beat the flat baseline.
         closes = (
             [100.0] * 20
             + [100.0 + i * 1.0 for i in range(1, 13)]  # rally 1 (bars 20..31)
@@ -68,7 +74,7 @@ class TestComputeTrustScore:
             + [124.0] * 20
         )
         quotes = _series(closes)
-        signals = [_signal(quotes, 19), _signal(quotes, 51)]
+        signals = [_signal(quotes, i) for i in self._SIGNAL_IDXS]
 
         result = compute_trust_score(
             ticker="kgh", name="KGHM", quotes=quotes, signals=signals
@@ -76,10 +82,12 @@ class TestComputeTrustScore:
 
         assert result.engine == ENGINE_VERSION
         assert result.as_of == quotes[-1].date
-        assert result.evaluated_count == 2
-        assert result.good_count == 2
-        assert result.buy_evaluated == 2 and result.buy_good == 2
+        assert result.evaluated_count == 8
+        assert result.good_count == 8
+        assert result.buy_evaluated == 8 and result.buy_good == 8
         assert result.score is not None and result.score > 55
+        # Shrinkage: even a perfect 8-for-8 record stays well below 100.
+        assert result.score <= 80
         assert all(e.good_entry for e in result.events)
 
     def test_bad_buy_entries_score_below_neutral(self) -> None:
@@ -92,13 +100,13 @@ class TestComputeTrustScore:
             + [76.0] * 20
         )
         quotes = _series(closes)
-        signals = [_signal(quotes, 19), _signal(quotes, 51)]
+        signals = [_signal(quotes, i) for i in self._SIGNAL_IDXS]
 
         result = compute_trust_score(
             ticker="kgh", name=None, quotes=quotes, signals=signals
         )
 
-        assert result.evaluated_count == 2
+        assert result.evaluated_count == 8
         assert result.good_count == 0
         assert result.score is not None and result.score < 45
         assert result.grade == "low"
@@ -118,6 +126,9 @@ class TestComputeTrustScore:
         assert result.sell_evaluated == 1 and result.sell_good == 1
         assert result.events[0].verdict == "Strong Sell"
         assert result.events[0].good_entry is True
+        # One judged signal is far below _MIN_EVALUATED → no numeric score.
+        assert result.score is None
+        assert result.grade == "insufficient"
 
     def test_non_strong_verdicts_are_ignored(self) -> None:
         # Successful Test → "Buy", No Demand → "Sell": neither is back-tested.
@@ -152,8 +163,9 @@ class TestComputeTrustScore:
         assert result.score is None
         assert result.grade == "insufficient"
 
-    def test_single_lucky_signal_stays_moderate(self) -> None:
-        # Shrinkage: one good signal must not produce an extreme score.
+    def test_single_lucky_signal_gets_no_score(self) -> None:
+        # A single lucky entry is far below the _MIN_EVALUATED = 8 sample
+        # floor — it must not earn any numeric score, let alone a high one.
         closes = [100.0] * 20 + [100.0 + i * 2.0 for i in range(1, 13)] + [124.0] * 10
         quotes = _series(closes)
         signals = [_signal(quotes, 19)]
@@ -164,7 +176,38 @@ class TestComputeTrustScore:
 
         assert result.evaluated_count == 1
         assert result.good_count == 1
-        assert result.score is not None and 50 < result.score <= 70
+        assert result.score is None
+        assert result.grade == "insufficient"
+        # The judged counts and the median edge are still reported.
+        assert result.avg_excess_return_pct is not None
+
+    def test_median_edge_resists_outlier_rallies(self) -> None:
+        # Skewed record: 5 slightly-bad entries (excess −1pp each) plus 3
+        # hugely-good ones (+30pp each). The MEAN edge is ≈ +10.6pp — dragged
+        # up entirely by the three outliers — while the MEDIAN is −1pp, the
+        # typical case. The score must be built from the median: reverting
+        # trust_score.py to a mean would flip both assertions below.
+        closes = (
+            [100.0] * 20  # flat (bars 0..19) — baseline stays 0
+            + [99.0] * 12  # shallow dip the 5 bad entries ride into (20..31)
+            + [100.0] * 20  # recovery, flat again (32..51)
+            + [130.0] * 32  # one lasting rally the 3 good entries catch (52..83)
+        )
+        quotes = _series(closes)
+        signals = [_signal(quotes, i) for i in (12, 13, 14, 15, 16, 45, 46, 47)]
+
+        result = compute_trust_score(
+            ticker="kgh", name=None, quotes=quotes, signals=signals
+        )
+
+        assert result.evaluated_count == 8
+        assert result.good_count == 3
+        # Median of the eight excesses (−1 ×5, +30 ×3) is −1, not the
+        # outlier-dragged mean of ≈ +10.6.
+        assert result.avg_excess_return_pct == pytest.approx(-1.0, abs=0.05)
+        # ...and the score stays below neutral; a mean-based magnitude term
+        # would saturate and push it above 50.
+        assert result.score is not None and result.score < 50
 
     def test_deterministic(self) -> None:
         closes = [100.0 + (i % 7) for i in range(80)]

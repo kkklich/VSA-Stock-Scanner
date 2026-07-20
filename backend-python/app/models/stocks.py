@@ -162,8 +162,9 @@ class VolumeSurgeItem(_CamelModel):
     last_day_ratio: float
     # Recent sessions whose volume individually beat the baseline average.
     days_above_baseline: int
-    # Close-to-close price change across the recent window, percent — the
-    # price "result" of the volume "effort" (VSA reads the two together).
+    # Close-to-close price change across the recent window, percent — a rough
+    # proxy for the price "result" of the volume "effort" (the full VSA
+    # reading also weighs each bar's spread and close position).
     price_change_pct: float
     # Computed VSA rating 0–100 (same window/settings as the ranking).
     current_rating: int
@@ -460,9 +461,12 @@ class SignalEffectiveness(_CamelModel):
     signal: str
     # Total evaluable occurrences across all tracked stocks in the last 120 sessions.
     count: int
-    # Percentage where price moved in the expected direction over the next 10 sessions.
+    # Percentage where the forward return beat the stock's own baseline in the
+    # signal's direction over the next 10 sessions.
     success_pct: float
-    # Average winner magnitude ÷ average loser magnitude (0 if insufficient data).
-    reward_risk: float
+    # Average winner magnitude ÷ average loser magnitude, both measured as
+    # excess over the baseline. Null when the ratio is undefined: no judged
+    # occurrences, or wins but no losses.
+    reward_risk: float | None
     # Number of stocks whose last detected signal is this type right now.
     active_count: int

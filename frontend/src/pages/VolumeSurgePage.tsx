@@ -304,7 +304,7 @@ export function VolumeSurgePage() {
                     sortDir={sortDir}
                     onSort={onSort}
                     align="right"
-                    info="Price change across the surge window. High volume on a rising price reads as buying (strength); on a falling price as selling — though in VSA extreme volume on a fall can also mark a selling climax."
+                    info="Price change across the surge window. Direction alone doesn't classify a surge in VSA: high volume on a rise can be genuine buying or a buying climax (weakness), and on a fall genuine selling or stopping volume (strength). Read it together with the VSA signal and the chart."
                     className="text-right"
                   />
                   <SortHeader

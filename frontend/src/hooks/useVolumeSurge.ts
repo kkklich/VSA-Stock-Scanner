@@ -25,7 +25,11 @@ export interface UseVolumeSurgeResult {
   error: string | null
   /** More rows exist beyond what's loaded — worth fetching the next page. */
   hasMore: boolean
-  /** Re-fetch on demand (e.g. after a data refresh, or to retry an error). */
+  /**
+   * Re-run the fetch for the *current* page — meant for retrying after an
+   * error. It does not reload earlier pages, so it is not a full refresh;
+   * to refresh, change a screen parameter (which resets to page 1).
+   */
   refetch: () => void
 }
 
@@ -66,7 +70,14 @@ export function useVolumeSurge(
         // Replace on page 1, append on later pages. Appending in the fetch
         // callback (guarded by `cancelled`) runs exactly once per page, so a
         // StrictMode double-mount or a superseded fetch can't duplicate rows.
-        setItems((prev) => (firstPage ? resp.items : [...prev, ...resp.items]))
+        // Dedupe by ticker anyway: the server's cached scan can recompute
+        // between page fetches, shifting a ticker onto a page we already
+        // loaded (duplicate React keys otherwise).
+        setItems((prev) => {
+          if (firstPage) return resp.items
+          const seen = new Set(prev.map((i) => i.ticker))
+          return [...prev, ...resp.items.filter((i) => !seen.has(i.ticker))]
+        })
         setLoading(false)
         setLoadingMore(false)
       })

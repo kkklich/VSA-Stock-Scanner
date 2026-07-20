@@ -4,24 +4,28 @@ Builds the data behind ``GET /api/stocks/volume-surge``: every tracked GPW
 company whose trading volume over the last few sessions is unusually high
 compared to its own recent norm.
 
-Method — multi-day **Relative Volume (RVOL)**, the standard "unusual volume"
-screen used by stock scanners:
+Method — a multi-day variant of **Relative Volume (RVOL)**, the standard
+"unusual volume" screen used by stock scanners (the classic form compares a
+single session to an N-day average; averaging the last few sessions is a
+stricter smoothing of it, and the classic single-day ratio is reported too):
 
     volume_ratio = avg(volume, last ``recent_days`` sessions)
                  / avg(volume, the ``baseline_days`` sessions before those)
 
 The baseline window deliberately *excludes* the recent window, so a surge
 cannot inflate its own reference average. A ratio of 1.0 means "normal
-activity"; screens conventionally flag >= 1.5 (50 % above normal) as elevated
-and >= 3.0 as a major event. Alongside the multi-day ratio the scan reports
-the classic single-day RVOL of the latest session and how many of the recent
-sessions individually beat the baseline average (persistence of the surge).
+activity"; published screens typically flag ~1.5–2.0 as elevated and ~3–4 as
+extreme. Alongside the multi-day ratio the scan reports the classic
+single-day RVOL of the latest session and how many of the recent sessions
+individually beat the baseline average (persistence of the surge).
 
-Relation to VSA: volume is the "effort" side of Volume Spread Analysis — a
-surge marks professional (institutional) activity. Each result therefore
-carries the price change over the surge window (the "result" of the effort)
-plus the stock's current VSA rating and verdict, computed on the same window
-and with the same settings as the ranking page.
+Relation to VSA: volume is the raw material of the "effort" side of Volume
+Spread Analysis — a surge marks professional (institutional) activity. Each
+result therefore carries the price change over the surge window (a rough
+proxy for the "result" of that effort — the full VSA reading also needs each
+bar's spread and close position, which is why the row carries the stock's
+current VSA rating and verdict, computed on the same window and with the
+same settings as the ranking page).
 
 Pre-filters, data-source priority (cache → PostgreSQL → stooq live) and the
 120-day analysis window are identical to the ranking, and the per-ticker
@@ -61,6 +65,10 @@ _HISTORY_DAYS = 120
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
 _MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
+# Recency pre-filter, same as the ranking: drop tickers whose last bar lags
+# the newest session across the scan by more than this many calendar days
+# (suspended/stale listings), while tolerating holidays and long weekends.
+_MAX_SESSION_LAG_DAYS = 10
 
 # Screen defaults: last 3 sessions vs the 20 sessions before them, flagged
 # when the recent average is at least 50 % above the baseline average.
@@ -190,6 +198,10 @@ async def compute_volume_surge(
         return quotes or []
 
     scanned = 0
+    # Last session date of every scored ticker — the recency pre-filter needs
+    # the dataset-global maximum, not just the max over the surging subset
+    # (otherwise a lone stale "surge" would define its own reference date).
+    session_dates: list[date] = []
 
     async def scan_company(
         company: GpwCompany,
@@ -212,14 +224,17 @@ async def compute_volume_surge(
             if metrics is None:
                 return None
             scanned += 1
+            session_dates.append(quotes[-1].date)
             if metrics.volume_ratio < min_ratio:
                 return None
 
             # VSA context on the same window/settings as the ranking, so the
-            # numbers match across pages.
+            # numbers match across pages. As-of the last session date (not
+            # the calendar day), matching the ranking.
             signals = detect_signals(quotes, config)
-            rating = compute_rating(signals, today)
-            verdict, _ = verdict_from_signals(signals, today)
+            as_of = quotes[-1].date
+            rating = compute_rating(signals, as_of)
+            verdict, _ = verdict_from_signals(signals, as_of)
 
             item = VolumeSurgeItem(
                 ticker=company.ticker.upper(),
@@ -243,7 +258,26 @@ async def compute_volume_surge(
     results = await asyncio.gather(
         *(scan_company(c) for c in companies), return_exceptions=True
     )
+    # scan_company returns tuple | None, so the isinstance filter below drops
+    # nothing legitimate — but an exception that escaped its guard (e.g. the
+    # DB dying inside fetch_quotes) must be logged, or a broken scan would
+    # come back as an empty 200 that looks like a quiet market.
+    for company, result in zip(companies, results):
+        if isinstance(result, BaseException):
+            logger.error("Volume surge: skipping %s: %s", company.ticker, result)
     hits = [r for r in results if isinstance(r, tuple)]
+
+    # Recency pre-filter (see _MAX_SESSION_LAG_DAYS): a "surge" on a ticker
+    # whose last session lags the newest one across all scanned tickers is
+    # months-old news from a suspended/stale listing — drop it. Dataset-global
+    # max, not wall-clock, so cached results stay deterministic.
+    latest_session = max(session_dates, default=None)
+    hits = [
+        (item, last_bar)
+        for item, last_bar in hits
+        if latest_session is None
+        or (latest_session - last_bar).days <= _MAX_SESSION_LAG_DAYS
+    ]
     items = sorted((item for item, _ in hits), key=lambda i: -i.volume_ratio)
     as_of = max((d for _, d in hits), default=None)
     return VolumeSurgeResponse(

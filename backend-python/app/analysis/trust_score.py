@@ -17,11 +17,12 @@ replayed as a paper trade:
     (price outperformed after a Strong Buy, underperformed after a Strong
     Sell).
 
-The hit-rate and the average edge are then folded into a single 0–100 trust
-score, shrunk toward the neutral 50 when there are only a few cases so one
-lucky signal can never produce a 100. Deterministic, computed locally from
-the same OHLCV data the charts use. Used by
-``GET /api/stocks/{ticker}/trust-score``.
+The hit-rate and the median edge over baseline are then folded into a single
+0–100 trust score, shrunk toward the neutral 50 on small samples; below
+``_MIN_EVALUATED`` judged signals no numeric score is reported at all
+(``grade: "insufficient"``), so a couple of lucky signals can never produce
+a high grade. Deterministic, computed locally from the same OHLCV data the
+charts use. Used by ``GET /api/stocks/{ticker}/trust-score``.
 """
 
 from __future__ import annotations
@@ -54,9 +55,15 @@ _HIT_RATE_WEIGHT = 0.65
 _MAGNITUDE_WEIGHT = 0.35
 
 # Sample-size shrinkage: with n evaluated signals the raw score keeps
-# n / (n + _SHRINK_N) of its distance from the neutral 50, so a single lucky
-# signal lands near 60, not 100.
-_SHRINK_N = 4
+# n / (n + _SHRINK_N) of its distance from the neutral 50, so a handful of
+# lucky signals can never produce an extreme score (with n = 8 the score
+# keeps 40% of its distance from neutral).
+_SHRINK_N = 12
+
+# Minimum evaluated signals before a numeric score is reported at all —
+# below this the sample is too small to grade and the response uses the
+# "insufficient" path (score: null).
+_MIN_EVALUATED = 8
 
 # Score boundaries for the qualitative grade.
 _GRADE_HIGH = 65
@@ -78,9 +85,14 @@ def _grade_for(score: int) -> str:
     return "medium"
 
 
-def _score_from(hit_rate: float, avg_excess_pp: float, n: int) -> int:
-    """Fold hit-rate and average edge into the shrunk 0–100 trust score."""
-    magnitude = 0.5 + 0.5 * math.tanh(avg_excess_pp / _EXCESS_SCALE_PP)
+def _score_from(hit_rate: float, median_excess_pp: float, n: int) -> int:
+    """Fold hit-rate and median edge into the shrunk 0–100 trust score.
+
+    The magnitude term uses the MEDIAN excess return, matching the median
+    baseline — a mean here would let one outlier rally (right-skewed returns)
+    systematically favour buy signals.
+    """
+    magnitude = 0.5 + 0.5 * math.tanh(median_excess_pp / _EXCESS_SCALE_PP)
     raw = 100.0 * (_HIT_RATE_WEIGHT * hit_rate + _MAGNITUDE_WEIGHT * magnitude)
     shrunk = 50.0 + (raw - 50.0) * n / (n + _SHRINK_N)
     return max(0, min(100, round(shrunk)))
@@ -110,14 +122,14 @@ def _build_summary(
             )
         return base
 
-    assert baseline is not None and avg_excess is not None and score is not None
+    assert baseline is not None and avg_excess is not None
     sentences = [
         f"Of the {n} strong signal(s) the VSA engine fired on {display_name} in "
         f"the analysed window, {good} ({good / n * 100:.0f}%) proved to be good "
         f"entries: price did better over the following {HORIZON_SESSIONS} "
         f"sessions than the stock's typical {HORIZON_SESSIONS}-session move "
         f"({baseline:+.1f}%).",
-        f"On average, acting on these signals "
+        f"In the typical (median) case, acting on these signals "
         f"{'beat' if avg_excess >= 0 else 'lagged'} that baseline by "
         f"{abs(avg_excess):.1f} percentage points.",
     ]
@@ -125,15 +137,22 @@ def _build_summary(
         sentences.append(
             f"{fresh} more recent strong signal(s) are still too fresh to judge."
         )
-    quality = {
-        "high": "have been reliable",
-        "medium": "have a mixed record",
-        "low": "have been unreliable",
-    }[grade]
-    sentences.append(
-        f"Overall, strong VSA signals {quality} on this stock: "
-        f"trust score {score}/100."
-    )
+    if score is None:
+        sentences.append(
+            f"Only {n} strong signal(s) are old enough to judge — fewer than "
+            f"the {_MIN_EVALUATED} needed for a reliable trust score, so no "
+            f"score is given yet."
+        )
+    else:
+        quality = {
+            "high": "have been reliable",
+            "medium": "have a mixed record",
+            "low": "have been unreliable",
+        }[grade]
+        sentences.append(
+            f"Overall, strong VSA signals {quality} on this stock: "
+            f"trust score {score}/100."
+        )
     return " ".join(sentences)
 
 
@@ -204,9 +223,18 @@ def compute_trust_score(
         grade = "insufficient"
         avg_excess: float | None = None
     else:
-        avg_excess = sum(raw_excess) / n
-        score = _score_from(good / n, avg_excess, n)
-        grade = _grade_for(score)
+        # Median (not mean) excess, consistent with the median baseline:
+        # right-skewed returns would let one outlier rally drag a mean up
+        # and systematically favour buy signals.
+        avg_excess = median(raw_excess)
+        if n < _MIN_EVALUATED:
+            # Too few judged signals for a meaningful grade — report the
+            # counts and the (median) edge, but no numeric score.
+            score = None
+            grade = "insufficient"
+        else:
+            score = _score_from(good / n, avg_excess, n)
+            grade = _grade_for(score)
 
     summary = _build_summary(
         display_name=name or ticker.upper(),

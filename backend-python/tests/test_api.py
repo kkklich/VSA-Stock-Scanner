@@ -62,6 +62,16 @@ class _FakeStooqClient:
         return self._quotes
 
 
+class _PerTickerStooqClient:
+    """Fake client returning a different canned series per ticker."""
+
+    def __init__(self, by_ticker: dict[str, list[StooqDailyQuote]]) -> None:
+        self._by_ticker = by_ticker
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        return self._by_ticker.get(ticker, [])
+
+
 @pytest.fixture(autouse=True)
 def _clear_caches_and_overrides():
     history_cache.clear()
@@ -289,6 +299,25 @@ class TestGetRanking:
                 params={"minVolume": 50_000, "pageSize": 500},
             ).json()
         assert all(item["volume"] >= 50_000 for item in body)
+
+    def test_stale_listing_excluded_from_ranking(self) -> None:
+        # A ticker whose last bar lags the newest session in the scan by 15
+        # days (i.e. a suspended/stale listing) must be dropped by the
+        # recency pre-filter instead of ranking its frozen rating; other
+        # tickers still make the list.
+        fresh = _rich_quotes()
+        stale = [
+            _make_quote((q.date - timedelta(days=15)).isoformat()) for q in fresh
+        ]
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"kgh": fresh, "pko": stale}
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/ranking").json()
+
+        tickers = {item["ticker"] for item in body}
+        assert "KGH" in tickers
+        assert "PKO" not in tickers
 
     def test_invalid_sort_by_rejected(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(

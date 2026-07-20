@@ -87,6 +87,13 @@ export function TrustScoreCard({ ticker }: { ticker: string }) {
   const [showEvents, setShowEvents] = useState(false)
 
   const style = data ? GRADE_STYLE[data.grade] : GRADE_STYLE.insufficient
+  // "insufficient" covers two cases: no judged signals at all, and a sample
+  // too small (1–7) for a numeric score — the badge must not claim "No track
+  // record" while the card shows e.g. "4/6 good entries" next to it.
+  const badgeLabel =
+    data && data.grade === 'insufficient' && data.evaluatedCount > 0
+      ? 'Too few signals'
+      : style.label
 
   return (
     <Card>
@@ -94,7 +101,7 @@ export function TrustScoreCard({ ticker }: { ticker: string }) {
         <span className="inline-flex items-center gap-1.5">
           <ShieldCheck size={14} className="text-emerald-400" /> Signal Trust Score
         </span>{' '}
-        <InfoTip text="How accurate the VSA engine's strong calls have been on THIS stock. Every past Strong Buy / Strong Sell signal is replayed as a paper trade: did the price beat the stock's typical 10-session move in the signal's direction? The hit-rate and the average edge are combined into one 0–100 score (few signals = pulled toward the neutral 50). Computed locally; deterministic and free." />
+        <InfoTip text="How accurate the VSA engine's strong calls have been on THIS stock. Every past Strong Buy / Strong Sell signal is replayed as a paper trade: did the price beat the stock's typical 10-session move in the signal's direction? The hit-rate and the median edge are combined into one 0–100 score (few signals = pulled toward the neutral 50). Computed locally; deterministic and free." />
       </CardTitle>
 
       <div className="px-4 pb-4">
@@ -129,7 +136,7 @@ export function TrustScoreCard({ ticker }: { ticker: string }) {
                       style.badge
                     }
                   >
-                    {style.label}
+                    {badgeLabel}
                   </span>
                   {data.evaluatedCount > 0 && (
                     <span className="tabular-nums text-slate-400">

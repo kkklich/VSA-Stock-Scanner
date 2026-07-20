@@ -38,6 +38,13 @@ _MIN_MEDIAN_VOLUME_PLN = 100_000.0
 _MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
 _SPARKLINE_BARS = 10
+# Recency pre-filter: exclude suspended/stale listings, whose last bar keeps
+# falling further behind the rest of the market while their rating (keyed to
+# their own last session) stays frozen. A ticker is dropped when its last bar
+# is more than this many calendar days older than the newest session across
+# the whole scan — dataset-global, not wall-clock, so cached results stay
+# deterministic; 10 days tolerates holidays and long weekends.
+_MAX_SESSION_LAG_DAYS = 10
 
 
 async def compute_ranking(
@@ -102,7 +109,10 @@ async def compute_ranking(
         history_cache.set(cache_key, quotes or [], history_cache_ttl)
         return quotes or []
 
-    async def fetch_and_analyse(company: GpwCompany) -> StockRankingItem | None:
+    async def fetch_and_analyse(
+        company: GpwCompany,
+    ) -> tuple[StockRankingItem, date] | None:
+        """Analyse one company; returns (item, its last session date) or None."""
         # Capitalisation floor (blueprint §5): market cap must exceed 100M PLN.
         # Applied only when the value is known, so missing metadata never
         # silently hides a company from the ranking.
@@ -124,11 +134,26 @@ async def compute_ranking(
                 return None
 
             signals = detect_signals(quotes, config)
-            rating_today = compute_rating(signals, today)
-            rating_yesterday = compute_rating(signals, today - timedelta(days=1))
-            rating_change = rating_today - rating_yesterday
 
-            verdict, days_since = verdict_from_signals(signals, today)
+            # Ratings are keyed to the last SESSION date, not the wall-clock
+            # date: identical data must yield identical ratings whether the
+            # ranking runs on Friday evening or Sunday (no weekend decay).
+            last_bar_date = quotes[-1].date
+            rating_today = compute_rating(signals, last_bar_date)
+
+            # ratingChange = how the newest session changed the rating: the
+            # rating as of the last bar minus the rating as it stood after
+            # the previous bar (excluding any signal fired on the last bar).
+            if len(quotes) >= 2:
+                prev_bar_date = quotes[-2].date
+                prior_signals = [s for s in signals if s.date < last_bar_date]
+                rating_change = rating_today - compute_rating(
+                    prior_signals, prev_bar_date
+                )
+            else:
+                rating_change = 0
+
+            verdict, days_since = verdict_from_signals(signals, last_bar_date)
 
             # Local AI-insight second opinion — reuses the quotes/signals/rating
             # already computed above (no extra I/O). We only surface its
@@ -157,7 +182,7 @@ async def compute_ranking(
                 else med_vol_list[n // 2]
             )
 
-            return StockRankingItem(
+            item = StockRankingItem(
                 ticker=company.ticker.upper(),
                 name=company.name,
                 sector=company.sector,
@@ -171,6 +196,7 @@ async def compute_ranking(
                 volume=median_vol_shares,
                 ai_confidence=ai.confidence,
             )
+            return item, last_bar_date
         except Exception:  # noqa: BLE001
             logger.exception("Skipping %s: analysis failed.", company.ticker)
             return None
@@ -179,6 +205,22 @@ async def compute_ranking(
     results = await asyncio.gather(
         *(fetch_and_analyse(c) for c in companies), return_exceptions=True
     )
-    ranking = [r for r in results if isinstance(r, StockRankingItem)]
+    # An exception that escaped fetch_and_analyse's guard (e.g. the DB dying
+    # mid-scan) must be logged, or a broken run would look like an empty market.
+    for company, result in zip(companies, results):
+        if isinstance(result, BaseException):
+            logger.error("Ranking: skipping %s: %s", company.ticker, result)
+    pairs = [r for r in results if isinstance(r, tuple)]
+
+    # Recency pre-filter (see _MAX_SESSION_LAG_DAYS): a ticker whose last bar
+    # lags the newest session in this run by more than the tolerance has
+    # stopped trading — drop it instead of ranking its frozen rating.
+    latest_session = max((d for _, d in pairs), default=None)
+    ranking = [
+        item
+        for item, last_bar in pairs
+        if latest_session is None
+        or (latest_session - last_bar).days <= _MAX_SESSION_LAG_DAYS
+    ]
     ranking.sort(key=lambda r: r.current_rating, reverse=True)
     return ranking
