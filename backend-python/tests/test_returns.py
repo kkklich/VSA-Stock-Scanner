@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from app.analysis.returns import baseline_close, compute_price_returns, pct_change
 from app.models import QuarterlyReport, StooqDailyQuote
-from app.routers.stocks import _ttm_sum
+from app.services.capex_service import sum_ttm
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -139,8 +139,8 @@ class TestTtmSum:
             _report("2025-09-30", 20, 2),
             _report("2025-06-30", 10, 1),
         ]
-        assert _ttm_sum(reports, "total_revenue") == 100
-        assert _ttm_sum(reports, "net_income") == 10
+        assert sum_ttm(reports, "total_revenue") == 100
+        assert sum_ttm(reports, "net_income") == 10
 
     def test_uses_only_the_four_newest_quarters(self) -> None:
         reports = [
@@ -150,7 +150,7 @@ class TestTtmSum:
             _report("2025-06-30", 10, 1),
             _report("2025-03-31", 999, 999),  # older — must be ignored
         ]
-        assert _ttm_sum(reports, "total_revenue") == 100
+        assert sum_ttm(reports, "total_revenue") == 100
 
     def test_sorts_regardless_of_input_order(self) -> None:
         # Oldest-first input must give the same answer as newest-first.
@@ -161,11 +161,11 @@ class TestTtmSum:
             _report("2025-12-31", 30, 3),
             _report("2026-03-31", 40, 4),
         ]
-        assert _ttm_sum(reports, "total_revenue") == 100
+        assert sum_ttm(reports, "total_revenue") == 100
 
     def test_fewer_than_four_quarters_is_none(self) -> None:
         reports = [_report("2026-03-31", 40, 4), _report("2025-12-31", 30, 3)]
-        assert _ttm_sum(reports, "total_revenue") is None
+        assert sum_ttm(reports, "total_revenue") is None
 
     def test_missing_figure_makes_the_sum_none(self) -> None:
         # A partial sum would understate a full year — report nothing instead.
@@ -175,5 +175,5 @@ class TestTtmSum:
             _report("2025-09-30", 20, 2),
             _report("2025-06-30", 10, 1),
         ]
-        assert _ttm_sum(reports, "total_revenue") is None
-        assert _ttm_sum(reports, "net_income") == 10
+        assert sum_ttm(reports, "total_revenue") is None
+        assert sum_ttm(reports, "net_income") == 10
