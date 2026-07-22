@@ -6,6 +6,17 @@ import type { SignalVerdict } from '../types'
 
 export const FILTER_PRESETS_KEY = 'stockpilot:filter-presets'
 
+/**
+ * Where the stock sits in its 52-week range. One control instead of four
+ * separate inputs, because the useful screens are a small fixed set:
+ * breakouts ("new high"), stocks pressing against the high ("near high"),
+ * breakdowns and stocks scraping the low.
+ */
+export type Range52w = 'any' | 'newHigh' | 'nearHigh' | 'newLow' | 'nearLow'
+
+/** How close to the extreme "near high"/"near low" means, in percent. */
+export const NEAR_52W_PCT = 5
+
 /** The filter values a preset captures (everything on the Filters page). */
 export interface ScreenFilters {
   /** Free-text search over ticker + name. */
@@ -24,6 +35,8 @@ export interface ScreenFilters {
   maxPrice: number | null
   /** Minimum 20-session median volume (shares); null = any. */
   minVolume: number | null
+  /** Position in the 52-week range; 'any' = no filter. */
+  range52w: Range52w
 }
 
 export interface FilterPreset {
@@ -45,6 +58,7 @@ export const EMPTY_FILTERS: ScreenFilters = {
   minPrice: null,
   maxPrice: null,
   minVolume: null,
+  range52w: 'any',
 }
 
 /** Read the persisted presets (safe if localStorage is unavailable). */
@@ -95,6 +109,28 @@ export function filtersActive(f: ScreenFilters): boolean {
     f.maxDaysSinceSignal !== null ||
     f.minPrice !== null ||
     f.maxPrice !== null ||
-    f.minVolume !== null
+    f.minVolume !== null ||
+    f.range52w !== 'any'
   )
+}
+
+/** Translate the 52-week selection into the ranking endpoint's parameters. */
+export function range52wParams(range: Range52w): {
+  maxDistFrom52wHighPct?: number
+  maxDistFrom52wLowPct?: number
+  new52wHigh?: boolean
+  new52wLow?: boolean
+} {
+  switch (range) {
+    case 'newHigh':
+      return { new52wHigh: true }
+    case 'nearHigh':
+      return { maxDistFrom52wHighPct: NEAR_52W_PCT }
+    case 'newLow':
+      return { new52wLow: true }
+    case 'nearLow':
+      return { maxDistFrom52wLowPct: NEAR_52W_PCT }
+    default:
+      return {}
+  }
 }

@@ -97,6 +97,25 @@ class StockRankingItem(_CamelModel):
     sector: str | None = None
     # Confidence (0–100) of the built-in AI-insight engine's verdict.
     ai_confidence: int = 0
+    # 52-week context. Explicit aliases because the automatic camelCase
+    # generator renders "52w" as "52W" ("distFrom52WHighPct"), which reads
+    # wrong and would not match the endpoint's query-parameter names.
+    #
+    # Distance of the last close from the 52-week high, percent (≤ 0;
+    # 0 = closed exactly at the high). The extremes cover up to 52 weeks of
+    # stored history before the last session — for a recently listed company
+    # that is its whole trading history. None only when not computable.
+    dist_from_52w_high_pct: float | None = Field(
+        default=None, alias="distFrom52wHighPct"
+    )
+    # Distance of the last close above the 52-week low, percent (≥ 0).
+    dist_from_52w_low_pct: float | None = Field(
+        default=None, alias="distFrom52wLowPct"
+    )
+    # True when the newest session set a new 52-week extreme: its intraday
+    # high (low) beat every bar of the preceding 52 weeks.
+    is_new_52w_high: bool = Field(default=False, alias="isNew52wHigh")
+    is_new_52w_low: bool = Field(default=False, alias="isNew52wLow")
 
 
 # ── New models: sector heatmap endpoint ───────────────────────────────────────
@@ -243,6 +262,33 @@ class FinancialMetrics(_CamelModel):
     total_revenue: int | None = None
     net_income: int | None = None
     shares_outstanding: int | None = None
+    # Profitability ratios as fractions from Yahoo (0.184 = 18.4%); the UI
+    # renders them as percentages. Return on equity / on assets — how much
+    # profit the company earns per zloty of shareholder capital / of assets.
+    return_on_equity: float | None = None
+    return_on_assets: float | None = None
+
+
+class PriceReturns(_CamelModel):
+    """Trailing price returns for a stock, percent.
+
+    Computed from the stored EOD bars (``app/analysis/returns.py``), not from
+    an external field, so the numbers always agree with the charts. A horizon
+    is ``None`` when the stored history does not reach back that far. These
+    ignore dividends — they are price returns, not total returns.
+    """
+
+    ytd_pct: float | None = None
+    # Field names carry the "1y"/"3y"/"5y" horizon; explicit aliases because
+    # the camelCase generator would render "y1_pct" as "y1Pct" but "1y" style
+    # names cannot start an identifier.
+    y1_pct: float | None = Field(default=None, alias="y1Pct")
+    y3_pct: float | None = Field(default=None, alias="y3Pct")
+    y5_pct: float | None = Field(default=None, alias="y5Pct")
+    # Change over the full stored history, and the date it starts from — so
+    # the UI can label it "since 2025-06-16" rather than claiming a horizon.
+    max_pct: float | None = None
+    max_from_date: date | None = None
 
 
 class QuarterlyReport(_CamelModel):
@@ -253,6 +299,81 @@ class QuarterlyReport(_CamelModel):
     net_income: int | None = None
     operating_income: int | None = None
     eps: float | None = None
+
+
+class CashflowPeriod(_CamelModel):
+    """One reported period of investment-related cash-flow figures.
+
+    Sourced from Yahoo's cash-flow statement (annual and quarterly frames).
+    ``capex`` is normalised to a POSITIVE "money spent" number — Yahoo reports
+    capital expenditure as a negative cash outflow, which reads as "-1.4bn
+    invested" in a table and sorts backwards.
+    """
+
+    period_end: str
+    # "annual" = a full reporting year, "quarterly" = one quarter.
+    period_type: Literal["annual", "quarterly"]
+    capex: int | None = None
+    operating_cash_flow: int | None = None
+    free_cash_flow: int | None = None
+    # Reporting currency of these figures (Yahoo ``financialCurrency``). NOT
+    # always PLN: foreign dual-listings report in EUR/USD/CZK/HUF/UAH, so the
+    # value is meaningless without it.
+    currency: str | None = None
+
+
+class CapexSummary(_CamelModel):
+    """How much a company invests in itself, condensed to one row.
+
+    All money figures are in ``currency`` (positive = spent). ``basis`` says
+    which reporting period the headline ``capex`` and the two ratios describe:
+    ``"ttm"`` (last four quarters — preferred) or ``"annual"`` (the latest full
+    year, used when quarterly cash-flow data is missing). Every field is
+    optional: for roughly one company in five Yahoo has no usable capex, and a
+    blank cell is the honest answer.
+    """
+
+    currency: str | None = None
+    # Which period the headline capex/ratios refer to; None when no data.
+    basis: Literal["ttm", "annual"] | None = None
+    # Headline figure — capex_ttm when available, else capex_annual.
+    capex: int | None = None
+    # Last four reported quarters summed (None unless all four carry a figure).
+    capex_ttm: int | None = None
+    # Latest full reporting year, and the year before it (for the YoY change).
+    capex_annual: int | None = None
+    annual_period_end: str | None = None
+    capex_prev_annual: int | None = None
+    # Change in yearly capex, percent — the "is it investing more?" number.
+    capex_growth_yoy_pct: float | None = None
+    # Capex as a share of revenue: capital intensity, comparable across sizes.
+    capex_to_revenue_pct: float | None = None
+    # Capex as a share of operating cash flow: above 100% means the investment
+    # is not covered by what the business itself generates.
+    capex_to_ocf_pct: float | None = None
+    operating_cash_flow: int | None = None
+
+
+class CapexItem(CapexSummary):
+    """One row of the capex screen: a company plus its investment figures."""
+
+    ticker: str
+    name: str
+    sector: str | None = None
+
+
+class CapexResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/capex``."""
+
+    # Newest reporting period end across all companies with data.
+    as_of: str | None = None
+    # Companies matching the filters before pagination (the pager total).
+    total_count: int = 0
+    # Of those, how many actually carry a capex figure.
+    with_data_count: int = 0
+    # Companies considered before filtering — context for "why so few rows".
+    scanned_count: int = 0
+    items: list[CapexItem] = []
 
 
 class CompanyFundamentalsResponse(_CamelModel):
@@ -268,6 +389,16 @@ class CompanyFundamentalsResponse(_CamelModel):
     country: str | None = None
     metrics: FinancialMetrics | None = None
     quarterly_reports: list[QuarterlyReport] = []
+    # Trailing price returns computed from the stored EOD bars.
+    price_returns: PriceReturns | None = None
+    # Trailing-twelve-month revenue / net income — the last four reported
+    # quarters summed. None when fewer than four quarters are stored, or when
+    # any of them is missing the figure (a partial sum would understate it).
+    ttm_revenue: int | None = None
+    ttm_net_income: int | None = None
+    # How much the company invests in itself (capital expenditure). None when
+    # Yahoo has no cash-flow statement for this ticker.
+    capex: CapexSummary | None = None
 
 
 # ── New models: VSA detection settings (Scanner page → engine) ───────────────

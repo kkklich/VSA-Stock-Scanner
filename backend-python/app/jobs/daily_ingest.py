@@ -113,10 +113,15 @@ class IngestService:
         except Exception:
             logger.exception("Failed to sync company metadata to DB; continuing.")
 
-        # Fetch and persist financial fundamentals + quarterly reports.
-        # Only done on full (bootstrap) ingests or once per week (Monday) to
-        # avoid hammering Yahoo Finance every day.
-        run_fundamentals = full or today.weekday() == 0  # Monday = 0
+        # Fetch and persist financial fundamentals + quarterly reports +
+        # cash-flow (capex) data. Only done on full (bootstrap) ingests or once
+        # per week (Monday) to avoid hammering Yahoo Finance every day — these
+        # figures only change when a company publishes a report. The extra
+        # backfill check makes a newly added fundamentals table fill itself on
+        # the next refresh instead of waiting for the next Monday.
+        run_fundamentals = (
+            full or today.weekday() == 0 or await self._fundamentals_missing()
+        )
         if run_fundamentals:
             logger.info("Fetching financial fundamentals for %d companies.", len(self._companies))
             await self._ingest_fundamentals(semaphore)
@@ -127,8 +132,21 @@ class IngestService:
 
         logger.info("Ingest complete. In-memory caches cleared.")
 
+    async def _fundamentals_missing(self) -> bool:
+        """True when no cash-flow data is stored yet (first run after upgrade).
+
+        Cheap: an existence probe ("is there a single row?"), not a read of the
+        whole table. Without it the capex screen would stay empty until the
+        next Monday on an existing installation.
+        """
+        try:
+            return not await self._repo.has_cashflow()
+        except Exception:  # noqa: BLE001 — a probe must never abort the ingest
+            logger.debug("Could not check stored cash-flow data; skipping backfill.")
+            return False
+
     async def _ingest_fundamentals(self, semaphore: asyncio.Semaphore) -> None:
-        """Fetch financial metrics and quarterly reports for all companies."""
+        """Fetch metrics, quarterly reports and cash flow for all companies."""
 
         async def fetch_one(company: GpwCompany) -> None:
             async with semaphore:
@@ -147,6 +165,20 @@ class IngestService:
                 except Exception:
                     logger.debug(
                         "Could not update quarterly reports for %s.", company.ticker
+                    )
+
+                # Capital expenditure (the /capex screen). Older data sources
+                # (StooqClient) have no cash-flow support at all, so the call
+                # is optional rather than assumed.
+                if not hasattr(self._stooq, "get_cashflow_periods"):
+                    return
+                try:
+                    periods = await self._stooq.get_cashflow_periods(company.ticker)
+                    if periods:
+                        await self._repo.upsert_cashflow(company.ticker, periods)
+                except Exception:
+                    logger.debug(
+                        "Could not update cash-flow data for %s.", company.ticker
                     )
 
         await asyncio.gather(*(fetch_one(c) for c in self._companies))

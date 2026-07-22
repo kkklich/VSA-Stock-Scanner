@@ -35,6 +35,13 @@ export interface ApiRankingItem {
   volume: number
   sector: string | null
   aiConfidence: number
+  /** % below the 52-week high (≤ 0; 0 = closed at the high). */
+  distFrom52wHighPct: number | null
+  /** % above the 52-week low (≥ 0). */
+  distFrom52wLowPct: number | null
+  /** The latest session set a new 52-week high / low. */
+  isNew52wHigh: boolean
+  isNew52wLow: boolean
 }
 
 /** Columns the ranking endpoint can sort by (must match the backend whitelist). */
@@ -50,6 +57,8 @@ export type RankingSortKey =
   | 'volume'
   | 'sector'
   | 'aiConfidence'
+  | 'distFrom52wHighPct'
+  | 'distFrom52wLowPct'
 
 export type SortDir = 'asc' | 'desc'
 
@@ -76,6 +85,13 @@ export interface RankingQuery {
   maxPrice?: number
   /** Minimum 20-session median volume, shares. */
   minVolume?: number
+  /** Only stocks trading within this many % of their 52-week high. */
+  maxDistFrom52wHighPct?: number
+  /** Only stocks trading within this many % above their 52-week low. */
+  maxDistFrom52wLowPct?: number
+  /** Only stocks whose latest session set a new 52-week high / low. */
+  new52wHigh?: boolean
+  new52wLow?: boolean
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
   /** URL-encoded VSA settings JSON from the Scanner page. */
@@ -103,6 +119,10 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     minPrice,
     maxPrice,
     minVolume,
+    maxDistFrom52wHighPct,
+    maxDistFrom52wLowPct,
+    new52wHigh,
+    new52wLow,
     tickers,
     settings,
   } = query
@@ -128,6 +148,14 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (minVolume !== undefined && minVolume > 0) {
     params.set('minVolume', String(minVolume))
   }
+  if (maxDistFrom52wHighPct !== undefined) {
+    params.set('maxDistFrom52wHighPct', String(maxDistFrom52wHighPct))
+  }
+  if (maxDistFrom52wLowPct !== undefined) {
+    params.set('maxDistFrom52wLowPct', String(maxDistFrom52wLowPct))
+  }
+  if (new52wHigh) params.set('new52wHigh', 'true')
+  if (new52wLow) params.set('new52wLow', 'true')
   if (tickers) params.set('tickers', tickers.join(','))
   if (settings) params.set('settings', settings)
 
@@ -256,6 +284,99 @@ export async function fetchVolumeSurge(
   if (query.settings) params.set('settings', query.settings)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiVolumeSurgeResponse>(`/api/stocks/volume-surge${qs}`)
+}
+
+// ── GET /api/stocks/capex ─────────────────────────────────────────────────────
+
+/**
+ * How much a company invests in its own business (capital expenditure).
+ *
+ * All money figures are in `currency` and positive = money spent. Any of them
+ * can be null: Yahoo has no usable capex for some companies, and "not
+ * reported" is deliberately not shown as zero. `basis` says which period the
+ * headline `capex` and the ratios describe, so a yearly and a 12-month figure
+ * are never silently compared.
+ */
+export interface ApiCapexSummary {
+  currency: string | null
+  basis: 'ttm' | 'annual' | null
+  /** Headline capex: last four quarters, or the latest full year. */
+  capex: number | null
+  capexTtm: number | null
+  capexAnnual: number | null
+  annualPeriodEnd: string | null
+  capexPrevAnnual: number | null
+  /** Change in yearly capex vs the year before, %. */
+  capexGrowthYoyPct: number | null
+  /** Capex as a share of revenue, % — capital intensity. */
+  capexToRevenuePct: number | null
+  /** Capex as a share of operating cash flow, % — above 100 = not self-funded. */
+  capexToOcfPct: number | null
+  operatingCashFlow: number | null
+}
+
+export interface ApiCapexItem extends ApiCapexSummary {
+  ticker: string
+  name: string
+  sector: string | null
+}
+
+export interface ApiCapexResponse {
+  /** Newest reporting period end across all companies. */
+  asOf: string | null
+  /** Companies matching the filters before pagination (pager total). */
+  totalCount: number
+  /** Of the whole universe, how many have any capex figure at all. */
+  withDataCount: number
+  /** Companies considered before filtering. */
+  scannedCount: number
+  items: ApiCapexItem[]
+}
+
+/** Columns the capex endpoint can sort by (backend whitelist). */
+export type CapexSortKey =
+  | 'ticker'
+  | 'name'
+  | 'sector'
+  | 'capex'
+  | 'capexTtm'
+  | 'capexAnnual'
+  | 'capexGrowthYoyPct'
+  | 'capexToRevenuePct'
+  | 'capexToOcfPct'
+  | 'operatingCashFlow'
+
+export interface CapexQuery {
+  /** Free-text search over ticker + name. */
+  q?: string
+  /** Exact sector name, or 'all'/undefined for no filter. */
+  sector?: string
+  /**
+   * Reporting currency, default 'PLN' — amounts in different currencies are
+   * not comparable. 'all' lifts the filter.
+   */
+  currency?: string
+  /** False keeps companies with no reported capex (blank rows). */
+  withData?: boolean
+  page?: number
+  pageSize?: number
+  /** Sort column (default capex). */
+  sortBy?: CapexSortKey
+  sortDir?: SortDir
+}
+
+export async function fetchCapex(query: CapexQuery = {}): Promise<ApiCapexResponse> {
+  const params = new URLSearchParams()
+  if (query.q) params.set('q', query.q)
+  if (query.sector && query.sector !== 'all') params.set('sector', query.sector)
+  if (query.currency) params.set('currency', query.currency)
+  if (query.withData === false) params.set('withData', 'false')
+  if (query.page) params.set('page', String(query.page))
+  if (query.pageSize) params.set('pageSize', String(query.pageSize))
+  if (query.sortBy) params.set('sortBy', query.sortBy)
+  if (query.sortDir) params.set('sortDir', query.sortDir)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiCapexResponse>(`/api/stocks/capex${qs}`)
 }
 
 // ── POST /api/stocks/refresh + GET /api/stocks/refresh/status ────────────────
@@ -474,6 +595,24 @@ export interface ApiFinancialMetrics {
   totalRevenue: number | null
   netIncome: number | null
   sharesOutstanding: number | null
+  /** Profitability ratios as fractions (0.184 = 18.4%). */
+  returnOnEquity: number | null
+  returnOnAssets: number | null
+}
+
+/**
+ * Trailing price returns, percent. Computed from the stored EOD bars, so a
+ * horizon is null when the stored history doesn't reach back that far.
+ * These ignore dividends — price return, not total return.
+ */
+export interface ApiPriceReturns {
+  ytdPct: number | null
+  y1Pct: number | null
+  y3Pct: number | null
+  y5Pct: number | null
+  /** Change over the whole stored history, and the date it starts from. */
+  maxPct: number | null
+  maxFromDate: string | null
 }
 
 export interface ApiQuarterlyReport {
@@ -495,6 +634,13 @@ export interface ApiFundamentals {
   country: string | null
   metrics: ApiFinancialMetrics | null
   quarterlyReports: ApiQuarterlyReport[]
+  /** Trailing price returns from the stored bars; null if unavailable. */
+  priceReturns: ApiPriceReturns | null
+  /** Last four reported quarters summed; null when fewer than four exist. */
+  ttmRevenue: number | null
+  ttmNetIncome: number | null
+  /** Investment spending; null when Yahoo has no cash-flow statement. */
+  capex: ApiCapexSummary | null
 }
 
 export async function fetchFundamentals(ticker: string): Promise<ApiFundamentals> {

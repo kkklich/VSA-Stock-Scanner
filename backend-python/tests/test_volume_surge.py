@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -16,8 +18,12 @@ from app.dependencies import (
 )
 from app.main import app
 from app.models import GpwCompany, StooqDailyQuote
+from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
-from app.services.volume_surge_service import compute_surge_metrics
+from app.services.volume_surge_service import (
+    compute_surge_metrics,
+    compute_volume_surge,
+)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -515,3 +521,82 @@ class TestGetVolumeSurge:
         assert len(surge["items"]) == 1
         assert len(ranking) == 1
         assert surge["items"][0]["currentRating"] == ranking[0]["currentRating"]
+
+    def test_page_past_the_end_returns_empty_page(self) -> None:
+        # Deep-linking a page beyond the result set (e.g. after the cached
+        # scan shrank) must return an empty page with the true totalCount,
+        # not an error.
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService([_company()])
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_surge_series()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/volume-surge", params={"page": 5, "pageSize": 2}
+            ).json()
+        assert body["items"] == []
+        assert body["totalCount"] == 1
+
+    def test_sort_by_sector_handles_missing_sector(self) -> None:
+        # `sector` is Optional — sorting by it must not compare None with str.
+        # None sorts as an empty string, i.e. first ascending.
+        volumes = [100_000] * 57 + [300_000] * 3
+        series = _series(volumes)
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService(
+                [
+                    _company("bnk", "Bank SA", sector="Banks"),
+                    _company("non", "NoSector SA", sector=None),
+                ]
+            )
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"bnk": series, "non": series}
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/volume-surge",
+                params={"sortBy": "sector", "sortDir": "asc"},
+            )
+        assert resp.status_code == 200
+        assert [i["ticker"] for i in resp.json()["items"]] == ["NON", "BNK"]
+
+
+# ── Failure visibility ────────────────────────────────────────────────────────
+
+
+class _ExplodingRepo:
+    """Repository stub whose every query raises (simulates the DB dying)."""
+
+    async def get_quotes(self, ticker, from_date=None, to_date=None):
+        raise RuntimeError("db down")
+
+
+class TestScanFailureLogging:
+    def test_db_failure_is_logged_not_silent(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # A repo that raises out of every scan task must not crash the scan —
+        # and, crucially, must not degrade it *silently*: an empty result with
+        # no log line would look like a quiet market instead of an outage.
+        async def run() -> object:
+            return await compute_volume_surge(
+                companies=[_company()],
+                stooq=_FakeStooqClient(_surge_series()),
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=_ExplodingRepo(),
+            )
+
+        with caplog.at_level(
+            logging.ERROR, logger="app.services.volume_surge_service"
+        ):
+            resp = asyncio.run(run())
+        assert resp.items == []
+        assert resp.scanned_count == 0
+        assert any(
+            "tst" in record.getMessage() and "db down" in record.getMessage()
+            for record in caplog.records
+        )

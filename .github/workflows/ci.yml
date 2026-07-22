@@ -1,0 +1,87 @@
+# StockPilot — continuous integration.
+#
+# Runs on every push and pull request: lints and tests the Python backend, then
+# type-checks and builds the React frontend. Nothing is deployed here — that is
+# deploy.yml, which waits for this workflow to pass.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend — Ruff + pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend-python/requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt ruff
+
+      - name: Lint (Ruff)
+        # Advisory, not blocking: the repo currently has 14 pre-existing findings
+        # (line length in tests, import order in alembic revisions, UP042/B904).
+        # Findings show up in the job log without turning the whole run red.
+        # Flip this to blocking once they are cleaned up.
+        continue-on-error: true
+        run: ruff check .
+
+      - name: Tests (pytest)
+        # The suite runs without a database — the app degrades gracefully when
+        # STOCKPILOT_DATABASE_URL is unset, and the tests rely on that.
+        run: pytest -q
+
+  frontend:
+    name: Frontend — TypeScript build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Build (tsc + vite)
+        run: npm run build
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catches a broken Dockerfile before it reaches the VPS. Build only —
+      # nothing is pushed to a registry; the server builds its own images.
+      - name: Build API image
+        run: docker build -t stockpilot-api:ci ./backend-python
+
+      - name: Build web image
+        run: docker build -t stockpilot-web:ci ./frontend

@@ -47,6 +47,15 @@
       }
     ]
   },
+  "aat": {
+    "description": "Alta S.A., through its subsidiaries, engages in the real estate activities in Poland. It is involved in the rental of own real estate properties for property management; acquisition, preparation, and sale of land for development, such as urban planning, design activities. The company was formerly known as TUP Spólka Akcyjna and changed its name to Alta S.A. in September 2013. Alta S.A. was incorporated in 2003 and is based in Warsaw, Poland. The company operates as a subsidiary of Hlamata Holdings Limited.",
+    "industry": "Asset Management",
+    "employees": 4,
+    "website": "https://www.altasa.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 26431338
+  },
   "acp": {
     "description": "Asseco Poland S.A. produces and sells software products worldwide. The company offers software and IT solutions for banking, payment, insurance, public administration, healthcare, defense and uniformed services, energy and gas, telecommunications and media, and security sectors. It also provides cloud solutions; and ERP solutions and services, including proprietary and third-party software, and consulting and implementation services for micro, small, and mid-sized companies, as well as large enterprises.",
     "industry": "Software - Application",
@@ -89,6 +98,24 @@
         "netIncome": 136200000
       }
     ]
+  },
+  "act": {
+    "description": "Action S.A., together with its subsidiaries, engages in the wholesale trade of computer accessories in Poland and internationally. The company provides distribution solutions in IT, network installations, ICT, photovoltaics, smart home, storage, CCTV, and emergency power supply. It also operates e-commerce platforms, such as pomoceDlaSeniora.pl, bron.pl, 1.pl, sferis.pl, krakvet.pl, gram.pl, testoria.pl, and tablety.pl. In addition, the company distributes home and office items, such as furniture, lighting, textiles, as well as home and outdoor training equipment; and computer equipment, inks, toners, lighting, power supply equipment, fans and air conditioners, hardware, consoles, computer components, shredders, photo paper, accessories, and cleaning products. Further, it offers its products under the Activejet, Actina, and Actis brands. Action S.A. was founded in 1991 and is headquartered in Piaseczno, Poland.",
+    "industry": "Computer Hardware",
+    "employees": 553,
+    "website": "https://www.action.pl",
+    "country": "Poland",
+    "city": "Piaseczno",
+    "marketCap": 572605952
+  },
+  "adv": {
+    "description": "Adiuvo Investments S.A. is a venture capital firm specializing in incubation, seed, startup, early venture, and growth capital investments. The firm primarily invests in projects in the segment of medical devices, biomedical, life-science, digital health, technologies and nutraceuticals including functional food. It seeks to invest in Poland. It prefers to hold its investments from three up to five years. The firm makes balance sheet investments. Adiuvo Investment S.A. was founded in 2013 and is based in Warsaw, Poland.",
+    "industry": "Medical Devices",
+    "employees": 1,
+    "website": "https://www.adiuvoinvestments.com/pl,",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 5401482
   },
   "ale": {
     "description": "Allegro.eu S.A. operates a commerce platform for consumers in Poland, Czech Republic, Slovakia, Hungary, and internationally. It operates through Allegro, Ceneo, Allegro International, and Other segments. The company engages in operating B2C, C2C, and B2B e-commerce platforms comprising online marketplace; and various services, such as consumer lending and logistics services. It also provides multi-category price comparison services allowing the customer to find prices among the different websites and marketplaces. In addition, it operates eBilet, an event ticket sales site.",
@@ -224,6 +251,24 @@
       }
     ]
   },
+  "ape": {
+    "description": "APS Energia SA designs, produces, and sells uninterruptible power supply systems for power generation, including nuclear, oil and gas, renewable energy sources, medicine, telecommunications, defense, and other industries. worldwide. The company offers inverters, double energy conversion inverters, and bidirectional inverters; static switch; UPS systems; pulse buffer rectifiers and active rectifiers; transistors DC/DC converters EPI; and battery discharge system BRI. It also provides energy storage systems; as well as buffer power supplies, static converters, traction rectifiers, frequency converters, and surveillance systems. In addition, the company offers design, assembly, installation, commissioning, warranty, and post-warranty service of the power supply equipment. APS Energia SA was founded in 1995 and is based in Warsaw, Poland.",
+    "industry": "Specialty Industrial Machinery",
+    "employees": 213,
+    "website": "https://www.apsenergia.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 149383136
+  },
+  "apn": {
+    "description": "Aplisens S.A. supplies industrial control and measurement equipment in Poland, European Union, CIS countries, the United States, Asia, and internationally. The company offers pressure, differential pressure, and level transducers; depth and level probes; electromagnetic flowmeters; measuring orifices; temperature sensors and transducers; valves and mounting accessories; meters, controllers, and displays; power supplies, separators, and signal transducers; fuel level probes for trucks; positioners; and electric actuators. It also provides consulting services related to the applications of its manufactured equipment; and warranty and post-warranty services. Its products are primarily focused on electronic pressure and differential pressure measurement technology. Aplisens S.A. was founded in 1992 and is headquartered in Warsaw, Poland.",
+    "industry": "Scientific & Technical Instruments",
+    "employees": 460,
+    "website": "https://www.aplisens.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 218804960
+  },
   "apr": {
     "description": "Auto Partner SA imports and distributes parts for passenger cars, delivery vans, and motorcycles in Poland. The company's products portfolio consists of suspension and steering systems, brake systems, motorbike assortments, workshop equipment, shock absorbers and springs, drive systems, filters, timing gears, hydraulics, metal and rubber parts, pneumatic tools, health and safety products, turbochargers, drivetrains, seals, workshop equipment, electric systems, cooling systems, oils and car chemicals, wipers, power window regulators, exhaust systems, body and lighting products, batteries, tires",
     "industry": "Auto Parts",
@@ -314,6 +359,15 @@
         "netIncome": -32220000
       }
     ]
+  },
+  "art": {
+    "description": "Artifex Mundi S.A. manufactures and publishes computer games in the United States, Great Britain, Germany, Japan, France, and internationally. It operates through Free-to-Play Games and Hidden Object Puzzle Adventure (HOPA) Games segments. The company also develops mobile games. Its games are available on PCs, mobile devices, and game consoles. Artifex Mundi S.A. was founded in 2012 and is headquartered in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 125,
+    "website": "https://www.artifexmundi.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 252544752
   },
   "asb": {
     "description": "ASBISc Enterprises Plc, together with its subsidiaries, operates as a trader and distributor of computer hardware and software in the Former Soviet Union, Central Eastern Europe, Western Europe, the Middle east, Africa, Cyprus, and internationally. The company offers IT components, including servers, storage systems, desktop PCs, laptops, and networking, as well as data center infrastructure, software, and cybersecurity solutions; robotic solutions; business solutions; and consumer distribution, including PC peripherals and gaming, tv and home appliances, premium audio-video products, printing",
@@ -406,6 +460,14 @@
       }
     ]
   },
+  "ats": {
+    "description": "Atlantis SE provides cash loans to business entities in Poland. The company was incorporated in 2018 and is headquartered in Tallinn, Estonia.",
+    "industry": "Credit Services",
+    "website": "https://www.atlantis.pl",
+    "country": "Estonia",
+    "city": "Tallinn",
+    "marketCap": 8820000
+  },
   "att": {
     "description": "Grupa Azoty S.A. manufactures and sells fertilizers, plastics, and other chemicals in Poland, Germany, South America, Asia, other European Union countries, and internationally. The company operates through The Fertilizers and Pigments segments. It provides compound fertilizers, nitrogen fertilizers with sulfur content, nitrogen fertilizers, ammonia, technical grade; and ammonia and urea solutions. The company also offers plastic and plastic products, including Tarnamid PA6 natural engineering plastics; Alphalon, a trademark of high quality polyamide 6; and Polyamide tubes.",
     "industry": "Agricultural Inputs",
@@ -453,6 +515,39 @@
         "netIncome": null
       }
     ]
+  },
+  "bbd": {
+    "description": "BBI Development S.A. engages in the real estate business in Poland. It engages in the development of projects, apartments, offices, and residential property. The company is based in Warsaw, Poland.",
+    "industry": "Real Estate - Development",
+    "website": "https://bbidevelopment.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 53941464
+  },
+  "bbt": {
+    "description": "BoomBit S.A. develops and publishes computer games in North America, Europe, Asia, Africa, South America, Australia, and Oceania. It offers services related to blockchain-based projects, as well as operates mobile esport platform. The company was formerly known as AIDEM MEDIA SPÓLKA Z OGRANICZONA ODPOWIEDZIALNOSCIA. BoomBit S.A. was founded in 1997 and is based in Gdansk, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 236,
+    "website": "https://boombit.com",
+    "country": "Poland",
+    "city": "Gdansk",
+    "marketCap": 78660608
+  },
+  "bcm": {
+    "description": "Betacom S.A. offers cloud services and IT solutions to enterprises in Poland. The company was founded in 1995 and is headquartered in Warsaw, Poland.",
+    "industry": "Information Technology Services",
+    "website": "https://betacom.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 20361600
+  },
+  "bcs": {
+    "description": "Big Cheese Studio Spolka Akcyjna engages in the production and publishing of games worldwide. It sells its products through online sales platforms, such as steam, playstation network, microsoft store, and nintendo e-shop. The company was founded in 2017 and is headquartered in Lódz, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "website": "https://bigcheesestudio.com",
+    "country": "Poland",
+    "city": "Lódz",
+    "marketCap": 18194000
   },
   "bdx": {
     "description": "Budimex SA, together with its subsidiaries, operates as a construction company in Poland, Germany, Slovakia, Czechia, Latvia, rest of the European Union, and internationally. It operates through Construction Business and Service Activities segments. The company carries out road, bridge, and hydraulic engineering construction projects; general contracting of public buildings, as well as commercial, industrial, military, residential, and sports facilities; railroad projects with infrastructure facilities, such as platforms, stations, and overpasses, including railroad lines; and railroad constru",
@@ -544,6 +639,32 @@
         "netIncome": null
       }
     ]
+  },
+  "bhw": {
+    "description": "Bank Handlowy w Warszawie S.A., together with its subsidiaries, provides a range of banking services for individual and corporate clients in Poland and internationally. The company operates in two segments, the Institutional Bank and Consumer Bank. The Institutional Bank segment offers traditional banking services, including credit and deposit services; cash management, trade financing, leasing, brokerage, and custody services in securities; treasury products on financial and commodity markets; investment banking services on the local and international capital markets, such as advisory services and underwriting financing via public and non-public issues of financial instruments; and proprietary transactions in the equity, debt, and derivative instruments markets to business entities, local government units, and the public sector. The Consumer Bank segment provides bank accounts, credit, deposits, cash loans, mortgage loans, credit cards, and asset management services, as well as acts as an agent in the sale of investment and insurance products to individuals, micro-enterprises, and individual entrepreneurs. The company was founded in 1870 and is headquartered in Warsaw, Poland. Bank Handlowy w Warszawie S.A. is a subsidiary of Citibank Europe plc.",
+    "industry": "Banks - Regional",
+    "employees": 3037,
+    "website": "https://www.citibank.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 16168709120
+  },
+  "bio": {
+    "description": "BIOTON S.A., a biotechnology company, develops, manufactures, markets, and sells pharmaceutical ingredient and medicinal products in Poland and internationally. The company offers recombinant human insulin; and oral diabetic drugs.BIOTON S.A. was founded in 1989 and is based in Ozarów Mazowiecki, Poland.",
+    "industry": "Biotechnology",
+    "website": "https://www.bioton.pl",
+    "country": "Poland",
+    "city": "Ozarów Mazowiecki",
+    "marketCap": 331006496
+  },
+  "bmx": {
+    "description": "BioMaxima S.A. produces and distributes microbiological media, reagents, and in vitro diagnostic equipment in Poland. It offers microbiology products, including ready to use media, such as plates, bottles, bags, and media in tubes; dehydrated media; agars and peptones; and supplements. The company also provides molecular biology and cell culture products which include real time PCR, nucleic acid isolation, NA and PCR electrophoresis, protein electrophoresis, enzymes, antibiotics, agaroses and molecular biology media, media and buffers for in vitro cultures, phenotypic micromatrices, plastics and small equipment, basic substrate components, and form. In addition, it offers laboratory diagnostics solutions for various areas of clinical chemistry, haematology, coagulology, immunochemistry, POCT, rapid tests, and blood collection systems; and disposable materials comprising microbiology, dispensing equipment, tubes, plugs, tripods, capillaries, equipment, aspiration-vacuum system, containers, tank for analysers, urine analysis, microscope slides, reagent tubes, and autoclave equipment. BioMaxima S.A. was founded in 1997 and is headquartered in Lublin, Poland.",
+    "industry": "Diagnostics & Research",
+    "employees": 143,
+    "website": "https://www.biomaxima.com",
+    "country": "Poland",
+    "city": "Lublin",
+    "marketCap": 42602080
   },
   "bnp": {
     "description": "BNP Paribas Bank Polska S.A. provides a range of banking products and services to individual and institutional clients in Poland. It operates through Retail and Business Banking; Small and Medium-Sized Enterprises; Corporate Banking; Corporate and Institutional Banking; and Other Operations segments. The company offers brokerage services; wealth management; cash, car, and installment loans; debit and credit cards; cash management; global trade finance services; import and export services; documentary collection; overdrafts; investment loans; and loans from agribusiness financing products.",
@@ -679,6 +800,15 @@
       }
     ]
   },
+  "cav": {
+    "description": "Cavatina Holding Spólka Akcyjna engages in the development of office spaces in Poland. The company was founded in 2017 and is headquartered in Kraków, Poland. Cavatina Holding Spólka Akcyjna operates as a subsidiary of Cavatina Group Spolka Akcyjna.",
+    "industry": "Real Estate - Development",
+    "employees": 81,
+    "website": "https://www.cavatina.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 327995840
+  },
   "cdr": {
     "description": "CD Projekt S.A., together its subsidiaries, engages in the production, publishing, and digital distribution of video games and related products in Poland. The company's flagship products include The Witcher series of games and Cyberpunk 2077. It also exports its products to Europe, North America, South America, Asia, Australia, and Africa. The company was incorporated in 2001 and is headquartered in Warsaw, Poland.",
     "industry": "Electronic Gaming & Multimedia",
@@ -719,6 +849,124 @@
         "periodEnd": "2024-12-31",
         "revenue": 332655000,
         "netIncome": 221724000
+      }
+    ]
+  },
+  "cez": {
+    "description": "CEZ, a. s. engages in the generation, distribution, trade, and sale of electricity, heat, thermal energy and other commodities in Central Europe. It operates through four segments: Generation, Distribution, Sales, and Mining. The company operates hydroelectric, wind, solar, nuclear, coal, photovoltaic, and biomass power plants, and combined cycle gas turbine power plant and combined heat and power units. It is also involved in the trade and sale of natural gas; mining of coal; quarrying and processing of construction aggregates and limestones; commodity trading business; and provision of energ…",
+    "industry": "Utilities - Regulated Electric",
+    "employees": 33700,
+    "website": "https://www.cez.cz",
+    "country": "Czech Republic",
+    "marketCap": 121855926272,
+    "peRatio": 23.945148,
+    "forwardPe": 4.189738,
+    "eps": 9.48,
+    "dividendYield": 3.36,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 536810247,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 84295000000,
+        "net_income": 13498000000,
+        "operating_income": 21886000000,
+        "eps": 25.1
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 91798000000,
+        "net_income": 5945000000,
+        "operating_income": 21164000000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 72253000000,
+        "net_income": 5513000000,
+        "operating_income": 15617000000,
+        "eps": 10.3
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 73480000000,
+        "net_income": 3992000000,
+        "operating_income": 15829000000,
+        "eps": 7.4
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 92708000000,
+        "net_income": 12703000000,
+        "operating_income": 26489000000,
+        "eps": 23.7
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "cfi": {
+    "description": "CFI Holding S.A. engages in construction activities in Poland. The company operates in Hotels and Restaurants, Real Estate, and Chemicals segments. It engages in hotel and restaurant and catering activities; rental of real estate and apartments in the TBS system; and recreation, sports, and medical services sectors activities. The company is also involved in commercial activities; catering activities and operational support for hotel activities; and rental of construction machinery. In addition, it sells artificial fertilizers, plant protection products, dyes, and other chemicals. CFI Holding …",
+    "industry": "Conglomerates",
+    "employees": null,
+    "website": "https://www.cfiholding.pl",
+    "country": "Poland",
+    "marketCap": 379620736,
+    "peRatio": 13.8,
+    "forwardPe": null,
+    "eps": 0.01,
+    "dividendYield": null,
+    "totalRevenue": 259136000,
+    "netIncome": 21325000,
+    "sharesOutstanding": 2750874900,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 62151000,
+        "net_income": 2674000,
+        "operating_income": 6895000,
+        "eps": 0.001
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 73861000,
+        "net_income": -9624000,
+        "operating_income": -5718000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 59988000,
+        "net_income": 6239000,
+        "operating_income": 19286000,
+        "eps": 0.002268
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 67545000,
+        "net_income": 16988000,
+        "operating_income": 28848000,
+        "eps": 0.006175
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 57743000,
+        "net_income": 2096000,
+        "operating_income": 8472000,
+        "eps": 0.001
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
       }
     ]
   },
@@ -770,6 +1018,24 @@
       }
     ]
   },
+  "clc": {
+    "description": "Columbus Energy S.A. engages in the provision of solutions in the field of photovoltaics and modern energy products for households and businesses in Poland, Czech Republic, Slovakia, and Ukraine. It also offers heat pumps, energy storage, electric car charging stations, as well as photovoltaic installations and alternative net-billing. The company was formerly known as Columbus Capital S.A. and changed its name to Columbus Energy S.A. in March 2016. Columbus Energy S.A. was founded in 2010 and is headquartered in Kraków, Poland.",
+    "industry": "Solar",
+    "employees": 296,
+    "website": "https://www.columbusenergy.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 168151568
+  },
+  "cle": {
+    "description": "Coal Energy S.A., through its subsidiaries, engages in the coal mining, coal beneficiation, and waste dumps processing businesses in Ukraine. It operates through the Mineral Resource and Processing Industry, Service Activity, and Other Activity segments. The company is also involved in the mining and sale of thermal coal grades, coking coals, and dual-purpose cokes. Coal Energy S.A. was founded in 1995 and is based in Bertrange, Luxembourg. Coal Energy S.A. operates as a subsidiary of Lycaste Holdings Limited.",
+    "industry": "Thermal Coal",
+    "employees": 96,
+    "website": "https://www.coalenergy.com.ua",
+    "country": "Luxembourg",
+    "city": "Bertrange",
+    "marketCap": 90292312
+  },
   "cog": {
     "description": "Cognor Holding S.A. engages in the production and distribution of steel products in Poland, the Czech Republic, Germany, and internationally. The company offers flat bars, round rolled peeled bars, slabs, round and square bars, reinforcing bars, billets with rounded edges for forgings, sections, T-profiles, equal and unequal side angles, metal sheets, conventional polygon ingots, carbon and medium-alloy steels, and high-alloy and special steels, as well as products from non-ferrous metals and non-ferrous metal scrap; C-section products; design of steel composition; and bronze, brass, and coppe",
     "industry": "Steel",
@@ -817,6 +1083,24 @@
         "netIncome": null
       }
     ]
+  },
+  "cpd": {
+    "description": "CPD S.A. together with its subsidiaries, develops and sells residential, office, and warehouse properties in Poland and Hungary. The company was formerly known as Celtic Property Developments S.A. and changed its name to CPD S.A. in September 2014. CPD S.A. was founded in 1999 and is based in Warsaw, Poland.",
+    "industry": "Real Estate - Diversified",
+    "employees": 1,
+    "website": "https://www.cpdsa.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 19161792
+  },
+  "cpr": {
+    "description": "Compremum S.A. engages in the manufacture and sale of windows and doors in Europe. The company also provides construction services including design of passive networks, execution of commissioned investment projects, construction of road infrastructure, construction of heating systems, and installations of optic infrastructure. In addition, it provides repair and modernization of passenger and freight cars, electric locomotives, and liquid fuel tanks; technical consultancy and maintenance services for energy facilities, as well as design, preparation, and implementation of installation infrastructure for the energy industry; and implementation of development projects. The company was formerly known as Pozbud T&R Spolka Akcyjna. Compremum S.A. was founded in 1973 and is based in Poznan, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 60,
+    "website": "https://compremum.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 54476676
   },
   "cps": {
     "description": "Cyfrowy Polsat S.A. provides digital satellite platform and terrestrial television (TV), and telecommunication services primarily in Poland. It operates through B2C and B2B Services, Media, Real Estate, and Green Energy segments. The company offers various pay TV; radio, TV, and media; bundling of services; paid premium content channels, OTT platform Polsat Box Go, Disney+ access, Max and FilmBox platforms, online video, multiroom, catch-up TV, and nPVR services; purchase add-on packages; mobile voice services; and various tariff plans; unlimited calls, SMS, and MMS, as well as tariff-based da",
@@ -914,6 +1198,87 @@
       }
     ]
   },
+  "crm": {
+    "description": "PZ Cormay S.A., a diagnostic company, provides IVD solutions in Poland and internationally. The company offers analyzers, reagents, cleaning liquids, calibrators, control materials, patterns, and agglutination tests. It also provides analyzers, test strips, inspections, and calibration strips. In addition, the company offers parasitology, such as Paragreen Mini-System, a specialized device for concentrating and preserving stool samples, as well as veterinary medicines. Further, it provides immunochemistry, including SNIBE, MINDRAY, and DIESSE, as well as molecular biology, such as RT-PCR systems, systems for isolating genetic material, workstations, RT-PCR reagent kits, and nucleic acid isolation reagent kits. Additionally, the company offers sampling comprising blood and urine samples and supporting materials, as well as Sentimag systems, Magtrace markers, Magseed Markers, and surgical instruments, as well as HPLC systems, point of care diagnostics, and integrated systems. The company was founded in 1985 and is based in Lomianki, Poland.",
+    "industry": "Scientific & Technical Instruments",
+    "employees": 220,
+    "website": "https://cormay.com",
+    "country": "Poland",
+    "city": "Lomianki",
+    "marketCap": 46986396
+  },
+  "csr": {
+    "description": "Caspar Asset Management S.A. provides asset management services to individual and institutional clients in Poland. The company also offers closed-end investment fund. In addition, it provides open-end investment funds; Caspar treasury bonds, Caspar bonds universal, Caspar market compass, Caspar shares global megatrends, and Caspar shares of world leaders; and individual retirement and pension security accounts. Caspar Asset Management S.A. was founded in 2009 and is headquartered in Poznan, Poland.",
+    "industry": "Asset Management",
+    "employees": 72,
+    "website": "https://www.caspar.com.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 59171192
+  },
+  "ctx": {
+    "description": "Captor Therapeutics Spolka Akcyjna, a biopharmaceutical company, develops therapeutic molecules for treating oncological and autoimmune diseases in Poland. The company offers targeted protein degradation technology that utilizes the Optigrade drug discovery platform to overcome the limitations of inhibitors and antibody drugs by destroying disease-causing proteins that are resistant to available therapeutics. It develops viadrudomide, which is in a Phase 1 clinical trial for hepatocellular carcinoma (HCC), lung cancer, and rare cancers; vratitoclax, a bifunctional MCL-1 protein degrader that is in the CTA-enabling stage for liquid and solid tumors; CT-02B, a NEK7 degrader that is in preclinical trials for neuroinflammation indications in Parkinson's disease, amyotrophic lateral sclerosis (ALS), and multiple sclerosis (MS); CT-02S, a NEK7 degrader that is in preclinical trials for systemic autoimmunity indications in inflammatory bowel diseases (IBD), gout, and dermatological diseases; and CT-05, a PKCtheta degrader that is in preclinical trials for autoimmunity, transplantation, and metabolism indications. In addition, the company's candidates in the discovery phase include an undisclosed project for oncology, autoimmunity, CNS, and rare indications; and novel E3 ligases for oncology and autoimmunity indications. Captor Therapeutics Spolka Akcyjna was incorporated in 2015 and is headquartered in Wroclaw, Poland.",
+    "industry": "Biotechnology",
+    "employees": 82,
+    "website": "https://captortherapeutics.com",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 477538144
+  },
+  "dad": {
+    "description": "Dadelo S.A. engages in the online sale of bicycles, accessories, and bicycle parts primarily in Poland. The company provides its products through Dadelo.pl and Centrumrowerowe.pl online stores. The company was founded in 2005 and is based in Bydgoszcz, Poland. Dadelo S.A. operates as a subsidiary of Oponeo.pl S.A.",
+    "industry": "Specialty Retail",
+    "employees": 422,
+    "website": "https://www.dadelo.pl",
+    "country": "Poland",
+    "city": "Bydgoszcz",
+    "marketCap": 947890176
+  },
+  "dat": {
+    "description": "DataWalk S.A. provides an enterprise IT class software platform in Poland, North and South America, and internationally. It operates through DataWalk SA and DataWalk Inc. segments. It provides anti-money laundering, fraud detection, law enforcement intelligence, and coronavirus analysis software products. The company serves the banking, defense, government, insurance, intelligence agencies, and law enforcement agencies. DataWalk S.A. was incorporated in 2011 and is headquartered in Wroclaw, Poland.",
+    "industry": "Software - Infrastructure",
+    "employees": 24,
+    "website": "https://datawalk.com/pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 817440384
+  },
+  "dbe": {
+    "description": "DB Energy S.A. operates as an energy saving company. It provides company and energy efficiency audit services in the medium and large industry. The company also offers lighting, cogeneration energy, photovoltaics, drives, energy sources, and compressed air products. The company was founded in 2009 and is headquartered in Wroclaw, Poland.",
+    "industry": "Specialty Industrial Machinery",
+    "employees": 21,
+    "website": "https://www.dbenergy.pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 32331078
+  },
+  "dcr": {
+    "description": "Decora S.A. engages in the production, distribution, sale, and export of flooring products and accessories in Poland. It operates through Flooring, Walling, and Other segments. Th company offers SPC flooring, floor underlays, and skirting boards; skirting boards and accessories, ceiling moldings, floor profiles, and wall decoration, as well as OEM services. The company offers vinyl flooring, underlays, skirting boards, and floor profiles. The company markets its products under the Arbiton, Afirmax, Modee, Vidella, and Ewifoam brands. Decora S.A. was founded in 1994 and is based in Sroda Wielkopolska, Poland.",
+    "industry": "Furnishings, Fixtures & Appliances",
+    "employees": 647,
+    "website": "https://www.decora.pl",
+    "country": "Poland",
+    "city": "Sroda Wielkopolska",
+    "marketCap": 756370304
+  },
+  "dek": {
+    "description": "Dekpol S.A. primary engages in the general contracting and development business in Poland, European Union, and internationally. It operates through General Contracting; Real Estate Development Activity; Production of Accessories for Construction Machines; and Other segments. The company constructs industrial plants, public utility, and sports and recreational facilities; environmental protection facilities; sanitary, road, and hydrotechnical works. It also produces buckets and integrated construction equipment, as well as engages in property management business that offers houses, apartments, and commercial units. The company was founded in 1993 and is headquartered in Zblewo, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 1154,
+    "website": "https://dekpol.pl",
+    "country": "Poland",
+    "city": "Zblewo",
+    "marketCap": 577015872
+  },
+  "dig": {
+    "description": "Digital Network SA, together with its subsidiaries, engages in media and advertising business in Poland and internationally. The company provides digital outdoor advertising services; and consulting services. It also provides digital content created by naEkranie.pl website. In addition, the company engages in the distribution, support, and marketing of thematic TV channels, as well as marketing and promotional activities for customers. Digital Network SA was formerly known as 4fun Media S.A. and changed its name to Digital Network SA in April 2022. The company was incorporated in 2005 and is based in Warsaw, Poland. Digital Network SA operates as a subsidiary of Epicom Ltd.",
+    "industry": "Broadcasting",
+    "employees": 44,
+    "website": "https://digitalnetwork.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1213880576
+  },
   "dnp": {
     "description": "Dino Polska S.A., together with its subsidiaries, operates a network of medium-sized grocery supermarkets under the Dino brand in Poland. The company stores offer fresh food products, such as meat, poultry, cold cuts, fruits and vegetables, dairy products, and bread; other groceries, including children's food, breakfast products, ready to eat meals, beverages, candies, snacks, frozen goods, processed goods, oils, grain and bulk products, condiments, and alcohol and cigarettes; and non-grocery products comprising flowers, cleaning agents, sanitary articles, pet food, seasonal products, and smal",
     "industry": "Grocery Stores",
@@ -1005,6 +1370,15 @@
       }
     ]
   },
+  "dtr": {
+    "description": "Digitree Group S.A. provides advertising services in Poland. The company operates through Agency and Technological segments. The company offers marketing services, such as search ads, social media ads, SEO, campaign management, lead campaigns, e-commerce implementations, and other agency services for medium and large companies. It also engages in development and implementation of solutions in marketing technologies, including automation, data analytics, programmatic advertising, AI, and e-commerce, such as E-mailing system and SMS. The company was formerly known as SARE S.A. Digitree Group S.A. was founded in 2005 and is headquartered in Rybnik, Poland.",
+    "industry": "Advertising Agencies",
+    "employees": 126,
+    "website": "https://www.digitree.pl",
+    "country": "Poland",
+    "city": "Rybnik",
+    "marketCap": 32499772
+  },
   "eat": {
     "description": "AmRest Holdings SE, together with its subsidiaries, operates and manages quick service, fast casual, coffee, and casual dining restaurants in Central and Eastern Europe, Western Europe, China, and internationally. The company operates Kentucky Fried Chicken, Pizza Hut, Burger King, and Starbucks restaurants based on franchise agreements. It also operates its own restaurants under the La Tagliatella brand name, as well as Blue Frog, Sushi Shop, and Bacoa brand names.",
     "industry": "Restaurants",
@@ -1050,6 +1424,65 @@
         "periodEnd": "2024-12-31",
         "revenue": null,
         "netIncome": null
+      }
+    ]
+  },
+  "ebp": {
+    "description": "Erste Bank Polska S.A. provides various banking products and services for individuals, small or medium-sized enterprises, corporate clients, and public sector institutions. The company offers personal account, savings accounts and term deposits, currencies, internet and mobile banking, and contactless payments, and debit and credit solutions. It also provides consumer loans and home mortgages; mutual funds, including pension schemes and various investment programmes; and tourist/travel, motor, and home insurance products, as well as bancassurance products. In addition, the company offers forei…",
+    "industry": "Banks - Regional",
+    "employees": 10144,
+    "website": "https://www.erste.pl",
+    "country": "Poland",
+    "marketCap": 65830354944,
+    "peRatio": 11.331574,
+    "forwardPe": 9.983357,
+    "eps": 56.85,
+    "dividendYield": 7.75,
+    "totalRevenue": 15449759744,
+    "netIncome": 5632520192,
+    "sharesOutstanding": 102189314,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 3991755000,
+        "net_income": 1027720000,
+        "operating_income": null,
+        "eps": 10.06
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 4013591000,
+        "net_income": 1838393000,
+        "operating_income": null,
+        "eps": 17.99
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 4051292000,
+        "net_income": 1017969000,
+        "operating_income": null,
+        "eps": 10.34
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 3949594000,
+        "net_income": 1733624000,
+        "operating_income": null,
+        "eps": 16.96
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 3957599000,
+        "net_income": 913395000,
+        "operating_income": null,
+        "eps": 8.94
       }
     ]
   },
@@ -1149,6 +1582,15 @@
       }
     ]
   },
+  "erb": {
+    "description": "Erbud S.A., together with its subsidiaries, engages in the construction business in Poland and internationally. It constructs hotels, office buildings, schools, housing, shopping centers, hospitals, apartments, public utility facilities, and industrial facilities. The company engages in designing and construction of renewable energy, including solar and wind farm; and offers operation and maintenance services. In addition, it offers road engineering and renewable energy sources, engineering services, and support services; management services; modular timber construction; design services; and maintenance services in industrial construction. Additionally, the company engages in the development contracting activities in the renewable energy source business. The company was founded in 1990 and is based in Warsaw, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 2685,
+    "website": "https://www.erbud.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 274982720
+  },
   "erg": {
     "description": "ERG Spólka Akcyjna manufactures and sells plastic products and polyethylene films products in Poland. It operates through three segments: Plastic Products, Commercial Activities, and Other. It offers bags and hoods, liner and separator sheets, shrink films, box and carton liners, films for frozen products, box and cardboard films, films for FFS packaging machines, perforated film for cooking, and paperlike films; films for printing and lamination; lamination film with PR foam, film for underfloor heating, film for torch-on felt, film for mineral wool, and big bag liners; pellet and eco-pea coa",
     "industry": "Auto Parts",
@@ -1191,6 +1633,15 @@
         "netIncome": -572000
       }
     ]
+  },
+  "est": {
+    "description": "ENEFI Vagyonkezelo Nyrt. engages in the production and sale of thermal energy in Hungary, Cyprus, and Romania. The company offers heat supply with heating modernization. It also engages in the operation of ski slopes and ski lifts; sells ski passes; ski equipment rental; asset management activities; and provision of ski lessons and catering services. In addition, the company trades capital market investment instruments. It serves municipalities and municipal institutions, state institutions, churches, condominiums and private businesses. The company was formerly known as ENEFI Energiahatékonysági Nyrt. ENEFI Vagyonkezelo Nyrt. was founded in 2000 and is based in Budapest, Hungary.",
+    "industry": "Utilities - Renewable",
+    "employees": 23,
+    "website": "https://enefi.hu",
+    "country": "Hungary",
+    "city": "Budapest",
+    "marketCap": 12693943
   },
   "eur": {
     "description": "Eurocash S.A. engages in the wholesale distribution of food and other fast moving consumer goods (FMCG) in Poland. It operates through Wholesale, Retail, Projects, and Other segments. The company's products include basic food, soft and alcoholic drinks, tobacco products, phone cards, pre-paid top-ups; and non-food items, such as cosmetics, household chemicals, OTC medicines, and other. It distributes its products to traditional grocery market, retail stores, convenience stores, gas stations, restaurants, and hotel and café chains.",
@@ -1235,6 +1686,41 @@
       }
     ]
   },
+  "fon": {
+    "description": "FON SE provides financial services in Estonia and Poland. The company grants loans for retail customers and small businesses. It is also involved in the capital investment activities. FON SE is based in Tallinn, Estonia.",
+    "industry": "Credit Services",
+    "website": "https://www.fon-sa.pl",
+    "country": "Estonia",
+    "city": "Tallinn",
+    "marketCap": 11784500
+  },
+  "gki": {
+    "description": "Grupa Kapitalowa IMMOBILE S.A. operates in industry, construction, automation and power engineering, hospitality, and development industries in Poland and internationally. The company manufactures and distributes handling systems; engages in the business of automatic car parks; offers crushing and grinding machines under the MAKRUM brand, as well as warehouse equipment, such as forklifts and warehouse racks; and sells aluminum facades, aluminum joinery, lift and slide doors, and fire protection products. It also constructs housing estates; operates hotels; is involved in the business of industrial construction, modern offices, commercial facilities, and development investment; carries out general investment implementation (GRI); and offers IT solutions, as well as equipment used in I and C, and related systems. In addition, the company provides professional advisory services; engineering services in the field of industrial automation, control and measurement equipment, computer science, telemetry, telecommunications, electricity, gas, cogeneration systems, water and sewage networks, air conditioning, regulation, electronics, and metrology; installation, ventilation, and heating services; and low, medium, and high-voltage power generation services to customers in the construction, industrial, and energy sectors. The company was formerly known as MAKRUM S.A. and changed its name to Grupa Kapitalowa IMMOBILE S.A. in 2014. Grupa Kapitalowa IMMOBILE S.A. was founded in 1868 and is based in Bydgoszcz, Poland.",
+    "industry": "Asset Management",
+    "employees": 1028,
+    "website": "https://www.immobile.com.pl",
+    "country": "Poland",
+    "city": "Bydgoszcz",
+    "marketCap": 365001152
+  },
+  "gob": {
+    "description": "Gobarto S.A. engages in breeding, purchasing, slaughtering, cutting, and packaging of pork in Poland and internationally. The company operates a cattle breeding farm and pork farms. It is also involved in distribution of red meat, poultry, and meat products, as well as plant production. It exports its products. The company was formerly known as Polski Koncern Miesny DUDA S.A. and changed its name to Gobarto S.A. in June 2016. Gobarto S.A. was founded in 1990 and is based in Warsaw, Poland. Gobarto S.A. is a subsidiary of Cedrob S.A.",
+    "industry": "Farm Products",
+    "employees": 2034,
+    "website": "https://gobarto.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 636625216
+  },
+  "gpp": {
+    "description": "Grupa Pracuj S.A. operates HR technology platform in Poland, Ukraine, and Germany. The company operates Pracuj.pl, a digital recruitment platform; Robota.ua, an online recruitment solution; the:protocol, a recruitment platform mainly for the IT sector; eRecruiter, a managing recruitment processes platform; and worksmile, a platform for organizational culture engagement. It offers softgarden, a SaaS system that provides advanced multiposting technology that enables automated job postings across multiple recruitment platforms; and absence.io for vacation, absence, time tracking, and personal files management services. Grupa Pracuj S.A. was founded in 2000 and is headquartered in Warsaw, Poland. Grupa Pracuj S.A. is a subsidiary of Frascati Investments Sp. Z O.O.",
+    "industry": "Staffing & Employment Services",
+    "employees": 1037,
+    "website": "https://grupapracuj.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 3210655744
+  },
   "gpw": {
     "description": "Gielda Papierów Wartosciowych w Warszawie S.A., together with its subsidiaries, operates a stock exchange in Poland. It operates through Financial, Commodity, and Other segments. The company trades in equities; equity-related financial instruments; other cash markets instruments, such as structured products, investment certificates, and exchange traded fund units; derivatives; corporate, municipal, co-operative, treasury, and mortgage bonds; debt instruments; and agricultural commodities, as well as provides listing, trading, clearing services for shares and bonds, and information services.",
     "industry": "Financial Data & Stock Exchanges",
@@ -1277,6 +1763,74 @@
         "netIncome": 50502000
       }
     ]
+  },
+  "gtc": {
+    "description": "Globe Trade Centre S.A., a real estate developer and investor company, engages in the development, management, and rental of office, retail, and residential spaces. It operates in Poland, Hungary, Germany, Bucharest, Belgrade, Zagreb, Sofia, and internationally. The company was founded in 1994 and is headquartered in Warsaw, Poland. Globe Trade Centre S.A. is a subsidiary of GTC Dutch Holdings B.V.",
+    "industry": "Real Estate Services",
+    "employees": 246,
+    "website": "https://www.gtcgroup.com",
+    "country": "Poland",
+    "marketCap": 1315044224,
+    "peRatio": null,
+    "forwardPe": 4.2407403,
+    "eps": -1.2,
+    "dividendYield": null,
+    "totalRevenue": 205600000,
+    "netIncome": -161500000,
+    "sharesOutstanding": 574255122,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 53300000,
+        "net_income": -5500000,
+        "operating_income": 31900000,
+        "eps": -0.01
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 50500000,
+        "net_income": -125200000,
+        "operating_income": 1800000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 50500000,
+        "net_income": -28900000,
+        "operating_income": 22500000,
+        "eps": -0.05
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 51300000,
+        "net_income": -1900000,
+        "operating_income": 26900000,
+        "eps": 0.0
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 49800000,
+        "net_income": 1000000,
+        "operating_income": 26200000,
+        "eps": 0.0
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "hrp": {
+    "description": "Harper Hygienics S.A. manufactures and sells hygienic and personal care products in Poland, Italy, Ukraine, the Netherlands, Israel, Austria, Central and Eastern Europe Countries, Western European countries, and internationally. The company offers cosmetic pads, makeup removal wipes, intimate hygiene wipes, sanitary pads, and other products under the Cleanic brand name; hygiene and cosmetic products for newborns, including hygiene pads, cosmetic buds, dry and wet wipes, and underpads under the Kindii brand name; household cleaning products under the Presto brand; and household cleaning wipes comprising kitchen, bathroom, multi-surface wipes, and wipes for wooden furniture under re Oh my Home! brand name. It also provides pet care products under the Petino brand; and Kitchen, bathroom, furniture, glass and mirror, and universal cleaning wipes under the Auchan, Carrefour, and Clair brand names. The company was founded in 1990 and is headquartered in Warsaw, Poland. Harper Hygienics S.A. Is a subsidiary of iCotton SIA.",
+    "industry": "Household & Personal Products",
+    "employees": 362,
+    "website": "https://www.harperhygienics.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 31198300
   },
   "hub": {
     "description": null,
@@ -1326,6 +1880,83 @@
       }
     ]
   },
+  "idm": {
+    "description": "IDM Spólka Akcyjna provides consultancy services in the field of real estate investments and receivables in Poland. The company also provides advisory services in the debt and real estate sectors; and capital operations. The company is based in Kraków, Poland. On July 22, 2014, IDM Spólka Akcyjna was declared bankrupt. IDM Spólka Akcyjna is in reorganization.",
+    "industry": "Capital Markets",
+    "website": "https://www.idmsa.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 22620594
+  },
+  "ifi": {
+    "description": "IFirma SA provides accounting services. The company offers services and tools for tax settlements and supporting business activities. It also provides Outsourcing and recruitment of IT specialists, and IT services and IT solutions, as well as internet accounting and the invoicing program Faktura+. In addition, the company offers accounting office, independent accounting, free invoice program, company registration, e-commerce integrator, and unregistered activity, as well as mobile application program. It serves programmers, freelancers, beauty industry, doctors, IT/startups, lawyers and legal advisors, e-commerce, and health sectors. The company was formerly known as Power Media S.A. and changed its name to Ifirma SA in June 2017. IFirma SA was founded in 1997 is based in Wroclaw, Poland.",
+    "industry": "Information Technology Services",
+    "website": "https://www.ifirma.pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 165120000
+  },
+  "ims": {
+    "description": "IMS S.A., together with its subsidiaries, primarily provides sensory marketing services in Poland. The company offers in-store music and royalty free music, scent marketing, scenting stores, and room aromatization services; digital signage, video wall, digital signage storefronts, and interactive screen for mall; in-store radio, advertising in shopping malls, video advertising, video marketing, and commercial networks through audio media; advertising totems and monitors, and video walls; and touch display for mall, gift card kiosk, and digital signage specialized devices. It also designs inter…",
+    "industry": "Advertising Agencies",
+    "employees": 51,
+    "website": "https://www.imssensory.com",
+    "country": "Poland",
+    "marketCap": 73074464,
+    "peRatio": 8.833333,
+    "forwardPe": null,
+    "eps": 0.24,
+    "dividendYield": 2.82,
+    "totalRevenue": 66496000,
+    "netIncome": 8320000,
+    "sharesOutstanding": 34469086,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 15849000,
+        "net_income": 957000,
+        "operating_income": 1707000,
+        "eps": 0.03
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 15586000,
+        "net_income": 1677000,
+        "operating_income": 2511000,
+        "eps": 0.04
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 16288000,
+        "net_income": 1666000,
+        "operating_income": 3231000,
+        "eps": 0.05
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 14266000,
+        "net_income": 1029000,
+        "operating_income": 1572000,
+        "eps": 0.03
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 20356000,
+        "net_income": 3948000,
+        "operating_income": 6117000,
+        "eps": null
+      }
+    ]
+  },
+  "inc": {
+    "description": "INC S.A. engages in the provision of investment and advisory services to small and medium-sized enterprises in Poland. The company was formerly known as INVESTcon GROUP Spólka Akcyjna and changed its name to INC S.A. in February 2014. INC S.A. was founded in 1995 and is headquartered in Poznan, Poland.",
+    "industry": "Capital Markets",
+    "employees": 35,
+    "website": "https://incsa.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 20223876
+  },
   "ing": {
     "description": "ING Bank Slaski S.A., together with its subsidiaries, provides various banking products and services for retail clients and businesses in Poland. It operates in two segments, Retail Banking and Corporate Banking. The company accepts personal and business accounts. Its loan products include cash loans, mortgages, business line of credit, invoice financing, leasing, factoring, investment loans, business loans, trade finance, guarantees, long-term financing, commercial real estate financing, and reverse factoring.",
     "industry": "Banks - Regional",
@@ -1371,6 +2002,76 @@
         "periodEnd": "2024-12-31",
         "revenue": 2893700000,
         "netIncome": 1309000000
+      }
+    ]
+  },
+  "inl": {
+    "description": "Introl S.A. operates as a general contractor in Poland and internationally. It is involved in the modernization of commercial and heat power plants; and implementation of renewable power sources and cogeneration systems, as well as constructs heat and power plants that generate electrical and thermal power primarily for municipal heat and power plants, waste water treatment plants, and coal mines. The company is also involved in the environmental protection, and water and sewage management activities; water and waste water treatment, and air/exhaust gas purification operations; provision of equipment for mechanical waste filtering and mechanical sludge treatment, and transportation of post-production waste, cement, ash, sand, etc., as well as smart manufacturing and cities solutions. In addition, it operates in the areas of process and production automation; implements industrial automation systems, such as process control and monitoring systems; produces automated stations; and modernizes production line, as well as offers maintenance services for industrial plants. Further, the company distributes control and measurement equipment; provides services in the design and implementation of measurement systems; and designs, implements, integrates, and maintains telecom, safety, automation, and power systems, as well as other low-current systems in smart buildings, such as office buildings, shopping centres, industrial facilities, public use buildings, etc. Additionally, it designs and constructs facilities with comfort systems comprising ventilation and air-conditioning systems for commercial and office buildings, and high-end systems for industrial and power plants; and produces pressure castings, temperature sensors, pressure molds, dies, and processing and custom based tools. Introl S.A. was formerly known as Introl-Polon Sp. z o. o and changed its name to Introl S.A. in 1997. The company was founded in 1990 and is headquartered in Katowice, Poland.",
+    "industry": "Scientific & Technical Instruments",
+    "employees": 1540,
+    "website": "https://www.introlsa.pl",
+    "country": "Poland",
+    "city": "Katowice",
+    "marketCap": 199977264
+  },
+  "ipe": {
+    "description": "IPOPEMA Securities S.A., together with its subsidiaries, provides brokerage, company analysis, and investment banking services in Poland. The company engages in the brokerage and investment banking activities; distribution of investment products; and provision of investment advisory services to a range of individual investors, as well as advisory services related to corporate financial restructuring and financing for infrastructure projects. It also involves in the creation and management of investment funds; management of portfolios of brokerage financial instruments; business and management consulting; information technology facilities management; information technology consulting; and software-related activities. In addition, the company offers investment banking services, including preparation and execution of capital market transactions, public issues of securities, mergers and acquisitions (M&A) transactions, management buyouts, and advisory services for raising private market financing, as well as organizing buyback transactions for shares listed on the Warsaw Stock Exchange through public tender offers and buy-back programs. Further, it provides portfolio management services; securities trading advisory services; intermediation services; involved in the creation and management of closed-end and open-end investment funds; and wholesale of computers, peripherals, and software. IPOPEMA Securities S.A. was incorporated in 2005 and is based in Warsaw, Poland.",
+    "industry": "Capital Markets",
+    "employees": 253,
+    "website": "https://www.ipopemasecurities.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 221539984
+  },
+  "jrh": {
+    "description": "JR Holding ASI S.A., an alternative investment company, invests in the computer gaming, renewable energy, modern media, biotechnology, and digital technology businesses in Poland. It also invests in the artificial intelligence and digital business, energy transformation, deeptech and spacetech, medtech, sustainability, and circular economy sectors. The company was formerly known as JR Holding S.A. and changed its name to JR Holding ASI S.A. in December 2019. JR Holding ASI S.A. was founded in 2003 and is headquartered in Kraków, Poland.",
+    "industry": "Asset Management",
+    "employees": 12,
+    "website": "https://jrh.ai",
+    "country": "Poland",
+    "marketCap": 204095552,
+    "peRatio": 8.053572,
+    "forwardPe": null,
+    "eps": 0.56,
+    "dividendYield": null,
+    "totalRevenue": 41036068,
+    "netIncome": 25440556,
+    "sharesOutstanding": 45254000,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 64061,
+        "net_income": 6325848,
+        "operating_income": 8014686,
+        "eps": 0.14
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": -8398130,
+        "net_income": -9809898,
+        "operating_income": -10322546,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": -807885,
+        "net_income": 28640193,
+        "operating_income": 35863138,
+        "eps": 0.63
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": -4285956,
+        "net_income": 284411,
+        "operating_income": 1205130,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": -83366,
+        "net_income": 12282094,
+        "operating_income": 15965989,
+        "eps": 0.27
       }
     ]
   },
@@ -1422,6 +2123,67 @@
       }
     ]
   },
+  "kch": {
+    "description": "Krakchemia S.A. engages in the chemical product trading in Poland and internationally. The company operates in two segments, Wholesale and Other Activities. It offers plastic raw materials, such as polyethylene, polypropylenes, styrene fibers, construction plastics, mineal fillers, masterbatches, and assisting agents; raw materials and chemical reagents. The company was formerly known as KrakChemia  Hurt S.A. and changed its name to Krakchemia S.A. in November 2004. Krakchemia S.A. was founded in 1945 and is headquartered in Kraków, Poland.",
+    "industry": "Specialty Chemicals",
+    "employees": 24,
+    "website": "https://www.krakchemia.pl",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 4347000
+  },
+  "kci": {
+    "description": "KCI Spolka Akcyjna, formerly known as Jupiter Spolka Akcyjna, is a private equity firm specializing in real estate and media sector. It seeks to invest in Poland. KCI Spolka Akcyjna is based in Kracow, Poland.",
+    "industry": "Real Estate - Development",
+    "employees": null,
+    "website": "https://www.kci.pl",
+    "country": "Poland",
+    "marketCap": 61175280,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -0.09,
+    "dividendYield": null,
+    "totalRevenue": 1604000,
+    "netIncome": -13730000,
+    "sharesOutstanding": 68582150,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 616000,
+        "net_income": -3999000,
+        "operating_income": -2002000,
+        "eps": -0.06
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 825000,
+        "net_income": -6138000,
+        "operating_income": -3219000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 6472000,
+        "net_income": 1417000,
+        "operating_income": -1312000,
+        "eps": 0.02
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 380000,
+        "net_income": -3405000,
+        "operating_income": -2674000,
+        "eps": -0.05
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 367000,
+        "net_income": -14585000,
+        "operating_income": -1203000,
+        "eps": null
+      }
+    ]
+  },
   "kgh": {
     "description": "KGHM Polska Miedz S.A. engages in the exploration and mining of copper, nickel, precious metals, and non-ferrous metals in Poland and internationally. The company offers copper cathodes, wire rod, Cu - Ofe wire, Cu - Ag wire, and granules; silver and gold; molybdenum; rhenium; nickel; and lead, sulphuric acid, copper and nickel sulphate, and selenium products, as well as platinum, palladium, and rock salt products. It holds a portfolio of mines located in Europe, Asia, Australia, Africa, and the United States. The company was founded in 1961 and is headquartered in Lubin, Poland.",
     "industry": "Copper",
@@ -1464,6 +2226,76 @@
         "netIncome": 330000000
       }
     ]
+  },
+  "kgl": {
+    "description": "KGL SA engages in the supply of thermoplastic polymer granulates in Poland and internationally. It offers styrenics, such as expandable, and low and high impact polystyrene, as well as styrene-butadiene copolymer; and polyolefins, including polypropylene homopolymer, polypropylene block copolymer, random polypropylene copolymer, metallocene polypropylene, metallocene polyethylene, and ethylene vinyl acetate copolymer, as well as high-, medium-, and low-density polyethylene. The company also provides engineering plastics, such as polyoxymethylene polyacetal, polycarbonate, polymethyl methacryla…",
+    "industry": "Specialty Chemicals",
+    "employees": 793,
+    "website": "https://www.kgl.pl",
+    "country": "Poland",
+    "marketCap": 72649072,
+    "peRatio": null,
+    "forwardPe": null,
+    "eps": -2.52,
+    "dividendYield": 9.52,
+    "totalRevenue": 542361024,
+    "netIncome": -17802000,
+    "sharesOutstanding": 7053308,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 138281000,
+        "net_income": 107000,
+        "operating_income": 4475000,
+        "eps": 0.02
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 136589000,
+        "net_income": -9182000,
+        "operating_income": -4235000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 131845000,
+        "net_income": -5711000,
+        "operating_income": -1995000,
+        "eps": -0.81
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 123645000,
+        "net_income": -479000,
+        "operating_income": 1408000,
+        "eps": -0.07
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 134756000,
+        "net_income": -3477000,
+        "operating_income": 844000,
+        "eps": null
+      }
+    ]
+  },
+  "kmp": {
+    "description": "Przedsiebiorstwo Produkcyjno - Handlowe KOMPAP S.A. manufactures and sells paper and printing products and services in Poland and internationally. The company prints leaflets, brochures, and user manuals and training materials for pharmaceutical, cosmetic, technical, and educational industry; A4 letterhead, for laser printers used in office, business correspondence, invoices, and official documents; and commercial prints, such as accounting, HR, warehouse, and sales prints. It also prints self-adhesive labels in the form of sheets, rolls, and folds for offices, warehouses, and other industries; and graphic design studio provides design and preparation of materials for printing, offering computer-to-plate printing plates. In addition, the company offers printing books, albums and school textbooks; printing services, including the production of books, magazines, commercial prints, and calendars; and offers solutions that enable secure and effective management of information in the form of documents. It serves its products under the BZGraf, OZGraf, and Komunikacja Masowa brand name. Przedsiebiorstwo Produkcyjno - Handlowe KOMPAP S.A. was founded in 1989 and is headquartered in Laskowice, Poland.",
+    "industry": "Paper & Paper Products",
+    "employees": 337,
+    "website": "https://kompap.pl",
+    "country": "Poland",
+    "city": "Laskowice",
+    "marketCap": 102970912
+  },
+  "kpl": {
+    "description": "Kino Polska TV Spolka Akcyjna operates as a media company in Poland, European Union, and internationally. The company broadcasts and produces television channels, such as Stopklatka, Zoom TV, Kino Polska, Kino Polska Muzyka, Kino TV, FilmBox Premium HD, and thematic channels. It is also involved in the sale of advertising time, as well as licensing rights. The company was founded in 2003 and is based in Warsaw, Poland. Kino Polska TV Spolka Akcyjna operates as a subsidiary of SPI International BV.",
+    "industry": "Broadcasting",
+    "employees": 238,
+    "website": "https://www.kinopolska.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 338946016
   },
   "krk": {
     "description": "Krka, d. d., a generic pharmaceutical company, develops, produces, markets, and sells prescription pharmaceuticals, non-prescription products, and animal health products in Slovenia, South-East Europe, East Europe, Central Europe, West Europe, and internationally. The company offers prescription pharmaceuticals for cardiovascular, central nervous system, gastrointestinal tract, pain, diabetes, and other therapeutic areas.",
@@ -1599,6 +2431,41 @@
       }
     ]
   },
+  "kvt": {
+    "description": "Krynica Vitamin S.A. produces and sells non-alcoholic and low-alcoholic beverages in Poland, Germany, the United Kingdom, the Czech Republic, Slovakia, and internationally. It offers energy drink; functional drinks, such as vitamin cocktails, and diet supplements; carbonated soft drink includes cola type, orange type, and lemon type beverages; alcopops; coffee; and dairy drinks. In addition, the company packages and markets its products in the form of aluminum cans, PET bottles, and glass bottles, as well as provides contract manufacturing services for other brands. Krynica Vitamin S.A. was incorporated in 2011 and is headquartered in Warsaw, Poland. Krynica Vitamin S.A. operates as a subsidiary of Zinat Sp. Z O.O.",
+    "industry": "Beverages - Non-Alcoholic",
+    "employees": 350,
+    "website": "https://krynicavitamin.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 159868816
+  },
+  "lbt": {
+    "description": "Libet S.A. manufactures and sells paving stones and other practical elements of building surroundings in Poland. The company's products include concrete slabs, porcelain stoneware boards, walls/fences/palisades, stair treads, design service, edging/curbs, outdoor lighting, architectural concrete, preparation tools, terrace brackets, and eco surfaces through online and offline channels. Libet S.A. was founded in 2008 and is headquartered in Wroclaw, Poland.",
+    "industry": "Building Products & Equipment",
+    "employees": 114,
+    "website": "https://www.libet.pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 48100000
+  },
+  "lbw": {
+    "description": "Lubawa S.A., together with its subsidiaries, manufactures and sells army, police, municipal police, border patrol, fire brigade, and special force products in Poland and internationally. The company operates through the Fabrics and Knitwear, Advertising Articles, Specialist Equipment, and Others segments. It provides individual protection products, including helmets, bulletproof vests, ballistic plates and shields, rescue masks, load-bearing equipment, backpacks, special and protective clothing, rescue vests, and individual camouflage; EOD and demining equipment comprising field clearance set, combat engineer demining and reconnaissance equipment, mine-clearance lightweight EOD vest, lightweight EOD suit for pyrotechnicians and sappers, and pyrotechnic shield; frame tents, pneumatic tents, and tent bases; and mobile camouflage and decoys. The company also offers EHS equipment, such as flood protection, tanks for liquids, decontamination, jump cushions, floating equipment, and water rescue; equipment for vehicles, including lightweight RPG net screens, additional modular armor, integrated multispectral modular armor, curved add-on armor, optronics protection, fuel tanks, ballistic protection, pneumatic floats, and armchair laps for pilots; and technical textiles comprising conductive fabrics, air duct fabrics, tapes, edges, tent fabrics, and boat fabrics, as well as technical textiles for gaskets, sanitary, lifts, inflatable structures, belts, tanks, membranes, and protective clothing. In addition, it provides vulcanization press and autoclave, cutting, PVC welding, water jet cutting and carving, and sewing services. Further, the company offers epidemic countermeasure products, including tent-based ambulance decontamination/ozone blasting units, L-2 chemical-resistant garments, preventative multifunctional masks, decontamination cabins, and 1-segment PVC decontamination chambers. Lubawa S.A. was founded in 1951 and is headquartered in Ostrów Wielkopolski, Poland.",
+    "industry": "Conglomerates",
+    "website": "https://www.lubawa.com.pl",
+    "country": "Poland",
+    "city": "Ostrów Wielkopolski",
+    "marketCap": 1655975424
+  },
+  "lkd": {
+    "description": "Lokum Deweloper S.A. develops real estate properties in Poland. It develops flats, apartments, and commercial and service premises. The company was founded in 2004 and is headquartered in Wroclaw, Poland.",
+    "industry": "Real Estate - Development",
+    "employees": 80,
+    "website": "https://lokum-deweloper.pl",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 408600000
+  },
   "lpp": {
     "description": "LPP SA designs, manufactures, and distributes apparel for women, men, and children. It offers apparel, accessories, footwear, and supplementary items under the Reserved, Cropp, House, Mohito, and Sinsay brand names. The company sells its products through offline and online stores. LPP SA was incorporated in 1989 and is headquartered in Gdansk, Poland.",
     "industry": "Apparel Manufacturing",
@@ -1651,6 +2518,15 @@
         "netIncome": null
       }
     ]
+  },
+  "lsi": {
+    "description": "LSI Software S.A. develops software for enterprise resource planning, retail chains, restaurants, hotels, gastronomy, sports and recreation facilities, entertainment, and cinemas. It offers implementation of professional B2B systems, as well as modern equipment, and consulting and maintenance services. The company was founded in 1991 and is headquartered in Lódz, Poland.",
+    "industry": "Software - Application",
+    "employees": 135,
+    "website": "https://www.lsisoftware.pl",
+    "country": "Poland",
+    "city": "Lódz",
+    "marketCap": 154016016
   },
   "mab": {
     "description": "Mabion S.A., a biopharmaceutical company, provides services as a contract development and manufacturing organization in the process development, analytics, and manufacturing of biologic medicines in Poland. It offers drug substance manufacturing, fill and finish, gene to vial end-to-end development, process development, analytics, and banking services. In addition, it offers cell line development, process development, production of a product for preclinical and clinical trials, development and validation of analytical methods, and preparation of the necessary documentation.",
@@ -1743,6 +2619,15 @@
       }
     ]
   },
+  "mbr": {
+    "description": "Mo-BRUK S.A. engages in the incineration of hazardous waste, including medical and industrial waste in Poland and internationally. The company is also involved in the stabilization and solidification of hazardous and non-hazardous inorganic waste; and production of alternative fuel from sorted municipal and industrial waste, used by cement plants, metal recycling, and waste storage. Mo-BRUK S.A. was founded in 1985 and is headquartered in Korzenna, Poland.",
+    "industry": "Waste Management",
+    "employees": 314,
+    "website": "https://mobruk.pl",
+    "country": "Poland",
+    "city": "Korzenna",
+    "marketCap": 1324357632
+  },
   "mci": {
     "description": "MCI Capital Alternatywna Spólka Inwestycyjna S.A., is a private equity and venture capital firm specializing in seed/startup, early to late venture, buy-out, middle market, mature, emerging growth, and growth capital investments. The firm seeks to invest in digital economy, digital climatech with a focus in area of green transformation in technology/digital companies, digital disruption, digital transformation & digital infrastructure.",
     "industry": "Asset Management",
@@ -1786,6 +2671,135 @@
       }
     ]
   },
+  "mcr": {
+    "description": "mcr Spolka Akcyjna produces, sells, installs, and services passive fire protection systems in Poland. It provides active extinguishing includes water mist fire extinguishing; construction security includes panel systems, spray systems, installation penetration systems, intumescent coating systems, and sprayed acoustic plasters; building systems integration, industrial energy storage, and fire partitions. It serves industrial buildings, professional energy, server rooms, high-rise buildings, cultural heritage buildings, industry and energy, public buildings, and commercial and logistics facilit…",
+    "industry": "Security & Protection Services",
+    "employees": null,
+    "website": "https://www.mcrsa.pl",
+    "country": "Poland",
+    "marketCap": 222607760,
+    "peRatio": 1.469697,
+    "forwardPe": null,
+    "eps": 9.9,
+    "dividendYield": 12.85,
+    "totalRevenue": 448332000,
+    "netIncome": 165532000,
+    "sharesOutstanding": 15299502,
+    "quarterlyReports": [
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 51566000,
+        "net_income": 131967000,
+        "operating_income": -13571000,
+        "eps": 8.8
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 146723000,
+        "net_income": 28172000,
+        "operating_income": 7993000,
+        "eps": 1.84
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 124257000,
+        "net_income": 831000,
+        "operating_income": 2812000,
+        "eps": 0.05
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 125786000,
+        "net_income": 2046000,
+        "operating_income": 3243000,
+        "eps": null
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": 131351000,
+        "net_income": 2599000,
+        "operating_income": 2161000,
+        "eps": 0.17
+      }
+    ]
+  },
+  "mdg": {
+    "description": "Medicalgorithmics S.A. provides AI-powered and noninvasive solutions for cardiac diagnostic in Poland, the United States, and internationally. It offers PocketECG, an AI-driven online ECG monitoring device for long-term holter, cardiac event, and mobile cardiac telemetry analysis; Kardiobeat.ai, an AI-Driven lightweight wireless holter monitor; DeepRhythmAI, a hardware-agnostic cloud-based software that leverages cutting-edge AI technology to detect, classify, analyze, and report ECG data; and DeepRhythmAI, a set of algorithms for heart rhythm analysis that integrates into third-party software and devices. The company also provides virtual cardiac stress test (VCAST), an AI-based medical system developed for non-invasive, clinical quantitative, and qualitative analysis of CT-scan data, to assess the hemodynamic significance of coronary artery atherosclerotic stenosis. In addition, the company engages in research and development services, including algorithm development, clinical studies, software development, consulting services, and medical hardware development; and end-to-end ECG Monitoring for clinical trials. Medicalgorithmics S.A. company was incorporated in 2005 and is headquartered in Warsaw, Poland.",
+    "industry": "Medical Devices",
+    "employees": 109,
+    "website": "https://www.medicalgorithmics.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 268724800
+  },
+  "mfo": {
+    "description": "MFO S.A. manufactures and sells steel profiles in Poland. The company offers CD profiles, UD and UA profiles, CW and UW standard profiles, and CW and UW eco profiles for drywall framing applications; mounting rails for ventilation and air conditioning, and electrical installation applications; and steel sections for technical flooring systems applications. It also provides steel profiles for furniture industry, rack system, and semi-trailer and truck body applications; and steel posts for applications in fencing systems and gates. The company was incorporated in 2011 and is based in Sochaczew,…",
+    "industry": "Metal Fabrication",
+    "employees": 393,
+    "website": "https://www.mfo.pl",
+    "country": "Poland",
+    "marketCap": 186991968,
+    "peRatio": 20.808823,
+    "forwardPe": null,
+    "eps": 1.36,
+    "dividendYield": null,
+    "totalRevenue": 689180032,
+    "netIncome": 9023000,
+    "sharesOutstanding": 6607490,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 173387000,
+        "net_income": 2429000,
+        "operating_income": 3919000,
+        "eps": 0.37
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 167686000,
+        "net_income": -1023000,
+        "operating_income": 1395000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 177545000,
+        "net_income": 3275000,
+        "operating_income": 5397000,
+        "eps": 0.49565
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 170563000,
+        "net_income": 4342000,
+        "operating_income": 6327000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 169702000,
+        "net_income": 3481000,
+        "operating_income": 6161000,
+        "eps": 0.53
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": null
+      }
+    ]
+  },
+  "mgt": {
+    "description": "Mangata Holding S.A. manufactures and sells fittings, castings, elements, fasteners, and components in Poland, the European Union, and internationally. It operates through Automotive Components and Subassemblies, Fittings and Industrial Automation, Fasteners, and Non-Productive Activities segments. The company offers forgings, exhaust systems, and metal components; and car parts, mechanical parts for vacuum pumps, servo drive parts, parts for construction and agricultural machinery, and hydraulic units. It also provides stop, bellow, check, butterfly, ball, and gate valves; and strainers, backflow preventers, and rubber expansion joints. In addition, the company offers engineering services for the implementation of the research and development of industrial valves. Further, it provides bolts, nuts, washers, rivets, and other fasteners. The company serves the automotive, mining, construction, gas and power, agriculture, heating distribution and technology, ventilation and air conditioning, water supply and sewage system, shipbuilding, industrial valve, control of valve, railway, and machine industries. It exports its products to approximately 70 countries, including Germany, the Netherlands, Italy, Sweden, France, Egypt, Indonesia, Brazil, China, the United Arab Emirates, Saudi Arabia, South Africa, and the United States. The company was formerly known as ZETKAMA Spólka Akcyjna and changed its name to Mangata Holding S.A. in September 2016. The company was founded in 1946 and is headquartered in Bielsko-Biala, Poland. Mangata Holding S.A. operates as a subsidiary of Capital MBO Spolka z ograniczona odpowiedzialnoscia.",
+    "industry": "Metal Fabrication",
+    "employees": 1519,
+    "website": "https://mangata.com.pl",
+    "country": "Poland",
+    "city": "Bielsko-Biala",
+    "marketCap": 430968576
+  },
   "mil": {
     "description": "Bank Millennium S.A. provides various banking products and services in Poland. It operates through Retail Customer; Corporate Customer; and Treasury, Assets and Liabilities Management, and Other segments. The company offers current, savings, foreign currency savings, individual investment retirement, private banking, business, and VAT accounts; and term and structured deposits.",
     "industry": "Banks - Regional",
@@ -1828,6 +2842,24 @@
         "netIncome": 172514000
       }
     ]
+  },
+  "mlg": {
+    "description": "MLP Group S.A., together with its subsidiaries, engages in the purchase, development, lease, and sale of real estate properties in Poland, Germany, Romania, and Austria. The company manages residential and non-residential real estate properties; and constructs buildings. It also leases warehouses and office space; and operates logistics parks. It serves manufacturing and logistics sectors. The company was founded in 1995 and is based in Pruszków, Poland.",
+    "industry": "Real Estate Services",
+    "employees": 55,
+    "website": "https://mlpgroup.com",
+    "country": "Poland",
+    "city": "Pruszków",
+    "marketCap": 2615452928
+  },
+  "mlk": {
+    "description": "MLK Foods Public Company LTD produces and sells dairy products in the European Union and CIS countries. The company offers hard, specialty, fresh, and processed cheeses; dairy drinks, including sterilized and pasteurized milk, kefir, and ryazhenka; cream, sour cream, and tvorog; drinkable and spoonable bio yoghurts; and private label products for various retailers. It also provides butter for industrial customers, such as confectioneries, bakeries, etc.; and skimmed milk and sweet whey powders. In addition, the company exports dairy products to approximately 10 countries. It markets its products under the Dobryana brand. The company was formerly known as Milkiland Public Company Limited and changed its name to MLK Foods Public Company LTD in January 2022. MLK Foods Public Company LTD was founded in 1994 and is based in Nicosia, Cyprus. MLK Foods Public Company LTD is a subsidiary of 1, Inc. Coöperatief Ua.",
+    "industry": "Packaged Foods",
+    "employees": 1511,
+    "website": "https://mlkfoods.cy",
+    "country": "Cyprus",
+    "city": "Nicosia",
+    "marketCap": 50062500
   },
   "mlt": {
     "description": null,
@@ -1877,6 +2909,65 @@
       }
     ]
   },
+  "mol": {
+    "description": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság, together with its subsidiaries, operates as an integrated oil and gas company in Hungary and internationally. The company offers MOL EVO fuel products; operates convenience store under the Fresh Corner brand; and provides e-charging solutions. It also provides lubricants and autochemicals; gasoline, diesel, heating oil, and bunker diesel; JET A-1 aviation fuel; liquefied petroleum gas, including butanes, propane-butane mix, autogas, propane; petrochemicals; black products, such as bitumen, HFO, petrolcoke, and liquid sulphur, as…",
+    "industry": "Oil & Gas Refining & Marketing",
+    "employees": 24744,
+    "website": "https://www.molgroup.info",
+    "country": "Hungary",
+    "marketCap": 34886791168,
+    "peRatio": 14.218651,
+    "forwardPe": null,
+    "eps": 3.11,
+    "dividendYield": 3.68,
+    "totalRevenue": null,
+    "netIncome": null,
+    "sharesOutstanding": 788936919,
+    "quarterlyReports": [
+      {
+        "period_end": "2026-03-31",
+        "total_revenue": 2017128000000,
+        "net_income": 38841000000,
+        "operating_income": 83240000000,
+        "eps": 49.232073
+      },
+      {
+        "period_end": "2025-12-31",
+        "total_revenue": 2058724000000,
+        "net_income": 12834000000,
+        "operating_income": 15794000000,
+        "eps": 16.26746
+      },
+      {
+        "period_end": "2025-09-30",
+        "total_revenue": 2267569000000,
+        "net_income": 94800000000,
+        "operating_income": 162972000000,
+        "eps": 120.161698
+      },
+      {
+        "period_end": "2025-06-30",
+        "total_revenue": 2198746000000,
+        "net_income": 38076000000,
+        "operating_income": 78531000000,
+        "eps": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "total_revenue": 2171244000000,
+        "net_income": 152343000000,
+        "operating_income": 185849000000,
+        "eps": 190.667535
+      },
+      {
+        "period_end": "2024-12-31",
+        "total_revenue": null,
+        "net_income": null,
+        "operating_income": null,
+        "eps": -10.61955
+      }
+    ]
+  },
   "mrc": {
     "description": "Mercator Medical S.A., together with its subsidiaries, manufactures and distributes disposable medical gloves, dressings, and non-woven fabric products in Poland, the Czech Republic, Ukraine, France, Hungary, Italy, Romania, Germany, rest of Europe, and Thailand. The company offers surgical and protective, sterile examination and protective, and household gloves; glove brackets; and household and protective  professional products, including caps, masks, gowns, shoe covers, surgical shirts, and sleeve protectors.",
     "industry": "Medical Instruments & Supplies",
@@ -1920,6 +3011,85 @@
       }
     ]
   },
+  "msp": {
+    "description": "Mostostal Plock S.A. operates as a mechanical company in Poland. It engages in the production and assembly of storage tanks, prefabrication and assembly of industrial installations and pipelines. The company is also involved in the prefabrication and erection of industrial, sports halls and indoor swimming pools, general and industrial constructions elements, radio and television masts, bridge and sewage treatment plant structures, industrial apparatus subject to UDT approvals, grain silos, industrial furnaces, steel chimneys, columns, reactors with accessories, compressors and pumps, and other structures and devices. In addition, it engages in the prefabrication and erection of storage tanks, including carbon steel tanks, stainless steel tanks, horizontal tanks, spherical tanks, and tanks with floating roof, as well as double shell and bottom tanks; and crane rental activities. Further, the company is involved in the industry installation and workshop services. Additionally, the company serves oil and gas sectors, as well as in the chemical, energy, and food industries. Mostostal Plock S.A. was founded in 1963 and is headquartered in Plock, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 238,
+    "website": "https://www.mostostal-plock.pl",
+    "country": "Poland",
+    "city": "Plock",
+    "marketCap": 26800000
+  },
+  "msw": {
+    "description": "Mostostal Warszawa S.A. operates in the construction industry in Poland and internationally. It operates through Industry and Energy, Infrastructure, and General Construction segments. The company also engages in the construction of residential buildings and housing development activities, office facilities and public buildings, and production halls and warehouses; and technological installations and steel structures. In addition, it constructs bridges, overpasses, and multi-level crossings, as well as underground structures, such as tunnels and underground facilities; modernizes and constructs national roads, provincial roads, express roads, and motorways; and constructs elements of municipal transport infrastructure and railway projects. Further, the company is involved in the execution and supply of equipment related to environmental protection, including turnkey energy facilities based on renewable fuels, sewage treatment plants, water treatment plants, water supply and sewage discharge networks, and de-dusting installations for heavy industry or hydro-technical facilities; and constructing energy facilities relying on fossil fuels, as well as provides design, renovation and modernization, and assembly services for energy boilers and turbo sets. Additionally, it manufactures bituminous mixtures; offers construction designs for new production capacities; and provides laboratory services for construction contracts, as well as offers equipment and transport services. The company was founded in 1945 and is headquartered in Warsaw, Poland. Mostostal Warszawa S.A. operates as a subsidiary of Acciona Construccion S.A.",
+    "industry": "Engineering & Construction",
+    "employees": 1051,
+    "website": "https://www.mostostal.waw.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 74000000
+  },
+  "msz": {
+    "description": "Mostostal Zabrze S.A. engages in the design, production, construction, and assembly activities. It constructs industrial facilities; and public facilities, such as hospitals, office buildings, residential buildings, swimming pools and commercial facilities; as well as engineering work including, roads, and sewage systems and treatment plants. The company offers industrial and specialist construction works in various industries, including metallurgy, cement, building materials, automotive, mining, and cableways. It also provides installation of equipment and process plants, steel structures for bridges, and storage tanks for petroleum and chemicals, as well as oxygen plants and installations for production of hydrogen; power and environmental protection services; and steel structures, steel hall, secondary steel structure, ducts, siloses, drilling towers, and piping. In addition, the company offers cranes and turntables for mobile cranes, subcomponents for boom sections, bodies and locomotive frames, bogie frames, and machining and anticorrosive protection services. Further, it provides electrical services, which includes engineering, procurement, installation of distribution devices and apparatus for electrical power networks and systems; and industrial and general constructions, as well as for steel, coke, chemical, and petrochemical industries. Mostostal Zabrze S.A. was founded in 1945 and is based in Gliwice, Poland.",
+    "industry": "Engineering & Construction",
+    "website": "https://www.mz.pl",
+    "country": "Poland",
+    "city": "Gliwice",
+    "marketCap": 413304736
+  },
+  "nng": {
+    "description": "NanoGroup S.A. operates as a biotechnology company in Poland. It engages in the production of medicines and other pharmaceutical products, and research and development work in the field of biotechnology and other natural and technical sciences. The company is also involved in technical research and analysis. In addition, it manages a portfolio of companies that manage projects to meet the needs of modern medicine in the field of oncology and transplantation. NanoGroup S.A. was incorporated in 2016 and is based in Warsaw, Poland.",
+    "industry": "Biotechnology",
+    "website": "https://nanogroup.eu",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 105719888
+  },
+  "nva": {
+    "description": "P.A. Nova S.A. engages in the construction business in Poland. It is involved in the execution of general and industrial construction facilities; provision of design services; development activities; management of a portfolio of real estate; and delivery and implementation of computer systems, such as CAD/PDM/GIS, as well as training of engineers and designers. The company was founded in 1987 and is headquartered in Gliwice, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 180,
+    "website": "https://www.panova.pl",
+    "country": "Poland",
+    "city": "Gliwice",
+    "marketCap": 175962176
+  },
+  "nvt": {
+    "description": "Novita S.A. manufacturers and distributes household, commercial, medical and sanitary, clothing, footwear, and technical nonwovens in Poland and internationally. The company offers spunlace and needled nonwovens products. Its products are used in the personal care, household, technical, and medical sectors. Novita S.A. was incorporated in 2001 and is headquartered in Zielona Góra, Poland. The company operates as a subsidiary of Tebesa Sp. z o.o.",
+    "industry": "Textile Manufacturing",
+    "employees": 186,
+    "website": "https://novita.pl",
+    "country": "Poland",
+    "city": "Zielona Góra",
+    "marketCap": 245000000
+  },
+  "obl": {
+    "description": "Orzel Bialy S.A. produces and sells refined lead and lead alloys through the recycling of waste batteries and other lead-bearing waste in Poland and internationally. It also provides polypropylene components; and laboratory testing services for water and wastewater, metals and metal alloys, metalliferous concentrates, ores and metal-bearing waste, soils, and solid fuels. The company offers its products to battery making companies, primarily in the automotive industry. The company was founded in 1858 and is based in Piekary Slaskie, Poland. Orzel Bialy S.A. is a subsidiary of ZAP Sznajder Batterien S.A.",
+    "industry": "Waste Management",
+    "employees": 283,
+    "website": "https://www.orzel-bialy.com.pl",
+    "country": "Poland",
+    "city": "Piekary Slaskie",
+    "marketCap": 656035648
+  },
+  "odl": {
+    "description": "Odlewnie Polskie S.A. produces and sells castings in Germany, the Czech Republic, the Netherlands, the United States, Sweden, Hungary, Great Britain, Austria, Slovakia, Denmark, Turkey, Spain, Italy, Switzerland, France, and Serbia. It offers ductile iron products using grey, nodular, ADI, SiMo, and steel cast iron materials. The company is involved in the buying ang selling of foreign castings; and provision of services in German foundries. In addition, it provides customer service, including design, production of foundry equipment and the creation of castings, their machining and heat treatment, as well as priming, assembly, and shipment services. The company offers its products to machine, automotive, industrial instruments, plumbing and sewage systems, heavy rail, energy, and appliance industries. The company was founded in 1899 and is headquartered in Starachowice, Poland.",
+    "industry": "Metal Fabrication",
+    "employees": 515,
+    "website": "https://odlewniepolskie.pl",
+    "country": "Poland",
+    "city": "Starachowice",
+    "marketCap": 410236256
+  },
+  "ond": {
+    "description": "Onde S.A. engages in the designing and construction solutions for the wind and photovoltaic farms in Poland. The company offers designing, engineering, and road construction; and operation and maintenance services. Onde S.A. was founded in 1998 and is headquartered in Torun, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 518,
+    "website": "https://onde.pl",
+    "country": "Poland",
+    "city": "Torun",
+    "marketCap": 474260992
+  },
   "opl": {
     "description": "Orange Polska S.A., together with its subsidiaries, provides telecommunications services for individuals, small and large businesses, and corporations in Poland. The company offers mobile and fixed telecommunications services, including calls, messaging, content, and access to the Internet and TV; and information technology and integration services, leased lines, and other value-added telecommunication services. It also engages in the sale of telecommunications equipment; provision of data transmission services; and construction of telecommunications infrastructure.",
     "industry": "Telecom Services",
@@ -1962,6 +3132,32 @@
         "netIncome": 201000000
       }
     ]
+  },
+  "pat": {
+    "description": "Patentus S.A. engages in design, production, service, and renovation of mining machinery and equipment, and the production of welded steel structures in Poland. It operates through Products and services and Wholesale segments. The company offers mining equipment such as scraper conveyors, belt conveyors, bucket conveyors, coal, concrete, rock, and other crushers, as well as devices for transport. It also provides gear wheels of main gears of traction vehicles; forgings and axles of wheelsets for railway vehicles; pins for rolling stock; hollow shafts; journal box housings; coupling hooks; bumper elements; hollow shafts; and gear wheels of main gearboxes. In addition, the company offers gears; steel structures; and metal processing services. Further, it engages in repairs of toothed gears and heat treatment, packaging business, and protective clothing and office supplies, as well as trades in steel, metallurgical products, welding equipment. Patentus S.A. was founded in 1992 and is headquartered in Pszczyna, Poland.",
+    "industry": "Specialty Industrial Machinery",
+    "employees": 132,
+    "website": "https://www.patentus.eu",
+    "country": "Poland",
+    "city": "Pszczyna",
+    "marketCap": 78175000
+  },
+  "pbg": {
+    "description": "PBG S.A. is in liquidation of its assets. Previously, the company was engaged in the provision of specialist contracting services for natural gas, crude oil, and fuel facilities. PBG S.A. was founded in 1994 and is based in Przezmierowo, Poland.",
+    "industry": "Oil & Gas Equipment & Services",
+    "website": "https://www.pbg-sa.pl",
+    "country": "Poland",
+    "city": "Przezmierowo",
+    "marketCap": 14731565
+  },
+  "pbx": {
+    "description": "Pekabex S.A., a construction company, engages in the production and sale of prefabricated reinforced and pre-stressed concrete elements in Poland, Sweden, Denmark, Germany, Switzerland, Hungary, the Netherlands and internationally. It offers foundations, poles, floor and roof beams, slabs, stadiums, walls, and engineering prefabricated elements; and other elements, such as bridge abutments, prefabricated shells, tanks, fountain basins, and stairs. The company also executes special orders for individual designs; and provides consulting, designing, transportation, and assembly services. Its products are used in construction of industrial, retail, office, cultural and sports facilities, halls, residential buildings, bridges, commercial facilities, stations, parking lots and other large-scale structures. The company was founded in 1972 and is headquartered in Poznan, Poland.",
+    "industry": "Engineering & Construction",
+    "employees": 1629,
+    "website": "https://pekabex.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 238831040
   },
   "pcf": {
     "description": "PCF Group Spólka Akcyjna engages in the development and production of video games in Poland and internationally. The company is involved in the production of games on demand, the acquisition and management of copyrights to produced games, and the production and publishing of its own games. It distributes its products through the Steam platform. The company was incorporated in 2019 and is headquartered in Warsaw, Poland.",
@@ -2124,6 +3320,15 @@
       }
     ]
   },
+  "pen": {
+    "description": "Photon Energy N.V., through its subsidiaries, builds and optimizes solar power plants and energy storage systems in the Czech Republic, Hungary, Poland, Australia, Romania, the Slovak Republic, Germany, New Zealand, and internationally. It operates through Engineering; Technology; Investments; Operations & Maintenance; New Energy; and Other segments. The company invests in and generates electricity through photovoltaic power plants, which has a combined capacity of 129.6 MWp. It also engages in the development, engineering, construction, and installation of turnkey photovoltaic systems; operation, maintenance, and supervision of photovoltaic power plants; and provision of inverter cardio, and monitoring and control services. In addition, the company engages in the wholesale, import, and export of FVE components; and project development, water technology, and other activities. Further, it provides capacity market, energy trading, and real-time asset aggregator services; asset management and battery energy storage system optimization; energy flexibility monetization, energy offtake, and clean energy supply and power purchase agreement solutions; water and wastewater treatment, water body management, water well, and consulting services; and PFAS management and environmental remediation solutions. Photon Energy N.V. was founded in 2008 and is headquartered in Amsterdam, the Netherlands.",
+    "industry": "Solar",
+    "employees": 233,
+    "website": "https://www.photonenergy.com",
+    "country": "Netherlands",
+    "city": "Amsterdam",
+    "marketCap": 69764584
+  },
   "peo": {
     "description": "Bank Polska Kasa Opieki S.A., a commercial bank, provides banking products and services to retail and corporate clients in Poland. It operates through Retail Banking and Private Banking; Enterprise banking; and Corporate and Investment Banking segments. The company offers bank accounts, deposits and certificates of deposit, payment cards, loan products, mortgage and consumer loans, and insurance products.",
     "industry": "Banks - Regional",
@@ -2263,6 +3468,15 @@
       }
     ]
   },
+  "pgm": {
+    "description": "PMPG Polskie Media SA, through its subsidiaries, operates in the traditional and new media markets. The company publishes Wprost, a digitally published social and information portal and weekly opinion magazine; and Tygodnik Lisickiego Do Rzeczy magazines. It also publishes in the Internet websites, such as wprost.pl, dorzeczy.pl, and superhistoria.pl. In addition, the company provides advertising and printing services. Further, it engages in the production of films, video, and television programs; and publishing activities in the field of computer games; publishes books, newspapers, magazines and periodicals. The company was formerly known as Platforma Mediowa Point Group Spólka Akcyjna and changed its name to PMPG Polskie Media SA in December 2014. PMPG Polskie Media SA was founded in 1997 and is headquartered in Warsaw, Poland.",
+    "industry": "Publishing",
+    "employees": 39,
+    "website": "https://pmpg.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 19306544
+  },
   "phn": {
     "description": "Polski Holding Nieruchomosci S.A. operates in real estate industry in Poland. The company engages in the rental and management of real estate and implementation of new commercial investments; implementation of new housing investments; and sale of apartments. It is also involved in rental of existing facilities and implementation of new logistics investments; general contracting activities; and owner or co-owner of hotel facilities and lease of existing facilities.",
     "industry": "Real Estate Services",
@@ -2310,6 +3524,15 @@
         "netIncome": null
       }
     ]
+  },
+  "phr": {
+    "description": "Pharmena S.A. engages in the sale of dietary supplements in Poland and internationally. The company also develops 1-MNA (PHR-701 program), a medical device for use in difficult-to-heal wounds. In addition, it is involved in research and development of therapeutic applications of 1 MNA as an anti-inflammatory and anti-fibrotic drug; and research and development at pulmonary fibrosis, respiratory tract infections, including viral infections, COVID-19, inflammatory diseases, metabolic diseases and other therapeutic applications. The company was incorporated in 2002 and is based in Lódz, Poland. Pharmena S.A. is a subsidiary of Pelion S.A.",
+    "industry": "Biotechnology",
+    "employees": 7,
+    "website": "https://www.pharmena.eu",
+    "country": "Poland",
+    "city": "Lódz",
+    "marketCap": 34527048
   },
   "pkn": {
     "description": "Orlen S.A. operates in refining, petrochemical, energy, retail, gas, and upstream business. It engages in the processing and wholesale of refinery products, such as crude oil; production and sale of fuel, oil, chemicals, and petrochemicals, as well as provision of supporting services; production, distribution, and sale of electricity and heat from conventional and renewable energy sources comprising solar photovoltaics, as well as natural gas; trading of electricity; exploration and extraction of mineral resources; exploration, production, and import of natural gas; and trading and storage of",
@@ -2498,6 +3721,14 @@
       }
     ]
   },
+  "plz": {
+    "description": "Plaza Centers N.V. does not have significant operations. Previously, it was engaged in the establishment, operation, and sale of shopping and entertainment centers, as well as other mixed-use projects. The company was formerly known as Plaza Centers (Europe) B.V. and changed its name to Plaza Centers N.V. in October 2006. Plaza Centers N.V. was incorporated in 1993 and is based in Amsterdam, the Netherlands.",
+    "industry": "Real Estate - Development",
+    "website": "https://plazacenters.com",
+    "country": "Netherlands",
+    "city": "Amsterdam",
+    "marketCap": 8720327
+  },
   "prm": {
     "description": "Prochem S.A. provides engineering and construction services in Poland. The company offers pre-investment services, such as program -and-spatial concepts, expert studies, and technical recommendations; and conducts feasibility studies for new investment projects, as well as for the purpose of modernization and extension projects. It also provides design services in various disciplines and stages comprising obtaining agreements, approvals, and permits, as well as offers project execution management services. In addition, the company offers procurement and consulting services.",
     "industry": "Engineering & Construction",
@@ -2579,6 +3810,24 @@
       }
     ]
   },
+  "ptw": {
+    "description": "Polskie Towarzystwo Wspierania Przedsiebiorczosci S.A. provides integrated solutions for business communication in Poland. The company publishes specialized journals and occasional publications for middle and senior management, opinion leaders, representatives of state and local governments, physicians, and healthcare managers under the Farmer, Nowy Przemysl, Rynek Zdrowia, and Property Magazine names. It also offers advertising services through newsletters, such as wnp.pl, PortalSamorzadowy.pl, PulsHR.pl, PropertyNews.pl, PropertyDesign.pl, dlahandlu.pl, PortalSozywczy.pl, Farmer.pl, SadyOgrody.pl, RynekZdrwia.pl, InfoDENT24.pl, and RynekSeniora.pl. In addition, the company operates dlahandlu.pl, Dobrzemieszkaj.pl, Farmer.pl, Horecatrends.pl, InfoWet.pl, InfoDENT24.pl, Portaldlaedukacji.pl, PortalSamorzadowy.pl, PortalSozywczy.pl, PropertyDesign.pl, PropertyNews.pl, PulsHR.pl, RynekSeniora.pl, RynekZdrwia.pl, SadyOgrody.pl, Well.pl, and wnp.pl. Further, the company organizes congresses and industry events, as well as trade fairs and seminars. Additionally, it manages International Congress Centre in Katowice (MCK) and the Spodek Sports and Entertainment Arena. Polskie Towarzystwo Wspierania Przedsiebiorczosci S.A. was founded in 1995 and is based in Katowice, Poland.",
+    "industry": "Publishing",
+    "employees": 315,
+    "website": "https://www.ptwp.pl",
+    "country": "Poland",
+    "city": "Katowice",
+    "marketCap": 226574304
+  },
+  "pur": {
+    "description": "Pure Biologics S.A., a biopharmaceutical company, engages in the research and development of biological drugs and medical devices for therapeutic use. Its therapeutic portfolio in the field of immuno-oncology includes PB003G, which targets the GARP-TGFß1 complex; PB004, an anticancer drug based on an anti-ROR1 antibody; and PB003A, a therapy that targets the aVß8 integrin. The company was founded in 2010 and is based in Wroclaw, Poland.",
+    "industry": "Biotechnology",
+    "employees": 7,
+    "website": "https://purebiologics.com",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 26081246
+  },
   "pzu": {
     "description": "Powszechny Zaklad Ubezpieczen SA provides life and non-life insurance products and services in Poland, the Baltic States, and Ukraine. It operates through Corporate Insurance; Mass Insurance; Group Insurance and Individually Continued Insurance; Individual Insurance; Life Investment Insurance; Investments; Banking; Pension Insurance; Baltic Countries; Ukraine; and Investment Contracts segments. The company offers motor, property, casualty, agricultural, fire, and third-party liability insurance, as well as health and accident insurance.",
     "industry": "Insurance - Property & Casualty",
@@ -2621,6 +3870,23 @@
         "netIncome": 1760000000
       }
     ]
+  },
+  "qrs": {
+    "description": "Quercus TFI S.A. is a publicly owned investment manager. The firm also provides investment consulting services to its clients. It primarily provides its services to high net-worth and ultra-high-net worth investors. The firm launches and manages equity, fixed income, commodity, multi-assets, and balanced mutual funds for its clients. It also manages separate client-focused portfolios. The firm invests in public equity and fixed income markets. It also invests in alternative investment markets including commodity. The firm employs fundamental analysis to make its investments. The firm conducts in-house research to make its investments. The firm typically invests in companies in service sectors. Quercus TFI S.A. was founded in August 2007, and is based in Warszawa, Poland.",
+    "industry": "Asset Management",
+    "website": "https://www.quercustfi.pl/en",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 696835584
+  },
+  "raf": {
+    "description": "Fabryka Obrabiarek RAFAMET S.A., together with its subsidiaries, manufactures and sells special purpose machine and mechanical tools in Poland and internationally. It operates through three segments: Machine Tools, Castings and Models, and Other Products and Services. The company offers machines for railways, including above and under floor wheel, axle, and wheel and axle lathes, as well as wheel boring machines, software, shunting vehicles, and measuring and diagnostic systems; heavy-duty machine tools, such as vertical turning and horizontal lathes; and grey iron castings, ductile, and alloy cast iron. It also provides large part machining services comprising turning, milling, drilling, horizontal boring, and grinding; general overhauls, modernizations, and relocations of machine tools; and mechanical and hydraulic design, engineering, and CNC machine tool software services. In addition, the company offers technical support services, which include assembly, installation, and commissioning of machine tools, as well as adjustments, technical inspections, maintenance, and guarantee and after-guarantee repairs; mechanical, electrical, electronic components, and software service works; and trainings. It sells its products under the RAFAMET and POREBA brand names. The company's products are used in machine-building, power generation, metallurgical, shipbuilding, and defense industries. It exports its products. The company was founded in 1846 and is headquartered in Kuznia Raciborska, Poland. Fabryka Obrabiarek RAFAMET S.A. operates as a subsidiary of Agencja Rozwoju Przemyslu S.A.",
+    "industry": "Tools & Accessories",
+    "employees": 368,
+    "website": "https://www.rafamet.com",
+    "country": "Poland",
+    "city": "Kuznia Raciborska",
+    "marketCap": 502651776
   },
   "rbw": {
     "description": "Rainbow Tours S.A. operates as a tour operator in Poland. The company operates through Sale of Tourist Events, Hotel, and Others segments. Rainbow Tours S.A. was founded in 1990 and is headquartered in Lódz, Poland.",
@@ -2670,6 +3936,41 @@
       }
     ]
   },
+  "rlp": {
+    "description": "Relpol S.A. manufactures relays worldwide. It offers signal relays, miniature relays, time relays, interface relays, solid state relays, supervisory relays, modular installation relays, and plug-in industrial relays. The company also provides switched-mode power supplies, astronomical and digital clocks, electricity consumption meters, single and three phase power controllers, and installation contractors. Its products are applied building and industrial automation, energy sector, railways, solar inverters and charging stations, lightning control relays for DIN rail, electronics, as well as ventilation, air conditioning, cooling, and heating systems. The company was founded in 1958 and is based in Zary, Poland.",
+    "industry": "Electrical Equipment & Parts",
+    "employees": 476,
+    "website": "https://www.relpol.pl",
+    "country": "Poland",
+    "city": "Zary",
+    "marketCap": 53427112
+  },
+  "rmk": {
+    "description": "Remak-Energomontaz S.A. engages in the repair and modernization of steam and water boilers in Poland. It is also involved in the power equipment, flue gas desulphurisation, electrostatic precipitators, industrial, and pipelines installation operations, as well as operates as a general contractor. In addition, the company engages in the construction, modernization, and regeneration of power boilers; construction of multi-generation systems combining gas cogeneration with other sources and types of fuels and renewable energy, such as biomass, geothermal energy or heat pumps, biogas, and biomethane plants; erection, overhaul, service, and modernisation of piping and fittings; and erection and overhaul of turbomachinery. Further, it is involved in the engineering, procurement, and construction works; construction, repair, and modernisation of gas projects; heat treatment operations; hydraulic vertical lifting systems and transport business; system commissioning and warranty handling operations; and development of technologies for erection using hydraulic systems for vertical and horizontal transport, as well as offers non-destructive and destructive testing laboratory services. The company was founded in 1970 and is headquartered in Warsaw, Poland.",
+    "industry": "Specialty Industrial Machinery",
+    "website": "https://www.remak.com.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 30900000
+  },
+  "rnk": {
+    "description": "Rank Progress S.A. invests in, develops, rents, and sells commercial real estate properties in Poland and internationally. The company develops shopping and service centers; shopping malls; mixed-use facilities, i.e. residential and office. It is also involved in provision of management services; conducts investment processes; financing and raising funds, sale and purchase real estate. Rank Progress S.A. was founded in 1997 and is based in Legnica, Poland.",
+    "industry": "Real Estate - Diversified",
+    "employees": 40,
+    "website": "https://www.rankprogress.pl",
+    "country": "Poland",
+    "city": "Legnica",
+    "marketCap": 181517424
+  },
+  "rvu": {
+    "description": "Ryvu Therapeutics S.A., a clinical-stage drug discovery and development company, engages in developing of small molecule therapies for treatment in oncology in Poland, European Union, and internationally. The company's lead candidate, Romaciclib (RVU120), is a CDK8 and CDK19 kinase inhibitor in Phase 2 clinical trial with potential to treat monotheraphy, combination therapy, monotherapy, and myelofibrosis. It also develops Dapolsertib (SEL24/MEN1703), a dual PIM and FLT3 kinase inhibitor licensed to the Menarini Group that is in study start-up for Phase 2 clinical trial for the treatment of diffuse large b-cell lymphoma and acute myeloid leukemia. In addition, the company's early pipeline candidates include candidates in the areas of kinases, synthetic lethality, immunometabolism, and immuno-oncology. It has collaborations with BioNTech SE to advance small molecule programs to target immune modulation in cancer and other disease areas; Exelixis Inc. for the development of targeted therapies based on Ryvu's STING agonist technology. The company was formerly known as Selvita S.A. and changed its name to Ryvu Therapeutics S.A. in October 2019. Ryvu Therapeutics S.A. was founded in 2007 and is headquartered in Kraków, Poland.",
+    "industry": "Biotechnology",
+    "employees": 228,
+    "website": "https://ryvu.com",
+    "country": "Poland",
+    "city": "Kraków",
+    "marketCap": 344490208
+  },
   "rwl": {
     "description": "Rawlplug S.A. design, manufacture, and sells fixings, fasteners, and tools under KOELNER, RAWPLUG, and MODECO EXPERT brands in Europe and internationally. It offers cordless and electric power tools, and power tool accessories; concrete and steel nail guns; accessories for nail guns and concrete; clips, washers, and tapes for nail guns; and building, mechanical, basic, cutting, measuring, connection, painting, and garden tools, as well as glue and glue guns, belts, health and safety articles, and tool transport accessories.",
     "industry": "Tools & Accessories",
@@ -2718,14 +4019,32 @@
       }
     ]
   },
+  "scp": {
+    "description": "Scope Fluidics S.A., a biotechnology company, designs and develops projects based on microfluidic technologies in medical diagnostics and healthcare in Poland. It offers BacterOMIC, an antibiotic susceptibility testing. Scope Fluidics S.A. was founded in 2010 and is headquartered in Warsaw, Poland.",
+    "industry": "Diagnostics & Research",
+    "employees": 157,
+    "website": "https://www.scopefluidics.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 376390592
+  },
+  "sgn": {
+    "description": "Sygnity S.A. manufactures and sells IT products and services in Poland and internationally. The company manufactures, purchases, and sells integrated IT systems, infrastructure, and hardware. It also offers computer programming and consultancy; software and IT; data processing; and hardware consultancy services. In addition, the company engages in the implementation, development, and maintenance of proprietary ERP-class IT systems. It serves the banking, financial, public, and public utility sectors. The company was formerly known as Computerland Poland SA and changed its name to Sygnity S.A. in April 2007. Sygnity S.A. was founded in 1991 and is headquartered in Warsaw, Poland. Sygnity S.A. is a subsidiary of TSS Europe B.V.",
+    "industry": "Information Technology Services",
+    "employees": 851,
+    "website": "https://www.sygnity.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 1698538496
+  },
   "shd": {
     "description": "Soho Development S.A. operates as an investment company. It primarily focuses on investing in real estate, healthcare, food, and publishing sectors, as well as companies that are in the early stages of development. The company was formerly known as Black Lion Fund S.A. and changed its name to Soho Development S.A. in May 2015. Soho Development S.A. was founded in 1994 and is based in Warsaw, Poland.",
     "industry": "Asset Management",
-    "employees": null,
+    "employees": 7,
     "website": "https://sohodevelopment.pl",
     "country": "Poland",
     "city": "Warsaw",
-    "marketCap": 7153959,
+    "marketCap": 25201680,
     "peRatio": null,
     "forwardPe": null,
     "eps": -0.02,
@@ -2760,6 +4079,14 @@
         "netIncome": -254000
       }
     ]
+  },
+  "sim": {
+    "description": "SimFabric S.A. produces and publishes computer games in Poland. It also operates a digital store, simfabric.store. The company was founded in 2016 and is based in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "website": "https://www.simfabric.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 18375000
   },
   "snk": {
     "description": "Sanok Rubber Company Spólka Akcyjna engages in the production and sale of rubber products in Poland, Germany, France, Finland, Hungary, Ukraine, and Belarus. The company operates through five segments: Automotive, Construction, Agriculture and Industry, Rubber Mixtures, and Other. It offers rubber, rubber-metal, rubber-plastic, and elastomer products; thermoplastic TPEs for body sealing and car suspension systems, as well as exhaust system suspensions; sealing systems used in the production of window and door joinery, and gutter and ventilation systems; and self-adhesive seals used for sealing",
@@ -2803,6 +4130,24 @@
         "netIncome": 7785000
       }
     ]
+  },
+  "sph": {
+    "description": "Sopharma AD produces, distributes, and exports pharmaceutical products in Europe, Bulgaria, and internationally. It offers Carsil to treat liver disease; Tempalgin, a painkiller; Analgin, a pain reliever; Tabex, a drug used for smoking secession; Tribestan, a drug used for stimulation of the male reproductive system; Broncholytin, which is used to suppress cough; Nivalin for use in the peripheral nervous system; Methylprednisolon for severe allergies and life-threatening conditions; Vitamin C; Valeriana, a herbal medicine to reduce the stress; veterinary vaccines; and medical devices, such as gauzes, compresses, and dressing. The company also provides food supplements; medicinal and cosmetic products, including plasters, bandages, herbal cosmetics, and sanitary-hygiene products; and yophilic products, ointments, syrups, drops, suppositories, inhalers, haemodialysis concentrates, sachets, substances, infusion solutions, veterinary vaccines, solutions and chemical substances and mixture. In addition, the company distributes pharmaceuticals, and sanitary and hygiene products; and provides contract manufacturing services, regulatory services, laboratory analysis, transport services, and other services. Further, it is involved in trading of pharmaceuticals; manufacturing medical plant; and provision of public opinion research services. Additionally, the company engages in the offline and online retail trade of medicinal products and medical equipment; and rental of properties, as well as in trading, consulting, and other activities. Sopharma AD was founded in 1933 and is headquartered in Sofia, Bulgaria.",
+    "industry": "Medical Distribution",
+    "employees": 6005,
+    "website": "https://www.sopharmagroup.com",
+    "country": "Bulgaria",
+    "city": "Sofia",
+    "marketCap": 3994958080
+  },
+  "spr": {
+    "description": "Spyrosoft Spólka Akcyjna operates as a software engineering company. It offers a range of software development services, including embedded and cloud solutions. Its services include agile consulting, artificial intelligence and machine learning, build operate transfer, cloud services, customer support, cybersecurity, digital product design, ecommerce development, embedded software engineering, enterprise software engineering, functional safety, HMI development and consulting, low-code development platforms, managed services, mobile app development, IT staff augmentation, and public sector digital services. It serves chemical industry, agritech, automotive, defense, security and aerospace, digital transformation, edutech, financial services, geospatial, healthcare and life sciences, hr tech, industry 4.0, legal technology consulting, media and entertainment, robotics, adtech & martech development, high tech, and retail industries. The company was founded in 2016 and is based in Wroclaw, Poland.",
+    "industry": "Software - Application",
+    "employees": 2000,
+    "website": "https://spyro-soft.com",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 426734880
   },
   "stf": {
     "description": "Stalprofil S.A. engages in the distribution of steel products in Poland and internationally. It provides hot rolled profiles, channels, equal-leg angles, unequal angles, and T-bars; cold formed profiles, such as square and rectangular profiles, and channels; flat, round, square, drawn, and ribbed bars, as well as wire rods; and hot and cold rolled plates, and patterned sheets.",
@@ -2895,6 +4240,33 @@
       }
     ]
   },
+  "sve": {
+    "description": "Synthaverse S.A., a pharmaceutical company, manufactures and sells medicinal preparations, medical devices, and laboratory reagents in Poland, rest of the European Union, and internationally. It operates through BCG and Traditional segments. The company offers OnkoBCG 50 and 100, which are oncological immunotherapy products used to treat superficial and non-invasive bladder tumors; GAMMA anty-D 50 and GAMMA anty-D 150, which are human anti-rh0(d) immunoglobulin products used in the prevention of maternal-fetal conflict in terms of the D antigen with the Rh system; GAMMA anty HBs 200 medications for use in passive prophylaxis hepatitis B virus; and BCG 10 tuberculosis vaccines. It also provides Distreptaza, a gynecology and proctology reagent used in medical laboratories, in case of poisoning with pesticides and biochemical and chemical-analytical tests; LAKCID, which is a lactobacillus probiotic drug; and pseudocholinoesteraza, which is a laboratory reagent. In addition, the company engages in the contract production of injection drugs, lyophilisates of active substances in sterile sealed vials, active substances and drugs based on surface and submerged biological culture, and suppository forms of drugs. The company was formerly known as BIOMED-LUBLIN Wytwórnia Surowic i Szczepionek S.A. and changed its name to Synthaverse S.A. in July 2023. Synthaverse S.A. was founded in 1944 and is headquartered in Lublin, Poland.",
+    "industry": "Biotechnology",
+    "employees": 214,
+    "website": "https://synthaverse.com",
+    "country": "Poland",
+    "city": "Lublin",
+    "marketCap": 157264784
+  },
+  "tbl": {
+    "description": "T-Bull S.A. engages in the production and distribution of games for mobile and stationary devices in Poland. The company's games include Moto Rider GO, Top Speed, Bike Clash, Racing Xtreme 2, and Drive Stars: Sports Car Racing. It also operates in the area of PC and console games. T-Bull S.A. was incorporated in 2015 and is headquartered in Wroclaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "employees": 16,
+    "website": "https://t-bull.com",
+    "country": "Poland",
+    "city": "Wroclaw",
+    "marketCap": 2020120
+  },
+  "tlx": {
+    "description": "Talex S.A. provides IT services in Poland. The company offers data centers, such as collocation, cloud computing, and business continuity; and isolated recovery, IT outsourcing, software development, and IT infrastructure integration services. It serves e-commerce, automotive, and the financial sectors. Talex S.A. was founded in 1989 and is headquartered in Poznan, Poland.",
+    "industry": "Information Technology Services",
+    "employees": 239,
+    "website": "https://www.talex.pl",
+    "country": "Poland",
+    "city": "Poznan",
+    "marketCap": 53101632
+  },
   "tpe": {
     "description": "TAURON Polska Energia S.A., through its subsidiaries, generates, distributes, and supplies electricity and heat in Poland and the Czech Republic. It operates through Generation, Heat, Renewable Energy Sources, distribution, Supply and Wholesale Trading segments. The Generation segment is involved in electricity generation through conventional sources, including co-generation, as well as through biomass burning; generation and supply of heat; and generation equipment's overhaul operations.",
     "industry": "Utilities - Renewable",
@@ -2943,6 +4315,15 @@
       }
     ]
   },
+  "tri": {
+    "description": "Triton Development S.A. engages in the residential construction business in Poland. It offers apartments in multi-family buildings, and single-family and semi-detached houses. The company also offers rental services and real estate administration services, as well as engages in investment brokerage business. The company was founded in 1992 and is based in Warsaw, Poland.",
+    "industry": "Residential Construction",
+    "employees": 14,
+    "website": "https://www.tritondevelopment.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 22148544
+  },
   "trk": {
     "description": "Trakcja S.A. operates in the infrastructure and energy construction sector in Poland and internationally. The company designs road and railway infrastructure elements and building structures; and constructs drainage, traction networks and power supply systems, cable and overhead power lines, engineering facilities, roads and highways, and utility infrastructure.",
     "industry": "Engineering & Construction",
@@ -2985,6 +4366,32 @@
         "netIncome": -9815000
       }
     ]
+  },
+  "trr": {
+    "description": "Termo-Rex S.A. provides heat treatment solutions in Poland and internationally. The company offers personal protective equipment, including masks, overalls, safety goggles, visors, surgical sets, aprons, and shoe protectors; and mobile and furnace heat treatment. It also engages in the leasing of resistance and induction heating equipment and mobile modular heat treatment furnace, as well as resistance heating mats, distributors, cables, and welding machines for pins and thermocouples; warehousing of electric system products; and manufacturing of accessories, resistance heaters, and heating mats. In addition, the company is involved in the extraction and sale of microspheres; assemblies, upgrades, and overhauls; and supply of thermal insulation, technical ceramic products, and electrical system products. It serves power, petrochemical, and shipbuilding industries. The company was founded in 1997 and is headquartered in Jaworzno, Poland.",
+    "industry": "Building Materials",
+    "employees": 29,
+    "website": "https://termo-rex.pl",
+    "country": "Poland",
+    "city": "Jaworzno",
+    "marketCap": 60014036
+  },
+  "ulg": {
+    "description": "Ultimate Games S.A. engages in the production and distribution of games for various platforms internationally. The company offers production and sale of games and applications for mobile platforms with iOS, Android operating systems, PC, Mac computers, Nintendo Switch, Microsoft Xbox and PlayStation. The company also offers mobile applications, advertising, and other services. Ultimate Games S.A. was incorporated in 2017 and is based in Warsaw, Poland.",
+    "industry": "Electronic Gaming & Multimedia",
+    "website": "https://ultimate-games.com",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 78450000
+  },
+  "ulm": {
+    "description": "ULMA Construccion Polska S.A. provides formwork and scaffolding solutions and services in Poland and internationally. The company rents and sells scaffoldings systems, which include frame and ringlock scaffolding for use in restoration, industrial, and construction sites; formwork systems, including wall, column, slab, climbing, tunnel, and bridge formwork; safety equipment; timber beams and plywood; and shoring systems. It offers construction services; and logistics, engineering and applications, onsite assistance, and equipment pre-assembly services; and ULMA Studio and Scaffmax scaffolding design software. The company was formerly known as BAUMA S.A. and changed its name to ULMA Construccion Polska S.A. in November 2006. The company was founded in 1961 and is headquartered in Brwinów, Poland. ULMA Construccion Polska S.A. is a subsidiary of ULMA C y E, S. Coop.",
+    "industry": "Rental & Leasing Services",
+    "employees": 434,
+    "website": "https://www.ulmaconstruction.pl",
+    "country": "Poland",
+    "city": "Brwinów",
+    "marketCap": 278548480
   },
   "uni": {
     "description": "UNIBEP S.A. operates as a construction company in Poland, Sweden, Norway, Iceland, Denmark, Germany, Belarus, and internationally. The company constructs hotels, multi-family housing, office buildings, student accommodation, pre-schools and nurseries, outpatient clinics and nursing homes, and commercial pavilions, as well as road and bridges. It is also involved in energy and industrial construction, and property development activities. In addition, the company provides general contracting services. The company was founded in 1950 and is headquartered in Bielsk Podlaski, Poland.",
@@ -3033,6 +4440,14 @@
         "netIncome": null
       }
     ]
+  },
+  "vin": {
+    "description": "Gielda Praw Majatkowych Vindexus Spolka Akcyjna provides debt management services in Poland. It offers securitization funds; debt recovery services; and debt collection and trading services. Gielda Praw Majatkowych Vindexus Spolka Akcyjna was founded in 1995 and is headquartered in Warsaw, Poland.",
+    "industry": "Specialty Business Services",
+    "website": "https://www.gpm-vindexus.pl",
+    "country": "Poland",
+    "city": "Warsaw",
+    "marketCap": 161643104
   },
   "vox": {
     "description": "Voxel S.A. provides medical services in Poland. The company offers imaging diagnostics services, including reimbursed, commercial, and private patient examinations; teleradiology services; and clinical/pharmaceutical trials. It is also involved in the sale of radiopharmaceuticals, and the leasing of land. Voxel S.A. was incorporated in 2005 and is headquartered in Kraków, Poland.",
@@ -3125,6 +4540,15 @@
       }
     ]
   },
+  "wik": {
+    "description": "Wikana S.A. engages in the real estate development business in Poland. It also provides rental space and real estate management services on commission. The company was formerly known as Masters S.A. and changed its name to Wikana S.A. in March 2009. The company was founded in 1994 and is based in Lublin, Poland.",
+    "industry": "Real Estate - Development",
+    "employees": 40,
+    "website": "https://www.wikana.pl",
+    "country": "Poland",
+    "city": "Lublin",
+    "marketCap": 177795584
+  },
   "wpl": {
     "description": "Wirtualna Polska Holding S.A., through its subsidiaries, engages in the media, advertising, and e-commerce businesses in Poland. The company operates tourism portals, comprising Wakacje.pl, nocowanie.pl, WAKACYJNY SWIAT, eazygo, PARKLOT.PL, and SZALLAS Group. It also provides financing for new cars through Totalmoney, Direct.Money.pl, Finansowy Supermarket, and Superauto.pl. In addition, the company sells home designs through the Homebook, Extradom, and Selsey platforms, as well as the Naturalnie platform.",
     "industry": "Advertising Agencies",
@@ -3172,6 +4596,24 @@
         "netIncome": null
       }
     ]
+  },
+  "wtn": {
+    "description": "Wittchen S.A. manufactures and sells luxury accessories, clothing, footwear, and luggage for men and women in Poland and Europe. The company offers messenger, shoulder, cross body, shopper, tote, hobo, waist, clutch, evening, and laptop bags, as well as backpacks; leather goods, such as wallets, cases, briefcases, business card holders, document holders, and organizers; and luggage products, including suitcases, cosmetic cases, travel bags, and travel accessories. It also provides clothing products comprising jackets, coats, gilets, and fur products; shoes consisting of sandals and flip flops, sneakers, and moccasins; ballerina, court, stiletto, and wedding shoes; ankle, Chelsea, knee high, combat, and cowboy boots, as well as sports shoes; and accessories, such as scarves, neckerchiefs, shawls, gloves, belts, umbrellas, socks, hats, keychains, masks, ties, and suspenders. It operates through a network of sales showrooms and retail stores, as well as an online store. The company was founded in 1990 and is headquartered in Nowy Dwór Mazowiecki, Poland. Wittchen S.A. operates as a subsidiary of Simei Investments Ltd.",
+    "industry": "Apparel Retail",
+    "employees": 416,
+    "website": "https://www.wittchen.com",
+    "country": "Poland",
+    "city": "Nowy Dwór Mazowiecki",
+    "marketCap": 241074768
+  },
+  "wxf": {
+    "description": "Warimpex Finanz- und Beteiligungs AG operates as a real estate development and investment company in Austria, Germany, Hungary, and Poland. It operates through Investment Properties, Hotels, and Development and Services segments. The company is involved in the construction, purchase, refurbishment, and operation of offices and hotel properties. It also provides tenant adaptations and renting of property; lodging, and food and beverages; and asset management services. In addition, it is involved in the sale of developed properties; and services for third parties. It serves corporate, business, and leisure customers, as well as sales channels. The company was founded in 1959 and is headquartered in Vienna, Austria.",
+    "industry": "Real Estate Services",
+    "employees": 87,
+    "website": "https://www.warimpex.com",
+    "country": "Austria",
+    "city": "Vienna",
+    "marketCap": 115054192
   },
   "xtb": {
     "description": "XTB S.A., together with its subsidiaries, provides ETF, currency derivatives, commodities, indices, stocks, and bonds brokerage services in Central and Eastern Europe, Western Europe, Latin America, and the Middle East. It operates in two segments, Retail Operations and Institutional Activity. The Retail operations segment engages in the provision of trading in financial instruments for individual customers.",
@@ -3269,6 +4711,24 @@
       }
     ]
   },
+  "zmt": {
+    "description": "Zamet S.A. does not have significant operations. Previously, the company was engaged in the manufacturing and selling of industrial steel structures, machinery, and equipment. The company was founded in 1956 and is headquartered in Piotrków Trybunalski, Poland. Zamet S.A. is a subsidiary of Equity III TDJ Estate Sp. z o.o. sp. Komandytowo-Akcyjna.",
+    "industry": "Steel",
+    "employees": 1,
+    "website": "https://www.zametsa.com",
+    "country": "Poland",
+    "city": "Piotrków Trybunalski",
+    "marketCap": 60798080
+  },
+  "zre": {
+    "description": "Zaklad Budowy Maszyn ZREMB - Chojnice S.A. produces and sells containers and steel structures in Poland and internationally. The company provides Side door containers, CSC, military transport platform, flat rack CSC electrical, CSC, zremove self-discharging containers, ZRECOOK mobile kitchen, container of own design for transporting a sorting device, construction facility, and ZREBOAT floating house. It also offers military containers, offshore containers, offshore frames, containers for transportation of hazardous freight, machinery for agriculture, steel constructions, and custom design military containers. In addition, it provides agricultural machinery and transport services. The company was founded in 1973 and is based in Chojnice, Poland.",
+    "industry": "Steel",
+    "employees": 168,
+    "website": "https://zrembchojnice.pl",
+    "country": "Poland",
+    "city": "Chojnice",
+    "marketCap": 128800000
+  },
   "zue": {
     "description": "ZUE S.A., together with its subsidiaries, provides construction services in Poland. It engages in the design, construction, modernization, and maintenance of catenary networks, catenary substations, and tram tracks; and construction and maintenance of lighting fixtures, street lighting, traffic lights, and communication networks for cable piping and fibre optic wiring.",
     "industry": "Infrastructure Operations",
@@ -3309,620 +4769,6 @@
         "periodEnd": "2024-12-31",
         "revenue": 297911000,
         "netIncome": 3832000
-      }
-    ]
-  },
-  "cez": {
-    "description": "CEZ, a. s. engages in the generation, distribution, trade, and sale of electricity, heat, thermal energy and other commodities in Central Europe. It operates through four segments: Generation, Distribution, Sales, and Mining. The company operates hydroelectric, wind, solar, nuclear, coal, photovoltaic, and biomass power plants, and combined cycle gas turbine power plant and combined heat and power units. It is also involved in the trade and sale of natural gas; mining of coal; quarrying and processing of construction aggregates and limestones; commodity trading business; and provision of energ…",
-    "industry": "Utilities - Regulated Electric",
-    "employees": 33700,
-    "website": "https://www.cez.cz",
-    "country": "Czech Republic",
-    "marketCap": 121855926272,
-    "peRatio": 23.945148,
-    "forwardPe": 4.189738,
-    "eps": 9.48,
-    "dividendYield": 3.36,
-    "totalRevenue": null,
-    "netIncome": null,
-    "sharesOutstanding": 536810247,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 84295000000,
-        "net_income": 13498000000,
-        "operating_income": 21886000000,
-        "eps": 25.1
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 91798000000,
-        "net_income": 5945000000,
-        "operating_income": 21164000000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 72253000000,
-        "net_income": 5513000000,
-        "operating_income": 15617000000,
-        "eps": 10.3
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 73480000000,
-        "net_income": 3992000000,
-        "operating_income": 15829000000,
-        "eps": 7.4
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 92708000000,
-        "net_income": 12703000000,
-        "operating_income": 26489000000,
-        "eps": 23.7
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": null
-      }
-    ]
-  },
-  "cfi": {
-    "description": "CFI Holding S.A. engages in construction activities in Poland. The company operates in Hotels and Restaurants, Real Estate, and Chemicals segments. It engages in hotel and restaurant and catering activities; rental of real estate and apartments in the TBS system; and recreation, sports, and medical services sectors activities. The company is also involved in commercial activities; catering activities and operational support for hotel activities; and rental of construction machinery. In addition, it sells artificial fertilizers, plant protection products, dyes, and other chemicals. CFI Holding …",
-    "industry": "Conglomerates",
-    "employees": null,
-    "website": "https://www.cfiholding.pl",
-    "country": "Poland",
-    "marketCap": 379620736,
-    "peRatio": 13.8,
-    "forwardPe": null,
-    "eps": 0.01,
-    "dividendYield": null,
-    "totalRevenue": 259136000,
-    "netIncome": 21325000,
-    "sharesOutstanding": 2750874900,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 62151000,
-        "net_income": 2674000,
-        "operating_income": 6895000,
-        "eps": 0.001
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 73861000,
-        "net_income": -9624000,
-        "operating_income": -5718000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 59988000,
-        "net_income": 6239000,
-        "operating_income": 19286000,
-        "eps": 0.002268
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 67545000,
-        "net_income": 16988000,
-        "operating_income": 28848000,
-        "eps": 0.006175
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 57743000,
-        "net_income": 2096000,
-        "operating_income": 8472000,
-        "eps": 0.001
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": null
-      }
-    ]
-  },
-  "ebp": {
-    "description": "Erste Bank Polska S.A. provides various banking products and services for individuals, small or medium-sized enterprises, corporate clients, and public sector institutions. The company offers personal account, savings accounts and term deposits, currencies, internet and mobile banking, and contactless payments, and debit and credit solutions. It also provides consumer loans and home mortgages; mutual funds, including pension schemes and various investment programmes; and tourist/travel, motor, and home insurance products, as well as bancassurance products. In addition, the company offers forei…",
-    "industry": "Banks - Regional",
-    "employees": 10144,
-    "website": "https://www.erste.pl",
-    "country": "Poland",
-    "marketCap": 65830354944,
-    "peRatio": 11.331574,
-    "forwardPe": 9.983357,
-    "eps": 56.85,
-    "dividendYield": 7.75,
-    "totalRevenue": 15449759744,
-    "netIncome": 5632520192,
-    "sharesOutstanding": 102189314,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 3991755000,
-        "net_income": 1027720000,
-        "operating_income": null,
-        "eps": 10.06
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 4013591000,
-        "net_income": 1838393000,
-        "operating_income": null,
-        "eps": 17.99
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": null
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 4051292000,
-        "net_income": 1017969000,
-        "operating_income": null,
-        "eps": 10.34
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 3949594000,
-        "net_income": 1733624000,
-        "operating_income": null,
-        "eps": 16.96
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": 3957599000,
-        "net_income": 913395000,
-        "operating_income": null,
-        "eps": 8.94
-      }
-    ]
-  },
-  "gtc": {
-    "description": "Globe Trade Centre S.A., a real estate developer and investor company, engages in the development, management, and rental of office, retail, and residential spaces. It operates in Poland, Hungary, Germany, Bucharest, Belgrade, Zagreb, Sofia, and internationally. The company was founded in 1994 and is headquartered in Warsaw, Poland. Globe Trade Centre S.A. is a subsidiary of GTC Dutch Holdings B.V.",
-    "industry": "Real Estate Services",
-    "employees": 246,
-    "website": "https://www.gtcgroup.com",
-    "country": "Poland",
-    "marketCap": 1315044224,
-    "peRatio": null,
-    "forwardPe": 4.2407403,
-    "eps": -1.2,
-    "dividendYield": null,
-    "totalRevenue": 205600000,
-    "netIncome": -161500000,
-    "sharesOutstanding": 574255122,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 53300000,
-        "net_income": -5500000,
-        "operating_income": 31900000,
-        "eps": -0.01
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 50500000,
-        "net_income": -125200000,
-        "operating_income": 1800000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 50500000,
-        "net_income": -28900000,
-        "operating_income": 22500000,
-        "eps": -0.05
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 51300000,
-        "net_income": -1900000,
-        "operating_income": 26900000,
-        "eps": 0.0
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 49800000,
-        "net_income": 1000000,
-        "operating_income": 26200000,
-        "eps": 0.0
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": null
-      }
-    ]
-  },
-  "ims": {
-    "description": "IMS S.A., together with its subsidiaries, primarily provides sensory marketing services in Poland. The company offers in-store music and royalty free music, scent marketing, scenting stores, and room aromatization services; digital signage, video wall, digital signage storefronts, and interactive screen for mall; in-store radio, advertising in shopping malls, video advertising, video marketing, and commercial networks through audio media; advertising totems and monitors, and video walls; and touch display for mall, gift card kiosk, and digital signage specialized devices. It also designs inter…",
-    "industry": "Advertising Agencies",
-    "employees": 51,
-    "website": "https://www.imssensory.com",
-    "country": "Poland",
-    "marketCap": 73074464,
-    "peRatio": 8.833333,
-    "forwardPe": null,
-    "eps": 0.24,
-    "dividendYield": 2.82,
-    "totalRevenue": 66496000,
-    "netIncome": 8320000,
-    "sharesOutstanding": 34469086,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 15849000,
-        "net_income": 957000,
-        "operating_income": 1707000,
-        "eps": 0.03
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 15586000,
-        "net_income": 1677000,
-        "operating_income": 2511000,
-        "eps": 0.04
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 16288000,
-        "net_income": 1666000,
-        "operating_income": 3231000,
-        "eps": 0.05
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 14266000,
-        "net_income": 1029000,
-        "operating_income": 1572000,
-        "eps": 0.03
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": 20356000,
-        "net_income": 3948000,
-        "operating_income": 6117000,
-        "eps": null
-      }
-    ]
-  },
-  "jrh": {
-    "description": "JR Holding ASI S.A., an alternative investment company, invests in the computer gaming, renewable energy, modern media, biotechnology, and digital technology businesses in Poland. It also invests in the artificial intelligence and digital business, energy transformation, deeptech and spacetech, medtech, sustainability, and circular economy sectors. The company was formerly known as JR Holding S.A. and changed its name to JR Holding ASI S.A. in December 2019. JR Holding ASI S.A. was founded in 2003 and is headquartered in Kraków, Poland.",
-    "industry": "Asset Management",
-    "employees": 12,
-    "website": "https://jrh.ai",
-    "country": "Poland",
-    "marketCap": 204095552,
-    "peRatio": 8.053572,
-    "forwardPe": null,
-    "eps": 0.56,
-    "dividendYield": null,
-    "totalRevenue": 41036068,
-    "netIncome": 25440556,
-    "sharesOutstanding": 45254000,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 64061,
-        "net_income": 6325848,
-        "operating_income": 8014686,
-        "eps": 0.14
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": -8398130,
-        "net_income": -9809898,
-        "operating_income": -10322546,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": -807885,
-        "net_income": 28640193,
-        "operating_income": 35863138,
-        "eps": 0.63
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": -4285956,
-        "net_income": 284411,
-        "operating_income": 1205130,
-        "eps": null
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": -83366,
-        "net_income": 12282094,
-        "operating_income": 15965989,
-        "eps": 0.27
-      }
-    ]
-  },
-  "kci": {
-    "description": "KCI Spolka Akcyjna, formerly known as Jupiter Spolka Akcyjna, is a private equity firm specializing in real estate and media sector. It seeks to invest in Poland. KCI Spolka Akcyjna is based in Kracow, Poland.",
-    "industry": "Real Estate - Development",
-    "employees": null,
-    "website": "https://www.kci.pl",
-    "country": "Poland",
-    "marketCap": 61175280,
-    "peRatio": null,
-    "forwardPe": null,
-    "eps": -0.09,
-    "dividendYield": null,
-    "totalRevenue": 1604000,
-    "netIncome": -13730000,
-    "sharesOutstanding": 68582150,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 616000,
-        "net_income": -3999000,
-        "operating_income": -2002000,
-        "eps": -0.06
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 825000,
-        "net_income": -6138000,
-        "operating_income": -3219000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 6472000,
-        "net_income": 1417000,
-        "operating_income": -1312000,
-        "eps": 0.02
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 380000,
-        "net_income": -3405000,
-        "operating_income": -2674000,
-        "eps": -0.05
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": 367000,
-        "net_income": -14585000,
-        "operating_income": -1203000,
-        "eps": null
-      }
-    ]
-  },
-  "kgl": {
-    "description": "KGL SA engages in the supply of thermoplastic polymer granulates in Poland and internationally. It offers styrenics, such as expandable, and low and high impact polystyrene, as well as styrene-butadiene copolymer; and polyolefins, including polypropylene homopolymer, polypropylene block copolymer, random polypropylene copolymer, metallocene polypropylene, metallocene polyethylene, and ethylene vinyl acetate copolymer, as well as high-, medium-, and low-density polyethylene. The company also provides engineering plastics, such as polyoxymethylene polyacetal, polycarbonate, polymethyl methacryla…",
-    "industry": "Specialty Chemicals",
-    "employees": 793,
-    "website": "https://www.kgl.pl",
-    "country": "Poland",
-    "marketCap": 72649072,
-    "peRatio": null,
-    "forwardPe": null,
-    "eps": -2.52,
-    "dividendYield": 9.52,
-    "totalRevenue": 542361024,
-    "netIncome": -17802000,
-    "sharesOutstanding": 7053308,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 138281000,
-        "net_income": 107000,
-        "operating_income": 4475000,
-        "eps": 0.02
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 136589000,
-        "net_income": -9182000,
-        "operating_income": -4235000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 131845000,
-        "net_income": -5711000,
-        "operating_income": -1995000,
-        "eps": -0.81
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 123645000,
-        "net_income": -479000,
-        "operating_income": 1408000,
-        "eps": -0.07
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": 134756000,
-        "net_income": -3477000,
-        "operating_income": 844000,
-        "eps": null
-      }
-    ]
-  },
-  "mcr": {
-    "description": "mcr Spolka Akcyjna produces, sells, installs, and services passive fire protection systems in Poland. It provides active extinguishing includes water mist fire extinguishing; construction security includes panel systems, spray systems, installation penetration systems, intumescent coating systems, and sprayed acoustic plasters; building systems integration, industrial energy storage, and fire partitions. It serves industrial buildings, professional energy, server rooms, high-rise buildings, cultural heritage buildings, industry and energy, public buildings, and commercial and logistics facilit…",
-    "industry": "Security & Protection Services",
-    "employees": null,
-    "website": "https://www.mcrsa.pl",
-    "country": "Poland",
-    "marketCap": 222607760,
-    "peRatio": 1.469697,
-    "forwardPe": null,
-    "eps": 9.9,
-    "dividendYield": 12.85,
-    "totalRevenue": 448332000,
-    "netIncome": 165532000,
-    "sharesOutstanding": 15299502,
-    "quarterlyReports": [
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 51566000,
-        "net_income": 131967000,
-        "operating_income": -13571000,
-        "eps": 8.8
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 146723000,
-        "net_income": 28172000,
-        "operating_income": 7993000,
-        "eps": 1.84
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 124257000,
-        "net_income": 831000,
-        "operating_income": 2812000,
-        "eps": 0.05
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 125786000,
-        "net_income": 2046000,
-        "operating_income": 3243000,
-        "eps": null
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": 131351000,
-        "net_income": 2599000,
-        "operating_income": 2161000,
-        "eps": 0.17
-      }
-    ]
-  },
-  "mfo": {
-    "description": "MFO S.A. manufactures and sells steel profiles in Poland. The company offers CD profiles, UD and UA profiles, CW and UW standard profiles, and CW and UW eco profiles for drywall framing applications; mounting rails for ventilation and air conditioning, and electrical installation applications; and steel sections for technical flooring systems applications. It also provides steel profiles for furniture industry, rack system, and semi-trailer and truck body applications; and steel posts for applications in fencing systems and gates. The company was incorporated in 2011 and is based in Sochaczew,…",
-    "industry": "Metal Fabrication",
-    "employees": 393,
-    "website": "https://www.mfo.pl",
-    "country": "Poland",
-    "marketCap": 186991968,
-    "peRatio": 20.808823,
-    "forwardPe": null,
-    "eps": 1.36,
-    "dividendYield": null,
-    "totalRevenue": 689180032,
-    "netIncome": 9023000,
-    "sharesOutstanding": 6607490,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 173387000,
-        "net_income": 2429000,
-        "operating_income": 3919000,
-        "eps": 0.37
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 167686000,
-        "net_income": -1023000,
-        "operating_income": 1395000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 177545000,
-        "net_income": 3275000,
-        "operating_income": 5397000,
-        "eps": 0.49565
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 170563000,
-        "net_income": 4342000,
-        "operating_income": 6327000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 169702000,
-        "net_income": 3481000,
-        "operating_income": 6161000,
-        "eps": 0.53
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": null
-      }
-    ]
-  },
-  "mol": {
-    "description": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság, together with its subsidiaries, operates as an integrated oil and gas company in Hungary and internationally. The company offers MOL EVO fuel products; operates convenience store under the Fresh Corner brand; and provides e-charging solutions. It also provides lubricants and autochemicals; gasoline, diesel, heating oil, and bunker diesel; JET A-1 aviation fuel; liquefied petroleum gas, including butanes, propane-butane mix, autogas, propane; petrochemicals; black products, such as bitumen, HFO, petrolcoke, and liquid sulphur, as…",
-    "industry": "Oil & Gas Refining & Marketing",
-    "employees": 24744,
-    "website": "https://www.molgroup.info",
-    "country": "Hungary",
-    "marketCap": 34886791168,
-    "peRatio": 14.218651,
-    "forwardPe": null,
-    "eps": 3.11,
-    "dividendYield": 3.68,
-    "totalRevenue": null,
-    "netIncome": null,
-    "sharesOutstanding": 788936919,
-    "quarterlyReports": [
-      {
-        "period_end": "2026-03-31",
-        "total_revenue": 2017128000000,
-        "net_income": 38841000000,
-        "operating_income": 83240000000,
-        "eps": 49.232073
-      },
-      {
-        "period_end": "2025-12-31",
-        "total_revenue": 2058724000000,
-        "net_income": 12834000000,
-        "operating_income": 15794000000,
-        "eps": 16.26746
-      },
-      {
-        "period_end": "2025-09-30",
-        "total_revenue": 2267569000000,
-        "net_income": 94800000000,
-        "operating_income": 162972000000,
-        "eps": 120.161698
-      },
-      {
-        "period_end": "2025-06-30",
-        "total_revenue": 2198746000000,
-        "net_income": 38076000000,
-        "operating_income": 78531000000,
-        "eps": null
-      },
-      {
-        "period_end": "2025-03-31",
-        "total_revenue": 2171244000000,
-        "net_income": 152343000000,
-        "operating_income": 185849000000,
-        "eps": 190.667535
-      },
-      {
-        "period_end": "2024-12-31",
-        "total_revenue": null,
-        "net_income": null,
-        "operating_income": null,
-        "eps": -10.61955
       }
     ]
   }

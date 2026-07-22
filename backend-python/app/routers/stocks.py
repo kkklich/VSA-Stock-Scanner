@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.returns import compute_price_returns
 from app.analysis.trust_score import compute_trust_score
 from app.analysis.vsa import (
     VsaConfig,
@@ -47,9 +48,13 @@ from app.dependencies import (
 from app.models import (
     AiAnalysisResponse,
     CandleBar,
+    CapexResponse,
+    CapexSummary,
+    CashflowPeriod,
     CompanyFundamentalsResponse,
     GpwCompany,
     HeatmapResponse,
+    PriceReturns,
     RatingHistoryResponse,
     RefreshStatusResponse,
     SignalEffectiveness,
@@ -63,6 +68,7 @@ from app.models import (
     VsaSignalResponse,
 )
 from app.services.cache import TTLCache
+from app.services.capex_service import build_capex_screen, sum_ttm, summarize_capex
 from app.services.exceptions import StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.heatmap_service import compute_heatmap
@@ -102,6 +108,8 @@ _RANKING_SORT_KEYS: dict[str, str] = {
     "volume": "volume",
     "sector": "sector",
     "aiConfidence": "ai_confidence",
+    "distFrom52wHighPct": "dist_from_52w_high_pct",
+    "distFrom52wLowPct": "dist_from_52w_low_pct",
 }
 
 # Verdict ordering so "Last Signal" sorts by conviction (Strong Buy → Strong
@@ -124,8 +132,11 @@ def _sort_value(item: object, attr: str) -> object:
     value = getattr(item, attr)
     if attr == "last_signal":
         return _SIGNAL_RANK.get(value, 0)
-    if value is None:  # e.g. sector may be missing
-        return ""
+    if value is None:
+        # Missing sector sorts as an empty string; a missing value in an
+        # optional NUMERIC column (the 52-week distances) must sort as a
+        # number or Python would refuse to compare it with the real floats.
+        return "" if attr == "sector" else float("-inf")
     if isinstance(value, str):
         return value.casefold()
     return value
@@ -143,6 +154,10 @@ def _query_ranking(
     min_price: float | None = None,
     max_price: float | None = None,
     min_volume: int | None = None,
+    max_dist_from_52w_high_pct: float | None = None,
+    max_dist_from_52w_low_pct: float | None = None,
+    new_52w_high: bool = False,
+    new_52w_low: bool = False,
     tickers: set[str] | None,
     sort_by: str,
     sort_dir: str,
@@ -183,6 +198,28 @@ def _query_ranking(
         rows = [r for r in rows if r.last_price <= max_price]
     if min_volume is not None:
         rows = [r for r in rows if r.volume >= min_volume]
+    if max_dist_from_52w_high_pct is not None:
+        # "Within N% of the 52-week high": the stored distance is ≤ 0
+        # (percent below the high), so within-N means distance ≥ −N.
+        rows = [
+            r
+            for r in rows
+            if r.dist_from_52w_high_pct is not None
+            and r.dist_from_52w_high_pct >= -max_dist_from_52w_high_pct
+        ]
+    if max_dist_from_52w_low_pct is not None:
+        # "Within N% of the 52-week low": the stored distance is ≥ 0
+        # (percent above the low).
+        rows = [
+            r
+            for r in rows
+            if r.dist_from_52w_low_pct is not None
+            and r.dist_from_52w_low_pct <= max_dist_from_52w_low_pct
+        ]
+    if new_52w_high:
+        rows = [r for r in rows if r.is_new_52w_high]
+    if new_52w_low:
+        rows = [r for r in rows if r.is_new_52w_low]
 
     attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
     reverse = sort_dir.casefold() != "asc"
@@ -325,6 +362,14 @@ async def get_ranking(
     min_price: Annotated[float | None, Query(alias="minPrice", ge=0)] = None,
     max_price: Annotated[float | None, Query(alias="maxPrice", ge=0)] = None,
     min_volume: Annotated[int | None, Query(alias="minVolume", ge=0)] = None,
+    max_dist_from_52w_high_pct: Annotated[
+        float | None, Query(alias="maxDistFrom52wHighPct", ge=0, le=100)
+    ] = None,
+    max_dist_from_52w_low_pct: Annotated[
+        float | None, Query(alias="maxDistFrom52wLowPct", ge=0)
+    ] = None,
+    new_52w_high: Annotated[bool, Query(alias="new52wHigh")] = False,
+    new_52w_low: Annotated[bool, Query(alias="new52wLow")] = False,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -375,6 +420,10 @@ async def get_ranking(
         min_price=min_price,
         max_price=max_price,
         min_volume=min_volume,
+        max_dist_from_52w_high_pct=max_dist_from_52w_high_pct,
+        max_dist_from_52w_low_pct=max_dist_from_52w_low_pct,
+        new_52w_high=new_52w_high,
+        new_52w_low=new_52w_low,
         tickers=ticker_set,
         sort_by=sort_by,
         sort_dir=sort_dir,
@@ -670,6 +719,177 @@ async def get_volume_surge(
     )
     start = (page - 1) * page_size
     return full.model_copy(update={"items": ordered[start : start + page_size]})
+
+
+# ── Endpoint: capital-expenditure screen ─────────────────────────────────────
+
+# Sortable capex columns: camelCase key (as the frontend sends it) → the
+# CapexItem attribute name (same whitelist idea as the ranking).
+_CAPEX_SORT_KEYS: dict[str, str] = {
+    "ticker": "ticker",
+    "name": "name",
+    "sector": "sector",
+    "capex": "capex",
+    "capexTtm": "capex_ttm",
+    "capexAnnual": "capex_annual",
+    "capexGrowthYoyPct": "capex_growth_yoy_pct",
+    "capexToRevenuePct": "capex_to_revenue_pct",
+    "capexToOcfPct": "capex_to_ocf_pct",
+    "operatingCashFlow": "operating_cash_flow",
+}
+
+_capex_lock = asyncio.Lock()
+
+
+@router.get(
+    "/capex",
+    response_model=CapexResponse,
+    response_model_by_alias=True,
+    summary="How much each company invests in itself (capital expenditure)",
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "Stored investment data could not be read"
+        },
+    },
+)
+async def get_capex(
+    q: Annotated[str | None, Query(max_length=50)] = None,
+    sector: Annotated[str | None, Query()] = None,
+    currency: Annotated[str, Query(max_length=8)] = "PLN",
+    with_data: Annotated[bool, Query(alias="withData")] = True,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
+    sort_by: Annotated[str, Query(alias="sortBy")] = "capex",
+    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
+    cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+) -> CapexResponse:
+    """Companies ranked by how much money they invest in their own business.
+
+    Capital expenditure (capex) is the cash spent on plants, machines,
+    buildings and software. Figures come from the stored Yahoo cash-flow
+    statements (refreshed with the weekly fundamentals pass), never from a
+    live fetch — the screen covers the whole universe at once.
+
+    ``currency`` defaults to ``PLN`` because amounts in different currencies
+    do not compare: a Hungarian issuer reporting in forint would top a
+    zloty-sorted list on unit size alone. ``currency=all`` lifts the filter
+    (the percentage columns stay comparable either way).
+
+    ``withData=false`` keeps companies Yahoo has no capex for; they carry null
+    figures rather than zeros, because "not reported" is not "invested
+    nothing". Server-side sorted (default: biggest investor first) and
+    paginated; ``totalCount`` carries the matching-row total.
+
+    A failed database read answers 503 rather than an empty screen, so a
+    momentary outage is never remembered as "this app has no capex data".
+    """
+    if sort_by not in _CAPEX_SORT_KEYS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid 'sortBy' value '{sort_by}'. "
+                f"Allowed: {', '.join(_CAPEX_SORT_KEYS)}."
+            ),
+        )
+
+    full: CapexResponse | None = cache.get("capex:full")
+    if full is None:
+        async with _capex_lock:
+            # A concurrent request may have finished computing while we waited.
+            full = cache.get("capex:full")
+            if full is None:
+                generation = cache.generation
+                loaded = await _load_capex(companies, repo)
+                if loaded is None:
+                    # The database read failed. Caching the empty screen here
+                    # would tell every visitor for the next cache lifetime that
+                    # the app has no investment data at all, and send them to a
+                    # Refresh button that cannot fix a database outage. Fail
+                    # loudly instead — the page shows the error and a Retry.
+                    raise HTTPException(
+                        status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=(
+                            "Could not read the stored investment data. "
+                            "Please try again in a moment."
+                        ),
+                    )
+                full = loaded
+                if not cache.set_if_generation(
+                    "capex:full", full, settings.history_cache_seconds, generation
+                ):
+                    logger.info("Capex cache invalidated during load — not cached.")
+
+    # Cheap per-request pass over the cached screen: filter → sort → slice.
+    # Both text filters are stripped ONCE and the stripped value is used for
+    # the "all" sentinel as well as the comparison — otherwise "%20all%20"
+    # would slip past the sentinel and then match nothing.
+    wanted_currency = currency.strip().upper()
+    wanted_sector = (sector or "").strip().casefold()
+    rows = full.items
+    if with_data:
+        rows = [r for r in rows if r.capex is not None]
+    if wanted_currency.casefold() != "all":
+        # The currency filter exists so amounts stay comparable, so it only
+        # judges rows that HAVE an amount: a company with no reported capex has
+        # nothing to compare and must survive into the withData=false view.
+        rows = [r for r in rows if r.capex is None or r.currency == wanted_currency]
+    if q and q.strip():
+        needle = q.strip().casefold()
+        rows = [
+            r
+            for r in rows
+            if needle in r.ticker.casefold() or needle in r.name.casefold()
+        ]
+    if wanted_sector and wanted_sector != "all":
+        rows = [r for r in rows if (r.sector or "").casefold() == wanted_sector]
+
+    attr = _CAPEX_SORT_KEYS[sort_by]
+    ordered = sorted(rows, key=lambda r: _sort_value(r, attr), reverse=sort_dir != "asc")
+    start = (page - 1) * page_size
+    return full.model_copy(
+        update={
+            "items": ordered[start : start + page_size],
+            "total_count": len(ordered),
+        }
+    )
+
+
+async def _load_capex(
+    companies: GpwCompanyService,
+    repo: QuoteRepository | None,
+) -> CapexResponse | None:
+    """Read stored cash-flow + revenue data and build the full screen.
+
+    Without a database there is nothing to read: the figures only ever arrive
+    through the ingest job, so the screen comes back empty (the page tells the
+    user to run a refresh) rather than triggering ~200 live Yahoo calls. That
+    is a stable state, so the caller may cache it.
+
+    Returns ``None`` when the database read itself failed. "The query blew up"
+    and "nobody has any capex" look identical once both are an empty screen,
+    and the caller must never cache the first as if it were the second.
+    """
+    tracked = companies.get_companies()
+    if repo is None:
+        logger.info("Capex screen requested without a database — returning empty.")
+        return CapexResponse(scanned_count=len(tracked))
+
+    try:
+        cashflow = await repo.get_all_cashflow()
+        revenue = await repo.get_all_revenue()
+    except Exception:
+        logger.exception("Capex screen: DB read failed.")
+        return None
+
+    screen = build_capex_screen(tracked, cashflow, revenue)
+    logger.info(
+        "Capex screen ready: %d of %d companies have capex data.",
+        screen.with_data_count,
+        screen.scanned_count,
+    )
+    return screen
 
 
 # ── Endpoint 4: raw EOD history ───────────────────────────────────────────────
@@ -1048,6 +1268,18 @@ async def get_trust_score(
 
 # ── Endpoint 7: company fundamentals ─────────────────────────────────────────
 
+# How far back the fundamentals endpoint asks for bars, to cover the 5-year
+# price return. `_get_quotes` backfills and PERSISTS anything the DB is
+# missing, so opening a stock page deepens that ticker's stored history once.
+_RETURNS_HISTORY_DAYS = 5 * 365 + 30
+# How long "Yahoo has no cash-flow statement for this company" is remembered.
+# Roughly one GPW company in twenty is permanently in that state, and each
+# check costs two network round trips, so without a marker every single view of
+# such a stock's page repeats the whole fetch to learn nothing. A day is safe:
+# these figures only move when a company publishes a report, and the nightly
+# refresh clears this cache anyway.
+_CAPEX_MISS_TTL_SECONDS = 24 * 60 * 60
+
 
 @router.get(
     "/{ticker}/fundamentals",
@@ -1064,6 +1296,7 @@ async def get_fundamentals(
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
     stooq: Annotated[StooqClient, Depends(get_stooq_client)],
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
 ) -> CompanyFundamentalsResponse:
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
@@ -1106,6 +1339,40 @@ async def get_fundamentals(
             detail=f"No fundamentals data available for '{normalized}'.",
         )
 
+    # Trailing price returns, computed from the same stored EOD bars the
+    # charts use (never an external "1Y return" field), so the figures always
+    # agree with what the user sees on the chart. A price-history failure must
+    # not take the whole card down — the rest of the payload is still useful.
+    price_returns: PriceReturns | None = None
+    try:
+        quotes = await _get_quotes(
+            normalized,
+            from_date=date.today() - timedelta(days=_RETURNS_HISTORY_DAYS),
+            to_date=None,
+            cache=cache,
+            cache_ttl=settings.history_cache_seconds,
+            repo=repo,
+            stooq=stooq,
+        )
+        if quotes:
+            price_returns = compute_price_returns(quotes)
+    except Exception:
+        logger.exception("Price returns unavailable for %s.", normalized)
+
+    # Capital expenditure — how much the company invests in itself.
+    ttm_revenue = sum_ttm(fundamentals.quarterly_reports, "total_revenue")
+    capex = await _load_ticker_capex(
+        normalized,
+        repo=repo,
+        stooq=stooq,
+        cache=cache,
+        # Prefer the summed quarters (same basis as the capex figure); fall
+        # back to Yahoo's own trailing-12-month revenue when the quarterly
+        # income statements are incomplete.
+        ttm_revenue=ttm_revenue
+        or (fundamentals.metrics.total_revenue if fundamentals.metrics else None),
+    )
+
     # Merge static company metadata (description, industry, …) from the service.
     return CompanyFundamentalsResponse(
         ticker=fundamentals.ticker,
@@ -1118,4 +1385,57 @@ async def get_fundamentals(
         country=company.country if company else None,
         metrics=fundamentals.metrics,
         quarterly_reports=fundamentals.quarterly_reports,
+        price_returns=price_returns,
+        ttm_revenue=ttm_revenue,
+        ttm_net_income=sum_ttm(fundamentals.quarterly_reports, "net_income"),
+        capex=capex,
     )
+
+
+async def _load_ticker_capex(
+    ticker: str,
+    *,
+    repo: QuoteRepository | None,
+    stooq: StooqClient,
+    cache: TTLCache,
+    ttm_revenue: int | None,
+) -> CapexSummary | None:
+    """Capex summary for one stock: stored data first, live Yahoo as fallback.
+
+    Unlike the whole-universe ``/capex`` screen, a single ticker is cheap
+    enough to fetch on demand, so opening a stock page shows its investment
+    figures even before the weekly fundamentals pass has run. Anything fetched
+    is persisted, so the next request is served from the database.
+
+    A company Yahoo simply has no cash-flow statement for persists nothing, so
+    without help the fetch would repeat on every single page view forever. That
+    "there is nothing to find" answer is therefore remembered in the shared
+    history cache for ``_CAPEX_MISS_TTL_SECONDS``, and the nightly refresh
+    clears that cache — so a statement Yahoo publishes later is still picked up.
+    """
+    periods: list[CashflowPeriod] = []
+    if repo is not None:
+        try:
+            periods = await repo.get_cashflow(ticker)
+        except Exception:
+            logger.exception("DB cash-flow lookup failed for %s.", ticker)
+
+    miss_key = f"capex-miss:{ticker}"
+    if (
+        not periods
+        and isinstance(stooq, YahooFinanceClient)
+        and cache.get(miss_key) is None
+    ):
+        try:
+            periods = await stooq.get_cashflow_periods(ticker)
+            if periods:
+                if repo is not None:
+                    await repo.upsert_cashflow(ticker, periods)
+            else:
+                cache.set(miss_key, True, _CAPEX_MISS_TTL_SECONDS)
+        except Exception:
+            logger.exception("Live cash-flow fetch failed for %s.", ticker)
+
+    if not periods:
+        return None
+    return summarize_capex(periods, ttm_revenue)

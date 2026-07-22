@@ -1,0 +1,79 @@
+# StockPilot — production stack for the Cyber_Folks VPS.
+#
+# Three containers:
+#   db   PostgreSQL 16      — EOD bars, fundamentals, daily rating snapshots
+#   api  FastAPI/Uvicorn    — the Python backend (port 5111, internal only)
+#   web  Nginx + React app  — static site + /api reverse proxy (port 8080 on localhost)
+#
+# Start / update:   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# Logs:             docker compose -f docker-compose.prod.yml logs -f api
+# Stop:             docker compose -f docker-compose.prod.yml down
+#
+# Only `web` is published, and only to 127.0.0.1 — the host's Nginx terminates
+# TLS and forwards to it. The database is never reachable from the internet.
+
+name: stockpilot
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stockpilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-stockpilot}
+      TZ: Europe/Warsaw
+    volumes:
+      # Named volume: market history survives container rebuilds and `down`.
+      # It is deleted only by `docker compose down -v` — don't run that.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stockpilot} -d ${POSTGRES_DB:-stockpilot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # No `ports:` on purpose — reachable only from the other containers.
+    # Admin access from the VPS shell:
+    #   docker compose -f docker-compose.prod.yml exec db psql -U stockpilot stockpilot
+
+  api:
+    build:
+      context: ./backend-python
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # asyncpg URL: "db" is this compose file's database service name.
+      STOCKPILOT_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-stockpilot}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-stockpilot}
+      # The browser calls the API same-origin through the web container, so CORS
+      # is not exercised in normal use. Kept correct for direct API calls.
+      STOCKPILOT_CORS_ALLOWED_ORIGINS: '["https://${DOMAIN:?set DOMAIN in .env.prod}","https://www.${DOMAIN}"]'
+      # Nightly refresh (Europe/Warsaw). GPW closes ~17:05.
+      STOCKPILOT_INGEST_HOUR: ${STOCKPILOT_INGEST_HOUR:-18}
+      STOCKPILOT_INGEST_MINUTE: ${STOCKPILOT_INGEST_MINUTE:-0}
+      TZ: Europe/Warsaw
+    # No `ports:` — only the web container talks to it, over the compose network.
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      # 127.0.0.1 prefix = not exposed to the internet. The host Nginx (which
+      # holds the Let's Encrypt certificate) proxies https://DOMAIN here.
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+volumes:
+  pgdata:

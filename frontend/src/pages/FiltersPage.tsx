@@ -23,11 +23,14 @@ import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
   EMPTY_FILTERS,
+  NEAR_52W_PCT,
   createPreset,
   filtersActive,
   loadPresets,
+  range52wParams,
   savePresets,
   type FilterPreset,
+  type Range52w,
   type ScreenFilters,
 } from '../lib/filterPresets'
 
@@ -52,6 +55,14 @@ const VOLUME_OPTIONS = [
   { value: 500_000, label: '≥ 500k' },
 ] as const
 
+const RANGE_52W_OPTIONS: { value: Range52w; label: string }[] = [
+  { value: 'any', label: 'Anywhere' },
+  { value: 'newHigh', label: 'New 52-week high' },
+  { value: 'nearHigh', label: `Within ${NEAR_52W_PCT}% of high` },
+  { value: 'nearLow', label: `Within ${NEAR_52W_PCT}% of low` },
+  { value: 'newLow', label: 'New 52-week low' },
+]
+
 const inputClass =
   'w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none'
 
@@ -73,6 +84,39 @@ function Field({
       </span>
       {children}
     </label>
+  )
+}
+
+/**
+ * One 52-week distance cell: the percentage plus a "NEW" chip when the latest
+ * session actually set the extreme (a breakout/breakdown, not just proximity).
+ */
+function Range52wCell({
+  pct,
+  isNew,
+  newLabel,
+  newTone,
+}: {
+  pct: number | null
+  isNew: boolean
+  newLabel: string
+  newTone: string
+}) {
+  if (pct === null) return <span className="text-slate-600">—</span>
+  return (
+    <span className="inline-flex items-center justify-end gap-1.5">
+      {isNew && (
+        <span
+          className={
+            'rounded px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ' +
+            newTone
+          }
+        >
+          {newLabel}
+        </span>
+      )}
+      <span className="tabular-nums text-slate-300">{fmtPct(pct)}</span>
+    </span>
   )
 }
 
@@ -143,6 +187,7 @@ export function FiltersPage() {
       minPrice: applied.minPrice ?? undefined,
       maxPrice: applied.maxPrice ?? undefined,
       minVolume: applied.minVolume ?? undefined,
+      ...range52wParams(applied.range52w),
     }),
     [page, sortBy, sortDir, applied],
   )
@@ -355,6 +400,23 @@ export function FiltersPage() {
           </Field>
 
           <Field
+            label="52-week range"
+            info="Where the last close sits between the 52-week low and high. Breakouts to new highs and stocks scraping their lows are the classic screens; VSA reads a new high on heavy volume as possible distribution, not automatic strength."
+          >
+            <select
+              value={filters.range52w}
+              onChange={(e) => set('range52w', e.target.value as Range52w)}
+              className={inputClass}
+            >
+              {RANGE_52W_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field
             label="Min. volume"
             info="20-session median volume (shares) — a liquidity floor so thinly traded stocks are excluded."
           >
@@ -478,7 +540,7 @@ export function FiltersPage() {
       ) : (
         <>
           <Card className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full min-w-[1000px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
                   <SortHeader
@@ -513,6 +575,26 @@ export function FiltersPage() {
                     onSort={onSort}
                     align="right"
                     className="text-right"
+                  />
+                  <SortHeader
+                    label="From 52w high"
+                    col="distFrom52wHighPct"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    align="right"
+                    info="How far below the 52-week high the last close sits. 0% means it closed at the high; a “NEW” chip marks a session that set a fresh 52-week high."
+                    className="hidden text-right md:table-cell"
+                  />
+                  <SortHeader
+                    label="From 52w low"
+                    col="distFrom52wLowPct"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                    align="right"
+                    info="How far above the 52-week low the last close sits. A “NEW” chip marks a session that set a fresh 52-week low."
+                    className="hidden text-right xl:table-cell"
                   />
                   <SortHeader
                     label="Rating (0–100)"
@@ -574,6 +656,22 @@ export function FiltersPage() {
                       }
                     >
                       {fmtPct(s.priceChangePct)}
+                    </td>
+                    <td className="hidden px-4 py-3 text-right text-sm md:table-cell">
+                      <Range52wCell
+                        pct={s.distFrom52wHighPct}
+                        isNew={s.isNew52wHigh}
+                        newLabel="new"
+                        newTone="bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
+                      />
+                    </td>
+                    <td className="hidden px-4 py-3 text-right text-sm xl:table-cell">
+                      <Range52wCell
+                        pct={s.distFrom52wLowPct}
+                        isNew={s.isNew52wLow}
+                        newLabel="new"
+                        newTone="bg-rose-500/15 text-rose-400 ring-rose-500/30"
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <RatingMeter rating={s.currentRating} />

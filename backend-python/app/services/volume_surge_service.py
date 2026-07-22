@@ -56,11 +56,15 @@ from app.models import (
 )
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
+from app.services.ranking_service import CONTEXT_HISTORY_DAYS
 from app.services.stooq_client import StooqClient
 
 logger = logging.getLogger(__name__)
 
-# Same analysis window and pre-filters as the ranking (blueprint §5).
+# Same analysis window and pre-filters as the ranking (blueprint §5). The
+# FETCH window is the ranking's longer CONTEXT_HISTORY_DAYS (52-week context)
+# so both services keep sharing one cached per-ticker history; analysis here
+# still runs on this 120-day slice.
 _HISTORY_DAYS = 120
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
 _MIN_MARKET_CAP_PLN = 100_000_000
@@ -158,7 +162,8 @@ async def compute_volume_surge(
     if today is None:
         today = date.today()
 
-    from_date = today - timedelta(days=_HISTORY_DAYS)
+    from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
+    analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
 
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote] | None:
@@ -212,27 +217,31 @@ async def compute_volume_surge(
             return None
 
         quotes = await fetch_quotes(company.ticker)
-        if not quotes or len(quotes) < 25:
+        # Analysis runs on the ranking's 120-day slice; only the shared fetch
+        # window is longer (see CONTEXT_HISTORY_DAYS), so results are
+        # identical to a plain 120-day fetch.
+        recent = [q for q in quotes or [] if q.date >= analysis_from]
+        if len(recent) < 25:
             return None
 
         # Guard the analysis: one malformed stock must never 500 the scan.
         try:
-            if median_volume_pln(quotes) < _MIN_MEDIAN_VOLUME_PLN:
+            if median_volume_pln(recent) < _MIN_MEDIAN_VOLUME_PLN:
                 return None
 
-            metrics = compute_surge_metrics(quotes, recent_days, baseline_days)
+            metrics = compute_surge_metrics(recent, recent_days, baseline_days)
             if metrics is None:
                 return None
             scanned += 1
-            session_dates.append(quotes[-1].date)
+            session_dates.append(recent[-1].date)
             if metrics.volume_ratio < min_ratio:
                 return None
 
             # VSA context on the same window/settings as the ranking, so the
             # numbers match across pages. As-of the last session date (not
             # the calendar day), matching the ranking.
-            signals = detect_signals(quotes, config)
-            as_of = quotes[-1].date
+            signals = detect_signals(recent, config)
+            as_of = recent[-1].date
             rating = compute_rating(signals, as_of)
             verdict, _ = verdict_from_signals(signals, as_of)
 
@@ -240,7 +249,7 @@ async def compute_volume_surge(
                 ticker=company.ticker.upper(),
                 name=company.name,
                 sector=company.sector,
-                last_price=float(quotes[-1].close),
+                last_price=float(recent[-1].close),
                 recent_avg_volume=metrics.recent_avg_volume,
                 baseline_avg_volume=metrics.baseline_avg_volume,
                 volume_ratio=round(metrics.volume_ratio, 2),
@@ -250,7 +259,7 @@ async def compute_volume_surge(
                 current_rating=rating,
                 last_signal=verdict,
             )
-            return item, quotes[-1].date
+            return item, recent[-1].date
         except Exception:  # noqa: BLE001
             logger.exception("Volume surge: skipping %s: analysis failed.", company.ticker)
             return None
@@ -262,7 +271,7 @@ async def compute_volume_surge(
     # nothing legitimate — but an exception that escaped its guard (e.g. the
     # DB dying inside fetch_quotes) must be logged, or a broken scan would
     # come back as an empty 200 that looks like a quiet market.
-    for company, result in zip(companies, results):
+    for company, result in zip(companies, results, strict=True):
         if isinstance(result, BaseException):
             logger.error("Volume surge: skipping %s: %s", company.ticker, result)
     hits = [r for r in results if isinstance(r, tuple)]

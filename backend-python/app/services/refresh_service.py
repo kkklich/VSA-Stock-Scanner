@@ -47,7 +47,7 @@ from app.models import (
     StooqDailyQuote,
 )
 from app.services.cache import TTLCache
-from app.services.ranking_service import compute_ranking
+from app.services.ranking_service import CONTEXT_HISTORY_DAYS, compute_ranking
 from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
 
@@ -176,12 +176,13 @@ class RefreshService:
     ) -> None:
         assert self._repo is not None
         from_date = today - timedelta(days=_HISTORY_DAYS)
+        context_from = today - timedelta(days=CONTEXT_HISTORY_DAYS)
         written = 0
 
         for item in ranking:
             ticker = item.ticker.lower()
             try:
-                quotes = await self._load_quotes(ticker, from_date)
+                quotes = await self._load_quotes(ticker, from_date, context_from)
                 points = build_rating_points(quotes)
                 if points:
                     await self._repo.upsert_rating_snapshots(ticker, points)
@@ -196,13 +197,18 @@ class RefreshService:
         )
 
     async def _load_quotes(
-        self, ticker: str, from_date: date
+        self, ticker: str, from_date: date, context_from: date
     ) -> list[StooqDailyQuote]:
-        """Reuse the history the ranking step just loaded (cache → DB)."""
-        cache_key = f"history:{ticker}:{from_date}:None"
+        """Reuse the history the ranking step just loaded (cache → DB).
+
+        The ranking caches the longer 52-week-context window (keyed by
+        ``context_from``); snapshots only need the bars from ``from_date``
+        on, so the cached list is sliced back down to the snapshot window.
+        """
+        cache_key = f"history:{ticker}:{context_from}:None"
         quotes: list[StooqDailyQuote] | None = self._history_cache.get(cache_key)
         if quotes is not None:
-            return quotes
+            return [q for q in quotes if q.date >= from_date]
         if self._repo is not None:
             return await self._repo.get_quotes(ticker, from_date)
         return []

@@ -6,6 +6,7 @@
 import {
   Activity,
   BookOpen,
+  Factory,
   Filter,
   LayoutDashboard,
   LayoutGrid,
@@ -49,6 +50,12 @@ const navItems: NavItem[] = [
     label: 'Volume surge',
     icon: Activity,
     match: (p) => p.startsWith('/volume-surge'),
+  },
+  {
+    to: '/capex',
+    label: 'Investment',
+    icon: Factory,
+    match: (p) => p.startsWith('/capex'),
   },
   {
     to: '/filters',

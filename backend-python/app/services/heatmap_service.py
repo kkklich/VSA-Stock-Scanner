@@ -20,6 +20,8 @@ import asyncio
 import logging
 from datetime import date, timedelta
 
+from app.analysis.returns import baseline_close as _baseline_close
+from app.analysis.returns import pct_change as _pct_change
 from app.analysis.statistics import median_volume_pln
 from app.analysis.vsa import (
     VsaConfig,
@@ -49,27 +51,6 @@ _MAX_CONCURRENT = 4
 # the newest session across the scan by more than this many calendar days
 # (suspended/stale listings), while tolerating holidays and long weekends.
 _MAX_SESSION_LAG_DAYS = 10
-
-
-def _pct_change(last_close: float, baseline: float) -> float | None:
-    """Percentage change from ``baseline`` to ``last_close`` (2 decimals)."""
-    if baseline <= 0:
-        return None
-    return round((last_close - baseline) / baseline * 100, 2)
-
-
-def _baseline_close(
-    quotes: list[StooqDailyQuote], cutoff: date, oldest: date
-) -> float | None:
-    """Close of the newest bar dated within ``[oldest, cutoff]`` (else None).
-
-    The ``oldest`` floor keeps gappy histories honest: without it a "1M"
-    change could silently be computed against a bar from many months ago.
-    """
-    for q in reversed(quotes):
-        if q.date <= cutoff:
-            return float(q.close) if q.date >= oldest else None
-    return None
 
 
 def compute_changes(
@@ -220,7 +201,7 @@ async def compute_heatmap(
     )
     # An exception that escaped build_tile's guard (e.g. the DB dying
     # mid-scan) must be logged, or a broken run would look like an empty map.
-    for company, result in zip(companies, results):
+    for company, result in zip(companies, results, strict=True):
         if isinstance(result, BaseException):
             logger.error("Heatmap: skipping %s: %s", company.ticker, result)
     tiles = [r for r in results if isinstance(r, tuple)]

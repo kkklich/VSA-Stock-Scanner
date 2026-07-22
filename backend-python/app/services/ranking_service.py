@@ -33,7 +33,25 @@ from app.services.stooq_client import StooqClient
 
 logger = logging.getLogger(__name__)
 
+# VSA analysis window (calendar days). Ratings, signals, liquidity and every
+# other per-stock metric except the 52-week context are computed on this slice,
+# so results are identical to the pre-52w engine.
 _HISTORY_DAYS = 120
+# Fetch window (calendar days): 52 weeks for the high/low context plus two
+# weeks of slack, because the 52-week window is anchored to the stock's last
+# SESSION date, which can trail today by a few days. Shared with the
+# volume-surge and scanner-stats services so all three reuse one cached
+# per-ticker history (the cache key embeds the from_date derived from this).
+CONTEXT_HISTORY_DAYS = 380
+# The 52-week window itself, anchored to the last bar.
+_WEEK52_DAYS = 365
+# Minimum span the stored bars must actually cover before a "52-week" figure is
+# reported. Without it a recently listed stock — or one whose history the DB
+# has only just started collecting — would have its 3-month high published as a
+# "new 52-week high", which the /filters screener then offers as a filter. 330
+# days (~47 weeks) leaves room for a listing that started just under a year ago
+# and for the gaps a thin GPW series can have, while still being a real year.
+_MIN_52W_COVERAGE_DAYS = 330
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
 _MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
@@ -45,6 +63,44 @@ _SPARKLINE_BARS = 10
 # the whole scan — dataset-global, not wall-clock, so cached results stay
 # deterministic; 10 days tolerates holidays and long weekends.
 _MAX_SESSION_LAG_DAYS = 10
+
+
+def compute_52w_context(
+    quotes: list[StooqDailyQuote],
+) -> tuple[float | None, float | None, bool, bool]:
+    """52-week high/low context for a chronological bar list.
+
+    Returns ``(dist_from_high_pct, dist_from_low_pct, new_high, new_low)``:
+    the last close vs. the highest high / lowest low of the 52 weeks ending
+    at the last bar (inclusive, so the "distance from high" is never
+    positive), plus flags saying whether the last bar itself set a new
+    52-week extreme (its intraday high/low beat every earlier bar in the
+    window).
+
+    The window has to be a real year: when the stored bars span less than
+    ``_MIN_52W_COVERAGE_DAYS`` the answer is "unknown" — all ``None``/``False``
+    — rather than a 52-week claim made from three months of data. Reporting a
+    short window would turn a quarterly high into a "new 52-week high" on the
+    screener, which is a plain falsehood to the reader.
+    """
+    if not quotes:
+        return None, None, False, False
+    last = quotes[-1]
+    window_from = last.date - timedelta(days=_WEEK52_DAYS)
+    window = [q for q in quotes if q.date >= window_from]
+    # window is non-empty (it always contains `last`); window[0] is its oldest
+    # bar, because callers pass chronologically sorted history.
+    if window[0].date > last.date - timedelta(days=_MIN_52W_COVERAGE_DAYS):
+        return None, None, False, False
+    high = max(float(q.high) for q in window)
+    low = min(float(q.low) for q in window)
+    last_close = float(last.close)
+    dist_high = round((last_close - high) / high * 100, 2) if high > 0 else None
+    dist_low = round((last_close - low) / low * 100, 2) if low > 0 else None
+    prior = window[:-1]
+    new_high = bool(prior) and float(last.high) > max(float(q.high) for q in prior)
+    new_low = bool(prior) and float(last.low) < min(float(q.low) for q in prior)
+    return dist_high, dist_low, new_high, new_low
 
 
 async def compute_ranking(
@@ -70,7 +126,8 @@ async def compute_ranking(
     if today is None:
         today = date.today()
 
-    from_date = today - timedelta(days=_HISTORY_DAYS)
+    from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
+    analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
 
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote] | None:
@@ -121,31 +178,35 @@ async def compute_ranking(
             return None
 
         quotes = await fetch_quotes(company.ticker)
-        if not quotes or len(quotes) < 25:
+        # Everything below except the 52-week context runs on the 120-day
+        # analysis slice, so the longer fetch window (CONTEXT_HISTORY_DAYS)
+        # never changes ratings, signals or the pre-filters.
+        recent = [q for q in quotes or [] if q.date >= analysis_from]
+        if len(recent) < 25:
             logger.debug("Skipping %s: insufficient history (%d bars).",
-                         company.ticker, len(quotes) if quotes else 0)
+                         company.ticker, len(recent))
             return None
 
         # Guard the analysis + model construction: a single company with
         # malformed data must never 500 the whole ranking — skip it instead.
         try:
-            if median_volume_pln(quotes) < _MIN_MEDIAN_VOLUME_PLN:
+            if median_volume_pln(recent) < _MIN_MEDIAN_VOLUME_PLN:
                 logger.debug("Skipping %s: below liquidity threshold.", company.ticker)
                 return None
 
-            signals = detect_signals(quotes, config)
+            signals = detect_signals(recent, config)
 
             # Ratings are keyed to the last SESSION date, not the wall-clock
             # date: identical data must yield identical ratings whether the
             # ranking runs on Friday evening or Sunday (no weekend decay).
-            last_bar_date = quotes[-1].date
+            last_bar_date = recent[-1].date
             rating_today = compute_rating(signals, last_bar_date)
 
             # ratingChange = how the newest session changed the rating: the
             # rating as of the last bar minus the rating as it stood after
             # the previous bar (excluding any signal fired on the last bar).
-            if len(quotes) >= 2:
-                prev_bar_date = quotes[-2].date
+            if len(recent) >= 2:
+                prev_bar_date = recent[-2].date
                 prior_signals = [s for s in signals if s.date < last_bar_date]
                 rating_change = rating_today - compute_rating(
                     prior_signals, prev_bar_date
@@ -161,20 +222,25 @@ async def compute_ranking(
             ai = analyze_stock(
                 ticker=company.ticker,
                 name=company.name,
-                quotes=quotes,
+                quotes=recent,
                 signals=signals,
                 rating=rating_today,
             )
 
-            last_close = float(quotes[-1].close)
-            prev_close = float(quotes[-2].close) if len(quotes) >= 2 else last_close
+            last_close = float(recent[-1].close)
+            prev_close = float(recent[-2].close) if len(recent) >= 2 else last_close
             price_change_pct = (
                 round((last_close - prev_close) / prev_close * 100, 2) if prev_close else 0.0
             )
 
-            sparkline = [float(q.close) for q in quotes[-_SPARKLINE_BARS:]]
+            sparkline = [float(q.close) for q in recent[-_SPARKLINE_BARS:]]
 
-            med_vol_list = sorted(q.volume for q in quotes[-20:])
+            # 52-week context is the one metric that uses the full fetched
+            # window. `recent` is a suffix of `quotes` (same last bar), so
+            # the window is anchored to the same session as the rating.
+            dist_high, dist_low, new_high, new_low = compute_52w_context(quotes)
+
+            med_vol_list = sorted(q.volume for q in recent[-20:])
             n = len(med_vol_list)
             median_vol_shares = int(
                 (med_vol_list[n // 2 - 1] + med_vol_list[n // 2]) / 2
@@ -195,6 +261,10 @@ async def compute_ranking(
                 sparkline=sparkline,
                 volume=median_vol_shares,
                 ai_confidence=ai.confidence,
+                dist_from_52w_high_pct=dist_high,
+                dist_from_52w_low_pct=dist_low,
+                is_new_52w_high=new_high,
+                is_new_52w_low=new_low,
             )
             return item, last_bar_date
         except Exception:  # noqa: BLE001
@@ -207,7 +277,7 @@ async def compute_ranking(
     )
     # An exception that escaped fetch_and_analyse's guard (e.g. the DB dying
     # mid-scan) must be logged, or a broken run would look like an empty market.
-    for company, result in zip(companies, results):
+    for company, result in zip(companies, results, strict=True):
         if isinstance(result, BaseException):
             logger.error("Ranking: skipping %s: %s", company.ticker, result)
     pairs = [r for r in results if isinstance(r, tuple)]

@@ -5,3 +5,13 @@
 [Bb]in/
 [Oo]bj/
 *.user
+
+# Production secrets — .env.prod holds the database password and lives ONLY on
+# the server. Commit .env.prod.example (the template) instead.
+.env.prod
+.env.production
+*.pem
+*.key
+
+# Database dumps written by deploy/backup-db.sh
+/backups/

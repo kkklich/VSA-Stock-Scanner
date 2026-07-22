@@ -57,6 +57,14 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
+    test: (p) => p.startsWith('/capex'),
+    entry: {
+      title: 'GPW Investment Spending — capex by company',
+      description:
+        'How much each GPW-listed company invests in its own business: capital expenditure over the last twelve months, year-on-year change, and capex as a share of revenue and operating cash flow.',
+    },
+  },
+  {
     test: (p) => p.startsWith('/filters'),
     entry: {
       title: 'GPW Stock Screener — filters and saved presets',

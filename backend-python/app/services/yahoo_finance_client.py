@@ -17,12 +17,32 @@ import math
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from app.models import FinancialMetrics, QuarterlyReport, StooqDailyQuote
+from app.models import (
+    CashflowPeriod,
+    FinancialMetrics,
+    QuarterlyReport,
+    StooqDailyQuote,
+)
 from app.services.exceptions import StooqAccessError
 
 logger = logging.getLogger(__name__)
 
 _FOUR = Decimal("0.0001")
+
+# Cash-flow statement rows we read, in fallback order. Yahoo labels the capex
+# line "Capital Expenditure" for most companies; a minority only carry
+# "Purchase Of PPE" (the same thing under the statement's own wording). Both
+# are cash OUTFLOWS (negative), so both normalise to positive spend the same
+# way. "Net PPE Purchase And Sale" is deliberately NOT used as a fallback: it
+# nets asset sales against purchases and can even be positive, which is a
+# different quantity from "money invested".
+_CAPEX_ROWS = ("Capital Expenditure", "Purchase Of PPE")
+_OCF_ROWS = ("Operating Cash Flow",)
+_FCF_ROWS = ("Free Cash Flow",)
+# Reported periods kept per ticker: 8 quarters covers two years of TTM sums,
+# 5 years covers the year-on-year comparison with room to spare.
+_MAX_QUARTERS = 8
+_MAX_YEARS = 5
 
 
 class YahooFinanceClient:
@@ -166,6 +186,9 @@ class YahooFinanceClient:
             total_revenue=_safe("totalRevenue"),
             net_income=_safe("netIncomeToCommon"),
             shares_outstanding=_safe("sharesOutstanding"),
+            # Yahoo reports these as fractions (0.184 = 18.4% return).
+            return_on_equity=_safe("returnOnEquity"),
+            return_on_assets=_safe("returnOnAssets"),
         )
 
     async def get_quarterly_reports(self, ticker: str) -> list[QuarterlyReport]:
@@ -211,3 +234,119 @@ class YahooFinanceClient:
                 )
             )
         return reports
+
+    # ── Cash flow (capital expenditure) ───────────────────────────────────────
+
+    async def get_cashflow_periods(self, ticker: str) -> list[CashflowPeriod]:
+        """Return annual + quarterly cash-flow periods for a GPW ticker.
+
+        Feeds the capex screen ("how much does this company invest in
+        itself"). Periods with no capex figure at all are dropped — Yahoo
+        often lists the row but leaves the cell empty, and an empty row is
+        indistinguishable from "invested nothing" once stored.
+        """
+        yf_ticker = ticker.strip().upper() + ".WA"
+        async with self._get_semaphore():
+            return await asyncio.to_thread(self._fetch_cashflow_sync, yf_ticker)
+
+    def _fetch_cashflow_sync(self, yf_ticker: str) -> list[CashflowPeriod]:
+        import yfinance as yf
+
+        try:
+            tk = yf.Ticker(yf_ticker)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not open %s for cash flow: %s", yf_ticker, exc)
+            return []
+
+        # The reporting currency is NOT always PLN (foreign dual-listings
+        # report in EUR/USD/CZK…), and a figure without its currency is
+        # meaningless, so it travels with every period.
+        currency: str | None = None
+        try:
+            currency = (tk.info or {}).get("financialCurrency")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("No reporting currency for %s: %s", yf_ticker, exc)
+
+        periods: list[CashflowPeriod] = []
+        for attr, period_type, limit in (
+            ("cashflow", "annual", _MAX_YEARS),
+            ("quarterly_cashflow", "quarterly", _MAX_QUARTERS),
+        ):
+            try:
+                frame = getattr(tk, attr)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("No %s for %s: %s", attr, yf_ticker, exc)
+                continue
+            periods.extend(
+                _periods_from_frame(frame, period_type, currency, limit)  # type: ignore[arg-type]
+            )
+
+        return periods
+
+
+# ── Cash-flow frame parsing (module level: pure, unit-testable) ───────────────
+
+def _frame_value(frame, column, row_names: tuple[str, ...], labels: dict) -> int | None:
+    """First present, non-empty value among ``row_names`` for one period.
+
+    Yahoo frequently lists a row and leaves the cell empty (NaN) for the most
+    recent period, so "the row exists" is not the same as "there is a number".
+
+    ``labels`` maps a row's printed label to its index object. The caller builds
+    it once per frame: this runs three times per reporting period and up to 13
+    periods per company, so rebuilding the same map here meant ~39 rebuilds per
+    ticker on a weekly pass over ~290 companies.
+    """
+    for name in row_names:
+        idx = labels.get(name)
+        if idx is None:
+            continue
+        try:
+            value = float(frame.loc[idx, column])
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(value):
+            continue
+        return int(value)
+    return None
+
+
+def _periods_from_frame(
+    frame,
+    period_type: str,
+    currency: str | None,
+    limit: int,
+) -> list[CashflowPeriod]:
+    """Extract capex / cash-flow figures from one yfinance cash-flow frame.
+
+    Columns are reporting periods (newest first), rows are statement lines.
+    Periods without a capex figure are skipped.
+    """
+    if frame is None or getattr(frame, "empty", True):
+        return []
+
+    # Row labels are the same for every period in the frame, so resolve them
+    # once here instead of on each of the ~39 per-ticker value lookups below.
+    labels = {str(idx): idx for idx in frame.index}
+
+    periods: list[CashflowPeriod] = []
+    for column in list(frame.columns)[:limit]:
+        period_end = column.date() if hasattr(column, "date") else None
+        if period_end is None:
+            continue
+        capex = _frame_value(frame, column, _CAPEX_ROWS, labels)
+        if capex is None:
+            continue
+        periods.append(
+            CashflowPeriod(
+                period_end=period_end.isoformat(),
+                period_type=period_type,  # type: ignore[arg-type]  # caller passes a literal
+                # Yahoo reports capex as a negative cash outflow; store it as
+                # positive "money spent" so it reads and sorts naturally.
+                capex=abs(capex),
+                operating_cash_flow=_frame_value(frame, column, _OCF_ROWS, labels),
+                free_cash_flow=_frame_value(frame, column, _FCF_ROWS, labels),
+                currency=currency,
+            )
+        )
+    return periods

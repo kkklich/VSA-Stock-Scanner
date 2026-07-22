@@ -17,14 +17,37 @@ import type { Candle, VsaSignal } from '../types'
 const BULL = '#10B981'
 const BEAR = '#F43F5E'
 
+/** What the user is currently looking at, reported after they stop scrolling. */
+export type VisibleSpan = {
+  /** Loaded bars hidden to the left; negative = empty space past the oldest bar. */
+  barsBefore: number
+  /** How many bars fit in the viewport right now. */
+  visibleBars: number
+  /** How many bars are loaded in total. */
+  totalBars: number
+}
+
+/** How long the view must sit still before `onSpanSettled` fires (ms). */
+const SETTLE_MS = 220
+
 export function StockChart({
   candles,
   signals,
+  onSpanSettled,
 }: {
   candles: Candle[]
   signals: VsaSignal[]
+  /**
+   * Called once the user stops scrolling/zooming the time scale. Lets the page
+   * grow or shrink the loaded time range to match what they scrolled to.
+   */
+  onSpanSettled?: (span: VisibleSpan) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Keep the latest callback without re-creating the chart when it changes.
+  const spanCb = useRef(onSpanSettled)
+  spanCb.current = onSpanSettled
 
   useEffect(() => {
     const el = containerRef.current
@@ -97,11 +120,31 @@ export function StockChart({
 
     chart.timeScale().fitContent()
 
+    // Report the visible span after the user stops scrolling/zooming, so the
+    // page can load a wider or narrower slice of history to match.
+    let settleTimer: ReturnType<typeof setTimeout> | undefined
+    const onLogicalRange = (
+      logical: { from: number; to: number } | null,
+    ) => {
+      if (!logical) return
+      clearTimeout(settleTimer)
+      settleTimer = setTimeout(() => {
+        spanCb.current?.({
+          barsBefore: logical.from,
+          visibleBars: logical.to - logical.from,
+          totalBars: candles.length,
+        })
+      }, SETTLE_MS)
+    }
+    chart.timeScale().subscribeVisibleLogicalRangeChange(onLogicalRange)
+
     const onResize = () =>
       chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
     window.addEventListener('resize', onResize)
 
     return () => {
+      clearTimeout(settleTimer)
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLogicalRange)
       window.removeEventListener('resize', onResize)
       chart.remove()
     }

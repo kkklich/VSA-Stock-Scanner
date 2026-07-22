@@ -1,7 +1,7 @@
 // Stock detail / charts page — the "detail" half of the master–detail dashboard.
 // Now backed by GET /api/stocks/{ticker}/signals via the useStockDetail hook.
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   ChevronDown,
@@ -11,7 +11,7 @@ import {
   MoreHorizontal,
   RotateCcw,
 } from 'lucide-react'
-import { StockChart } from '../components/StockChart'
+import { StockChart, type VisibleSpan } from '../components/StockChart'
 import { CompanyPicker } from '../components/CompanyPicker'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
 import { TrustScoreCard } from '../components/TrustScoreCard'
@@ -52,6 +52,21 @@ const RANGE_OPTIONS = [
 type RangeKey = (typeof RANGE_OPTIONS)[number]['key']
 
 const DEFAULT_RANGE: RangeKey = '1Y'
+
+/**
+ * Scroll-to-change-range tuning. "Show me further back" is either panning more
+ * than `PAN_PAST_START_BARS` past the oldest loaded candle, or zooming out
+ * until the viewport is `ZOOM_OUT_FACTOR` times wider than the loaded data
+ * (which is what a wheel-zoom anchored near the right edge looks like — the
+ * window grows past the newest bar rather than past the oldest one). Shrinking
+ * the view below `ZOOM_IN_FRACTION` of the loaded bars means "show me a shorter
+ * range". At rest the viewport is only a few bars wider than the data, so the
+ * zoom-out factor has margin. The cooldown keeps one gesture to a single step.
+ */
+const PAN_PAST_START_BARS = 8
+const ZOOM_OUT_FACTOR = 1.15
+const ZOOM_IN_FRACTION = 0.3
+const STEP_COOLDOWN_MS = 700
 
 /** API `fromDate` (YYYY-MM-DD) for a range; MAX asks far enough back for everything. */
 function rangeFromDate(key: RangeKey): string {
@@ -284,6 +299,24 @@ function DetectionSettings({
   )
 }
 
+/** Small uppercase divider inside the fundamentals card. */
+function CardSection({ label, info }: { label: string; info?: string }) {
+  return (
+    <div className="flex items-center gap-1.5 border-t border-slate-800 pt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      {label}
+      {info && <InfoTip text={info} />}
+    </div>
+  )
+}
+
+/** Percent value with directional colour; "—" when not available. */
+function PctValue({ pct }: { pct: number | null | undefined }) {
+  if (pct == null) return <span className="text-slate-600">—</span>
+  return (
+    <span className={'tabular-nums ' + deltaTone(pct)}>{fmtPct(pct)}</span>
+  )
+}
+
 function FundamentalsCard({
   ticker,
   sector,
@@ -293,15 +326,21 @@ function FundamentalsCard({
 }) {
   const { data, loading } = useFundamentals(ticker)
   const m = data?.metrics
+  const r = data?.priceReturns
 
-  // Yahoo returns the dividend yield either as a fraction (0.056) or as a
-  // percentage (5.6) depending on the data vintage — normalise to percent.
-  const divYield =
-    m?.dividendYield == null
-      ? null
-      : m.dividendYield < 1
-        ? m.dividendYield * 100
-        : m.dividendYield
+  // Yahoo already reports the dividend yield AS A PERCENT (KGHM: 0.51 = 0.51%,
+  // cross-checked against dividendRate 1.5 PLN ÷ price 306 ≈ 0.49%). An older
+  // "if < 1 it must be a fraction, so ×100" heuristic lived here and turned
+  // every sub-1% yield into a wild 51%-style figure — never reintroduce it:
+  // a fraction and a small percentage are indistinguishable from the value
+  // alone, so trust the documented unit instead of guessing.
+  const divYield = m?.dividendYield ?? null
+
+  // ROE/ROA arrive as fractions (0.184 = 18.4%).
+  const asPct = (v: number | null | undefined) =>
+    v == null ? '—' : `${(v * 100).toFixed(1)}%`
+  const asPln = (v: number | null | undefined) =>
+    v == null ? '—' : `${fmtCompactPln(v)} PLN`
 
   const rows: [string, string][] = [
     ['Sector', data?.sector ?? sector ?? '—'],
@@ -312,6 +351,54 @@ function FundamentalsCard({
     ['Dividend yield', divYield != null ? `${divYield.toFixed(2)}%` : '—'],
     ['Employees', data?.employees != null ? data.employees.toLocaleString('en-US') : '—'],
   ]
+
+  // Price returns. "Since …" always has a value once there are two bars, so
+  // it is the honest fallback while the stored history is still short.
+  const returnRows: [string, number | null | undefined][] = [
+    ['This year', r?.ytdPct],
+    ['1 year', r?.y1Pct],
+    ['3 years', r?.y3Pct],
+    ['5 years', r?.y5Pct],
+  ]
+
+  const incomeRows: [string, string][] = [
+    ['Revenue (12M)', asPln(data?.ttmRevenue)],
+    ['Net income (12M)', asPln(data?.ttmNetIncome)],
+    ['ROE', asPct(m?.returnOnEquity)],
+    ['ROA', asPct(m?.returnOnAssets)],
+  ]
+
+  // Investment spending (capex). Figures are in the statement's own reporting
+  // currency — not always PLN for dual-listed foreign issuers — and `basis`
+  // says whether they cover the last four quarters or one full year.
+  const capex = data?.capex ?? null
+  const capexCurrency = capex?.currency ?? 'PLN'
+  const asMoney = (v: number | null | undefined) =>
+    v == null ? '—' : `${fmtCompactPln(v)} ${capexCurrency}`
+  const capexRows: [string, string][] = capex
+    ? [
+        [
+          capex.basis === 'annual' ? 'Invested (last year)' : 'Invested (12M)',
+          asMoney(capex.capex),
+        ],
+        [
+          'vs previous year',
+          capex.capexGrowthYoyPct == null
+            ? '—'
+            : fmtPct(capex.capexGrowthYoyPct),
+        ],
+        [
+          '% of revenue',
+          capex.capexToRevenuePct == null
+            ? '—'
+            : `${capex.capexToRevenuePct.toFixed(1)}%`,
+        ],
+        [
+          '% of cash flow',
+          capex.capexToOcfPct == null ? '—' : `${capex.capexToOcfPct.toFixed(0)}%`,
+        ],
+      ]
+    : []
 
   return (
     <Card>
@@ -332,6 +419,55 @@ function FundamentalsCard({
                 <dd className="text-right font-medium text-slate-200">{v}</dd>
               </div>
             ))}
+
+            <CardSection
+              label="Price return"
+              info="How much the share price alone moved over each period, measured from this stock's own stored price history. Dividends are NOT included, so for a high-yielding stock your actual return was higher. “—” means the stored history doesn't reach back that far yet."
+            />
+            {returnRows.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-slate-500">{k}</dt>
+                <dd className="text-right font-medium">
+                  <PctValue pct={v} />
+                </dd>
+              </div>
+            ))}
+            {r?.maxPct != null && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">
+                  {r.maxFromDate ? `Since ${r.maxFromDate}` : 'All time'}
+                </dt>
+                <dd className="text-right font-medium">
+                  <PctValue pct={r.maxPct} />
+                </dd>
+              </div>
+            )}
+
+            <CardSection
+              label="Income"
+              info="Revenue and profit over the last four reported quarters (trailing 12 months). ROE = profit earned per zloty of shareholder capital; ROA = profit per zloty of assets — higher generally means a more efficient business. “—” means the figure was not reported."
+            />
+            {incomeRows.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-slate-500">{k}</dt>
+                <dd className="text-right font-medium text-slate-200">{v}</dd>
+              </div>
+            ))}
+
+            {capexRows.length > 0 && (
+              <>
+                <CardSection
+                  label="Investment (capex)"
+                  info="Money the company spends on its own business — factories, machines, buildings, software. “% of revenue” shows how capital-intensive it is; “% of cash flow” above 100% means it invests more than the business itself generates, so the rest comes from reserves or debt. Compare companies on the Investment page."
+                />
+                {capexRows.map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-3">
+                    <dt className="text-slate-500">{k}</dt>
+                    <dd className="text-right font-medium text-slate-200">{v}</dd>
+                  </div>
+                ))}
+              </>
+            )}
             {data?.website && (
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">WWW</dt>
@@ -437,11 +573,44 @@ export function ChartsPage() {
 
   // Picking a range also widens the signal context window to cover it, so
   // markers appear across the whole visible chart, not just the recent part.
-  function selectRange(key: RangeKey) {
+  const selectRange = useCallback((key: RangeKey) => {
     setRange(key)
     const opt = RANGE_OPTIONS.find((r) => r.key === key)
     if (opt) setContextWindow(opt.sessions)
-  }
+  }, [])
+
+  // Scroll-driven range switching: scrolling/zooming out past the oldest loaded
+  // bar steps up to the next longer range (loading more history), and zooming
+  // well inside the loaded data steps down to the next shorter one. The chart
+  // refits after each step, so one scroll gesture moves at most one step and
+  // the buttons stay in sync with what is on screen.
+  const stepCooldown = useRef(0)
+
+  const handleSpanSettled = useCallback(
+    ({ barsBefore, visibleBars, totalBars }: VisibleSpan) => {
+      if (loading || totalBars === 0) return
+      if (Date.now() < stepCooldown.current) return
+
+      const index = RANGE_OPTIONS.findIndex((r) => r.key === range)
+      // Either the view runs off the left of the loaded slice, or it has been
+      // zoomed out wider than the slice — both mean "show me further back".
+      const wantsOlder =
+        barsBefore < -PAN_PAST_START_BARS ||
+        visibleBars > totalBars * ZOOM_OUT_FACTOR
+      const wantsNarrower = visibleBars < totalBars * ZOOM_IN_FRACTION
+
+      const next = wantsOlder
+        ? RANGE_OPTIONS[index + 1]
+        : wantsNarrower
+          ? RANGE_OPTIONS[index - 1]
+          : undefined
+      if (!next) return
+
+      stepCooldown.current = Date.now() + STEP_COOLDOWN_MS
+      selectRange(next.key)
+    },
+    [loading, range, selectRange],
+  )
 
   const visibleSignals = useMemo(
     () =>
@@ -517,6 +686,7 @@ export function ChartsPage() {
               <div
                 role="group"
                 aria-label="Chart time range"
+                title="Scroll or zoom the chart to change the range automatically"
                 className="flex overflow-hidden rounded-lg border border-slate-700"
               >
                 {RANGE_OPTIONS.map(({ key }) => (
@@ -542,7 +712,11 @@ export function ChartsPage() {
               </div>
             </div>
             <div className="h-[300px] w-full sm:h-[420px]">
-              <StockChart candles={data.history} signals={visibleSignals} />
+              <StockChart
+                candles={data.history}
+                signals={visibleSignals}
+                onSpanSettled={handleSpanSettled}
+              />
             </div>
           </Card>
           <RatingHistoryCard ticker={ticker} />

@@ -17,9 +17,11 @@ from app.dependencies import (
     ranking_cache,
 )
 from app.main import app
-from app.models import StooqDailyQuote
+from app.models import FinancialMetrics, QuarterlyReport, StooqDailyQuote
 from app.routers.stocks import _backfill_attempted
 from app.services.exceptions import StooqAccessError
+from app.services.gpw_company_service import GpwCompanyService
+from app.services.ranking_service import _MIN_MARKET_CAP_PLN
 
 # ── Test fixtures ─────────────────────────────────────────────────────────────
 
@@ -43,10 +45,29 @@ def _make_quote(
 
 
 def _rich_quotes(n: int = 40) -> list[StooqDailyQuote]:
-    """40 bars at 100 PLN with 200k volume/day — passes all pre-filters."""
-    start = date(2026, 1, 2)
-    from datetime import timedelta
+    """40 bars at 100 PLN with 200k volume/day — passes all pre-filters.
+
+    Dated to end today: the ranking service slices its analysis window by
+    real dates, so a fixed historical start would fall outside it.
+    """
+    start = date.today() - timedelta(days=n - 1)
     return [_make_quote((start + timedelta(days=i)).isoformat()) for i in range(n)]
+
+
+def _with_year_of_history(quotes: list[StooqDailyQuote]) -> list[StooqDailyQuote]:
+    """Prepend one old bar so the series really spans 52 weeks.
+
+    The 52-week context is only reported when the stored bars cover close to a
+    full year (see ``_MIN_52W_COVERAGE_DAYS``). The added bar sits 340 days
+    before the last one: inside the 52-week window, outside the 120-day
+    analysis slice (so ratings and signals are untouched) and inside the price
+    range of the rest (so it never becomes the window's high or low).
+    """
+    last = quotes[-1].date
+    return [
+        _make_quote((last - timedelta(days=340)).isoformat(), high=101.0, low=99.0),
+        *quotes,
+    ]
 
 
 class _FakeStooqClient:
@@ -95,7 +116,7 @@ class TestGetCompanies:
         assert resp.status_code == 200
         body = resp.json()
         assert isinstance(body, list)
-        assert len(body) == 193
+        assert len(body) == len(GpwCompanyService().get_companies())
 
     def test_kghm_is_present(self) -> None:
         with TestClient(app) as client:
@@ -300,6 +321,91 @@ class TestGetRanking:
             ).json()
         assert all(item["volume"] >= 50_000 for item in body)
 
+    def test_52w_context_fields_present(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_with_year_of_history(_rich_quotes())
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/ranking").json()
+        item = body[0]
+        # camelCase fields exposed; the close (100) sits below the high (102).
+        assert "distFrom52wHighPct" in item
+        assert "distFrom52wLowPct" in item
+        assert "isNew52wHigh" in item
+        assert item["distFrom52wHighPct"] <= 0
+        assert item["distFrom52wLowPct"] >= 0
+
+    def test_52w_context_is_null_without_a_year_of_history(self) -> None:
+        # 40 bars is not 52 weeks: reporting their high as a "52-week high"
+        # would be a plain falsehood on the screener, so the fields stay null.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/ranking").json()
+        item = body[0]
+        assert item["distFrom52wHighPct"] is None
+        assert item["distFrom52wLowPct"] is None
+        assert item["isNew52wHigh"] is False
+        assert item["isNew52wLow"] is False
+
+    def test_sort_by_dist_from_52w_high(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_with_year_of_history(_rich_quotes())
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking",
+                params={"sortBy": "distFrom52wHighPct", "sortDir": "desc",
+                        "pageSize": 500},
+            )
+        assert resp.status_code == 200
+        vals = [item["distFrom52wHighPct"] for item in resp.json()]
+        assert vals == sorted(vals, reverse=True)
+
+    def test_within_pct_of_52w_high_filter(self) -> None:
+        # _rich_quotes closes at 100 with a 102 high → −1.96% from the high.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_with_year_of_history(_rich_quotes())
+        )
+        with TestClient(app) as client:
+            within5 = client.get(
+                "/api/stocks/ranking",
+                params={"maxDistFrom52wHighPct": 5, "pageSize": 500},
+            ).json()
+            within1 = client.get(
+                "/api/stocks/ranking",
+                params={"maxDistFrom52wHighPct": 1, "pageSize": 500},
+            ).json()
+        assert len(within5) > 0  # −1.96% is within 5% of the high
+        assert all(item["distFrom52wHighPct"] >= -5 for item in within5)
+        assert within1 == []  # −1.96% is NOT within 1% of the high
+
+    def test_new_52w_high_filter(self) -> None:
+        # A strictly rising series so the last bar sets a new 52-week high;
+        # a flat series (kgh) never does.
+        rising = _with_year_of_history([
+            _make_quote(
+                (date.today() - timedelta(days=39 - i)).isoformat(),
+                close=100.0 + i,
+                high=101.0 + i,
+                low=99.0 + i,
+            )
+            for i in range(40)
+        ])
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"kgh": rising, "pko": _with_year_of_history(_rich_quotes())}
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={"new52wHigh": "true", "pageSize": 500},
+            ).json()
+        tickers = {item["ticker"] for item in body}
+        assert "KGH" in tickers
+        assert "PKO" not in tickers
+        assert all(item["isNew52wHigh"] for item in body)
+
     def test_stale_listing_excluded_from_ranking(self) -> None:
         # A ticker whose last bar lags the newest session in the scan by 15
         # days (i.e. a suspended/stale listing) must be dropped by the
@@ -361,9 +467,15 @@ class TestGetRanking:
 
         # One call per company on first load, then 0 calls on cache hit.
         # Companies whose known market cap is below the 100M PLN floor are
-        # skipped before any data is fetched (5 of the 193 seed companies).
+        # skipped before any data is fetched.
+        companies = GpwCompanyService().get_companies()
+        expected = sum(
+            1
+            for c in companies
+            if c.market_cap is None or c.market_cap >= _MIN_MARKET_CAP_PLN
+        )
         first_load_calls = calls["count"]
-        assert first_load_calls == 188  # 193 companies - 5 skipped
+        assert first_load_calls == expected
 
 
 # ── GET /api/stocks/{ticker}/history ─────────────────────────────────────────
@@ -610,6 +722,55 @@ class TestGetFundamentals:
             assert "marketCap" in body["metrics"]
             assert "peRatio" in body["metrics"]
             assert "market_cap" not in body["metrics"]
+
+    def test_returns_and_ttm_from_stored_data(self) -> None:
+        # Deterministic: seed the repo so the endpoint never needs the network.
+        # Two years of bars priced 100 → 150 gives a computable 1Y return, and
+        # four seeded quarters give a trailing-twelve-month revenue.
+        repo = InMemoryQuoteRepository()
+        today = date.today()
+        quotes = [
+            _make_quote((today - timedelta(days=730 - i)).isoformat(), close=100.0)
+            for i in range(700)
+        ] + [_make_quote(today.isoformat(), close=150.0)]
+        asyncio.run(repo.upsert_quotes("kgh", quotes))
+        asyncio.run(
+            repo.upsert_fundamentals(
+                "kgh",
+                FinancialMetrics(
+                    market_cap=1_000_000_000,
+                    return_on_equity=0.184,
+                    return_on_assets=0.072,
+                ),
+            )
+        )
+        asyncio.run(
+            repo.upsert_quarterly(
+                "kgh",
+                [
+                    QuarterlyReport(period_end="2026-03-31", total_revenue=40, net_income=4),
+                    QuarterlyReport(period_end="2025-12-31", total_revenue=30, net_income=3),
+                    QuarterlyReport(period_end="2025-09-30", total_revenue=20, net_income=2),
+                    QuarterlyReport(period_end="2025-06-30", total_revenue=10, net_income=1),
+                ],
+            )
+        )
+        app.dependency_overrides[get_quote_repository] = lambda: repo
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=quotes
+        )
+
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/kgh/fundamentals").json()
+
+        assert body["metrics"]["returnOnEquity"] == 0.184
+        assert body["metrics"]["returnOnAssets"] == 0.072
+        assert body["ttmRevenue"] == 100
+        assert body["ttmNetIncome"] == 10
+        # 100 → 150 over the stored window.
+        assert body["priceReturns"]["y1Pct"] == 50.0
+        assert body["priceReturns"]["maxPct"] == 50.0
+        assert body["priceReturns"]["maxFromDate"] is not None
 
 
 # ── Stooq client helpers (from test_stooq_client.py, kept for regression) ────

@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import (
+    CompanyCashflowRow,
     CompanyFundamentalsRow,
     CompanyQuarterlyRow,
     CompanyRow,
@@ -28,6 +29,7 @@ from app.db.models import (
     RatingSnapshotRow,
 )
 from app.models import (
+    CashflowPeriod,
     CompanyFundamentalsResponse,
     FinancialMetrics,
     GpwCompany,
@@ -75,6 +77,40 @@ class QuoteRepository(Protocol):
         """Return the stored fundamentals for a ticker, or None if not yet ingested."""
         ...
 
+    async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
+        """Insert or update cash-flow rows (capex, operating/free cash flow)."""
+        ...
+
+    async def get_cashflow(self, ticker: str) -> list[CashflowPeriod]:
+        """Return every stored cash-flow period for one ticker, newest first."""
+        ...
+
+    async def get_all_cashflow(self) -> dict[str, list[CashflowPeriod]]:
+        """Return the cash-flow periods of every ticker, keyed by ticker.
+
+        One query for the whole universe — the capex screen needs all ~200
+        companies at once, so a per-ticker round trip would be ~200 queries.
+        """
+        ...
+
+    async def has_cashflow(self) -> bool:
+        """True when at least one cash-flow row is stored, for any ticker.
+
+        A pure existence probe: the daily ingest asks it to decide whether the
+        capex tables still need their first fill. Reading the whole table (~290
+        companies × up to 13 periods) just to test it for emptiness would be
+        thousands of rows built into models and thrown away every evening.
+        """
+        ...
+
+    async def get_all_revenue(self) -> dict[str, int]:
+        """Return the stored trailing-12-month revenue per ticker.
+
+        Only tickers whose revenue is known appear. Used as the denominator of
+        the capex/revenue ratio on the capex screen.
+        """
+        ...
+
     async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
         """Insert or update daily VSA rating snapshots for a ticker."""
         ...
@@ -87,6 +123,20 @@ class QuoteRepository(Protocol):
     ) -> list[RatingPoint]:
         """Return stored rating snapshots for ``ticker`` in date order."""
         ...
+
+
+# ── Shared row → model mapping ────────────────────────────────────────────────
+
+def _cashflow_period(row: CompanyCashflowRow) -> CashflowPeriod:
+    """Map one stored cash-flow row to its API model."""
+    return CashflowPeriod(
+        period_end=row.period_end.isoformat(),
+        period_type=row.period_type,  # type: ignore[arg-type]  # constrained on write
+        capex=row.capex,
+        operating_cash_flow=row.operating_cash_flow,
+        free_cash_flow=row.free_cash_flow,
+        currency=row.currency,
+    )
 
 
 # ── PostgreSQL implementation ─────────────────────────────────────────────────
@@ -193,6 +243,8 @@ class PostgresQuoteRepository:
             "total_revenue": metrics.total_revenue,
             "net_income": metrics.net_income,
             "shares_outstanding": metrics.shares_outstanding,
+            "return_on_equity": metrics.return_on_equity,
+            "return_on_assets": metrics.return_on_assets,
         }
         async with self._sf() as session, session.begin():
             stmt = pg_insert(CompanyFundamentalsRow).values([values]).on_conflict_do_update(
@@ -226,6 +278,79 @@ class PostgresQuoteRepository:
                 },
             )
             await session.execute(stmt)
+
+    async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
+        if not periods:
+            return
+        rows = [
+            {
+                "ticker": ticker,
+                "period_end": date.fromisoformat(p.period_end),
+                "period_type": p.period_type,
+                "capex": p.capex,
+                "operating_cash_flow": p.operating_cash_flow,
+                "free_cash_flow": p.free_cash_flow,
+                "currency": p.currency,
+            }
+            for p in periods
+        ]
+        async with self._sf() as session, session.begin():
+            stmt = pg_insert(CompanyCashflowRow).values(rows).on_conflict_do_update(
+                constraint="uq_cashflow",
+                set_={
+                    "capex": pg_insert(CompanyCashflowRow).excluded.capex,
+                    "operating_cash_flow": (
+                        pg_insert(CompanyCashflowRow).excluded.operating_cash_flow
+                    ),
+                    "free_cash_flow": (
+                        pg_insert(CompanyCashflowRow).excluded.free_cash_flow
+                    ),
+                    "currency": pg_insert(CompanyCashflowRow).excluded.currency,
+                },
+            )
+            await session.execute(stmt)
+
+    async def get_cashflow(self, ticker: str) -> list[CashflowPeriod]:
+        async with self._sf() as session:
+            rows = (
+                await session.execute(
+                    select(CompanyCashflowRow)
+                    .where(CompanyCashflowRow.ticker == ticker)
+                    .order_by(CompanyCashflowRow.period_end.desc())
+                )
+            ).scalars().all()
+        return [_cashflow_period(row) for row in rows]
+
+    async def get_all_cashflow(self) -> dict[str, list[CashflowPeriod]]:
+        async with self._sf() as session:
+            rows = (
+                await session.execute(
+                    select(CompanyCashflowRow).order_by(
+                        CompanyCashflowRow.period_end.desc()
+                    )
+                )
+            ).scalars().all()
+        by_ticker: dict[str, list[CashflowPeriod]] = {}
+        for row in rows:
+            by_ticker.setdefault(row.ticker, []).append(_cashflow_period(row))
+        return by_ticker
+
+    async def has_cashflow(self) -> bool:
+        async with self._sf() as session:
+            stmt = select(CompanyCashflowRow.id).limit(1)
+            return (await session.execute(stmt)).scalar() is not None
+
+    async def get_all_revenue(self) -> dict[str, int]:
+        async with self._sf() as session:
+            rows = (
+                await session.execute(
+                    select(
+                        CompanyFundamentalsRow.ticker,
+                        CompanyFundamentalsRow.total_revenue,
+                    ).where(CompanyFundamentalsRow.total_revenue.is_not(None))
+                )
+            ).all()
+        return {ticker: revenue for ticker, revenue in rows}
 
     async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
         if not points:
@@ -305,6 +430,8 @@ class PostgresQuoteRepository:
                 total_revenue=fund_row.total_revenue,
                 net_income=fund_row.net_income,
                 shares_outstanding=fund_row.shares_outstanding,
+                return_on_equity=fund_row.return_on_equity,
+                return_on_assets=fund_row.return_on_assets,
             )
 
         quarterly = [
@@ -338,6 +465,7 @@ class InMemoryQuoteRepository:
         self._companies: list[GpwCompany] = []
         self._fundamentals: dict[str, FinancialMetrics] = {}
         self._quarterly: dict[str, list[QuarterlyReport]] = {}
+        self._cashflow: dict[str, list[CashflowPeriod]] = {}
         self._ratings: dict[str, dict[date, RatingPoint]] = {}
 
     async def upsert_companies(self, companies: list[GpwCompany]) -> None:
@@ -372,6 +500,32 @@ class InMemoryQuoteRepository:
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
         self._quarterly[ticker] = reports
+
+    async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
+        # Same key as the DB's unique constraint, so a re-ingest replaces a
+        # period instead of duplicating it.
+        merged = {(p.period_end, p.period_type): p for p in self._cashflow.get(ticker, [])}
+        for p in periods:
+            merged[(p.period_end, p.period_type)] = p
+        self._cashflow[ticker] = sorted(
+            merged.values(), key=lambda p: p.period_end, reverse=True
+        )
+
+    async def get_cashflow(self, ticker: str) -> list[CashflowPeriod]:
+        return list(self._cashflow.get(ticker, []))
+
+    async def get_all_cashflow(self) -> dict[str, list[CashflowPeriod]]:
+        return {t: list(rows) for t, rows in self._cashflow.items()}
+
+    async def has_cashflow(self) -> bool:
+        return any(self._cashflow.values())
+
+    async def get_all_revenue(self) -> dict[str, int]:
+        return {
+            t: m.total_revenue
+            for t, m in self._fundamentals.items()
+            if m.total_revenue is not None
+        }
 
     async def upsert_rating_snapshots(self, ticker: str, points: list[RatingPoint]) -> None:
         bucket = self._ratings.setdefault(ticker, {})

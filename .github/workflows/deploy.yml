@@ -1,0 +1,71 @@
+# StockPilot — deploy to the Cyber_Folks VPS.
+#
+# Triggered by a push to main/master (or manually from the Actions tab). It logs
+# into the server over SSH and runs deploy/deploy.sh there: git pull, rebuild the
+# containers, restart, health-check.
+#
+# ── Required GitHub repository secrets ────────────────────────────────────────
+# Settings → Secrets and variables → Actions → "New repository secret":
+#
+#   VPS_HOST        the server's IP address or hostname, e.g. 203.0.113.10
+#   VPS_USER        the SSH user that owns the checkout, e.g. stockpilot
+#   VPS_SSH_KEY     the PRIVATE half of a deploy key (whole file, including the
+#                   "-----BEGIN OPENSSH PRIVATE KEY-----" line). Generate on the
+#                   VPS with:  ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/github_deploy
+#                   then:      cat ~/.ssh/github_deploy.pub >> ~/.ssh/authorized_keys
+#                   and paste the contents of ~/.ssh/github_deploy as the secret.
+#   VPS_PORT        (optional) SSH port if it isn't 22
+#   VPS_PATH        (optional) checkout path on the server; defaults to ~/stockpilot
+#
+# Until these secrets exist the job fails fast with a clear message — deploying
+# by hand (ssh in, `bash deploy/deploy.sh`) stays perfectly valid.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  # Never let two deploys touch the server at the same time.
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Rebuild and restart on the VPS
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check that the deploy secrets are configured
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          missing=""
+          [ -z "$VPS_HOST" ]    && missing="$missing VPS_HOST"
+          [ -z "$VPS_USER" ]    && missing="$missing VPS_USER"
+          [ -z "$VPS_SSH_KEY" ] && missing="$missing VPS_SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing — see the comments at the top of .github/workflows/deploy.yml"
+            exit 1
+          fi
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          # Building the images can take a few minutes on a small VPS.
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.VPS_PATH || '~/stockpilot' }}"
+            git fetch --all
+            git reset --hard origin/${{ github.ref_name }}
+            bash deploy/deploy.sh --skip-pull

@@ -47,6 +47,17 @@ from app.services.yahoo_finance_client import YahooFinanceClient
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Columns added to an ALREADY-EXISTING table by a later version of the app.
+# `create_all` can only create whole missing tables, so these are applied on
+# startup with ADD COLUMN IF NOT EXISTS (idempotent — a no-op once present).
+# Keep each entry in sync with the ORM model and its Alembic revision.
+#   (table, column, SQL type)
+_ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    # 2026-07-21, alembic 002 — profitability ratios for the returns card.
+    ("company_fundamentals", "return_on_equity", "DOUBLE PRECISION"),
+    ("company_fundamentals", "return_on_assets", "DOUBLE PRECISION"),
+)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -114,9 +125,22 @@ async def lifespan(_app: FastAPI):
                 # missing and never alters existing ones. Running it on every
                 # startup means tables added in newer versions (e.g.
                 # company_fundamentals) appear automatically on an older DB.
-                # Column-level schema changes still need: alembic upgrade head
                 async with engine.begin() as conn:
                     await conn.run_sync(Base.metadata.create_all)
+                    # create_all cannot add a column to a table that already
+                    # exists, so columns introduced by a later version are
+                    # added here explicitly. ADD COLUMN IF NOT EXISTS is
+                    # idempotent, so this is a no-op on an up-to-date DB and
+                    # the owner never has to run a migration by hand. The
+                    # equivalent Alembic revisions are kept in alembic/
+                    # versions/ for deployments that manage schema properly.
+                    for table, column, coltype in _ADDED_COLUMNS:
+                        await conn.execute(
+                            text(
+                                f"ALTER TABLE {table} "
+                                f"ADD COLUMN IF NOT EXISTS {column} {coltype}"
+                            )
+                        )
                 logger.info("Database schema verified (missing tables created).")
 
                 repo = PostgresQuoteRepository(session_factory)

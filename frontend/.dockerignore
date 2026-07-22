@@ -1,0 +1,13 @@
+# Keep the build context small — node_modules is reinstalled by `npm ci`
+# inside the image, and dist/ is rebuilt there too.
+node_modules/
+dist/
+dist-ssr/
+.pytest_cache/
+.ruff_cache/
+*.log
+*.local
+.vscode/
+.idea/
+Dockerfile
+.dockerignore

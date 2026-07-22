@@ -41,7 +41,9 @@ def _quote(d: date, close: float = 100.0, volume: int = 200_000) -> StooqDailyQu
 
 
 def _rich_quotes(n: int = 40) -> list[StooqDailyQuote]:
-    start = date(2026, 1, 2)
+    # Ends today: the ranking step slices its analysis window by real dates,
+    # so a fixed historical start would fall outside it.
+    start = date.today() - timedelta(days=n - 1)
     return [_quote(start + timedelta(days=i)) for i in range(n)]
 
 

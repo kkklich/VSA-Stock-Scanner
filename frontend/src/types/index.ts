@@ -26,6 +26,13 @@ export interface StockRankingItem {
   sector: string | null
   /** AI-insight engine confidence, 0–100. */
   aiConfidence: number
+  /** % below the 52-week high (≤ 0; 0 = closed at the high). */
+  distFrom52wHighPct: number | null
+  /** % above the 52-week low (≥ 0). */
+  distFrom52wLowPct: number | null
+  /** The latest session set a new 52-week high / low. */
+  isNew52wHigh: boolean
+  isNew52wLow: boolean
   /** Whether the ticker is starred into the watchlist. */
   starred: boolean
 }

@@ -34,10 +34,15 @@ from app.analysis.vsa import SignalType, VsaConfig, detect_signals
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
+from app.services.ranking_service import CONTEXT_HISTORY_DAYS
 from app.services.stooq_client import StooqClient
 
 logger = logging.getLogger(__name__)
 
+# Analysis window — identical to the ranking's, so the back-test judges the
+# same signals the ranking shows. The FETCH window is the ranking's longer
+# CONTEXT_HISTORY_DAYS (52-week context) so both keep sharing one cached
+# per-ticker history.
 _HISTORY_DAYS = 120
 _FORWARD_SESSIONS = 10  # look-ahead window for the back-test
 _MAX_CONCURRENT = 4
@@ -90,7 +95,8 @@ async def compute_scanner_stats(
     if today is None:
         today = date.today()
 
-    from_date = today - timedelta(days=_HISTORY_DAYS)
+    from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
+    analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
 
     acc: dict[str, _Acc] = {name: _Acc() for name in SIGNAL_DISPLAY.values()}
@@ -123,8 +129,12 @@ async def compute_scanner_stats(
         return rows or []
 
     async def process(company: GpwCompany) -> None:
-        quotes = await fetch_quotes(company.ticker)
-        if not quotes or len(quotes) < 25:
+        fetched = await fetch_quotes(company.ticker)
+        # Analysis runs on the ranking's 120-day slice; only the shared fetch
+        # window is longer (see CONTEXT_HISTORY_DAYS), so the stats are
+        # identical to a plain 120-day fetch.
+        quotes = [q for q in fetched if q.date >= analysis_from]
+        if len(quotes) < 25:
             return
 
         signals = detect_signals(quotes, config)
@@ -205,7 +215,7 @@ async def compute_scanner_stats(
     )
     # A ticker whose task raised (e.g. the DB dying mid-scan) silently
     # contributes nothing to the stats — log it so the gap is visible.
-    for company, result in zip(companies, results):
+    for company, result in zip(companies, results, strict=True):
         if isinstance(result, BaseException):
             logger.error("Scanner stats: skipping %s: %s", company.ticker, result)
 
