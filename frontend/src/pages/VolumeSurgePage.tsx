@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import {
   Card,
+  CompanyLink,
   InfoTip,
   SignalBadge,
   SortHeader,
@@ -248,10 +249,13 @@ export function VolumeSurgePage() {
         </div>
       ) : (
         <>
-          <Card className="overflow-x-auto">
+          {/* min-width (not an overflow wrapper) so the sticky header can pin to
+              the page as you scroll; the table stays inside the card and the
+              page scrolls sideways when the viewport is narrower than it. */}
+          <Card className="min-w-[760px]">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
+                <tr className="text-[11px] uppercase tracking-wider text-slate-500">
                   <SortHeader
                     label="Company"
                     col="ticker"
@@ -402,7 +406,11 @@ function SurgeRow({
       className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/40"
     >
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2.5">
+        <CompanyLink
+          ticker={item.ticker}
+          title={item.name}
+          className="flex items-center gap-2.5"
+        >
           <TickerMark ticker={item.ticker} />
           <div className="min-w-0">
             <div className="font-semibold text-slate-100">{item.ticker}</div>
@@ -410,7 +418,7 @@ function SurgeRow({
               {item.name}
             </div>
           </div>
-        </div>
+        </CompanyLink>
       </td>
       <td className="hidden px-4 py-3 text-xs text-slate-400 lg:table-cell">
         {item.sector ?? '—'}

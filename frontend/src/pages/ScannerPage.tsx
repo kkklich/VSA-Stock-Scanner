@@ -579,28 +579,30 @@ function EffectivenessStats({
       </div>
 
       <table className="w-full px-2 pb-4 text-sm">
+        {/* Sticky header: pins to the top of the scroll area (mobile / short
+            viewports where this column scrolls) so the labels stay visible. */}
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
             <th
-              className="cursor-pointer select-none px-4 py-2 font-medium hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
               onClick={() => toggleSort('signal')}
             >
               Signal{arrow('signal')}
             </th>
             <th
-              className="cursor-pointer select-none px-2 py-2 text-right font-medium hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
               onClick={() => toggleSort('successPct')}
             >
               Success%{arrow('successPct')}
             </th>
             <th
-              className="cursor-pointer select-none px-2 py-2 text-right font-medium hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
               onClick={() => toggleSort('rewardRisk')}
             >
               R/R{arrow('rewardRisk')}
             </th>
             <th
-              className="cursor-pointer select-none px-4 py-2 text-right font-medium hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
               onClick={() => toggleSort('count')}
             >
               Trades{arrow('count')}

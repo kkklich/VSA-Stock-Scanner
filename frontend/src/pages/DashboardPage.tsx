@@ -1,26 +1,13 @@
-// Dashboard — the app's home page ("/"). A single ranked table with a
-// segmented control at the top to switch the view between:
-//   Best VSA  — highest VSA rating today (the core "best stocks" per VSA method)
-//   Winners   — biggest price gainers today
-//   Losers    — biggest price losers today
-//   Favorites — the user's starred stocks
-// All views query the live GET /api/stocks/ranking feed server-side: each tab
-// maps to a sort order (plus the favorites allow-list), and search/filters are
-// sent as query parameters. Rows load in pages of 25 with infinite scroll — a
-// sentinel below the list fetches the next page as it comes into view.
+// Dashboard — the app's home page ("/"). A single ranked table of the best
+// GPW stocks by VSA rating today. It queries the live GET /api/stocks/ranking
+// feed server-side (sorted by rating; the column headers re-sort), with
+// search/filters sent as query parameters. Rows load in pages of 25 with
+// infinite scroll — a sentinel below the list fetches the next page as it
+// comes into view.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Loader2,
-  RefreshCw,
-  Search,
-  SlidersHorizontal,
-  Star,
-  TrendingDown,
-  TrendingUp,
-  Trophy,
-} from 'lucide-react'
+import { Loader2, RefreshCw, Search, SlidersHorizontal, Star } from 'lucide-react'
 import {
   useInfiniteRanking,
   type InfiniteRankingParams,
@@ -31,6 +18,7 @@ import { loadFavorites, saveFavorites } from '../lib/favorites'
 import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
+  CompanyLink,
   InfoTip,
   RatingMeter,
   SignalBadge,
@@ -39,34 +27,6 @@ import {
   TickerMark,
 } from '../components/ui'
 import type { SignalVerdict, StockRankingItem } from '../types'
-
-type ViewId = 'best' | 'winners' | 'losers' | 'favorites'
-
-const TABS: { id: ViewId; label: string; icon: React.ElementType }[] = [
-  { id: 'best', label: 'Best VSA', icon: Trophy },
-  { id: 'winners', label: 'Winners', icon: TrendingUp },
-  { id: 'losers', label: 'Losers', icon: TrendingDown },
-  { id: 'favorites', label: 'Favorites', icon: Star },
-]
-
-const VIEW_COPY: Record<ViewId, { title: string; subtitle: string }> = {
-  best: {
-    title: 'Best stocks today (VSA)',
-    subtitle: 'Highest VSA rating across the GPW after the latest close.',
-  },
-  winners: {
-    title: "Today's winners",
-    subtitle: 'Largest positive price change this session.',
-  },
-  losers: {
-    title: "Today's losers",
-    subtitle: 'Largest negative price change this session.',
-  },
-  favorites: {
-    title: 'Your favorites',
-    subtitle: 'Stocks you starred, ranked by VSA rating.',
-  },
-}
 
 /** Rows fetched per request — each scroll to the bottom appends one page. */
 const PAGE_SIZE = 25
@@ -85,17 +45,8 @@ type DashboardSortKey = Extract<
   | 'priceChangePct'
 >
 
-/** The column each tab sorts by until the user clicks a different header. */
-const TAB_DEFAULT_SORT: Record<ViewId, { sortBy: DashboardSortKey; sortDir: SortDir }> = {
-  best: { sortBy: 'currentRating', sortDir: 'desc' },
-  winners: { sortBy: 'priceChangePct', sortDir: 'desc' },
-  losers: { sortBy: 'priceChangePct', sortDir: 'asc' },
-  favorites: { sortBy: 'currentRating', sortDir: 'desc' },
-}
-
 export function DashboardPage() {
   const navigate = useNavigate()
-  const [view, setView] = useState<ViewId>('best')
   const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
 
   const [query, setQuery] = useState('')
@@ -111,16 +62,6 @@ export function DashboardPage() {
   const [sortBy, setSortBy] = useState<DashboardSortKey>('currentRating')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  // Switching tabs resets to that tab's natural sort; a header click still
-  // overrides it until the tab changes again. Adjusted during render (not in
-  // an effect) so the stale sort never reaches the backend as a request.
-  const [prevView, setPrevView] = useState(view)
-  if (view !== prevView) {
-    setPrevView(view)
-    setSortBy(TAB_DEFAULT_SORT[view].sortBy)
-    setSortDir(TAB_DEFAULT_SORT[view].sortDir)
-  }
-
   const [filterOpen, setFilterOpen] = useState(false)
   const [minRating, setMinRating] = useState(0)
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
@@ -129,13 +70,6 @@ export function DashboardPage() {
   useEffect(() => {
     saveFavorites(stars)
   }, [stars])
-
-  // Tickers currently starred — the allow-list sent to the backend when the
-  // Favorites tab is active.
-  const favTickers = useMemo(
-    () => Object.keys(stars).filter((t) => stars[t]),
-    [stars],
-  )
 
   // Everything is computed by the backend — this hook just requests pages
   // with the right sort/filter/search, appending them as the user scrolls.
@@ -147,9 +81,8 @@ export function DashboardPage() {
       q: debouncedSearch || undefined,
       minRating: minRating || undefined,
       signal: signalFilter,
-      tickers: view === 'favorites' ? favTickers : undefined,
     }),
-    [sortBy, sortDir, debouncedSearch, minRating, signalFilter, view, favTickers],
+    [sortBy, sortDir, debouncedSearch, minRating, signalFilter],
   )
   const {
     items,
@@ -206,18 +139,18 @@ export function DashboardPage() {
     return () => observer.disconnect()
   }, [hasMore, loading, loadingMore, error, loadMore])
 
-  const copy = VIEW_COPY[view]
-
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
-      {/* Header + view switcher */}
+      {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
-            {copy.title}
+            Best stocks today (VSA)
             <InfoTip text="Stocks are ranked by their VSA rating (0–100): the volume-spread patterns of professional buying and selling, with recent signals weighted more. Configure the detection rules on the Scanner page — this list follows your settings." />
           </h2>
-          <p className="text-sm text-slate-500">{copy.subtitle}</p>
+          <p className="text-sm text-slate-500">
+            Highest VSA rating across the GPW after the latest close.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -233,31 +166,6 @@ export function DashboardPage() {
               placeholder="Search stocks…"
               className="w-full rounded-lg border border-slate-800 bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
             />
-          </div>
-
-          {/* Segmented control */}
-          <div className="inline-flex rounded-lg border border-slate-800 bg-slate-900 p-1">
-            {TABS.map(({ id, label, icon: Icon }) => {
-              const active = view === id
-              return (
-                <button
-                  key={id}
-                  onClick={() => setView(id)}
-                  className={
-                    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ' +
-                    (active
-                      ? 'bg-slate-800 text-slate-100 ring-1 ring-inset ring-slate-700'
-                      : 'text-slate-400 hover:text-slate-200')
-                  }
-                >
-                  <Icon
-                    size={15}
-                    className={active ? 'text-emerald-400' : ''}
-                  />
-                  <span className="hidden sm:inline">{label}</span>
-                </button>
-              )
-            })}
           </div>
 
           {/* Filter dropdown */}
@@ -365,11 +273,13 @@ export function DashboardPage() {
       )}
 
       {/* ── Desktop / tablet table (md+) ─────────────────────────────────── */}
+      {/* No overflow wrapper: the table scrolls with the page so its header can
+          stay pinned (position: sticky) as you scroll; min-width keeps it inside
+          the card when the viewport is narrower than the table. */}
       {!loading && !error && rows.length > 0 && (
-        <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] table-fixed text-sm">
-              <colgroup>
+        <div className="hidden min-w-[1120px] rounded-xl border border-slate-800 bg-slate-900/40 md:block">
+          <table className="w-full min-w-[1120px] table-fixed text-sm">
+            <colgroup>
                 <col className="w-10" />
                 <col className="w-48" />
                 <col />
@@ -380,8 +290,10 @@ export function DashboardPage() {
                 <col className="w-44" />
               </colgroup>
               <thead>
-                <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                  <th className="px-4 py-3 font-medium">#</th>
+                <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
+                  <th className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_#1e293b]">
+                    #
+                  </th>
                   <SortHeader
                     label="Symbol"
                     col="ticker"
@@ -473,16 +385,24 @@ export function DashboardPage() {
                             }
                           />
                         </button>
-                        <TickerMark ticker={s.ticker} />
-                        <span className="font-semibold text-slate-100">
+                        <CompanyLink
+                          ticker={s.ticker}
+                          title={s.name}
+                          className="flex items-center gap-2.5 font-semibold text-slate-100"
+                        >
+                          <TickerMark ticker={s.ticker} />
                           {s.ticker}
-                        </span>
+                        </CompanyLink>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-400">
-                      <span className="block truncate" title={s.name}>
+                      <CompanyLink
+                        ticker={s.ticker}
+                        title={s.name}
+                        className="block truncate hover:text-slate-200"
+                      >
                         {s.name}
-                      </span>
+                      </CompanyLink>
                     </td>
                     <td className="px-4 py-3">
                       <RatingMeter rating={s.currentRating} />
@@ -513,7 +433,6 @@ export function DashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
       )}
 
@@ -611,34 +530,20 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Empty states */}
+      {/* Empty state */}
       {!loading && !error && rows.length === 0 && items && (
         <div className="py-16 text-center text-slate-500">
-          {view === 'favorites' && !filtersActive && !debouncedSearch ? (
-            <>
-              <Star size={28} className="mx-auto mb-3 text-slate-600" />
-              <p>
-                No favorites yet — tap the{' '}
-                <Star
-                  size={13}
-                  className="inline -translate-y-px text-amber-400"
-                />{' '}
-                star on any stock to add it here.
-              </p>
-            </>
-          ) : (
-            <p>
-              No stocks match your search or filters.
-              {filtersActive && (
-                <button
-                  onClick={clearFilters}
-                  className="ml-2 text-emerald-400 hover:underline"
-                >
-                  Clear filters
-                </button>
-              )}
-            </p>
-          )}
+          <p>
+            No stocks match your search or filters.
+            {filtersActive && (
+              <button
+                onClick={clearFilters}
+                className="ml-2 text-emerald-400 hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </p>
         </div>
       )}
     </div>

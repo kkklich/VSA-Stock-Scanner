@@ -30,6 +30,7 @@ import { loadFavorites, saveFavorites } from '../lib/favorites'
 import { settingsQueryValue } from '../lib/vsaSettings'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
+  CompanyLink,
   Pagination,
   RatingMeter,
   SignalBadge,
@@ -419,11 +420,13 @@ export function WatchlistPage() {
       {error && !loading && <ErrorBanner message={error} onRetry={refetch} />}
 
       {/* ── Desktop / tablet table (md+) ─────────────────────────────────── */}
+      {/* No overflow wrapper: the table scrolls with the page so its header can
+          stay pinned (position: sticky) as you scroll; min-width keeps it inside
+          the card when the viewport is narrower than the table. */}
       {!loading && !error && rows.length > 0 && (
-        <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] table-fixed text-sm">
-              <colgroup>
+        <div className="hidden min-w-[1100px] rounded-xl border border-slate-800 bg-slate-900/40 md:block">
+          <table className="w-full min-w-[1100px] table-fixed text-sm">
+            <colgroup>
                 <col className="w-40" />
                 <col />
                 <col className="w-40" />
@@ -433,7 +436,7 @@ export function WatchlistPage() {
                 <col className="w-40" />
               </colgroup>
               <thead>
-                <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+                <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
                   <SortHeader
                     label="Symbol"
                     col="ticker"
@@ -512,16 +515,24 @@ export function WatchlistPage() {
                           active={!!stars[s.ticker]}
                           onToggle={() => toggleStar(s.ticker)}
                         />
-                        <TickerMark ticker={s.ticker} />
-                        <span className="font-semibold text-slate-100">
+                        <CompanyLink
+                          ticker={s.ticker}
+                          title={s.name}
+                          className="flex items-center gap-2.5 font-semibold text-slate-100"
+                        >
+                          <TickerMark ticker={s.ticker} />
                           {s.ticker}
-                        </span>
+                        </CompanyLink>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-400">
-                      <span className="block truncate" title={s.name}>
+                      <CompanyLink
+                        ticker={s.ticker}
+                        title={s.name}
+                        className="block truncate hover:text-slate-200"
+                      >
                         {s.name}
-                      </span>
+                      </CompanyLink>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="font-medium text-slate-200">
@@ -561,7 +572,6 @@ export function WatchlistPage() {
                 ))}
               </tbody>
             </table>
-          </div>
 
           <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
             <span>

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookmarkPlus, Loader2, RotateCcw, X } from 'lucide-react'
 import {
   Card,
+  CompanyLink,
   InfoTip,
   Pagination,
   RatingMeter,
@@ -539,10 +540,13 @@ export function FiltersPage() {
         </div>
       ) : (
         <>
-          <Card className="overflow-x-auto">
+          {/* min-width (not an overflow wrapper) so the sticky header can pin to
+              the page as you scroll; the table stays inside the card and the
+              page scrolls sideways when the viewport is narrower than it. */}
+          <Card className="min-w-[1000px]">
             <table className="w-full min-w-[1000px] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
+                <tr className="text-[11px] uppercase tracking-wider text-slate-500">
                   <SortHeader
                     label="Company"
                     col="ticker"
@@ -631,7 +635,11 @@ export function FiltersPage() {
                     className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/40"
                   >
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <CompanyLink
+                        ticker={s.ticker}
+                        title={s.name}
+                        className="flex items-center gap-2.5"
+                      >
                         <TickerMark ticker={s.ticker} />
                         <div className="min-w-0">
                           <div className="font-semibold text-slate-100">
@@ -641,7 +649,7 @@ export function FiltersPage() {
                             {s.name}
                           </div>
                         </div>
-                      </div>
+                      </CompanyLink>
                     </td>
                     <td className="hidden px-4 py-3 text-xs text-slate-400 lg:table-cell">
                       {s.sector ?? '—'}

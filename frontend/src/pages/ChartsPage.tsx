@@ -571,9 +571,17 @@ export function ChartsPage() {
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY)
   const [contextWindow, setContextWindow] = useState(DEFAULT_CONTEXT_WINDOW)
 
+  // Tells the chart how to treat the next data swap: `true` keeps the current
+  // view (seamless, for a scroll/zoom-driven range change), `false` fits the
+  // new range to the view (for an explicit button click). Read by the chart
+  // when the re-fetched data lands, so a ref — not state — carries it across
+  // the async gap without its own re-render.
+  const preserveViewRef = useRef(false)
+
   // Picking a range also widens the signal context window to cover it, so
   // markers appear across the whole visible chart, not just the recent part.
-  const selectRange = useCallback((key: RangeKey) => {
+  const selectRange = useCallback((key: RangeKey, preserveView = false) => {
+    preserveViewRef.current = preserveView
     setRange(key)
     const opt = RANGE_OPTIONS.find((r) => r.key === key)
     if (opt) setContextWindow(opt.sessions)
@@ -591,6 +599,8 @@ export function ChartsPage() {
       if (loading || totalBars === 0) return
       if (Date.now() < stepCooldown.current) return
 
+      // eslint-disable-next-line no-console
+      console.log('[span]', range, 'before=' + barsBefore.toFixed(1), 'vis=' + visibleBars.toFixed(1), 'total=' + totalBars)
       const index = RANGE_OPTIONS.findIndex((r) => r.key === range)
       // Either the view runs off the left of the loaded slice, or it has been
       // zoomed out wider than the slice — both mean "show me further back".
@@ -607,7 +617,9 @@ export function ChartsPage() {
       if (!next) return
 
       stepCooldown.current = Date.now() + STEP_COOLDOWN_MS
-      selectRange(next.key)
+      // Scroll/zoom-driven change: keep the view so the extra history slides in
+      // seamlessly instead of the chart snapping to fit the new range.
+      selectRange(next.key, true)
     },
     [loading, range, selectRange],
   )
@@ -716,6 +728,7 @@ export function ChartsPage() {
                 candles={data.history}
                 signals={visibleSignals}
                 onSpanSettled={handleSpanSettled}
+                preserveViewRef={preserveViewRef}
               />
             </div>
           </Card>

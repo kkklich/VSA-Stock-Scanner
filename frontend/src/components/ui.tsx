@@ -1,6 +1,7 @@
 // Small reusable presentational pieces used across pages.
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ArrowDown,
   ArrowDownUp,
@@ -11,6 +12,42 @@ import {
 } from 'lucide-react'
 import type { SignalVerdict } from '../types'
 import { ratingTone } from '../lib/format'
+
+/**
+ * A company's ticker/name rendered as a real link to its detail page
+ * (`/stock/:ticker`). Because it is an actual `<a href>` (react-router Link),
+ * the browser can open it in a new tab — Ctrl/Cmd-click, middle-click, or
+ * right-click → "Open link in new tab" — and hovering shows the URL. A plain
+ * left-click still navigates in the same tab.
+ *
+ * `stopPropagation` keeps a surrounding clickable row from also firing its own
+ * navigation (which would otherwise open the current tab on a Ctrl/Cmd-click).
+ */
+export function CompanyLink({
+  ticker,
+  className = '',
+  title,
+  children,
+}: {
+  ticker: string
+  className?: string
+  title?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      to={`/stock/${ticker.toLowerCase()}`}
+      onClick={(e) => e.stopPropagation()}
+      title={title ?? `Open ${ticker} details`}
+      className={
+        'rounded-sm hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50 ' +
+        className
+      }
+    >
+      {children}
+    </Link>
+  )
+}
 
 /**
  * An info icon that reveals a plain-language explanation on hover or keyboard
@@ -206,7 +243,14 @@ export function SortHeader<T extends string>({
   const Icon = !active ? ArrowDownUp : sortDir === 'asc' ? ArrowUp : ArrowDown
   return (
     <th
-      className={'px-4 py-3 font-medium ' + className}
+      // Sticky header: stays pinned to the top of the scroll area as the table
+      // scrolls, so the column labels remain visible. A solid background hides
+      // the rows passing underneath; the inset shadow draws the bottom divider
+      // (a plain border-bottom can disappear on scroll with collapsed borders).
+      className={
+        'sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_#1e293b] ' +
+        className
+      }
       aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
     >
       <span

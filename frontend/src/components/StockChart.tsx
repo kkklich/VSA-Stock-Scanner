@@ -1,7 +1,7 @@
 // Interactive candlestick + volume chart with VSA signal markers, built on
 // TradingView Lightweight Charts (v5 API). See DOCUMENTATION.md §4 Component 2.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import {
   CandlestickSeries,
   ColorType,
@@ -16,6 +16,9 @@ import type { Candle, VsaSignal } from '../types'
 
 const BULL = '#10B981'
 const BEAR = '#F43F5E'
+
+/** Empty slots kept to the right of the newest bar (time-scale `rightOffset`). */
+const RIGHT_OFFSET = 4
 
 /** What the user is currently looking at, reported after they stop scrolling. */
 export type VisibleSpan = {
@@ -34,6 +37,7 @@ export function StockChart({
   candles,
   signals,
   onSpanSettled,
+  preserveViewRef,
 }: {
   candles: Candle[]
   signals: VsaSignal[]
@@ -42,12 +46,29 @@ export function StockChart({
    * grow or shrink the loaded time range to match what they scrolled to.
    */
   onSpanSettled?: (span: VisibleSpan) => void
+  /**
+   * When the parent flips this to `true` right before it swaps in a wider or
+   * narrower slice of history (because the user scrolled/zoomed off the edge),
+   * the chart keeps the exact same bars under the viewport instead of
+   * re-fitting — so the range change is seamless, with no "jump". The chart
+   * resets it to `false` after each data swap. Left `false` (button clicks,
+   * first load, a new ticker) the chart fits the new data to the view.
+   */
+  preserveViewRef?: MutableRefObject<boolean>
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Keep the latest callback without re-creating the chart when it changes.
   const spanCb = useRef(onSpanSettled)
   spanCb.current = onSpanSettled
+
+  // Remembered across chart rebuilds so a data swap can restore the same view
+  // instead of snapping to fit. `lastRange` tracks where the user is looking
+  // (updated on every scroll/zoom); the counts identify the series it belongs
+  // to so we only reuse it for the same stock.
+  const lastRangeRef = useRef<{ from: number; to: number } | null>(null)
+  const lastBarCountRef = useRef(0)
+  const lastCandlesRef = useRef<Candle[] | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -64,7 +85,7 @@ export function StockChart({
         horzLines: { color: 'rgba(148,163,184,0.06)' },
       },
       rightPriceScale: { borderColor: 'rgba(148,163,184,0.15)' },
-      timeScale: { borderColor: 'rgba(148,163,184,0.15)', rightOffset: 4 },
+      timeScale: { borderColor: 'rgba(148,163,184,0.15)', rightOffset: RIGHT_OFFSET },
       crosshair: { mode: 0 },
       width: el.clientWidth,
       height: el.clientHeight,
@@ -85,7 +106,7 @@ export function StockChart({
         high: c.high,
         low: c.low,
         close: c.close,
-      }))
+      })),
     )
 
     // Volume histogram pinned to a lower overlay band.
@@ -102,7 +123,7 @@ export function StockChart({
         value: c.volume,
         color:
           c.close >= c.open ? 'rgba(16,185,129,0.5)' : 'rgba(244,63,94,0.5)',
-      }))
+      })),
     )
 
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
@@ -118,15 +139,50 @@ export function StockChart({
     })
     createSeriesMarkers(candleSeries, markers)
 
-    chart.timeScale().fitContent()
+    // Choose the initial view for this freshly built chart. Setting the range
+    // (or fitting) here — in the same synchronous block as createChart/setData
+    // — is the layout that reliably sticks; deferring it to a later effect does
+    // not, because setData re-applies a default view on the next frame.
+    const prevRange = lastRangeRef.current
+    const prevCount = lastBarCountRef.current
+    const sameSeries = lastCandlesRef.current === candles // only signals changed
+    const keepView =
+      prevRange != null &&
+      prevCount > 0 &&
+      candles.length > 0 &&
+      (preserveViewRef?.current === true || sameSeries)
 
-    // Report the visible span after the user stops scrolling/zooming, so the
-    // page can load a wider or narrower slice of history to match.
+    if (keepView && prevRange) {
+      // A range change adds (or removes) `delta` bars at the OLD end of the
+      // series; the newest bar is unchanged. Shifting the visible range by
+      // `delta` keeps the same bars under the viewport (and slides freshly
+      // loaded history into the margin the user zoomed into). `delta` is 0 when
+      // only the signals changed, so the view is simply held in place.
+      const delta = candles.length - prevCount
+      chart.timeScale().setVisibleLogicalRange({
+        from: prevRange.from + delta,
+        to: prevRange.to + delta,
+      })
+    } else {
+      chart.timeScale().fitContent()
+    }
+    // Consume the one-shot preserve request only once the candles have actually
+    // swapped. Widening the range also widens the signal context window, which
+    // changes `signals` and re-runs this effect one render BEFORE the new
+    // candles arrive; consuming the flag on that early run would drop it before
+    // the data swap it was meant for, and the swap would snap to fit.
+    if (!sameSeries && preserveViewRef) preserveViewRef.current = false
+    lastBarCountRef.current = candles.length
+    lastCandlesRef.current = candles
+
+    // Track the visible range as the user moves it, and report the settled span
+    // so the page can load a wider or narrower slice of history to match.
     let settleTimer: ReturnType<typeof setTimeout> | undefined
     const onLogicalRange = (
       logical: { from: number; to: number } | null,
     ) => {
       if (!logical) return
+      lastRangeRef.current = { from: logical.from, to: logical.to }
       clearTimeout(settleTimer)
       settleTimer = setTimeout(() => {
         spanCb.current?.({
@@ -148,7 +204,7 @@ export function StockChart({
       window.removeEventListener('resize', onResize)
       chart.remove()
     }
-  }, [candles, signals])
+  }, [candles, signals, preserveViewRef])
 
   return <div ref={containerRef} className="h-full w-full" />
 }
