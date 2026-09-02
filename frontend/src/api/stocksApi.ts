@@ -22,6 +22,21 @@ export async function fetchCompanies(): Promise<ApiCompany[]> {
 
 // ── GET /api/stocks/ranking ───────────────────────────────────────────────────
 
+/** One trading method's read of one stock (a cell in the multi-method list). */
+export interface ApiMethodResult {
+  methodId: string
+  /** 0–100 attractiveness for this method (feeds the combined score). */
+  score: number
+  /** Age in days of the last bar the setup fired on; 999 = not recently. */
+  daysSince: number
+  /** The setup fired on the most recent bar. */
+  fired: boolean
+  /** Short human note, e.g. the VSA verdict or "6/7 rules". */
+  detail: string | null
+  /** False when the stock has too little history to evaluate this method. */
+  available: boolean
+}
+
 export interface ApiRankingItem {
   ticker: string
   name: string
@@ -42,6 +57,25 @@ export interface ApiRankingItem {
   /** The latest session set a new 52-week high / low. */
   isNew52wHigh: boolean
   isNew52wLow: boolean
+  /** Per-method results keyed by method id (VSA + any registered method). */
+  methodResults: Record<string, ApiMethodResult>
+  /** Mean of the selected methods' scores (0–100), or null. */
+  combinedScore: number | null
+}
+
+/** Catalogue entry for one selectable trading method. */
+export interface ApiTradingMethod {
+  id: string
+  name: string
+  description: string
+  source: string
+  sourceUrl: string | null
+  direction: string
+}
+
+/** GET /api/stocks/methods — the trading-method catalogue for the selector. */
+export async function fetchMethods(): Promise<ApiTradingMethod[]> {
+  return apiFetch<ApiTradingMethod[]>('/api/stocks/methods')
 }
 
 /** Columns the ranking endpoint can sort by (must match the backend whitelist). */
@@ -59,6 +93,7 @@ export type RankingSortKey =
   | 'aiConfidence'
   | 'distFrom52wHighPct'
   | 'distFrom52wLowPct'
+  | 'combinedScore'
 
 export type SortDir = 'asc' | 'desc'
 
@@ -94,6 +129,12 @@ export interface RankingQuery {
   new52wLow?: boolean
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
+  /**
+   * Trading-method ids that fold into the combined cross-method score (and the
+   * `combinedScore` sort). Unknown ids are ignored server-side; an empty/absent
+   * value means "all methods".
+   */
+  methods?: string[]
   /** URL-encoded VSA settings JSON from the Scanner page. */
   settings?: string
 }
@@ -124,6 +165,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     new52wHigh,
     new52wLow,
     tickers,
+    methods,
     settings,
   } = query
 
@@ -157,6 +199,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (new52wHigh) params.set('new52wHigh', 'true')
   if (new52wLow) params.set('new52wLow', 'true')
   if (tickers) params.set('tickers', tickers.join(','))
+  if (methods && methods.length) params.set('methods', methods.join(','))
   if (settings) params.set('settings', settings)
 
   const { data, headers } = await apiFetchWithHeaders<ApiRankingItem[]>(
@@ -462,6 +505,22 @@ export async function fetchScannerStats(
 
 // ── GET /api/stocks/{ticker}/signals ─────────────────────────────────────────
 
+/** One bar where a trading method's setup fired — a chart overlay marker. */
+export interface ApiMethodSignal {
+  date: string
+  /** Short on-chart tag, e.g. "Trend Template". */
+  label: string
+  type: 'Bullish' | 'Bearish'
+}
+
+/** All chart-overlay markers for one trading method (excludes VSA). */
+export interface ApiMethodSignalGroup {
+  methodId: string
+  name: string
+  direction: string
+  signals: ApiMethodSignal[]
+}
+
 export interface ApiStockSignals {
   ticker: string
   name: string | null
@@ -472,6 +531,12 @@ export interface ApiStockSignals {
   ratingChange: number
   history: Candle[]  // backend returns { time, open, high, low, close, volume }
   vsaSignals: VsaSignal[]
+  /**
+   * Per-method chart overlays for every method OTHER than VSA (whose markers
+   * are `vsaSignals`). Empty on older backends; each group may itself be empty
+   * when that method never fired in the window.
+   */
+  methodSignals: ApiMethodSignalGroup[]
 }
 
 export async function fetchSignals(
@@ -583,6 +648,62 @@ export async function fetchTrustScore(
   )
 }
 
+// ── GET /api/stocks/{ticker}/opinion-summary ─────────────────────────────────
+
+/** The consolidated direction across the app's per-stock opinions. */
+export type OpinionStance = 'bullish' | 'bearish' | 'neutral' | 'mixed'
+
+/** One analytical engine's contribution to the consolidated opinion. */
+export interface ApiOpinionSource {
+  /** Stable key, e.g. "vsa", "aiInsight", "trustScore", "minervini". */
+  key: string
+  label: string
+  /** "direction" sources vote on the consensus; "reliability" ones don't. */
+  kind: 'direction' | 'reliability'
+  /**
+   * For a direction source: its bullish/bearish/neutral lean. For the
+   * reliability source: bullish = reliable, bearish = unreliable, neutral =
+   * mixed. "unavailable" = could not be evaluated.
+   */
+  stance: 'bullish' | 'bearish' | 'neutral' | 'unavailable'
+  /** Compact value, e.g. "Buy · 72/100", "6/7 rules". */
+  headline: string
+  /** One plain-language sentence explaining this source's read. */
+  detail: string
+  /** The source's entry setup fired in the last few sessions (methods only). */
+  firedRecently: boolean
+}
+
+export interface ApiAnalyticsSummary {
+  ticker: string
+  name: string | null
+  /** Trading day of the last bar the summary is based on. */
+  asOf: string
+  stance: OpinionStance
+  /** 0–100 — how strongly the directional sources agree with each other. */
+  agreement: number
+  /** One-line takeaway. */
+  headline: string
+  /** Plain-language paragraph reconciling the sources. */
+  summary: string
+  /** Per-source breakdown (direction sources first, reliability last). */
+  sources: ApiOpinionSource[]
+  /** Built-in engine identifier, e.g. "stockpilot-summary-1". */
+  engine: string
+}
+
+export async function fetchOpinionSummary(
+  ticker: string,
+  settings?: string,
+): Promise<ApiAnalyticsSummary> {
+  const params = new URLSearchParams()
+  if (settings) params.set('settings', settings)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiAnalyticsSummary>(
+    `/api/stocks/${encodeURIComponent(ticker)}/opinion-summary${qs}`,
+  )
+}
+
 // ── GET /api/stocks/{ticker}/fundamentals ────────────────────────────────────
 
 export interface ApiFinancialMetrics {
@@ -646,5 +767,40 @@ export interface ApiFundamentals {
 export async function fetchFundamentals(ticker: string): Promise<ApiFundamentals> {
   return apiFetch<ApiFundamentals>(
     `/api/stocks/${encodeURIComponent(ticker)}/fundamentals`,
+  )
+}
+
+// ── GET /api/stocks/{ticker}/volume ──────────────────────────────────────────
+
+/**
+ * One stock's multi-day relative-volume (RVOL) reading — the single-ticker
+ * form of the /volume-surge screen. All figures are null (and `available` is
+ * false) when the stored history is shorter than the two windows combined.
+ */
+export interface ApiTickerVolume {
+  ticker: string
+  /** Trading day of the last bar the reading is based on. */
+  asOf: string | null
+  /** Windows used: last `recentDays` sessions vs the `baselineDays` before. */
+  recentDays: number
+  baselineDays: number
+  available: boolean
+  recentAvgVolume: number | null
+  baselineAvgVolume: number | null
+  /** recent avg ÷ baseline avg — multi-day RVOL (1.0 = normal activity). */
+  volumeRatio: number | null
+  /** Latest single session's volume ÷ baseline avg (classic RVOL). */
+  lastDayRatio: number | null
+  /** Recent sessions whose volume individually beat the baseline average. */
+  daysAboveBaseline: number | null
+  /** Close-to-close price change across the recent window, percent. */
+  priceChangePct: number | null
+  /** Latest session's raw volume (shares). */
+  lastVolume: number | null
+}
+
+export async function fetchTickerVolume(ticker: string): Promise<ApiTickerVolume> {
+  return apiFetch<ApiTickerVolume>(
+    `/api/stocks/${encodeURIComponent(ticker)}/volume`,
   )
 }

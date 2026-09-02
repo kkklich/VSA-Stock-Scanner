@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   ChevronDown,
   ChevronUp,
@@ -11,14 +12,25 @@ import {
   MoreHorizontal,
   RotateCcw,
 } from 'lucide-react'
-import { StockChart, type VisibleSpan } from '../components/StockChart'
+import { StockChart, type MethodOverlay, type VisibleSpan } from '../components/StockChart'
+import {
+  ChartMethodLegend,
+  type ChartMethodLegendItem,
+} from '../components/ChartMethodLegend'
 import { CompanyPicker } from '../components/CompanyPicker'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
 import { TrustScoreCard } from '../components/TrustScoreCard'
+import { AnalyticsSummaryCard } from '../components/AnalyticsSummaryCard'
 import { RatingHistoryCard } from '../components/RatingHistoryCard'
+import { VolumeCard } from '../components/VolumeCard'
+import { InvestmentCard } from '../components/InvestmentCard'
 import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
+import { useMethods } from '../hooks/useMethods'
+import { usePersistentState } from '../hooks/usePersistentState'
 import { useFundamentals } from '../hooks/useFundamentals'
+import { useTickerVolume } from '../hooks/useTickerVolume'
+import type { ApiFundamentals } from '../api/stocksApi'
 import type { Candle, SignalFlag, VsaSignal } from '../types'
 import {
   deltaTone,
@@ -33,6 +45,29 @@ import {
 
 const DEFAULT_SENSITIVITY = 60
 const DEFAULT_CONTEXT_WINDOW = 120
+
+// ── Trading-method chart overlays ─────────────────────────────────────────────
+
+/** Method id whose overlay is the built-in VSA arrows (from `vsaSignals`). */
+const VSA_METHOD_ID = 'vsa'
+/** VSA's marker/legend colour (emerald = strength, matching the arrows). */
+const VSA_COLOR = '#10B981'
+/**
+ * Distinct marker colours for the OTHER methods, assigned in backend display
+ * order. Chosen to read clearly on dark candlesticks and stay apart from the
+ * emerald/rose VSA arrows.
+ */
+const OVERLAY_COLORS = [
+  '#F59E0B', // amber
+  '#6366F1', // indigo
+  '#EC4899', // pink
+  '#06B6D4', // cyan
+  '#A855F7', // purple
+  '#84CC16', // lime
+] as const
+
+/** localStorage key for which methods are drawn on the stock chart. */
+const CHART_METHODS_KEY = 'stockpilot:chart-methods:v1'
 
 // ── Chart time ranges ─────────────────────────────────────────────────────────
 
@@ -185,11 +220,12 @@ function SignalChecklist({
   strength: SignalFlag[]
   weakness: SignalFlag[]
 }) {
+  const { t } = useTranslation()
   return (
     <Card className="flex flex-col">
       <CardTitle>
-        Market strength{' '}
-        <InfoTip text="Bullish VSA patterns detected for this stock in the shown period, with the date each last fired. ✓ = detected, ✕ = not present. Spring = trapped sellers below support; Successful Test = quiet retest of lows; SOS = strong buying bar." />
+        {t('chart.strength.title')}{' '}
+        <InfoTip text={t('chart.strength.info')} />
       </CardTitle>
       <ul className="px-4 pb-3">
         {strength.map((f) => (
@@ -198,8 +234,8 @@ function SignalChecklist({
       </ul>
       <div className="border-t border-slate-800" />
       <CardTitle>
-        Market weakness{' '}
-        <InfoTip text="Bearish VSA patterns detected for this stock. Upthrust = trapped buyers above resistance; No Demand = quiet up-bar without professional interest; SOW = strong selling bar." />
+        {t('chart.weakness.title')}{' '}
+        <InfoTip text={t('chart.weakness.info')} />
       </CardTitle>
       <ul className="px-4 pb-4">
         {weakness.map((f) => (
@@ -229,21 +265,22 @@ function DetectionSettings({
   onContextWindow: (v: number) => void
   onReset: () => void
 }) {
+  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-medium text-slate-300">
-            Adjust context for signal-detection sensitivity
+            {t('chart.detection.title')}
           </span>
-          <InfoTip text="Filters which VSA signals appear on the chart and in the Strength / Weakness checklist. Sensitivity: higher reveals more (and weaker) signals; lower shows only the strongest. Context window: only signals from the last N trading sessions are shown." />
+          <InfoTip text={t('chart.detection.info')} />
         </div>
         <button
           onClick={() => setCollapsed((c) => !c)}
           className="text-slate-500 hover:text-slate-300"
           aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Expand settings' : 'Collapse settings'}
+          aria-label={collapsed ? t('chart.detection.expand') : t('chart.detection.collapse')}
         >
           {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
         </button>
@@ -252,7 +289,7 @@ function DetectionSettings({
       {!collapsed && (
         <div className="mt-3">
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-xs text-slate-500">Sensitivity</label>
+            <label className="text-xs text-slate-500">{t('chart.detection.sensitivity')}</label>
             <span className="text-xs tabular-nums text-slate-300">
               {sensitivity}
             </span>
@@ -267,7 +304,7 @@ function DetectionSettings({
           />
 
           <label className="mb-1 block text-xs text-slate-500">
-            Context window (sessions)
+            {t('chart.detection.contextWindow')}
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -286,11 +323,14 @@ function DetectionSettings({
               onClick={onReset}
               className="inline-flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
             >
-              <RotateCcw size={13} /> Reset
+              <RotateCcw size={13} /> {t('chart.detection.reset')}
             </button>
             <span className="ml-auto text-xs text-slate-500">
-              Showing <span className="text-emerald-400">{shown}</span> / {total}{' '}
-              signals
+              <Trans
+                i18nKey="chart.detection.showing"
+                values={{ shown, total }}
+                components={[<span className="text-emerald-400" />]}
+              />
             </span>
           </div>
         </div>
@@ -318,13 +358,15 @@ function PctValue({ pct }: { pct: number | null | undefined }) {
 }
 
 function FundamentalsCard({
-  ticker,
+  data,
+  loading,
   sector,
 }: {
-  ticker: string
+  data: ApiFundamentals | null
+  loading: boolean
   sector: string | null
 }) {
-  const { data, loading } = useFundamentals(ticker)
+  const { t } = useTranslation()
   const m = data?.metrics
   const r = data?.priceReturns
 
@@ -343,73 +385,44 @@ function FundamentalsCard({
     v == null ? '—' : `${fmtCompactPln(v)} PLN`
 
   const rows: [string, string][] = [
-    ['Sector', data?.sector ?? sector ?? '—'],
-    ['Industry', data?.industry ?? '—'],
-    ['Market cap', m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
-    ['P/E', m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
-    ['EPS', m?.eps != null ? m.eps.toFixed(2) : '—'],
-    ['Dividend yield', divYield != null ? `${divYield.toFixed(2)}%` : '—'],
-    ['Employees', data?.employees != null ? data.employees.toLocaleString('en-US') : '—'],
+    [t('chart.fundamentals.sector'), data?.sector ?? sector ?? '—'],
+    [t('chart.fundamentals.industry'), data?.industry ?? '—'],
+    [t('chart.fundamentals.marketCap'), m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
+    [t('chart.fundamentals.pe'), m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
+    [t('chart.fundamentals.eps'), m?.eps != null ? m.eps.toFixed(2) : '—'],
+    [t('chart.fundamentals.dividendYield'), divYield != null ? `${divYield.toFixed(2)}%` : '—'],
+    [t('chart.fundamentals.employees'), data?.employees != null ? data.employees.toLocaleString('en-US') : '—'],
   ]
 
   // Price returns. "Since …" always has a value once there are two bars, so
   // it is the honest fallback while the stored history is still short.
   const returnRows: [string, number | null | undefined][] = [
-    ['This year', r?.ytdPct],
-    ['1 year', r?.y1Pct],
-    ['3 years', r?.y3Pct],
-    ['5 years', r?.y5Pct],
+    [t('chart.fundamentals.thisYear'), r?.ytdPct],
+    [t('chart.fundamentals.oneYear'), r?.y1Pct],
+    [t('chart.fundamentals.threeYears'), r?.y3Pct],
+    [t('chart.fundamentals.fiveYears'), r?.y5Pct],
   ]
 
   const incomeRows: [string, string][] = [
-    ['Revenue (12M)', asPln(data?.ttmRevenue)],
-    ['Net income (12M)', asPln(data?.ttmNetIncome)],
-    ['ROE', asPct(m?.returnOnEquity)],
-    ['ROA', asPct(m?.returnOnAssets)],
+    [t('chart.fundamentals.revenue12m'), asPln(data?.ttmRevenue)],
+    [t('chart.fundamentals.netIncome12m'), asPln(data?.ttmNetIncome)],
+    [t('chart.fundamentals.roe'), asPct(m?.returnOnEquity)],
+    [t('chart.fundamentals.roa'), asPct(m?.returnOnAssets)],
   ]
 
-  // Investment spending (capex). Figures are in the statement's own reporting
-  // currency — not always PLN for dual-listed foreign issuers — and `basis`
-  // says whether they cover the last four quarters or one full year.
-  const capex = data?.capex ?? null
-  const capexCurrency = capex?.currency ?? 'PLN'
-  const asMoney = (v: number | null | undefined) =>
-    v == null ? '—' : `${fmtCompactPln(v)} ${capexCurrency}`
-  const capexRows: [string, string][] = capex
-    ? [
-        [
-          capex.basis === 'annual' ? 'Invested (last year)' : 'Invested (12M)',
-          asMoney(capex.capex),
-        ],
-        [
-          'vs previous year',
-          capex.capexGrowthYoyPct == null
-            ? '—'
-            : fmtPct(capex.capexGrowthYoyPct),
-        ],
-        [
-          '% of revenue',
-          capex.capexToRevenuePct == null
-            ? '—'
-            : `${capex.capexToRevenuePct.toFixed(1)}%`,
-        ],
-        [
-          '% of cash flow',
-          capex.capexToOcfPct == null ? '—' : `${capex.capexToOcfPct.toFixed(0)}%`,
-        ],
-      ]
-    : []
+  // Investment spending (capex) has moved to its own InvestmentCard next to
+  // this one — it is fed the same fundamentals payload, so no extra fetch.
 
   return (
     <Card>
       <CardTitle>
-        Fundamentals{' '}
-        <InfoTip text="Company fundamentals from Yahoo Finance, refreshed daily. Market cap = market value of all shares; P/E = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Dividend yield = yearly dividend as % of the price." />
+        {t('chart.fundamentals.title')}{' '}
+        <InfoTip text={t('chart.fundamentals.info')} />
       </CardTitle>
       <dl className="space-y-2 px-4 pb-4 text-sm">
         {loading && !data ? (
           <div className="flex items-center gap-2 py-2 text-slate-500">
-            <Loader2 size={14} className="animate-spin" /> Loading…
+            <Loader2 size={14} className="animate-spin" /> {t('common.loading')}
           </div>
         ) : (
           <>
@@ -421,8 +434,8 @@ function FundamentalsCard({
             ))}
 
             <CardSection
-              label="Price return"
-              info="How much the share price alone moved over each period, measured from this stock's own stored price history. Dividends are NOT included, so for a high-yielding stock your actual return was higher. “—” means the stored history doesn't reach back that far yet."
+              label={t('chart.fundamentals.priceReturn')}
+              info={t('chart.fundamentals.priceReturnInfo')}
             />
             {returnRows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3">
@@ -435,7 +448,9 @@ function FundamentalsCard({
             {r?.maxPct != null && (
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">
-                  {r.maxFromDate ? `Since ${r.maxFromDate}` : 'All time'}
+                  {r.maxFromDate
+                    ? t('chart.fundamentals.since', { date: r.maxFromDate })
+                    : t('chart.fundamentals.allTime')}
                 </dt>
                 <dd className="text-right font-medium">
                   <PctValue pct={r.maxPct} />
@@ -444,8 +459,8 @@ function FundamentalsCard({
             )}
 
             <CardSection
-              label="Income"
-              info="Revenue and profit over the last four reported quarters (trailing 12 months). ROE = profit earned per zloty of shareholder capital; ROA = profit per zloty of assets — higher generally means a more efficient business. “—” means the figure was not reported."
+              label={t('chart.fundamentals.income')}
+              info={t('chart.fundamentals.incomeInfo')}
             />
             {incomeRows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3">
@@ -454,23 +469,9 @@ function FundamentalsCard({
               </div>
             ))}
 
-            {capexRows.length > 0 && (
-              <>
-                <CardSection
-                  label="Investment (capex)"
-                  info="Money the company spends on its own business — factories, machines, buildings, software. “% of revenue” shows how capital-intensive it is; “% of cash flow” above 100% means it invests more than the business itself generates, so the rest comes from reserves or debt. Compare companies on the Investment page."
-                />
-                {capexRows.map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-3">
-                    <dt className="text-slate-500">{k}</dt>
-                    <dd className="text-right font-medium text-slate-200">{v}</dd>
-                  </div>
-                ))}
-              </>
-            )}
             {data?.website && (
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">WWW</dt>
+                <dt className="text-slate-500">{t('chart.fundamentals.www')}</dt>
                 <dd className="text-right font-medium">
                   <a
                     href={data.website}
@@ -505,23 +506,24 @@ function RatingCard({
   currentRating: number
   ratingChange: number
 }) {
+  const { t } = useTranslation()
   const tone = ratingTone(currentRating)
   return (
     <Card>
       <CardTitle right={<MoreHorizontal size={16} className="text-slate-600" />}>
-        VSA Rating{' '}
-        <InfoTip text="0–100 score built from all detected VSA signals with time decay: recent signals count more, old ones fade out (half impact after ~30 days). Above 70 = strong accumulation (green), around 50 = neutral, below 30 = distribution (red)." />
+        {t('chart.rating.title')}{' '}
+        <InfoTip text={t('chart.rating.info')} />
       </CardTitle>
       <div className="px-4 pb-4">
         <div className="flex items-end gap-2">
           <span className={'text-5xl font-bold tabular-nums ' + tone.text}>
             {currentRating}
           </span>
-          <span className="mb-1 text-xs text-slate-500">/ 100</span>
+          <span className="mb-1 text-xs text-slate-500">{t('chart.rating.outOf')}</span>
         </div>
         <div className="mt-3 space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">Rating change</span>
+            <span className="text-slate-500">{t('chart.rating.ratingChange')}</span>
             <span className={deltaTone(ratingChange)}>
               {fmtSigned(ratingChange)}
             </span>
@@ -535,21 +537,25 @@ function RatingCard({
 // ── Loading / error placeholders ──────────────────────────────────────────────
 
 function LoadingState() {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center justify-center py-24">
       <div className="flex flex-col items-center gap-4 text-slate-400">
         <Loader2 size={36} className="animate-spin text-emerald-500" />
-        <p className="text-sm">Loading chart data…</p>
+        <p className="text-sm">{t('chart.loading')}</p>
       </div>
     </div>
   )
 }
 
 function ErrorState({ message, ticker }: { message: string; ticker: string }) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center justify-center py-24">
       <div className="max-w-md rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center">
-        <p className="font-semibold text-rose-300">{ticker.toUpperCase()} — failed to load</p>
+        <p className="font-semibold text-rose-300">
+          {t('chart.failedToLoad', { ticker: ticker.toUpperCase() })}
+        </p>
         <p className="mt-1 text-sm text-slate-400">{message}</p>
       </div>
     </div>
@@ -559,12 +565,21 @@ function ErrorState({ message, ticker }: { message: string; ticker: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function ChartsPage() {
+  const { t } = useTranslation()
   const { ticker = 'kgh' } = useParams<{ ticker: string }>()
 
   // Chart time range — drives the fromDate sent to the signals endpoint.
   const [range, setRange] = useState<RangeKey>(DEFAULT_RANGE)
   const fromDate = useMemo(() => rangeFromDate(range), [range])
   const { data, loading, error } = useStockDetail(ticker, fromDate)
+
+  // Company fundamentals — fetched once here and shared by the Fundamentals and
+  // Investment cards (both read the same payload; one fetch, not two). Volume
+  // (RVOL) is fetched independently of the chart range, so it does not
+  // recompute as the user scrolls/zooms the chart.
+  const { data: fundamentals, loading: fundamentalsLoading } =
+    useFundamentals(ticker)
+  const { data: volume, loading: volumeLoading } = useTickerVolume(ticker)
 
   // Detection-settings state — drives which signals are shown on the chart
   // and in the strength/weakness checklist.
@@ -637,6 +652,83 @@ export function ChartsPage() {
     [visibleSignals],
   )
 
+  // ── Trading-method chart overlays ───────────────────────────────────────────
+  // Which methods are drawn on the chart. `null` (default) = show all. VSA's
+  // markers are the built-in arrows (from `vsaSignals`); every other method's
+  // markers come from `data.methodSignals`.
+  const { methods: catalogue } = useMethods()
+  const [chartMethods, setChartMethods] = usePersistentState<string[] | null>(
+    CHART_METHODS_KEY,
+    null,
+  )
+  const isMethodShown = useCallback(
+    (id: string) => chartMethods === null || chartMethods.includes(id),
+    [chartMethods],
+  )
+
+  // Non-VSA overlay groups on this chart, each given a stable colour by its
+  // backend display order (so the legend swatch and the markers always match).
+  const methodGroups = useMemo(
+    () =>
+      (data?.methodSignals ?? []).map((g, i) => ({
+        ...g,
+        color: OVERLAY_COLORS[i % OVERLAY_COLORS.length],
+      })),
+    [data],
+  )
+
+  const allChartMethodIds = useMemo(
+    () => [VSA_METHOD_ID, ...methodGroups.map((g) => g.methodId)],
+    [methodGroups],
+  )
+
+  const toggleChartMethod = useCallback(
+    (id: string) =>
+      setChartMethods((prev) => {
+        const base = prev ?? allChartMethodIds
+        return base.includes(id) ? base.filter((m) => m !== id) : [...base, id]
+      }),
+    [allChartMethodIds, setChartMethods],
+  )
+
+  // Overlays actually drawn: the selected non-VSA methods.
+  const overlays = useMemo<MethodOverlay[]>(
+    () =>
+      methodGroups
+        .filter((g) => isMethodShown(g.methodId))
+        .map((g) => ({ methodId: g.methodId, color: g.color, signals: g.signals })),
+    [methodGroups, isMethodShown],
+  )
+
+  // VSA arrows show only when VSA is selected (still filtered by the
+  // detection-sensitivity panel, which stays a VSA-only control).
+  const vsaChartSignals = useMemo(
+    () => (isMethodShown(VSA_METHOD_ID) ? visibleSignals : []),
+    [isMethodShown, visibleSignals],
+  )
+
+  // Legend / chooser rows: VSA first, then each overlay method.
+  const legendItems = useMemo<ChartMethodLegendItem[]>(() => {
+    if (!data) return []
+    const vsaName = catalogue.find((m) => m.id === VSA_METHOD_ID)?.name ?? 'VSA'
+    return [
+      {
+        id: VSA_METHOD_ID,
+        name: vsaName,
+        color: VSA_COLOR,
+        count: visibleSignals.length,
+        selected: isMethodShown(VSA_METHOD_ID),
+      },
+      ...methodGroups.map((g) => ({
+        id: g.methodId,
+        name: g.name,
+        color: g.color,
+        count: g.signals.length,
+        selected: isMethodShown(g.methodId),
+      })),
+    ]
+  }, [data, catalogue, methodGroups, visibleSignals.length, isMethodShown])
+
   if (loading && !data) return <LoadingState />
   if (error) return <ErrorState message={error} ticker={ticker} />
   if (!data) return null
@@ -649,7 +741,7 @@ export function ChartsPage() {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <CompanyPicker ticker={data.ticker} name={data.name} />
         <span className="text-xl font-semibold text-slate-200">
-          {fmtPrice(data.lastPrice)} PLN
+          {fmtPrice(data.lastPrice)} {t('common.pln')}
         </span>
         <span className={'text-sm font-medium ' + deltaTone(data.priceChangePct)}>
           {fmtPct(data.priceChangePct)}
@@ -660,7 +752,7 @@ export function ChartsPage() {
             tone.badge
           }
         >
-          VSA {data.currentRating}
+          {t('chart.vsaBadge', { rating: data.currentRating })}
         </span>
       </div>
 
@@ -689,7 +781,7 @@ export function ChartsPage() {
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
                 {data.ticker} · 1D
                 <span className="text-xs font-normal text-slate-500">
-                  {data.history.length} sessions
+                  {t('chart.sessions', { count: data.history.length })}
                 </span>
                 {loading && (
                   <Loader2 size={14} className="animate-spin text-slate-500" />
@@ -697,8 +789,8 @@ export function ChartsPage() {
               </span>
               <div
                 role="group"
-                aria-label="Chart time range"
-                title="Scroll or zoom the chart to change the range automatically"
+                aria-label={t('chart.timeRangeGroup')}
+                title={t('chart.timeRangeHint')}
                 className="flex overflow-hidden rounded-lg border border-slate-700"
               >
                 {RANGE_OPTIONS.map(({ key }) => (
@@ -708,8 +800,8 @@ export function ChartsPage() {
                     onClick={() => selectRange(key)}
                     title={
                       key === 'MAX'
-                        ? 'All stored history'
-                        : `Last ${key.replace('M', ' months').replace('Y', ' year(s)')}`
+                        ? t('chart.rangeTitleMax')
+                        : t('chart.rangeTitleLast', { range: key })
                     }
                     className={
                       'px-2.5 py-1 text-xs font-medium transition-colors ' +
@@ -723,10 +815,12 @@ export function ChartsPage() {
                 ))}
               </div>
             </div>
+            <ChartMethodLegend items={legendItems} onToggle={toggleChartMethod} />
             <div className="h-[300px] w-full sm:h-[420px]">
               <StockChart
                 candles={data.history}
-                signals={visibleSignals}
+                signals={vsaChartSignals}
+                overlays={overlays}
                 onSpanSettled={handleSpanSettled}
                 preserveViewRef={preserveViewRef}
               />
@@ -735,9 +829,17 @@ export function ChartsPage() {
           <RatingHistoryCard ticker={ticker} />
         </div>
 
-        {/* Right: fundamentals / rating / AI insight */}
+        {/* Right: consolidated summary, volume, fundamentals / investment /
+            rating / AI insight */}
         <div className="flex flex-col gap-4">
-          <FundamentalsCard ticker={ticker} sector={data.sector} />
+          <AnalyticsSummaryCard ticker={ticker} />
+          <VolumeCard data={volume} loading={volumeLoading} />
+          <FundamentalsCard
+            data={fundamentals}
+            loading={fundamentalsLoading}
+            sector={data.sector}
+          />
+          <InvestmentCard data={fundamentals} loading={fundamentalsLoading} />
           <RatingCard
             currentRating={data.currentRating}
             ratingChange={data.ratingChange}

@@ -15,18 +15,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Sequence
 from datetime import date, timedelta
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.methods import MethodResult, all_methods
+from app.analysis.methods.vsa_method import vsa_result_from_signals
 from app.analysis.statistics import median_volume_pln
 from app.analysis.vsa import (
     VsaConfig,
+    VsaSignal,
     compute_rating,
     detect_signals,
     verdict_from_signals,
 )
 from app.db.repository import QuoteRepository
-from app.models import GpwCompany, StockRankingItem, StooqDailyQuote
+from app.models import GpwCompany, MethodResultModel, StockRankingItem, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
 from app.services.stooq_client import StooqClient
@@ -63,6 +67,56 @@ _SPARKLINE_BARS = 10
 # the whole scan — dataset-global, not wall-clock, so cached results stay
 # deterministic; 10 days tolerates holidays and long weekends.
 _MAX_SESSION_LAG_DAYS = 10
+
+
+def _to_method_model(method_id: str, result: MethodResult) -> MethodResultModel:
+    """Convert a framework ``MethodResult`` dataclass into the API model."""
+    return MethodResultModel(
+        method_id=method_id,
+        score=result.score,
+        days_since=result.days_since,
+        fired=result.fired,
+        detail=result.detail,
+        available=result.available,
+    )
+
+
+def _evaluate_methods(
+    quotes: list[StooqDailyQuote],
+    config: VsaConfig | None,
+    *,
+    vsa_signals: Sequence[VsaSignal],
+    vsa_rating: int,
+    vsa_verdict: str,
+    as_of: date,
+) -> dict[str, MethodResultModel]:
+    """Run every registered trading method against one stock's bars.
+
+    VSA reuses the signals/rating the ranking already computed for the row, so
+    its column equals the Rating/Signal columns exactly and no VSA work is
+    repeated. Every other method evaluates on the full fetched window. A method
+    that raises is skipped (recorded as unavailable) so one bad rule can never
+    break the ranking.
+    """
+    results: dict[str, MethodResultModel] = {}
+    for method in all_methods():
+        if method.id == "vsa":
+            results["vsa"] = _to_method_model(
+                "vsa",
+                vsa_result_from_signals(vsa_signals, vsa_rating, vsa_verdict, as_of),
+            )
+            continue
+        try:
+            results[method.id] = _to_method_model(
+                method.id, method.evaluate(quotes, config)
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Method %s failed on a stock; marking unavailable.",
+                             method.id)
+            results[method.id] = MethodResultModel(
+                method_id=method.id, score=0, available=False
+            )
+    return results
 
 
 def compute_52w_context(
@@ -240,6 +294,17 @@ async def compute_ranking(
             # the window is anchored to the same session as the rating.
             dist_high, dist_low, new_high, new_low = compute_52w_context(quotes)
 
+            # Every registered trading method's read of this stock. VSA reuses
+            # the values just computed; other methods see the full window.
+            method_results = _evaluate_methods(
+                quotes or [],
+                config,
+                vsa_signals=signals,
+                vsa_rating=rating_today,
+                vsa_verdict=verdict,
+                as_of=last_bar_date,
+            )
+
             med_vol_list = sorted(q.volume for q in recent[-20:])
             n = len(med_vol_list)
             median_vol_shares = int(
@@ -265,6 +330,7 @@ async def compute_ranking(
                 dist_from_52w_low_pct=dist_low,
                 is_new_52w_high=new_high,
                 is_new_52w_low=new_low,
+                method_results=method_results,
             )
             return item, last_bar_date
         except Exception:  # noqa: BLE001

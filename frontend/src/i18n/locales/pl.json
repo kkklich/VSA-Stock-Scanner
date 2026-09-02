@@ -1,0 +1,210 @@
+{
+  "common": {
+    "appName": "StockPilot",
+    "retry": "Ponów",
+    "reset": "Resetuj",
+    "loading": "Ładowanie…",
+    "pln": "PLN",
+    "dash": "—",
+    "moreInfo": "Więcej informacji",
+    "sortBy": "Sortuj według: {{label}}",
+    "openTickerDetails": "Otwórz szczegóły {{ticker}}",
+    "prevPage": "Poprzednia strona",
+    "nextPage": "Następna strona",
+    "page": "Strona {{page}}"
+  },
+  "language": {
+    "label": "Język",
+    "en": "English",
+    "pl": "Polski"
+  },
+  "nav": {
+    "dashboard": "Pulpit",
+    "watchlist": "Obserwowane",
+    "scanner": "Skaner",
+    "heatmap": "Mapa sektorów",
+    "volumeSurge": "Skok wolumenu",
+    "investment": "Inwestycje",
+    "filters": "Filtry",
+    "charts": "Wykresy",
+    "help": "Pomoc",
+    "settings": "Ustawienia",
+    "closeMenu": "Zamknij menu",
+    "openMenu": "Otwórz menu"
+  },
+  "topbar": {
+    "lastSync": "Ostatnia synchronizacja:",
+    "market": "Rynek:",
+    "open": "OTWARTY",
+    "closed": "ZAMKNIĘTY"
+  },
+  "pageTitles": {
+    "dashboard": "Pulpit",
+    "watchlist": "Obserwowane",
+    "scanner": "Skaner VSA — GPW",
+    "heatmap": "Mapa cieplna sektorów",
+    "volumeSurge": "Skok wolumenu",
+    "investment": "Wydatki inwestycyjne",
+    "stock": "Szczegóły spółki",
+    "filters": "Filtry",
+    "settings": "Ustawienia",
+    "help": "Jak korzystać ze StockPilot",
+    "app": "StockPilot"
+  },
+  "dashboard": {
+    "heading": "Najlepsze spółki dziś",
+    "headingInfo": "Spółki uszeregowane według wybranych przez Ciebie metod handlowych. Każda metoda ocenia spółkę w skali 0–100 i wskazuje, czy jej układ wystąpił niedawno; kolumna Łącznie to średnia z wybranych metod. Metody wybierzesz przyciskiem Metody.",
+    "subtitle": "Ranking wielometodowy na GPW po ostatnim zamknięciu.",
+    "searchPlaceholder": "Szukaj spółek…",
+    "filter": "Filtr",
+    "minRating": "Minimalny rating VSA",
+    "signal": "Sygnał",
+    "all": "Wszystkie",
+    "clearFilters": "Wyczyść filtry",
+    "loading": "Ładowanie rankingu GPW…",
+    "backendError": "Błąd serwera:",
+    "loadingMore": "Ładowanie kolejnych spółek…",
+    "showing": "Wyświetlono {{shown}} z {{total}} spółek",
+    "emptyNoMatch": "Żadna spółka nie pasuje do wyszukiwania lub filtrów.",
+    "toggleFavorite": "Przełącz ulubione",
+    "openDetails": "{{ticker}} {{name}}, otwórz szczegóły",
+    "methodSource": "Źródło:",
+    "cols": {
+      "rank": "#",
+      "symbol": "Symbol",
+      "name": "Nazwa",
+      "signal": "Sygnał",
+      "combined": "Łącznie",
+      "price": "Cena",
+      "change": "Zmiana",
+      "changeSub": "% i wykres"
+    },
+    "combinedInfo": "Średnia ocen z wybranych przez Ciebie metod (0–100). Najwyżej ustawia spółki najlepsze łącznie we wszystkich wybranych metodach."
+  },
+  "chart": {
+    "loading": "Ładowanie danych wykresu…",
+    "failedToLoad": "{{ticker}} — nie udało się załadować",
+    "sessions_one": "{{count}} sesja",
+    "sessions_few": "{{count}} sesje",
+    "sessions_many": "{{count}} sesji",
+    "sessions_other": "{{count}} sesji",
+    "timeRangeGroup": "Zakres czasu wykresu",
+    "timeRangeHint": "Przewiń lub przybliż wykres, aby automatycznie zmienić zakres",
+    "rangeTitleMax": "Cała zapisana historia",
+    "rangeTitleLast": "Ostatnie {{range}}",
+    "vsaBadge": "VSA {{rating}}",
+    "strength": {
+      "title": "Siła rynku",
+      "info": "Wzorce VSA byka wykryte dla tej spółki w pokazanym okresie, z datą ostatniego wystąpienia. ✓ = wykryto, ✕ = brak. Spring = uwięzieni sprzedający poniżej wsparcia; Udany test = spokojny retest dołków; SOS = silna świeca kupna."
+    },
+    "weakness": {
+      "title": "Słabość rynku",
+      "info": "Wzorce VSA niedźwiedzia wykryte dla tej spółki. Upthrust = uwięzieni kupujący powyżej oporu; No Demand = spokojna świeca wzrostowa bez zainteresowania profesjonalistów; SOW = silna świeca sprzedaży."
+    },
+    "detection": {
+      "title": "Dostosuj kontekst czułości detekcji sygnałów",
+      "info": "Filtruje, które sygnały VSA pojawiają się na wykresie oraz na liście Siła / Słabość. Czułość: wyższa ujawnia więcej (i słabszych) sygnałów; niższa pokazuje tylko najsilniejsze. Okno kontekstu: pokazywane są tylko sygnały z ostatnich N sesji giełdowych.",
+      "sensitivity": "Czułość",
+      "contextWindow": "Okno kontekstu (sesje)",
+      "reset": "Resetuj",
+      "showing": "Wyświetlono <0>{{shown}}</0> / {{total}} sygnałów",
+      "expand": "Rozwiń ustawienia",
+      "collapse": "Zwiń ustawienia"
+    },
+    "fundamentals": {
+      "title": "Wskaźniki fundamentalne",
+      "info": "Dane fundamentalne spółki z Yahoo Finance, odświeżane codziennie. Kapitalizacja = wartość rynkowa wszystkich akcji; C/Z = cena podzielona przez roczny zysk na akcję (niższa może oznaczać taniej); EPS = zysk na akcję; Stopa dywidendy = roczna dywidenda jako % ceny.",
+      "sector": "Sektor",
+      "industry": "Branża",
+      "marketCap": "Kapitalizacja",
+      "pe": "C/Z",
+      "eps": "EPS",
+      "dividendYield": "Stopa dywidendy",
+      "employees": "Zatrudnienie",
+      "www": "WWW",
+      "priceReturn": "Stopa zwrotu z ceny",
+      "priceReturnInfo": "O ile zmieniła się sama cena akcji w każdym okresie, liczona z zapisanej historii cen tej spółki. Dywidendy NIE są wliczone, więc dla spółki o wysokiej stopie dywidendy Twój rzeczywisty zwrot był wyższy. „—” oznacza, że zapisana historia nie sięga jeszcze tak daleko.",
+      "thisYear": "W tym roku",
+      "oneYear": "1 rok",
+      "threeYears": "3 lata",
+      "fiveYears": "5 lat",
+      "since": "Od {{date}}",
+      "allTime": "Cały okres",
+      "income": "Wyniki finansowe",
+      "incomeInfo": "Przychody i zysk z ostatnich czterech raportowanych kwartałów (12 miesięcy). ROE = zysk na złotówkę kapitału akcjonariuszy; ROA = zysk na złotówkę aktywów — wyższy zwykle oznacza bardziej efektywny biznes. „—” oznacza, że wartość nie została podana.",
+      "revenue12m": "Przychody (12M)",
+      "netIncome12m": "Zysk netto (12M)",
+      "roe": "ROE",
+      "roa": "ROA",
+      "investment": "Inwestycje (capex)",
+      "investmentInfo": "Pieniądze, które spółka wydaje na własny biznes — fabryki, maszyny, budynki, oprogramowanie. „% przychodów” pokazuje, jak kapitałochłonna jest spółka; „% przepływów pieniężnych” powyżej 100% oznacza, że inwestuje więcej, niż sam biznes generuje, więc reszta pochodzi z rezerw lub długu. Porównaj spółki na stronie Inwestycje.",
+      "investedLastYear": "Zainwestowano (ostatni rok)",
+      "invested12m": "Zainwestowano (12M)",
+      "vsPreviousYear": "vs poprzedni rok",
+      "pctOfRevenue": "% przychodów",
+      "pctOfCashFlow": "% przepływów pieniężnych",
+      "operatingCashFlow": "Operacyjne przepływy pieniężne",
+      "noInvestmentData": "Brak danych o inwestycjach dla tej spółki."
+    },
+    "rating": {
+      "title": "Rating VSA",
+      "info": "Ocena 0–100 zbudowana ze wszystkich wykrytych sygnałów VSA z zanikiem w czasie: najnowsze sygnały liczą się bardziej, stare zanikają (połowa wpływu po ~30 dniach). Powyżej 70 = silna akumulacja (zielony), około 50 = neutralnie, poniżej 30 = dystrybucja (czerwony).",
+      "outOf": "/ 100",
+      "ratingChange": "Zmiana ratingu"
+    },
+    "methods": {
+      "legend": "Pokaż na wykresie:",
+      "toggle": "Pokaż lub ukryj znaczniki {{name}} na wykresie"
+    },
+    "volume": {
+      "title": "Wolumen (RVOL)",
+      "info": "Wolumen względny: jak duży jest ostatni obrót tej spółki w porównaniu z jej własną normą. Dzieli średni wolumen z ostatnich kilku sesji przez średnią z sesji je poprzedzających. 1,0× = normalna aktywność; ~1,5–2× to podwyższona, a ~3×+ ekstremalna — oznaka nietypowego zainteresowania profesjonalistów. Ta sama miara co na stronie Skok wolumenu.",
+      "relativeVolume": "wolumen względny",
+      "window": "Ostatnie {{recent}} sesje vs {{baseline}} wcześniejszych",
+      "recentAvg_one": "Śr. wolumen (ostatnia {{count}} sesja)",
+      "recentAvg_few": "Śr. wolumen (ostatnie {{count}} sesje)",
+      "recentAvg_many": "Śr. wolumen (ostatnich {{count}} sesji)",
+      "recentAvg_other": "Śr. wolumen (ostatnich {{count}} sesji)",
+      "baselineAvg_one": "Baza (poprzednia {{count}} sesja)",
+      "baselineAvg_few": "Baza (poprzednie {{count}} sesje)",
+      "baselineAvg_many": "Baza (poprzednich {{count}} sesji)",
+      "baselineAvg_other": "Baza (poprzednich {{count}} sesji)",
+      "lastSession": "Ostatnia sesja",
+      "lastDayRvol": "RVOL ostatniego dnia",
+      "daysAbove": "Sesje powyżej bazy",
+      "priceMove": "Zmiana ceny (okno)",
+      "noData": "Za mało historii, aby zmierzyć wolumen."
+    },
+    "summary": {
+      "title": "Podsumowanie analiz",
+      "info": "Konkluzja: osobne opinie StockPilot — werdykt VSA, druga opinia AI Insight, wskaźnik zaufania do sygnałów i każda metoda handlowa — zebrane w jeden odczyt. Nastawienie to skonsolidowany kierunek; „zgodność” mówi, jak mocno sygnały są ze sobą zgodne (100 = jednomyślnie, 50 = po równo). Liczone lokalnie na serwerze; deterministycznie i za darmo.",
+      "loading": "Podsumowywanie…",
+      "unavailable": "Podsumowanie niedostępne: {{error}}",
+      "agreement": "Zgodność",
+      "fired": "Wyzwolony",
+      "disclaimer": "{{engine}} · na dzień {{asOf}} · podsumowanie danych historycznych, nie porada inwestycyjna",
+      "stance": {
+        "bullish": "Byczy",
+        "bearish": "Niedźwiedzi",
+        "neutral": "Neutralny",
+        "mixed": "Mieszany"
+      }
+    }
+  },
+  "methods": {
+    "button": "Metody",
+    "title": "Wybierz, które metody handlowe pokazać jako kolumny",
+    "heading": "Metody handlowe",
+    "all": "Wszystkie",
+    "showAll": "Pokaż wszystkie metody",
+    "source": "Źródło:"
+  },
+  "refresh": {
+    "button": "Odśwież",
+    "running": "Pobieranie i przeliczanie…",
+    "failed": "Odświeżanie nie powiodło się",
+    "updated": "Zaktualizowano {{time}}",
+    "title": "Pobierz świeże dane z Yahoo Finance i przelicz wszystkie ratingi VSA. Dane aktualizują się automatycznie raz dziennie po zamknięciu GPW (18:00).",
+    "titleFailed": "Odświeżanie nie powiodło się: {{error}}"
+  }
+}

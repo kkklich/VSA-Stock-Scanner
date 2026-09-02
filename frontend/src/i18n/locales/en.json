@@ -1,0 +1,204 @@
+{
+  "common": {
+    "appName": "StockPilot",
+    "retry": "Retry",
+    "reset": "Reset",
+    "loading": "Loading…",
+    "pln": "PLN",
+    "dash": "—",
+    "moreInfo": "More information",
+    "sortBy": "Sort by {{label}}",
+    "openTickerDetails": "Open {{ticker}} details",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "page": "Page {{page}}"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "pl": "Polski"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "watchlist": "Watchlist",
+    "scanner": "Scanner",
+    "heatmap": "Sector heatmap",
+    "volumeSurge": "Volume surge",
+    "investment": "Investment",
+    "filters": "Filters",
+    "charts": "Charts",
+    "help": "Help",
+    "settings": "Settings",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
+  },
+  "topbar": {
+    "lastSync": "Last sync:",
+    "market": "Market:",
+    "open": "OPEN",
+    "closed": "CLOSED"
+  },
+  "pageTitles": {
+    "dashboard": "Dashboard",
+    "watchlist": "Watchlist",
+    "scanner": "VSA Scanner — GPW",
+    "heatmap": "Sector Heatmap",
+    "volumeSurge": "Volume Surge",
+    "investment": "Investment Spending",
+    "stock": "Stock Detail",
+    "filters": "Filters",
+    "settings": "Settings",
+    "help": "How to use StockPilot",
+    "app": "StockPilot"
+  },
+  "dashboard": {
+    "heading": "Best stocks today",
+    "headingInfo": "Companies ranked across the trading methods you select. Each method scores every stock 0–100 and flags whether its setup fired recently; the Combined column is the average across your chosen methods. Pick methods with the Methods button.",
+    "subtitle": "Multi-method ranking across the GPW after the latest close.",
+    "searchPlaceholder": "Search stocks…",
+    "filter": "Filter",
+    "minRating": "Minimum VSA rating",
+    "signal": "Signal",
+    "all": "All",
+    "clearFilters": "Clear filters",
+    "loading": "Loading GPW rankings…",
+    "backendError": "Backend error:",
+    "loadingMore": "Loading more stocks…",
+    "showing": "Showing {{shown}} of {{total}} stocks",
+    "emptyNoMatch": "No stocks match your search or filters.",
+    "toggleFavorite": "Toggle favorite",
+    "openDetails": "{{ticker}} {{name}}, open details",
+    "methodSource": "Source:",
+    "cols": {
+      "rank": "#",
+      "symbol": "Symbol",
+      "name": "Name",
+      "signal": "Signal",
+      "combined": "Combined",
+      "price": "Price",
+      "change": "Change",
+      "changeSub": "% & sparkline"
+    },
+    "combinedInfo": "Average of the scores from the methods you've selected (0–100). Ranks companies highest across all the chosen methods together."
+  },
+  "chart": {
+    "loading": "Loading chart data…",
+    "failedToLoad": "{{ticker}} — failed to load",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "timeRangeGroup": "Chart time range",
+    "timeRangeHint": "Scroll or zoom the chart to change the range automatically",
+    "rangeTitleMax": "All stored history",
+    "rangeTitleLast": "Last {{range}}",
+    "vsaBadge": "VSA {{rating}}",
+    "strength": {
+      "title": "Market strength",
+      "info": "Bullish VSA patterns detected for this stock in the shown period, with the date each last fired. ✓ = detected, ✕ = not present. Spring = trapped sellers below support; Successful Test = quiet retest of lows; SOS = strong buying bar."
+    },
+    "weakness": {
+      "title": "Market weakness",
+      "info": "Bearish VSA patterns detected for this stock. Upthrust = trapped buyers above resistance; No Demand = quiet up-bar without professional interest; SOW = strong selling bar."
+    },
+    "detection": {
+      "title": "Adjust context for signal-detection sensitivity",
+      "info": "Filters which VSA signals appear on the chart and in the Strength / Weakness checklist. Sensitivity: higher reveals more (and weaker) signals; lower shows only the strongest. Context window: only signals from the last N trading sessions are shown.",
+      "sensitivity": "Sensitivity",
+      "contextWindow": "Context window (sessions)",
+      "reset": "Reset",
+      "showing": "Showing <0>{{shown}}</0> / {{total}} signals",
+      "expand": "Expand settings",
+      "collapse": "Collapse settings"
+    },
+    "fundamentals": {
+      "title": "Fundamentals",
+      "info": "Company fundamentals from Yahoo Finance, refreshed daily. Market cap = market value of all shares; P/E = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Dividend yield = yearly dividend as % of the price.",
+      "sector": "Sector",
+      "industry": "Industry",
+      "marketCap": "Market cap",
+      "pe": "P/E",
+      "eps": "EPS",
+      "dividendYield": "Dividend yield",
+      "employees": "Employees",
+      "www": "WWW",
+      "priceReturn": "Price return",
+      "priceReturnInfo": "How much the share price alone moved over each period, measured from this stock's own stored price history. Dividends are NOT included, so for a high-yielding stock your actual return was higher. “—” means the stored history doesn't reach back that far yet.",
+      "thisYear": "This year",
+      "oneYear": "1 year",
+      "threeYears": "3 years",
+      "fiveYears": "5 years",
+      "since": "Since {{date}}",
+      "allTime": "All time",
+      "income": "Income",
+      "incomeInfo": "Revenue and profit over the last four reported quarters (trailing 12 months). ROE = profit earned per zloty of shareholder capital; ROA = profit per zloty of assets — higher generally means a more efficient business. “—” means the figure was not reported.",
+      "revenue12m": "Revenue (12M)",
+      "netIncome12m": "Net income (12M)",
+      "roe": "ROE",
+      "roa": "ROA",
+      "investment": "Investment (capex)",
+      "investmentInfo": "Money the company spends on its own business — factories, machines, buildings, software. “% of revenue” shows how capital-intensive it is; “% of cash flow” above 100% means it invests more than the business itself generates, so the rest comes from reserves or debt. Compare companies on the Investment page.",
+      "investedLastYear": "Invested (last year)",
+      "invested12m": "Invested (12M)",
+      "vsPreviousYear": "vs previous year",
+      "pctOfRevenue": "% of revenue",
+      "pctOfCashFlow": "% of cash flow",
+      "operatingCashFlow": "Operating cash flow",
+      "noInvestmentData": "No investment data reported for this company."
+    },
+    "rating": {
+      "title": "VSA Rating",
+      "info": "0–100 score built from all detected VSA signals with time decay: recent signals count more, old ones fade out (half impact after ~30 days). Above 70 = strong accumulation (green), around 50 = neutral, below 30 = distribution (red).",
+      "outOf": "/ 100",
+      "ratingChange": "Rating change"
+    },
+    "methods": {
+      "legend": "Show on chart:",
+      "toggle": "Show or hide {{name}} markers on the chart"
+    },
+    "volume": {
+      "title": "Volume (RVOL)",
+      "info": "Relative volume: how heavy this stock's recent trading is versus its own normal. It divides the average volume of the last few sessions by the average of the sessions before them. 1.0× = normal activity; ~1.5–2× is elevated and ~3×+ is extreme — a sign of unusual professional interest. Same measure as the Volume surge page.",
+      "relativeVolume": "relative volume",
+      "window": "Last {{recent}} sessions vs the {{baseline}} before",
+      "recentAvg_one": "Avg volume (last {{count}} session)",
+      "recentAvg_other": "Avg volume (last {{count}} sessions)",
+      "baselineAvg_one": "Baseline avg (prior {{count}} session)",
+      "baselineAvg_other": "Baseline avg (prior {{count}} sessions)",
+      "lastSession": "Latest session",
+      "lastDayRvol": "Latest-day RVOL",
+      "daysAbove": "Sessions above baseline",
+      "priceMove": "Price move (window)",
+      "noData": "Not enough history to measure volume yet."
+    },
+    "summary": {
+      "title": "Analytics summary",
+      "info": "The bottom line: StockPilot's separate opinions — the VSA verdict, the AI Insight second opinion, the Signal Trust Score and every trading method — pulled together into one read. The stance is the consolidated direction; 'agreement' is how strongly the signals line up (100 = unanimous, 50 = evenly split). Computed locally on the server; deterministic and free.",
+      "loading": "Summarising…",
+      "unavailable": "Summary unavailable: {{error}}",
+      "agreement": "Agreement",
+      "fired": "Fired",
+      "disclaimer": "{{engine}} · as of {{asOf}} · a summary of historical data, not investment advice",
+      "stance": {
+        "bullish": "Bullish",
+        "bearish": "Bearish",
+        "neutral": "Neutral",
+        "mixed": "Mixed"
+      }
+    }
+  },
+  "methods": {
+    "button": "Methods",
+    "title": "Choose which trading methods to show as columns",
+    "heading": "Trading methods",
+    "all": "All",
+    "showAll": "Show all methods",
+    "source": "Source:"
+  },
+  "refresh": {
+    "button": "Refresh",
+    "running": "Downloading & recalculating…",
+    "failed": "Refresh failed",
+    "updated": "Updated {{time}}",
+    "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after the GPW close (18:00).",
+    "titleFailed": "Refresh failed: {{error}}"
+  }
+}

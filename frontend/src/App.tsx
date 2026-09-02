@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { DashboardPage } from './pages/DashboardPage'
@@ -19,24 +20,25 @@ import { PlaceholderPage } from './pages/PlaceholderPage'
 import { HelpPage } from './pages/HelpPage'
 import { usePageSeo } from './lib/seo'
 
-/** Human-readable top-bar title for the current path. */
-function titleForPath(pathname: string): string {
-  if (pathname === '/') return 'Dashboard'
-  if (pathname.startsWith('/watchlist')) return 'Watchlist'
-  if (pathname.startsWith('/scanner')) return 'VSA Scanner — GPW'
-  if (pathname.startsWith('/heatmap')) return 'Sector Heatmap'
-  if (pathname.startsWith('/volume-surge')) return 'Volume Surge'
-  if (pathname.startsWith('/capex')) return 'Investment Spending'
-  if (pathname.startsWith('/stock/')) return 'Stock Detail'
-  if (pathname.startsWith('/filters')) return 'Filters'
-  if (pathname.startsWith('/settings')) return 'Settings'
-  if (pathname.startsWith('/help')) return 'How to use StockPilot'
-  return 'StockPilot'
+/** Translation key (under `pageTitles`) for the top-bar title of the current path. */
+function titleKeyForPath(pathname: string): string {
+  if (pathname === '/') return 'pageTitles.dashboard'
+  if (pathname.startsWith('/watchlist')) return 'pageTitles.watchlist'
+  if (pathname.startsWith('/scanner')) return 'pageTitles.scanner'
+  if (pathname.startsWith('/heatmap')) return 'pageTitles.heatmap'
+  if (pathname.startsWith('/volume-surge')) return 'pageTitles.volumeSurge'
+  if (pathname.startsWith('/capex')) return 'pageTitles.investment'
+  if (pathname.startsWith('/stock/')) return 'pageTitles.stock'
+  if (pathname.startsWith('/filters')) return 'pageTitles.filters'
+  if (pathname.startsWith('/settings')) return 'pageTitles.settings'
+  if (pathname.startsWith('/help')) return 'pageTitles.help'
+  return 'pageTitles.app'
 }
 
 function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
+  const { t } = useTranslation()
 
   // Keep the document title + meta description in sync with the active route.
   usePageSeo(pathname)
@@ -47,7 +49,7 @@ function Layout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
-          title={titleForPath(pathname)}
+          title={t(titleKeyForPath(pathname))}
           onMenuClick={() => setMenuOpen(true)}
         />
 

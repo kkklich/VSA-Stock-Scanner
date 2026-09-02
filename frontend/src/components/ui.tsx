@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowDown,
   ArrowDownUp,
@@ -34,11 +35,12 @@ export function CompanyLink({
   title?: string
   children: React.ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <Link
       to={`/stock/${ticker.toLowerCase()}`}
       onClick={(e) => e.stopPropagation()}
-      title={title ?? `Open ${ticker} details`}
+      title={title ?? t('common.openTickerDetails', { ticker })}
       className={
         'rounded-sm hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50 ' +
         className
@@ -64,6 +66,7 @@ export function InfoTip({
   align?: 'left' | 'center' | 'right'
   className?: string
 }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const pos =
     align === 'right'
@@ -79,7 +82,7 @@ export function InfoTip({
     >
       <button
         type="button"
-        aria-label="More information"
+        aria-label={t('common.moreInfo')}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         className="text-slate-500 transition-colors hover:text-slate-300 focus:text-slate-300 focus:outline-none"
@@ -239,6 +242,7 @@ export function SortHeader<T extends string>({
   /** Extra classes on the <th> (e.g. responsive visibility). */
   className?: string
 }) {
+  const { t } = useTranslation()
   const active = sortBy === col
   const Icon = !active ? ArrowDownUp : sortDir === 'asc' ? ArrowUp : ArrowDown
   return (
@@ -262,7 +266,7 @@ export function SortHeader<T extends string>({
         <button
           type="button"
           onClick={() => onSort(col)}
-          aria-label={`Sort by ${label}`}
+          aria-label={t('common.sortBy', { label })}
           className={
             'inline-flex items-center gap-1 transition-colors hover:text-slate-200 ' +
             (active ? 'text-slate-200' : '')
@@ -299,6 +303,7 @@ export function Pagination({
   total: number
   onChange: (page: number) => void
 }) {
+  const { t } = useTranslation()
   const pages: (number | '…')[] = []
   if (total <= 7) {
     for (let p = 1; p <= total; p++) pages.push(p)
@@ -319,7 +324,7 @@ export function Pagination({
         className={btn}
         disabled={current === 1}
         onClick={() => onChange(current - 1)}
-        aria-label="Previous page"
+        aria-label={t('common.prevPage')}
       >
         <ChevronLeft size={14} />
       </button>
@@ -338,7 +343,7 @@ export function Pagination({
                 : '')
             }
             onClick={() => onChange(p)}
-            aria-label={`Page ${p}`}
+            aria-label={t('common.page', { page: p })}
             aria-current={p === current ? 'page' : undefined}
           >
             {p}
@@ -349,7 +354,7 @@ export function Pagination({
         className={btn}
         disabled={current === total}
         onClick={() => onChange(current + 1)}
-        aria-label="Next page"
+        aria-label={t('common.nextPage')}
       >
         <ChevronRight size={14} />
       </button>

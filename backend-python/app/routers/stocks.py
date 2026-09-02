@@ -27,6 +27,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.analytics_summary import build_analytics_summary
+from app.analysis.methods import all_methods, method_ids
 from app.analysis.returns import compute_price_returns
 from app.analysis.trust_score import compute_trust_score
 from app.analysis.vsa import (
@@ -47,6 +49,7 @@ from app.dependencies import (
 )
 from app.models import (
     AiAnalysisResponse,
+    AnalyticsSummaryResponse,
     CandleBar,
     CapexResponse,
     CapexSummary,
@@ -54,6 +57,8 @@ from app.models import (
     CompanyFundamentalsResponse,
     GpwCompany,
     HeatmapResponse,
+    MethodSignalGroup,
+    MethodSignalItem,
     PriceReturns,
     RatingHistoryResponse,
     RefreshStatusResponse,
@@ -62,6 +67,8 @@ from app.models import (
     StockRankingItem,
     StockSignalsResponse,
     StooqDailyQuote,
+    TickerVolumeResponse,
+    TradingMethodInfo,
     TrustScoreResponse,
     VolumeSurgeResponse,
     VsaSettings,
@@ -80,6 +87,7 @@ from app.services.volume_surge_service import (
     DEFAULT_BASELINE_DAYS,
     DEFAULT_MIN_RATIO,
     DEFAULT_RECENT_DAYS,
+    compute_surge_metrics,
     compute_volume_surge,
 )
 from app.services.yahoo_finance_client import YahooFinanceClient
@@ -89,6 +97,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 _SIGNALS_DEFAULT_DAYS = 365
+
+# The VSA method's chart overlay already ships as ``vsa_signals`` on the signals
+# response, so it is skipped when building the other methods' ``method_signals``
+# (re-sending it would duplicate the markers and bloat the payload).
+_VSA_METHOD_ID = "vsa"
+
+# Extra history fetched *before* the displayed range when evaluating method
+# overlays. Trend-following methods need a long run-up (Minervini's 200-day
+# moving average needs ~220 prior sessions), so without this their markers
+# would only appear near the chart's right edge — or not at all on a short
+# range. ~400 calendar days comfortably covers 220 trading sessions plus gaps.
+_METHOD_LOOKBACK_DAYS = 400
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -110,6 +130,8 @@ _RANKING_SORT_KEYS: dict[str, str] = {
     "aiConfidence": "ai_confidence",
     "distFrom52wHighPct": "dist_from_52w_high_pct",
     "distFrom52wLowPct": "dist_from_52w_low_pct",
+    # Combined cross-method score (mean of the selected methods' scores).
+    "combinedScore": "combined_score",
 }
 
 # Verdict ordering so "Last Signal" sorts by conviction (Strong Buy → Strong
@@ -142,6 +164,24 @@ def _sort_value(item: object, attr: str) -> object:
     return value
 
 
+def _with_combined_score(
+    row: StockRankingItem, selected_methods: list[str] | None
+) -> StockRankingItem:
+    """Attach the combined cross-method score to a row (mean of method scores).
+
+    Averages the ``score`` of the selected methods that are actually available
+    on this row (unavailable methods — too little history — are skipped).
+    ``None`` when no selected method can be evaluated, so such a row sorts to
+    the bottom of a combined-score sort. Default (``selected_methods`` is
+    ``None``) uses every method present on the row.
+    """
+    results = row.method_results
+    ids = selected_methods if selected_methods is not None else list(results.keys())
+    scores = [results[m].score for m in ids if m in results and results[m].available]
+    combined = round(sum(scores) / len(scores)) if scores else None
+    return row.model_copy(update={"combined_score": combined})
+
+
 def _query_ranking(
     items: list[StockRankingItem],
     *,
@@ -159,6 +199,7 @@ def _query_ranking(
     new_52w_high: bool = False,
     new_52w_low: bool = False,
     tickers: set[str] | None,
+    selected_methods: list[str] | None = None,
     sort_by: str,
     sort_dir: str,
 ) -> list[StockRankingItem]:
@@ -166,7 +207,9 @@ def _query_ranking(
 
     Kept pure and separate from the endpoint so it is trivially unit-testable
     and so the expensive ranking computation stays fully cached: only this cheap
-    in-memory pass runs per request.
+    in-memory pass runs per request. ``selected_methods`` chooses which
+    per-method scores fold into each row's combined score (default: all methods
+    present on the row).
     """
     rows = items
     if tickers is not None:
@@ -220,6 +263,11 @@ def _query_ranking(
         rows = [r for r in rows if r.is_new_52w_high]
     if new_52w_low:
         rows = [r for r in rows if r.is_new_52w_low]
+
+    # Attach the combined cross-method score only to the rows that survived the
+    # filters above (no filter reads it; the sort below does). Doing it here
+    # instead of up-front avoids copying rows that were just filtered out.
+    rows = [_with_combined_score(r, selected_methods) for r in rows]
 
     attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
     reverse = sort_dir.casefold() != "asc"
@@ -335,6 +383,35 @@ async def get_companies(
     return companies.get_companies()
 
 
+# ── Endpoint: trading-method catalogue ────────────────────────────────────────
+
+
+@router.get(
+    "/methods",
+    response_model=list[TradingMethodInfo],
+    response_model_by_alias=True,
+    summary="Available trading methods (for the dashboard method selector)",
+)
+async def get_methods() -> list[TradingMethodInfo]:
+    """Every registered trading method (VSA plus the pluggable ones).
+
+    The dashboard's method selector reads this to know which columns it can
+    show; each entry carries the method's plain-language description and its
+    evidence source. In display order (VSA first).
+    """
+    return [
+        TradingMethodInfo(
+            id=m.id,
+            name=m.name,
+            description=m.description,
+            source=m.source,
+            source_url=m.source_url,
+            direction=m.direction,
+        )
+        for m in all_methods()
+    ]
+
+
 # ── Endpoint 2: VSA ranking ───────────────────────────────────────────────────
 
 
@@ -371,6 +448,7 @@ async def get_ranking(
     new_52w_high: Annotated[bool, Query(alias="new52wHigh")] = False,
     new_52w_low: Annotated[bool, Query(alias="new52wLow")] = False,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
+    methods: Annotated[str | None, Query(max_length=512)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
@@ -409,6 +487,15 @@ async def get_ranking(
     if tickers is not None:
         ticker_set = {t.strip().casefold() for t in tickers.split(",") if t.strip()}
 
+    # Which methods fold into the combined cross-method score. Unknown ids are
+    # dropped (a stale client can't change the maths); an empty/absent value
+    # means "all methods", so the combined column is always populated.
+    selected_methods: list[str] | None = None
+    if methods is not None:
+        known = set(method_ids())
+        chosen = [m.strip() for m in methods.split(",") if m.strip() in known]
+        selected_methods = chosen or None
+
     filtered = _query_ranking(
         full_ranking,
         q=q,
@@ -425,6 +512,7 @@ async def get_ranking(
         new_52w_high=new_52w_high,
         new_52w_low=new_52w_low,
         tickers=ticker_set,
+        selected_methods=selected_methods,
         sort_by=sort_by,
         sort_dir=sort_dir,
     )
@@ -988,15 +1076,22 @@ async def get_signals(
     effective_from = from_date or (date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS))
     effective_to = to_date
 
-    quotes = await _get_quotes(
+    # Fetch the display window PLUS a long run-up in a single call. Trend-
+    # following method overlays (Minervini's 200-day MA, …) need far more
+    # history than a short display range holds, so we fetch the wider window
+    # once and slice the display bars from it — the candles, VSA overlay and
+    # rating below run on the exact requested window, unchanged, while
+    # ``overlay_quotes`` feeds the per-method overlays further down.
+    overlay_quotes = await _get_quotes(
         normalized,
-        from_date=effective_from,
+        from_date=effective_from - timedelta(days=_METHOD_LOOKBACK_DAYS),
         to_date=effective_to,
         cache=cache,
         cache_ttl=settings.history_cache_seconds,
         repo=repo,
         stooq=stooq,
     )
+    quotes = [q for q in overlay_quotes if q.date >= effective_from]
 
     company = companies.find(normalized)
 
@@ -1044,6 +1139,41 @@ async def get_signals(
         for s in signals
     ]
 
+    # Per-method chart overlays for every OTHER registered method (Minervini,
+    # …). VSA is skipped — its overlay is already ``vsa_signals`` above.
+    #
+    # These run on ``overlay_quotes`` (the wide window fetched up front, with the
+    # ~400-day run-up trend-following methods like Minervini's 200-day MA need)
+    # and the resulting markers are clipped to the displayed range, so the
+    # candles, VSA overlay and rating stay exactly the requested window. One
+    # method raising must never take the whole chart down — failures degrade to
+    # an empty overlay for that method.
+    display_start = quotes[0].date if quotes else effective_from
+
+    method_signals: list[MethodSignalGroup] = []
+    for method in all_methods():
+        if method.id == _VSA_METHOD_ID:
+            continue
+        try:
+            fired = method.signals(overlay_quotes, config)
+        except Exception:
+            logger.exception(
+                "Method '%s' overlay failed for %s.", method.id, normalized
+            )
+            fired = []
+        method_signals.append(
+            MethodSignalGroup(
+                method_id=method.id,
+                name=method.name,
+                direction=method.direction,
+                signals=[
+                    MethodSignalItem(date=s.date, label=s.label, type=s.type)
+                    for s in fired
+                    if s.date >= display_start
+                ],
+            )
+        )
+
     return StockSignalsResponse(
         ticker=normalized.upper(),
         name=company.name if company else None,
@@ -1054,6 +1184,7 @@ async def get_signals(
         rating_change=rating_change,
         history=history,
         vsa_signals=vsa_signal_responses,
+        method_signals=method_signals,
     )
 
 
@@ -1263,6 +1394,161 @@ async def get_trust_score(
         name=company.name if company else None,
         quotes=quotes,
         signals=signals,
+    )
+
+
+# ── Endpoint: consolidated analytics opinion summary ─────────────────────────
+
+
+@router.get(
+    "/{ticker}/opinion-summary",
+    response_model=AnalyticsSummaryResponse,
+    response_model_by_alias=True,
+    summary="Consolidated 'bottom line' fusing every per-stock analytics opinion",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+        status.HTTP_404_NOT_FOUND: {"description": "No price history for this ticker"},
+        status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
+    },
+)
+async def get_opinion_summary(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+) -> AnalyticsSummaryResponse:
+    """One consolidated read that pulls the app's separate opinions together.
+
+    Fuses the VSA rating/verdict, the AI Insight second opinion, the Signal
+    Trust Score and every trading method into a single stance, an agreement
+    score and a plain-language reconciliation — where the signals agree, where
+    they disagree, and the bottom line. Computed locally by
+    ``app/analysis/analytics_summary.py`` from the same engines the individual
+    cards use, so it can never contradict them; no external AI services.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = ticker.strip().casefold()
+    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+
+    config = _parse_vsa_settings(vsa_settings)
+
+    quotes = await _get_quotes(
+        normalized,
+        from_date=date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS),
+        to_date=None,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    if not quotes:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"No price history available for '{normalized}'.",
+        )
+
+    signals = detect_signals(quotes, config)
+    company = companies.find(normalized)
+
+    return build_analytics_summary(
+        ticker=normalized,
+        name=company.name if company else None,
+        quotes=quotes,
+        signals=signals,
+        config=config,
+    )
+
+
+# ── Endpoint: single-stock volume (RVOL) reading ─────────────────────────────
+
+
+@router.get(
+    "/{ticker}/volume",
+    response_model=TickerVolumeResponse,
+    response_model_by_alias=True,
+    summary="Multi-day relative-volume (RVOL) reading for one stock",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+        status.HTTP_404_NOT_FOUND: {"description": "No price history for this ticker"},
+        status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
+    },
+)
+async def get_ticker_volume(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    recent_days: Annotated[
+        int, Query(alias="recentDays", ge=1, le=10)
+    ] = DEFAULT_RECENT_DAYS,
+    baseline_days: Annotated[
+        int, Query(alias="baselineDays", ge=10, le=60)
+    ] = DEFAULT_BASELINE_DAYS,
+) -> TickerVolumeResponse:
+    """This one stock's unusual-volume reading, matching the /volume-surge screen.
+
+    The single-ticker form of the volume-surge scanner: the same multi-day
+    relative volume (RVOL) — the average volume of the last ``recentDays``
+    sessions divided by the average of the ``baselineDays`` sessions before
+    them — computed with the shared ``compute_surge_metrics`` helper, so a
+    stock's page and the scanner can never disagree. ``available`` is False
+    (and the figures null) when the stored history is shorter than the two
+    windows combined.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = ticker.strip().casefold()
+    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+
+    quotes = await _get_quotes(
+        normalized,
+        from_date=date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS),
+        to_date=None,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    if not quotes:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"No price history available for '{normalized}'.",
+        )
+
+    metrics = compute_surge_metrics(quotes, recent_days, baseline_days)
+    if metrics is None:
+        # Too little history to score — report the shape with nulls rather than
+        # 404, so the card can say "not enough data" instead of erroring.
+        return TickerVolumeResponse(
+            ticker=normalized.upper(),
+            as_of=quotes[-1].date,
+            recent_days=recent_days,
+            baseline_days=baseline_days,
+            available=False,
+            last_volume=quotes[-1].volume,
+        )
+
+    return TickerVolumeResponse(
+        ticker=normalized.upper(),
+        as_of=quotes[-1].date,
+        recent_days=recent_days,
+        baseline_days=baseline_days,
+        available=True,
+        recent_avg_volume=metrics.recent_avg_volume,
+        baseline_avg_volume=metrics.baseline_avg_volume,
+        volume_ratio=round(metrics.volume_ratio, 2),
+        last_day_ratio=round(metrics.last_day_ratio, 2),
+        days_above_baseline=metrics.days_above_baseline,
+        price_change_pct=metrics.price_change_pct,
+        last_volume=quotes[-1].volume,
     )
 
 

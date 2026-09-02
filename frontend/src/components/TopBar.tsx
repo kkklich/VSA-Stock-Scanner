@@ -2,6 +2,8 @@
 // last EOD sync, and a user avatar on the right (DOCUMENTATION.md §3).
 
 import { Menu } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 // ── Warsaw-time helpers ───────────────────────────────────────────────────────
 
@@ -57,13 +59,14 @@ export function TopBar({
   onMenuClick: () => void
 }) {
   const open = isMarketOpen()
+  const { t } = useTranslation()
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <button
           onClick={onMenuClick}
           className="-ml-1 rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 lg:hidden"
-          aria-label="Open menu"
+          aria-label={t('nav.openMenu')}
         >
           <Menu size={20} />
         </button>
@@ -74,7 +77,8 @@ export function TopBar({
 
       <div className="flex items-center gap-3 text-xs sm:gap-5">
         <span className="hidden text-slate-500 md:inline">
-          Last sync: <span className="text-slate-300">{computeLastSyncLabel()}</span>
+          {t('topbar.lastSync')}{' '}
+          <span className="text-slate-300">{computeLastSyncLabel()}</span>
         </span>
         <span className="flex items-center gap-1.5 text-slate-400">
           <span
@@ -85,11 +89,13 @@ export function TopBar({
                 : 'bg-slate-500')
             }
           />
-          <span className="hidden sm:inline">Market:</span>
+          <span className="hidden sm:inline">{t('topbar.market')}</span>
           <span className={'font-semibold ' + (open ? 'text-emerald-400' : 'text-slate-400')}>
-            {open ? 'OPEN' : 'CLOSED'}
+            {open ? t('topbar.open') : t('topbar.closed')}
           </span>
         </span>
+
+        <LanguageSwitcher />
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-300 ring-1 ring-slate-700">
           AM
         </div>

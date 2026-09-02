@@ -16,56 +16,58 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 type NavItem = {
   to: string
-  label: string
+  /** Key under the `nav` namespace in the translation files. */
+  labelKey: string
   icon: React.ElementType
   /** Returns true when this item should appear active for the given path. */
   match: (pathname: string) => boolean
 }
 
 const navItems: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
   {
     to: '/watchlist',
-    label: 'Watchlist',
+    labelKey: 'nav.watchlist',
     icon: Star,
     match: (p) => p.startsWith('/watchlist'),
   },
   {
     to: '/scanner',
-    label: 'Scanner',
+    labelKey: 'nav.scanner',
     icon: TrendingUp,
     match: (p) => p.startsWith('/scanner'),
   },
   {
     to: '/heatmap',
-    label: 'Sector heatmap',
+    labelKey: 'nav.heatmap',
     icon: LayoutGrid,
     match: (p) => p.startsWith('/heatmap'),
   },
   {
     to: '/volume-surge',
-    label: 'Volume surge',
+    labelKey: 'nav.volumeSurge',
     icon: Activity,
     match: (p) => p.startsWith('/volume-surge'),
   },
   {
     to: '/capex',
-    label: 'Investment',
+    labelKey: 'nav.investment',
     icon: Factory,
     match: (p) => p.startsWith('/capex'),
   },
   {
     to: '/filters',
-    label: 'Filters',
+    labelKey: 'nav.filters',
     icon: Filter,
     match: (p) => p.startsWith('/filters'),
   },
   {
     to: '/stock/kgh',
-    label: 'Charts',
+    labelKey: 'nav.charts',
     icon: LineChart,
     match: (p) => p.startsWith('/stock'),
   },
@@ -79,6 +81,7 @@ export function Sidebar({
   onClose: () => void
 }) {
   const { pathname } = useLocation()
+  const { t } = useTranslation()
 
   const linkClass = (isActive: boolean) =>
     'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
@@ -116,7 +119,7 @@ export function Sidebar({
           <button
             onClick={onClose}
             className="text-slate-500 hover:text-slate-200 lg:hidden"
-            aria-label="Close menu"
+            aria-label={t('nav.closeMenu')}
           >
             <span className="text-xl leading-none">×</span>
           </button>
@@ -124,7 +127,7 @@ export function Sidebar({
 
         {/* Primary nav */}
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {navItems.map(({ to, label, icon: Icon, match }) => {
+          {navItems.map(({ to, labelKey, icon: Icon, match }) => {
             const isActive = match(pathname)
             return (
               <Link
@@ -138,7 +141,7 @@ export function Sidebar({
                   size={18}
                   strokeWidth={2}
                 />
-                {label}
+                {t(labelKey)}
               </Link>
             )
           })}
@@ -152,7 +155,7 @@ export function Sidebar({
             className={linkClass(pathname.startsWith('/help'))}
           >
             <BookOpen size={18} />
-            Help
+            {t('nav.help')}
           </Link>
           <Link
             to="/settings"
@@ -160,7 +163,7 @@ export function Sidebar({
             className={linkClass(pathname.startsWith('/settings'))}
           >
             <Settings size={18} />
-            Settings
+            {t('nav.settings')}
           </Link>
         </div>
       </aside>

@@ -20,6 +20,19 @@ const BEAR = '#F43F5E'
 /** Empty slots kept to the right of the newest bar (time-scale `rightOffset`). */
 const RIGHT_OFFSET = 4
 
+/**
+ * One trading method's overlay layer on the chart: its historical firings
+ * drawn as coloured circle markers (bullish below the bar, bearish above), so
+ * several methods can be read side by side and told apart by colour. VSA keeps
+ * its own arrow markers via the `signals` prop; every OTHER method comes in
+ * here. `color` is chosen by the page so the chart and its legend agree.
+ */
+export interface MethodOverlay {
+  methodId: string
+  color: string
+  signals: { date: string; label: string; type: 'Bullish' | 'Bearish' }[]
+}
+
 /** What the user is currently looking at, reported after they stop scrolling. */
 export type VisibleSpan = {
   /** Loaded bars hidden to the left; negative = empty space past the oldest bar. */
@@ -36,11 +49,14 @@ const SETTLE_MS = 220
 export function StockChart({
   candles,
   signals,
+  overlays,
   onSpanSettled,
   preserveViewRef,
 }: {
   candles: Candle[]
   signals: VsaSignal[]
+  /** Extra per-method overlay layers (Minervini, …); VSA uses `signals`. */
+  overlays?: MethodOverlay[]
   /**
    * Called once the user stops scrolling/zooming the time scale. Lets the page
    * grow or shrink the loaded time range to match what they scrolled to.
@@ -127,7 +143,7 @@ export function StockChart({
     )
 
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
-    const markers: SeriesMarker<Time>[] = signals.map((s) => {
+    const vsaMarkers: SeriesMarker<Time>[] = signals.map((s) => {
       const bull = s.type === 'Bullish'
       return {
         time: s.date as Time,
@@ -137,6 +153,28 @@ export function StockChart({
         text: s.signalName,
       }
     })
+
+    // Other methods' markers — coloured circles so each method reads as its
+    // own layer (bullish below the bar, bearish above), told apart by colour.
+    const overlayMarkers: SeriesMarker<Time>[] = (overlays ?? []).flatMap((o) =>
+      o.signals.map((s) => {
+        const bull = s.type === 'Bullish'
+        return {
+          time: s.date as Time,
+          position: bull ? ('belowBar' as const) : ('aboveBar' as const),
+          color: o.color,
+          shape: 'circle' as const,
+          text: s.label,
+        }
+      }),
+    )
+
+    // Lightweight Charts requires markers in ascending time order; merging the
+    // VSA + overlay layers interleaves them, so sort the combined set by date
+    // (the `time` values are YYYY-MM-DD strings, which sort lexicographically).
+    const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers].sort(
+      (a, b) => String(a.time).localeCompare(String(b.time)),
+    )
     createSeriesMarkers(candleSeries, markers)
 
     // Choose the initial view for this freshly built chart. Setting the range
@@ -204,7 +242,7 @@ export function StockChart({
       window.removeEventListener('resize', onResize)
       chart.remove()
     }
-  }, [candles, signals, preserveViewRef])
+  }, [candles, signals, overlays, preserveViewRef])
 
   return <div ref={containerRef} className="h-full w-full" />
 }

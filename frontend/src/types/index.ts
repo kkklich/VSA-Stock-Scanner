@@ -33,8 +33,40 @@ export interface StockRankingItem {
   /** The latest session set a new 52-week high / low. */
   isNew52wHigh: boolean
   isNew52wLow: boolean
+  /** Per-method results keyed by method id (VSA + any registered method). */
+  methodResults: Record<string, MethodResult>
+  /** Mean of the selected methods' scores (0–100), or null. */
+  combinedScore: number | null
   /** Whether the ticker is starred into the watchlist. */
   starred: boolean
+}
+
+/** One trading method's read of one stock — a cell in the multi-method list. */
+export interface MethodResult {
+  methodId: string
+  /** 0–100 attractiveness for this method (feeds the combined score). */
+  score: number
+  /** Age in days of the last bar the setup fired on; 999 = not recently. */
+  daysSince: number
+  /** The setup fired on the most recent bar. */
+  fired: boolean
+  /** Short human note, e.g. the VSA verdict or "6/7 rules". */
+  detail: string | null
+  /** False when the stock has too little history to evaluate this method. */
+  available: boolean
+}
+
+/** A selectable trading method in the dashboard's method picker. */
+export interface TradingMethod {
+  id: string
+  name: string
+  /** Plain-language explainer shown in the UI. */
+  description: string
+  /** Evidence source (book / paper / verified track record). */
+  source: string
+  sourceUrl: string | null
+  /** "Bullish" — long-only setups for now. */
+  direction: string
 }
 
 /** The badge verdict derived from the strongest active VSA structure. */

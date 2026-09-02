@@ -70,6 +70,47 @@ class StockHistoryResponse(BaseModel):
     quotes: list[StooqDailyQuote]
 
 
+# ── New models: pluggable trading methods ────────────────────────────────────
+
+
+class MethodResultModel(_CamelModel):
+    """One trading method's read of one stock — a cell in the multi-method list.
+
+    Produced by the framework in ``app/analysis/methods`` (VSA plus any
+    registered method). ``score`` is a 0–100 attractiveness used by the
+    combined cross-method ranking; ``days_since`` is how recently the method's
+    entry setup last fired (999 = not in the evaluated window, the same
+    sentinel the ranking uses elsewhere).
+    """
+
+    # Method id this result belongs to (e.g. "vsa", "minervini").
+    method_id: str
+    # 0–100 attractiveness for this method (feeds the combined score).
+    score: int
+    # Age in days of the most recent bar the setup fired on; 999 = not recently.
+    days_since: int = 999
+    # The setup fired on the most recent bar (== days_since 0).
+    fired: bool = False
+    # Short human note, e.g. the VSA verdict or "6/7 rules". Optional.
+    detail: str | None = None
+    # False when the stock has too little history to evaluate this method.
+    available: bool = True
+
+
+class TradingMethodInfo(_CamelModel):
+    """Catalogue entry for one selectable trading method (``GET .../methods``)."""
+
+    id: str
+    name: str
+    # Plain-language explainer shown in the UI.
+    description: str
+    # Evidence source (book / paper / verified track record).
+    source: str
+    source_url: str | None = None
+    # "Bullish" — long-only setups for now.
+    direction: str = "Bullish"
+
+
 # ── New models: ranking endpoint ──────────────────────────────────────────────
 
 class StockRankingItem(_CamelModel):
@@ -116,6 +157,14 @@ class StockRankingItem(_CamelModel):
     # high (low) beat every bar of the preceding 52 weeks.
     is_new_52w_high: bool = Field(default=False, alias="isNew52wHigh")
     is_new_52w_low: bool = Field(default=False, alias="isNew52wLow")
+    # Per-method results, keyed by method id (VSA plus every registered
+    # trading method). Baked into the cached ranking, so selecting methods in
+    # the UI is a cheap per-request pass — no recomputation.
+    method_results: dict[str, MethodResultModel] = Field(default_factory=dict)
+    # Mean of the SELECTED methods' scores, 0–100 — the combined cross-method
+    # ranking. Set per request from the ``methods`` query parameter (None until
+    # computed, and when the row can evaluate none of the selected methods).
+    combined_score: int | None = None
 
 
 # ── New models: sector heatmap endpoint ───────────────────────────────────────
@@ -208,6 +257,41 @@ class VolumeSurgeResponse(_CamelModel):
     items: list[VolumeSurgeItem] = []
 
 
+class TickerVolumeResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/volume``.
+
+    The single-stock version of the volume-surge screen: the same multi-day
+    relative-volume (RVOL) reading, computed with the same defaults and the
+    same ``compute_surge_metrics`` helper, so a stock's page and the
+    ``/volume-surge`` scanner never disagree. All figures are ``None`` (and
+    ``available`` is ``False``) when the stored history is shorter than the two
+    windows combined.
+    """
+
+    ticker: str
+    # Trading day of the last bar the reading is based on.
+    as_of: date | None = None
+    # Windows used: last ``recent_days`` sessions vs. the ``baseline_days``
+    # sessions before them.
+    recent_days: int
+    baseline_days: int
+    # False when there is too little history to compute the ratio.
+    available: bool = True
+    # Average daily volume over the recent / baseline windows (shares).
+    recent_avg_volume: int | None = None
+    baseline_avg_volume: int | None = None
+    # recent avg ÷ baseline avg — the multi-day relative volume. 1.0 = normal.
+    volume_ratio: float | None = None
+    # Latest single session's volume ÷ baseline avg (classic single-day RVOL).
+    last_day_ratio: float | None = None
+    # How many of the recent sessions individually beat the baseline average.
+    days_above_baseline: int | None = None
+    # Close-to-close price change across the recent window, percent.
+    price_change_pct: float | None = None
+    # Latest session's raw volume (shares).
+    last_volume: int | None = None
+
+
 # ── New models: signals endpoint ──────────────────────────────────────────────
 
 class CandleBar(_CamelModel):
@@ -231,6 +315,33 @@ class VsaSignalResponse(_CamelModel):
     type: Literal["Bullish", "Bearish"]
 
 
+class MethodSignalItem(_CamelModel):
+    """One bar where a trading method's setup fired — a chart overlay marker."""
+
+    date: date
+    # Short on-chart tag, e.g. "Spring", "Trend Template".
+    label: str
+    type: Literal["Bullish", "Bearish"]
+
+
+class MethodSignalGroup(_CamelModel):
+    """All chart-overlay markers for one trading method.
+
+    Lets the stock chart draw a per-method layer (and the user toggle each
+    method on/off). VSA's markers are NOT repeated here — they already ship in
+    ``StockSignalsResponse.vsa_signals`` — so this carries the other registered
+    methods (Minervini, …). A method with no firings in the window is still
+    listed with an empty ``signals`` list, so the UI knows it exists.
+    """
+
+    method_id: str
+    # Display name (column/legend label), e.g. "Minervini Trend Template".
+    name: str
+    # "Bullish" — long-only setups for now.
+    direction: str = "Bullish"
+    signals: list[MethodSignalItem] = []
+
+
 class StockSignalsResponse(_CamelModel):
     """Response payload for ``GET /api/stocks/{ticker}/signals``."""
 
@@ -243,8 +354,12 @@ class StockSignalsResponse(_CamelModel):
     rating_change: int
     # Full OHLCV history for the requested window.
     history: list[CandleBar]
-    # Detected VSA patterns within the same window.
+    # Detected VSA patterns within the same window (the VSA method's overlay).
     vsa_signals: list[VsaSignalResponse]
+    # Per-method chart overlays for every OTHER registered trading method
+    # (Minervini, …); VSA stays in ``vsa_signals`` above. Additive — an older
+    # client that ignores this field still gets the unchanged VSA chart.
+    method_signals: list[MethodSignalGroup] = []
 
 
 # ── New models: fundamentals endpoint ─────────────────────────────────────────
@@ -534,6 +649,69 @@ class TrustScoreResponse(_CamelModel):
     # Back-tested strong signals, newest first (capped; counts cover all).
     events: list[TrustScoreEvent] = []
     # Identifier of the built-in engine that produced the score.
+    engine: str
+
+
+# ── New models: analytics opinion summary endpoint ───────────────────────────
+
+
+class AnalyticsOpinionSource(_CamelModel):
+    """One analytical engine's contribution to the consolidated opinion.
+
+    A row in the "Analytics summary" card. Most sources are *directional* —
+    they lean bullish / bearish / neutral (VSA, the AI Insight second opinion,
+    each trading method). One is a *reliability* gauge (the Signal Trust
+    Score): it does not vote on direction, it says how much the VSA calls on
+    this stock can be trusted, so it is coloured green (reliable) → red
+    (unreliable) rather than by market direction.
+    """
+
+    # Stable key, e.g. "vsa", "aiInsight", "trustScore", "minervini".
+    key: str
+    # Display name shown in the card, e.g. "VSA rating", "AI Insight".
+    label: str
+    # "direction" sources vote on the consensus; "reliability" ones don't.
+    kind: Literal["direction", "reliability"]
+    # For a direction source: its bullish/bearish/neutral lean. For a
+    # reliability source: green ("bullish") = reliable, red ("bearish") =
+    # unreliable, "neutral" = mixed/unknown. "unavailable" = could not evaluate.
+    stance: Literal["bullish", "bearish", "neutral", "unavailable"]
+    # Compact value, e.g. "Buy · 72/100", "Strong Buy · 68% conf.", "6/7 rules".
+    headline: str
+    # One plain-language sentence explaining this source's read.
+    detail: str
+    # The source's entry setup fired in the last few sessions (methods only).
+    fired_recently: bool = False
+
+
+class AnalyticsSummaryResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/opinion-summary``.
+
+    A single consolidated read that fuses the app's separate per-stock
+    opinions — the VSA rating/verdict, the AI Insight second opinion, the
+    Signal Trust Score and every trading method — into one plain-language
+    takeaway: where they agree, where they disagree, and the bottom line.
+    Computed locally by ``app/analysis/analytics_summary.py``; deterministic,
+    no external AI services.
+    """
+
+    ticker: str
+    name: str | None = None
+    # Trading day of the last bar the summary is based on.
+    as_of: date
+    # The consolidated direction across the directional sources. "mixed" when
+    # bullish and bearish sources genuinely conflict.
+    stance: Literal["bullish", "bearish", "neutral", "mixed"]
+    # 0–100 — how strongly the directional sources agree with each other
+    # (100 = unanimous, 50 = evenly split).
+    agreement: int = Field(ge=0, le=100)
+    # One-line takeaway.
+    headline: str
+    # Plain-language paragraph reconciling the sources.
+    summary: str
+    # Per-source breakdown (direction sources first, reliability last).
+    sources: list[AnalyticsOpinionSource] = []
+    # Identifier of the built-in engine that produced the summary.
     engine: str
 
 

@@ -603,6 +603,117 @@ class TestGetSignals:
         assert "vsaSignals" in body
         assert "last_price" not in body
 
+    def test_method_signals_overlay_shape(self) -> None:
+        # The chart's per-method overlay layer: one group per non-VSA method,
+        # each with its markers. VSA is NOT repeated here (it ships as
+        # vsaSignals), and Minervini is present.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/kgh/signals").json()
+
+        groups = body["methodSignals"]
+        assert isinstance(groups, list)
+        ids = {g["methodId"] for g in groups}
+        assert "vsa" not in ids  # already delivered as vsaSignals
+        assert "minervini" in ids
+        for g in groups:
+            assert "name" in g and "direction" in g
+            assert isinstance(g["signals"], list)
+            for s in g["signals"]:
+                assert "date" in s and "label" in s
+                assert s["type"] in ("Bullish", "Bearish")
+
+
+# ── GET /api/stocks/{ticker}/opinion-summary ─────────────────────────────────
+
+
+class TestGetOpinionSummary:
+    def test_returns_consolidated_shape(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/opinion-summary")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ticker"] == "KGH"
+        assert body["stance"] in ("bullish", "bearish", "neutral", "mixed")
+        assert 0 <= body["agreement"] <= 100
+        assert body["headline"] and body["summary"]
+        assert body["engine"]
+
+        by_key = {s["key"]: s for s in body["sources"]}
+        # VSA + AI Insight + the reliability Trust Score are always present.
+        assert "vsa" in by_key
+        assert "aiInsight" in by_key
+        assert by_key["trustScore"]["kind"] == "reliability"
+        # camelCase serialisation (never snake_case) for the frontend.
+        assert "firedRecently" in by_key["vsa"]
+        assert "fired_recently" not in by_key["vsa"]
+
+    def test_rejects_invalid_ticker(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/" + "a" * 21 + "/opinion-summary")
+        assert resp.status_code == 400
+
+    def test_no_history_returns_404(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(quotes=[])
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/opinion-summary")
+        assert resp.status_code == 404
+
+
+# ── GET /api/stocks/{ticker}/volume ──────────────────────────────────────────
+
+
+class TestGetTickerVolume:
+    def test_returns_rvol_shape(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/volume")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ticker"] == "KGH"
+        assert body["available"] is True
+        assert body["recentDays"] == 3 and body["baselineDays"] == 20
+        # Flat 200k-volume fixture → recent avg equals baseline avg → RVOL 1.0.
+        assert body["volumeRatio"] == 1.0
+        assert body["recentAvgVolume"] == 200_000
+        assert body["baselineAvgVolume"] == 200_000
+        assert body["lastVolume"] == 200_000
+        # camelCase serialisation for the frontend, never snake_case.
+        assert "recent_avg_volume" not in body
+
+    def test_short_history_is_unavailable(self) -> None:
+        # Fewer bars than recentDays + baselineDays (3 + 20) → cannot be scored.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes(n=10)
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/volume")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["available"] is False
+        assert body["volumeRatio"] is None
+
+    def test_rejects_invalid_ticker(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/" + "a" * 21 + "/volume")
+        assert resp.status_code == 400
+
+    def test_no_history_returns_404(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(quotes=[])
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/volume")
+        assert resp.status_code == 404
+
 
 # ── Signals: stooq backfill of history older than the stored bars ────────────
 

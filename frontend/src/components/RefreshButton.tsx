@@ -7,24 +7,23 @@
 // the caption says what's happening; when it finishes the page refetches.
 
 import { RefreshCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useRefresh } from '../hooks/useRefresh'
 import { fmtRefreshTime } from '../lib/format'
 
 export function RefreshButton({ onRefreshed }: { onRefreshed: () => void }) {
+  const { t } = useTranslation()
   const { refreshing, status, error, refresh } = useRefresh(onRefreshed)
 
   const caption = refreshing
-    ? 'Downloading & recalculating…'
+    ? t('refresh.running')
     : error
-      ? 'Refresh failed'
+      ? t('refresh.failed')
       : status?.lastRefreshAt
-        ? `Updated ${fmtRefreshTime(status.lastRefreshAt)}`
+        ? t('refresh.updated', { time: fmtRefreshTime(status.lastRefreshAt) })
         : null
 
-  const title = error
-    ? `Refresh failed: ${error}`
-    : 'Download fresh data from Yahoo Finance and recalculate all VSA ratings. ' +
-      'Data updates automatically once a day after the GPW close (18:00).'
+  const title = error ? t('refresh.titleFailed', { error }) : t('refresh.title')
 
   return (
     <div className="flex items-center gap-2">
@@ -40,7 +39,7 @@ export function RefreshButton({ onRefreshed }: { onRefreshed: () => void }) {
         }
       >
         <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-        <span className="hidden sm:inline">Refresh</span>
+        <span className="hidden sm:inline">{t('refresh.button')}</span>
       </button>
       {caption && (
         <span
