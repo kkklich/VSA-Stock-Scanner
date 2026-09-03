@@ -111,6 +111,49 @@ class TradingMethodInfo(_CamelModel):
     direction: str = "Bullish"
 
 
+class MethodBacktestResponse(_CamelModel):
+    """GPW back-test of one trading method (``GET .../methods/{id}/backtest``).
+
+    Every long firing of the method across the tracked universe, judged on stored
+    GPW history: its forward return over ``forwardSessions`` sessions versus the
+    stock's own median forward move (baseline). The gate ``passes`` when the setup
+    beats that baseline more than half the time with a positive average edge.
+    """
+
+    method_id: str
+    name: str
+    # Newest bar date across the scanned stocks.
+    as_of: date | None = None
+    # Forward horizon (sessions) each firing is judged over.
+    forward_sessions: int
+    # Stocks with enough stored history to evaluate.
+    scanned_count: int = 0
+    # Total long firings found across the universe.
+    signal_count: int = 0
+    # Firings old enough to have forward data (the judged sample).
+    evaluated_count: int = 0
+    # Judged firings that beat the stock's own baseline.
+    win_count: int = 0
+    # Share of judged firings that beat the baseline (None = insufficient sample).
+    win_rate_pct: float | None = None
+    # Mean forward return of the firings, percent.
+    avg_forward_return_pct: float | None = None
+    # Mean baseline (random-day) forward return over the same horizon, percent.
+    baseline_return_pct: float | None = None
+    # The edge: mean (firing return − baseline), percentage points.
+    avg_excess_return_pct: float | None = None
+    # Avg winner magnitude ÷ avg loser magnitude (baseline-excess frame); None
+    # when undefined (wins but no losses, or nothing judged).
+    reward_risk: float | None = None
+    # Gate result: True passes, False fails, None = not enough evidence yet.
+    passes: bool | None = None
+    # "insufficient" | "fail" | "pass" | "strong".
+    grade: str = "insufficient"
+    # One plain-language sentence explaining the verdict.
+    summary: str = ""
+    engine: str = "method-backtest-1"
+
+
 # ── New models: ranking endpoint ──────────────────────────────────────────────
 
 class StockRankingItem(_CamelModel):

@@ -59,6 +59,12 @@ class TestRegistry:
         ids = method_ids()
         assert len(ids) == len(set(ids))
 
+    def test_breakout_is_registered_after_minervini(self) -> None:
+        ids = method_ids()
+        assert "breakout" in ids
+        # order: vsa (10) < minervini (20) < breakout (30)
+        assert ids.index("breakout") > ids.index("minervini")
+
 
 # ── Minervini Trend Template ──────────────────────────────────────────────────
 
@@ -110,6 +116,82 @@ class TestMinervini:
 
     def test_signals_empty_on_short_history(self) -> None:
         assert get_method("minervini").signals(_series([100.0] * 50)) == []
+
+
+# ── Volume Breakout ───────────────────────────────────────────────────────────
+
+
+def _breakout_series(
+    n_base: int = 200,
+    breakout_close: float = 106.0,
+    breakout_volume: int = 600_000,
+    end: date | None = None,
+) -> list[StooqDailyQuote]:
+    """A long, flat base at 100 on 200k volume, then one final breakout bar.
+
+    The last bar closes at a new high (default 106 vs the base's ~101 highs) on
+    expanded volume — a volume-confirmed breakout on the most recent session.
+    """
+    if end is None:
+        end = date.today()
+    rows = [(100.0, 200_000)] * n_base + [(breakout_close, breakout_volume)]
+    n = len(rows)
+    return [
+        _quote(end - timedelta(days=n - 1 - i), c, v) for i, (c, v) in enumerate(rows)
+    ]
+
+
+class TestVolumeBreakout:
+    def test_breakout_fires_on_volume_expansion_to_new_high(self) -> None:
+        result = get_method("breakout").evaluate(_breakout_series())
+        assert result.available is True
+        assert result.fired is True
+        assert result.days_since == 0
+        assert result.score >= 60  # good posture on the breakout bar
+        assert result.detail and result.detail.startswith("Breakout")
+
+    def test_new_high_without_volume_does_not_fire(self) -> None:
+        # Same new-high close, but volume stays at the base level → no breakout,
+        # even though the price posture still scores well.
+        result = get_method("breakout").evaluate(
+            _breakout_series(breakout_volume=200_000)
+        )
+        assert result.available is True
+        assert result.fired is False
+        assert result.days_since == 999  # NEVER_FIRED
+
+    def test_downtrend_does_not_fire_and_scores_low(self) -> None:
+        result = get_method("breakout").evaluate(
+            _series([250.0 - i * 0.5 for i in range(300)])
+        )
+        assert result.available is True
+        assert result.fired is False
+        # A downtrend must not lean bullish in the analytics summary (score <= 50).
+        assert result.score < 50
+
+    def test_short_history_is_unavailable(self) -> None:
+        result = get_method("breakout").evaluate(_series([100.0] * 50))
+        assert result.available is False
+        assert result.fired is False
+
+    def test_signals_mark_the_breakout(self) -> None:
+        signals = get_method("breakout").signals(_breakout_series())
+        assert len(signals) >= 1
+        assert all(
+            s.label == "Volume Breakout" and s.type == "Bullish" for s in signals
+        )
+        assert signals == sorted(signals, key=lambda s: s.date)  # oldest first
+
+    def test_signals_empty_in_a_downtrend(self) -> None:
+        assert (
+            get_method("breakout").signals(
+                _series([250.0 - i * 0.5 for i in range(300)])
+            )
+            == []
+        )
+
+    def test_signals_empty_on_short_history(self) -> None:
+        assert get_method("breakout").signals(_series([100.0] * 50)) == []
 
 
 # ── VSA method wrapper ────────────────────────────────────────────────────────

@@ -28,7 +28,7 @@ from pydantic import ValidationError
 
 from app.analysis.ai_insight import analyze_stock
 from app.analysis.analytics_summary import build_analytics_summary
-from app.analysis.methods import all_methods, method_ids
+from app.analysis.methods import all_methods, get_method, method_ids
 from app.analysis.returns import compute_price_returns
 from app.analysis.trust_score import compute_trust_score
 from app.analysis.vsa import (
@@ -57,6 +57,7 @@ from app.models import (
     CompanyFundamentalsResponse,
     GpwCompany,
     HeatmapResponse,
+    MethodBacktestResponse,
     MethodSignalGroup,
     MethodSignalItem,
     PriceReturns,
@@ -79,6 +80,10 @@ from app.services.capex_service import build_capex_screen, sum_ttm, summarize_ca
 from app.services.exceptions import StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.heatmap_service import compute_heatmap
+from app.services.method_backtest_service import (
+    DEFAULT_FORWARD_SESSIONS,
+    compute_method_backtest,
+)
 from app.services.ranking_service import compute_ranking
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
@@ -410,6 +415,100 @@ async def get_methods() -> list[TradingMethodInfo]:
         )
         for m in all_methods()
     ]
+
+
+# ── Endpoint: trading-method GPW back-test (the "gate") ───────────────────────
+
+# One computation per (method, horizon, settings) at a time, with the same
+# generation guard the heatmap/volume-surge use so a scan racing the nightly
+# refresh is served but not cached stale.
+_method_backtest_locks: dict[str, asyncio.Lock] = {}
+
+
+@router.get(
+    "/methods/{method_id}/backtest",
+    response_model=MethodBacktestResponse,
+    response_model_by_alias=True,
+    summary="Back-test one trading method on stored GPW history (the gate)",
+    responses={status.HTTP_404_NOT_FOUND: {"description": "Unknown method id"}},
+)
+async def get_method_backtest(
+    method_id: str,
+    forward_sessions: Annotated[
+        int, Query(alias="forwardSessions", ge=3, le=30)
+    ] = DEFAULT_FORWARD_SESSIONS,
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
+    cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
+    history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+) -> MethodBacktestResponse:
+    """Prove one method on GPW history before its score is trusted with money.
+
+    Every long firing of the method across the tracked universe is judged: its
+    return over the next ``forwardSessions`` sessions versus the stock's own
+    median forward move (baseline). The gate **passes** when the setup beats that
+    baseline more than half the time with a positive average edge, **fails** when
+    it does not, and is **insufficient** when too few firings are old enough to
+    judge. A full scan is heavy (it fetches multi-year history), so the first
+    call is slow and later calls are instant until the next data refresh.
+    """
+    method = get_method(method_id)
+    if method is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"Unknown method id '{method_id}'."
+        )
+
+    config = _parse_vsa_settings(vsa_settings)
+    cache_key = (
+        f"method-backtest:{method_id}:{forward_sessions}{config.cache_suffix()}"
+    )
+    result: MethodBacktestResponse | None = cache.get(cache_key)
+
+    if result is None:
+        lock = _method_backtest_locks.setdefault(cache_key, asyncio.Lock())
+        async with lock:
+            result = cache.get(cache_key)
+            if result is None:
+                generation = cache.generation
+                logger.info("Method back-test cold — computing for %s.", method_id)
+                stats = await compute_method_backtest(
+                    method=method,
+                    companies=companies.get_companies(),
+                    stooq=stooq,
+                    history_cache=history_cache,
+                    history_cache_ttl=settings.history_cache_seconds,
+                    repo=repo,
+                    config=config,
+                    forward_sessions=forward_sessions,
+                )
+                result = MethodBacktestResponse(
+                    method_id=stats.method_id,
+                    name=stats.name,
+                    as_of=stats.as_of,
+                    forward_sessions=stats.forward_sessions,
+                    scanned_count=stats.scanned_count,
+                    signal_count=stats.signal_count,
+                    evaluated_count=stats.evaluated_count,
+                    win_count=stats.win_count,
+                    win_rate_pct=stats.win_rate_pct,
+                    avg_forward_return_pct=stats.avg_forward_return_pct,
+                    baseline_return_pct=stats.baseline_return_pct,
+                    avg_excess_return_pct=stats.avg_excess_return_pct,
+                    reward_risk=stats.reward_risk,
+                    passes=stats.passes,
+                    grade=stats.grade,
+                    summary=stats.summary,
+                    engine=stats.engine,
+                )
+                if not cache.set_if_generation(
+                    cache_key, result, settings.history_cache_seconds, generation
+                ):
+                    logger.info(
+                        "Method back-test cache invalidated mid-compute — not cached."
+                    )
+    return result
 
 
 # ── Endpoint 2: VSA ranking ───────────────────────────────────────────────────

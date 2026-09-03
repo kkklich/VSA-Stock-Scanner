@@ -715,6 +715,50 @@ class TestGetTickerVolume:
         assert resp.status_code == 404
 
 
+# ── GET /api/stocks/methods/{method_id}/backtest ─────────────────────────────
+
+
+class TestGetMethodBacktest:
+    def test_returns_gate_shape_for_empty_universe(self) -> None:
+        # An empty price feed means no firing is old enough to judge, so the gate
+        # answers "insufficient" without ever touching the network.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=[]
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/methods/breakout/backtest")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["methodId"] == "breakout"
+        assert body["forwardSessions"] == 10  # the default horizon
+        assert body["grade"] in ("insufficient", "fail", "pass", "strong")
+        # An empty universe cannot judge a single firing → insufficient sample.
+        assert body["grade"] == "insufficient"
+        assert body["passes"] is None  # gate verdict is nullable
+        # camelCase serialisation for the frontend, never snake_case.
+        assert "method_id" not in body
+
+    def test_unknown_method_returns_404(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/methods/does-not-exist/backtest")
+        assert resp.status_code == 404
+
+    def test_forward_sessions_out_of_range_rejected(self) -> None:
+        # forwardSessions is clamped to 3–30; anything outside is a 422.
+        with TestClient(app) as client:
+            too_small = client.get(
+                "/api/stocks/methods/breakout/backtest",
+                params={"forwardSessions": 1},
+            )
+            too_large = client.get(
+                "/api/stocks/methods/breakout/backtest",
+                params={"forwardSessions": 99},
+            )
+        assert too_small.status_code == 422
+        assert too_large.status_code == 422
+
+
 # ── Signals: stooq backfill of history older than the stored bars ────────────
 
 
