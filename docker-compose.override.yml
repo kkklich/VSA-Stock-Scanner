@@ -1,4 +1,13 @@
+# Local-development overrides (auto-merged by `docker compose up` when a base
+# docker-compose.yml is present). Kept OUT of the production stack, which is run
+# explicitly with `-f docker-compose.prod.yml`.
 services:
   db:
     ports:
-      - "5432:5432"
+      # Bind ONLY to the loopback interface. A bare "5432:5432" binds to
+      # 0.0.0.0, and because Docker inserts its own iptables rules ahead of UFW,
+      # that would expose PostgreSQL to the whole network (and the internet on a
+      # VPS) with just the DB password in the way — the host firewall does not
+      # cover Docker-published ports. "127.0.0.1:" keeps `psql` from the host
+      # working while making the port unreachable from anywhere else.
+      - "127.0.0.1:5432:5432"

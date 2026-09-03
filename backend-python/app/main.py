@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -57,6 +58,27 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("company_fundamentals", "return_on_equity", "DOUBLE PRECISION"),
     ("company_fundamentals", "return_on_assets", "DOUBLE PRECISION"),
 )
+
+# These identifiers are interpolated into a raw ALTER TABLE statement (there is
+# no bind-parameter form for DDL identifiers), so they must never come from
+# anything but the trusted constant above. This guard enforces that invariant:
+# a plain SQL identifier for the table/column and an allow-listed column type.
+# It makes the DDL injection-proof by construction even if a future edit is
+# careless about where a value originates.
+_SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_ALLOWED_COLUMN_TYPES = frozenset(
+    {"DOUBLE PRECISION", "INTEGER", "BIGINT", "TEXT", "BOOLEAN", "NUMERIC", "DATE"}
+)
+
+
+def _validate_ddl_column(table: str, column: str, coltype: str) -> None:
+    """Reject anything that is not a bare identifier / allow-listed type."""
+    if not _SQL_IDENTIFIER_RE.match(table):
+        raise ValueError(f"Unsafe table identifier for DDL: {table!r}")
+    if not _SQL_IDENTIFIER_RE.match(column):
+        raise ValueError(f"Unsafe column identifier for DDL: {column!r}")
+    if coltype.upper() not in _ALLOWED_COLUMN_TYPES:
+        raise ValueError(f"Column type not on the DDL allow-list: {coltype!r}")
 
 
 @asynccontextmanager
@@ -135,6 +157,7 @@ async def lifespan(_app: FastAPI):
                     # equivalent Alembic revisions are kept in alembic/
                     # versions/ for deployments that manage schema properly.
                     for table, column, coltype in _ADDED_COLUMNS:
+                        _validate_ddl_column(table, column, coltype)
                         await conn.execute(
                             text(
                                 f"ALTER TABLE {table} "
