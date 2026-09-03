@@ -49,6 +49,7 @@ jobs:
           [ -z "$VPS_HOST" ]    && missing="$missing VPS_HOST"
           [ -z "$VPS_USER" ]    && missing="$missing VPS_USER"
           [ -z "$VPS_SSH_KEY" ] && missing="$missing VPS_SSH_KEY"
+          echo "blade: $missing $vps_host $vps_user $vps_ssh_key"
           if [ -n "$missing" ]; then
             echo "::error::Missing repository secret(s):$missing — see the comments at the top of .github/workflows/deploy.yml"
             exit 1
