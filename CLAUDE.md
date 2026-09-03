@@ -40,7 +40,7 @@ agent/      ALL project documentation & reference material lives here:
 
 ## API contract (do not change without updating DOCUMENTATION.md)
 
-- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence, combinedScore; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (PLN), `minVolume` (20-session median volume, shares), `maxDistFrom52wHighPct`/`maxDistFrom52wLowPct` (within N% of the 52-week high/low), `new52wHigh`/`new52wLow` (booleans — the latest session set a fresh 52-week extreme), `tickers` (comma-separated allow-list, e.g. favorites), `methods` (comma-separated trading-method ids that fold into the combined cross-method score and the `combinedScore` sort — unknown ids ignored; empty/absent = all methods). Each row also carries the **pluggable trading-method results** (added 2026-09-01): `methodResults` — a map keyed by method id (`vsa`, `minervini`, …), each `{ methodId, score (0–100), daysSince (999 = not recently), fired, detail, available }` — plus `combinedScore` (mean of the *selected* methods' scores, `null` when the row can evaluate none of them; computed per-request from `methods`). The methods self-register in `app/analysis/methods/` (see `GET /api/stocks/methods`); adding one is writing one class. Each row also carries the **52-week context**: `distFrom52wHighPct` (≤ 0), `distFrom52wLowPct` (≥ 0), `isNew52wHigh`, `isNew52wLow` — window anchored to the stock's last session, at most 52 weeks of stored history. The two percentages are `null` and both flags `false` when the stored bars do **not** span ~52 weeks (< 330 days between the oldest bar in the window and the last session — a recent listing, a shallow DB, a gappy series): a three-month high must never be reported as a "new 52-week high". All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
+- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence, combinedScore; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (PLN), `minVolume` (20-session median volume, shares), `maxDistFrom52wHighPct`/`maxDistFrom52wLowPct` (within N% of the 52-week high/low), `new52wHigh`/`new52wLow` (booleans — the latest session set a fresh 52-week extreme), `tickers` (comma-separated allow-list, e.g. favorites), `methods` (comma-separated trading-method ids that fold into the combined cross-method score and the `combinedScore` sort — unknown ids ignored; empty/absent = all methods). Each row also carries the **pluggable trading-method results** (added 2026-09-01): `methodResults` — a map keyed by method id (`vsa`, `minervini`, …), each `{ methodId, score (0–100), daysSince (999 = not recently), fired, detail, available }` — plus `combinedScore` (mean of the *selected* methods' scores, `null` when the row can evaluate none of them; computed per-request from `methods`). The methods self-register in `app/analysis/methods/` (see `GET /api/stocks/methods`); adding one is writing one class. Note (2026-09-03): the ranking path now feeds each method a universe-wide **relative-strength percentile**, so Minervini's `score`/`detail` on this endpoint reflect its RS rule 8 (scored `/8`, e.g. `"8/8 rules"`) — higher than the standalone `/{ticker}` paths, which have no universe and fall back to the 7 structural rules. Each row also carries the **52-week context**: `distFrom52wHighPct` (≤ 0), `distFrom52wLowPct` (≥ 0), `isNew52wHigh`, `isNew52wLow` — window anchored to the stock's last session, at most 52 weeks of stored history. The two percentages are `null` and both flags `false` when the stored bars do **not** span ~52 weeks (< 330 days between the oldest bar in the window and the last session — a recent listing, a shallow DB, a gappy series): a three-month high must never be reported as a "new 52-week high". All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
 - `GET /api/stocks/methods` — **trading-method catalogue** (added 2026-09-01) for the dashboard's method selector. Returns `TradingMethodInfo[]` in display order (VSA first): `{ id, name, description, source, sourceUrl, direction }`. Every registered method (`app/analysis/methods/`) appears here automatically; the selector reads it to know which per-method columns it can show.
 - `GET /api/stocks/methods/{method_id}/backtest` — **the GPW back-test gate** (added 2026-09-02) for one trading method: proves the method on stored GPW history before its score is trusted with money. Every *long* firing of the method across the tracked universe (from its `signals()`) is judged — forward return over the next `forwardSessions` (3–30, default 10) sessions versus the stock's **own median forward move** (baseline) — and folded into `{ methodId, name, asOf, forwardSessions, scannedCount, signalCount, evaluatedCount, winCount, winRatePct, avgForwardReturnPct, baselineReturnPct, avgExcessReturnPct, rewardRisk, passes, grade, summary, engine }`. The gate `passes` when the setup beat the stock's own baseline **more than 50%** of the time (`winRatePct`) **and** the average edge (`avgExcessReturnPct`) is positive; `grade` is `strong` (winRate ≥ 55% with avg edge ≥ 1.0 pp and `rewardRisk` ≥ 1.2, or `rewardRisk` `null`), `pass`, `fail`, or `insufficient` (< 30 judged firings across the universe — then `passes` is `null`). `rewardRisk` is avg winner magnitude ÷ avg loser magnitude in the baseline-excess frame (`null` when undefined). This is the roadmap's planned **GPW back-test gate**, but **informational only** for now — the ranking does not yet enforce `passes`. Generic — it drives off `TradingMethod.signals`, so it judges every method with no per-method code; 404 on an unknown id. Supports `settings`. Heavy (fetches ~4 years/ticker into its own `backtest-history:` cache); cached per (method, horizon, settings) with a lock + generation guard, so the first call is slow and the rest instant until the next refresh.
 - `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[], methodSignals[] }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`. **`methodSignals` (added 2026-09-01)** carries the **per-method chart overlays** for every registered trading method *other than* VSA (whose markers are `vsaSignals`): a list of `{ methodId, name, direction, signals[{date, label, type}] }`, one group per method (empty `signals` = did not fire in the window). These power the stock chart's toggleable per-method marker layers (`ChartMethodLegend` chooser; VSA arrows + one coloured-circle layer per other method; selection persisted in localStorage). The overlays are evaluated on a window extended ~400 days **before** `fromDate` (so trend-following methods like Minervini's 200-day MA have enough run-up) and clipped to the displayed range — `history`, `vsaSignals` and the rating are unaffected and stay exactly the requested window. Each `TradingMethod` supplies its overlay via a new `signals(bars, config)` method (`app/analysis/methods/base.py`; default empty).
@@ -146,9 +146,15 @@ details.** Summary (2026-07-03):
   "—", best case, in the UI); the trust score uses the median edge, stronger
   shrinkage and needs ≥ 8 judged signals for a numeric score; ratings/verdicts
   are keyed to the last session date instead of the calendar day (no weekend
-  decay). KNOWN LIMITATION: signals are still detected without full
-  background/phase (trend-context) analysis, which the VSA source texts
-  consider essential — planned follow-up (see `agent/ROADMAP.md`).
+  decay). Trend-context (background) gating added 2026-09-03: bullish
+  structures (Spring/Test) are suppressed in a clearly falling background and
+  bearish ones (Upthrust/No Demand) in a clearly rising one; SOS now requires
+  a genuine break above resistance; and a wide up-bar on climactic volume in
+  new-high ground is reclassified as a bearish buying climax (reusing the
+  Upthrust marker) instead of being silently dropped. The gate is on by
+  default and configurable in code (`VsaConfig.use_trend_context`).
+  REMAINING LIMITATION: the background read is a single 30-bar-MA proxy, not
+  full Wyckoff accumulation/distribution phase analysis (see `agent/ROADMAP.md`).
 - **Volume-scanner verification (2026-07-20):** the RVOL method was checked
   against three independent sources (public scanner references, the VSA
   source text, a first-principles code review) — method confirmed sound.
@@ -233,13 +239,22 @@ details.** Summary (2026-07-03):
   (`vsa_method.py`), not a hard-coded special case, and the first concrete
   example is the **Minervini Trend Template** (`minervini.py`; Mark Minervini,
   *Trade Like a Stock Market Wizard* — price/moving-average structure, rules
-  1–7; the cross-sectional RS rule 8 and a GPW back-test gate are planned
-  follow-ups). A second example, **Volume Breakout** (`volume_breakout.py`, id
-  `breakout`; added 2026-09-02), is the volume-confirmed base breakout of O'Neil
-  (CANSLIM) and Minervini (VCP): a close above the highest high of the prior 50
-  sessions on volume ≥ 1.5× the prior-50-session average, an up day closing
-  strong and above its 50-day MA — volume-based, medium-term, long-only (same
-  "needs a GPW back-test before it guides money" caveat as Minervini). The
+  1–7, plus **rule 8 (cross-sectional RS-rank ≥ 70)** since 2026-09-03: the
+  ranking pre-computes each stock's relative strength (IBD-style blended
+  3/6/9/12-month return) as a 0–100 universe percentile and folds it into the
+  score, so the ranking path scores `/8` and only top-30%-RS stocks reach a
+  full 100; the standalone/single-stock path (no universe) falls back to the
+  7 structural rules `/7`. `fired`/recency stay structural. A GPW back-test
+  gate is still a planned follow-up. A second example, **Volume Breakout**
+  (`volume_breakout.py`, id `breakout`; added 2026-09-02), is the
+  volume-confirmed base breakout of O'Neil (CANSLIM) and Minervini (VCP): a
+  close above the highest high of the prior 50 sessions on volume ≥ 1.5× the
+  prior-50-session average, closing strong — and, since 2026-09-03, **only out
+  of a real base**: firing now also requires volume to have dried up into the
+  pivot (measured on the pre-breakout bar) and the prior base to be tight
+  (≤ 35% deep), so news gaps and vertical trend-continuation no longer fire.
+  Volume-based, medium-term, long-only (same "needs a GPW back-test before it
+  guides money" caveat as Minervini). The
   ranking computes every method's result per stock (baked into
   the cache), exposes them as `methodResults` + a `combinedScore`, and the
   Dashboard now shows a **method selector (multi-select)**, one **column per
@@ -289,12 +304,17 @@ details.** Summary (2026-07-03):
   than before (adds operating cash flow) and fed the same fundamentals payload
   the Fundamentals card uses — the page fetches fundamentals once and shares it,
   so no extra request (`InvestmentCard`; `useFundamentals` lifted to the page).
-- **Tests:** backend `pytest` — 361 passing (adds `TestVolumeBreakout` for the
-  Volume Breakout method, `tests/test_method_backtest.py` for the generic GPW
-  back-test gate, and `TestGetMethodBacktest` in `tests/test_api.py` for the
-  `/methods/{id}/backtest` endpoint); frontend `npm run build` passes and
-  `vitest` has 20 passing.
-  Layout is responsive (sidebar drawer below `lg`, card lists below `md`).
+- **Tests:** backend `pytest` — 381 passing (the 2026-09-03 trading-method
+  refactor adds trend-context / SOS-resistance / buying-climax tests to
+  `tests/test_vsa.py`, plus Minervini RS-rank, 52-week-window and Volume
+  Breakout base-gating tests to `tests/test_methods.py`; earlier:
+  `TestVolumeBreakout`, `tests/test_method_backtest.py` for the generic GPW
+  back-test gate, and `TestGetMethodBacktest` in `tests/test_api.py`); frontend
+  `npm run build` passes and `vitest` has 20 passing.
+  Layout is responsive (sidebar drawer below `lg`; every list/screener page —
+  Dashboard, Watchlist, Filters, Volume Surge, Capex — swaps its wide data table
+  for a stacked card list below `lg`, so phones and tablets never scroll
+  sideways; the full tables return at `lg`+).
 - **Known gaps:** Settings page is a placeholder; favorites & filter presets
   are localStorage-only; frontend unit coverage is still thin (a handful of
   component/lib tests); see `agent/ROADMAP.md`.
@@ -302,4 +322,4 @@ details.** Summary (2026-07-03):
   all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-09-02 (Generic **GPW back-test gate** — `app/services/method_backtest_service.py` + `GET /api/stocks/methods/{id}/backtest` — proves any trading method on stored GPW history via its `signals()`: judges every long firing's forward return vs the stock's own median move and `passes` when it beat that baseline > 50% of the time with a positive average edge (informational only for now — the ranking does not yet enforce it). Earlier same day: Volume Breakout trading method (`volume_breakout.py`, id `breakout`); single-stock Volume (RVOL) + Investment (capex) cards + `/{ticker}/volume`; consolidated analytics-opinion summary card + `/opinion-summary` — roadmap #24.)*
+*Last updated: 2026-09-03 (**Trading-method audit + Tier-1/Tier-2 refactor.** Each method was verified against its canonical source (VSA → Tom Williams *Master the Markets*; Minervini → *Trade Like a Stock Market Wizard*; Volume Breakout → O'Neil CANSLIM + Minervini VCP). Tier-1 bug fixes: Volume Breakout's two dead firing rules removed + zero-range strong-close fixed; Minervini's truncated 52-week window + left-edge chart marker fixed; VSA warm-up comment corrected. Tier-2 methodology upgrades (these shift ratings — a data refresh is advisable): VSA trend-context/background gate (`VsaConfig.use_trend_context`, on by default) + SOS resistance-break + climactic-volume reclassification; Minervini rule 8 (universe RS-rank ≥ 70) in the ranking path; Volume Breakout now fires only out of a real, tight base. Backend `pytest` 361 → 381 green. Previously: Generic **GPW back-test gate** — `app/services/method_backtest_service.py` + `GET /api/stocks/methods/{id}/backtest` — proves any trading method on stored GPW history via its `signals()`: judges every long firing's forward return vs the stock's own median move and `passes` when it beat that baseline > 50% of the time with a positive average edge (informational only for now — the ranking does not yet enforce it). Earlier same day: Volume Breakout trading method (`volume_breakout.py`, id `breakout`); single-stock Volume (RVOL) + Investment (capex) cards + `/{ticker}/volume`; consolidated analytics-opinion summary card + `/opinion-summary` — roadmap #24.)*

@@ -53,7 +53,7 @@ export function MethodPicker({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-slate-800 bg-slate-900 p-2 shadow-xl">
+          <div className="absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-800 bg-slate-900 p-2 shadow-xl">
             <div className="flex items-center justify-between px-2 py-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 {t('methods.heading')}

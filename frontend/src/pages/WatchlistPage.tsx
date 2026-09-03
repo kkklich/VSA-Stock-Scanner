@@ -419,12 +419,14 @@ export function WatchlistPage() {
       {loading && <LoadingSkeleton />}
       {error && !loading && <ErrorBanner message={error} onRetry={refetch} />}
 
-      {/* ── Desktop / tablet table (md+) ─────────────────────────────────── */}
+      {/* ── Desktop table (lg+) ──────────────────────────────────────────── */}
       {/* No overflow wrapper: the table scrolls with the page so its header can
           stay pinned (position: sticky) as you scroll; min-width keeps it inside
-          the card when the viewport is narrower than the table. */}
+          the card when the viewport is narrower than the table. The table is
+          wide (1100px), so it only appears from lg up; phones and tablets get
+          the card list below instead. */}
       {!loading && !error && rows.length > 0 && (
-        <div className="hidden min-w-[1100px] rounded-xl border border-slate-800 bg-slate-900/40 md:block">
+        <div className="hidden min-w-[1100px] rounded-xl border border-slate-800 bg-slate-900/40 lg:block">
           <table className="w-full min-w-[1100px] table-fixed text-sm">
             <colgroup>
                 <col className="w-40" />
@@ -590,9 +592,9 @@ export function WatchlistPage() {
         </div>
       )}
 
-      {/* ── Mobile cards (below md) ──────────────────────────────────────── */}
+      {/* ── Mobile / tablet cards (below lg) ─────────────────────────────── */}
       {!loading && !error && rows.length > 0 && (
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-3 lg:hidden">
           {rows.map((s) => (
             <div
               key={s.ticker}
@@ -648,9 +650,9 @@ export function WatchlistPage() {
         </div>
       )}
 
-      {/* Mobile pagination */}
+      {/* Mobile / tablet pagination */}
       {!loading && !error && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pb-2 md:hidden">
+        <div className="flex items-center justify-center gap-2 pb-2 lg:hidden">
           <Pagination
             current={currentPage}
             total={totalPages}

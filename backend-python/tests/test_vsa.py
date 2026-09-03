@@ -54,6 +54,20 @@ def _normal_bars(n: int = 30, base_price: float = 100.0, base_vol: int = 50_000)
     return bars
 
 
+_START = date(2026, 1, 2)
+# Gate turned off, for A/B comparisons that isolate the trend-context effect.
+GATE_OFF = VsaConfig(use_trend_context=False)
+
+
+def _sloped_bars(n: int, first: float, step: float, vol: int = 50_000) -> list[StooqDailyQuote]:
+    """``n`` bars whose close moves ``step`` per session from ``first`` (spread 2)."""
+    out: list[StooqDailyQuote] = []
+    for i in range(n):
+        p = first + i * step
+        out.append(_bar((_START + timedelta(days=i)).isoformat(), p, p + 1, p - 1, p, vol))
+    return out
+
+
 # ── detect_signals ────────────────────────────────────────────────────────────
 
 
@@ -694,3 +708,116 @@ class TestConfigFromSettings:
         payload = VsaSettings(nodemand=VsaSignalSettings(enabled=False))
         cfg = config_from_settings(payload)
         assert cfg.for_signal(SignalName.NO_DEMAND).enabled is False
+
+
+# ── Trend-context / background gate (2a, 2b, 2c) ──────────────────────────────
+
+
+class TestTrendContextConfig:
+    """The ``use_trend_context`` flag defaults on and hashes as the default."""
+
+    def test_default_config_has_trend_context_on(self) -> None:
+        assert VsaConfig.default().use_trend_context is True
+
+    def test_default_still_hashes_as_default(self) -> None:
+        # A defaulted config (gate on) must keep the empty cache suffix so the
+        # nightly pre-warmed ranking keys are unchanged.
+        assert VsaConfig.default().is_default() is True
+        assert VsaConfig.default().cache_suffix() == ""
+
+    def test_disabling_the_gate_is_non_default(self) -> None:
+        cfg = VsaConfig(use_trend_context=False)
+        assert cfg.is_default() is False
+        assert cfg.cache_suffix() != ""
+
+
+class TestTrendContextGate:
+    """Signals are read against their background (Master the Markets)."""
+
+    def test_bullish_signal_suppressed_in_bearish_background(self) -> None:
+        # A Spring-shaped bar (dips below recent support, recovers to close near
+        # its high on high volume) inside a clear downtrend. With the gate on it
+        # is suppressed (a break in a downtrend is a breakdown, not a spring);
+        # with the gate off the old behaviour fires the Spring.
+        bars = _sloped_bars(35, first=140.0, step=-1.0)
+        recent_low = min(float(b.low) for b in bars[-20:])
+        spring = _bar(
+            (_START + timedelta(days=35)).isoformat(),
+            recent_low, recent_low + 3.0, recent_low - 1.5, recent_low + 2.7, 120_000,
+        )
+        seq = bars + [spring]
+        assert SignalName.SPRING not in {s.signal_name for s in detect_signals(seq)}
+        assert SignalName.SPRING in {s.signal_name for s in detect_signals(seq, GATE_OFF)}
+
+    def test_bearish_signal_suppressed_in_bullish_background(self) -> None:
+        # A No Demand bar (narrow, quiet up-bar) during a strong advance is an
+        # unremarkable pause, not a warning — suppressed with the gate on.
+        bars = _sloped_bars(35, first=70.0, step=1.0)
+        lastc = 70.0 + 34 * 1.0
+        nd = _bar(
+            (_START + timedelta(days=35)).isoformat(),
+            lastc + 0.4, lastc + 0.6, lastc + 0.1, lastc + 0.3, 12_000,
+        )
+        seq = bars + [nd]
+        assert SignalName.NO_DEMAND not in {s.signal_name for s in detect_signals(seq)}
+        assert SignalName.NO_DEMAND in {s.signal_name for s in detect_signals(seq, GATE_OFF)}
+
+    def test_sos_requires_breaking_resistance(self) -> None:
+        # An old tall bar sets prior resistance at 106. A wide, strong, high-
+        # volume up-bar that closes at 103.5 (below 106) does NOT push through
+        # supply, so it is no longer an SOS; the same shape closing at 107.5
+        # (through resistance) still is.
+        bars = _normal_bars(25, base_price=100.0, base_vol=50_000)
+        bars[5] = _bar((_START + timedelta(days=5)).isoformat(), 100, 106, 99, 101, 60_000)
+        below = bars + [
+            _bar((_START + timedelta(days=25)).isoformat(), 100, 104, 100, 103.5, 120_000)
+        ]
+        through = bars + [
+            _bar((_START + timedelta(days=25)).isoformat(), 100, 108, 100, 107.5, 120_000)
+        ]
+        assert SignalName.SOS not in {s.signal_name for s in detect_signals(below)}
+        assert SignalName.SOS in {s.signal_name for s in detect_signals(through)}
+
+    def test_excessive_volume_up_bar_in_new_high_ground_is_a_climax(self) -> None:
+        # Ultra-high volume (6x average) on a wide, strong up-bar breaking to new
+        # highs while the background is already extended (a steady advance) is a
+        # BUYING CLIMAX — reclassified bearish (reusing the Upthrust structure).
+        # With the gate off, the old engine simply silenced it (excessive-volume
+        # cap) — no signal at all.
+        bars = _sloped_bars(35, first=80.0, step=1.0)
+        lastc = 80.0 + 34 * 1.0
+        climax = _bar(
+            (_START + timedelta(days=35)).isoformat(),
+            lastc, lastc + 6, lastc - 0.5, lastc + 5.5, 50_000 * 6,
+        )
+        seq = bars + [climax]
+        names_on = {s.signal_name for s in detect_signals(seq)}
+        assert SignalName.UPTHRUST in names_on
+        assert SignalName.SOS not in names_on
+        # Confirm the reclassified signal is bearish.
+        climax_sig = [s for s in detect_signals(seq) if s.date == climax.date]
+        assert climax_sig and climax_sig[0].type == SignalType.BEARISH
+        assert detect_signals(seq, GATE_OFF) == []
+
+    def test_excessive_volume_breakout_out_of_a_range_stays_sos(self) -> None:
+        # The same ultra-high volume breakout, but out of a flat base (the
+        # background is NOT extended) — this is a range breakout on a volume
+        # surge, so the climax cap is lifted and it remains a valid SOS. With the
+        # gate off it is silenced by the fixed excessive-volume cap.
+        bars = _normal_bars(35, base_price=100.0, base_vol=50_000)
+        brk = _bar(
+            (_START + timedelta(days=35)).isoformat(), 100, 108, 99.5, 107.5, 50_000 * 6
+        )
+        seq = bars + [brk]
+        assert SignalName.SOS in {s.signal_name for s in detect_signals(seq)}
+        assert detect_signals(seq, GATE_OFF) == []
+
+    def test_short_history_leaves_signals_unchanged(self) -> None:
+        # With fewer than the trend lookback of prior bars the background is
+        # unknown, so the gate never suppresses — the classic SOS fixture still
+        # fires exactly as before.
+        bars = _normal_bars(25)
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000)
+        )
+        assert SignalName.SOS in {s.signal_name for s in detect_signals(bars)}

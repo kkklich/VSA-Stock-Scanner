@@ -323,13 +323,15 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* ── Desktop / tablet table (md+) ─────────────────────────────────── */}
+      {/* ── Desktop table (lg+) ──────────────────────────────────────────── */}
       {/* No overflow wrapper: the table scrolls with the page so its header can
           stay pinned (position: sticky) as you scroll; min-width keeps the
-          columns from crushing and grows with the number of method columns. */}
+          columns from crushing and grows with the number of method columns.
+          The table is wide (grows with the method columns), so it only appears
+          from lg up; phones and tablets get the card list below instead. */}
       {!loading && !error && rows.length > 0 && (
         <div
-          className="hidden rounded-xl border border-slate-800 bg-slate-900/40 md:block"
+          className="hidden rounded-xl border border-slate-800 bg-slate-900/40 lg:block"
           style={{ minWidth: tableMinWidth }}
         >
           <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
@@ -484,9 +486,9 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* ── Mobile cards (below md) ──────────────────────────────────────── */}
+      {/* ── Mobile / tablet cards (below lg) ─────────────────────────────── */}
       {!loading && !error && rows.length > 0 && (
-        <ul className="flex flex-col gap-2 md:hidden">
+        <ul className="flex flex-col gap-2 lg:hidden">
           {rows.map((s, i) => (
             <li key={s.ticker}>
               <div

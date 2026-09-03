@@ -39,6 +39,20 @@ def _series(closes: list[float], end: date | None = None) -> list[StooqDailyQuot
     return [_quote(end - timedelta(days=n - 1 - i), closes[i]) for i in range(n)]
 
 
+def _flat_then_rise(
+    flat_n: int = 260, rise_n: int = 120, slope: float = 0.8
+) -> list[StooqDailyQuote]:
+    """A long flat base then a clean sustained rise.
+
+    The trend template is OFF through the base (the 200-day MA is flat, price is
+    not yet 30% above its low) and turns ON partway up the rise — a genuine
+    off->on transition that sits INSIDE the evaluated window, unlike a series
+    that is already rising at the left edge (whose true entry predates the data).
+    """
+    closes = [100.0] * flat_n + [100.0 + (i + 1) * slope for i in range(rise_n)]
+    return _series(closes)
+
+
 # ── Registry ──────────────────────────────────────────────────────────────────
 
 
@@ -92,21 +106,68 @@ class TestMinervini:
         assert result.score < 100
 
     def test_short_history_is_unavailable(self) -> None:
-        # Fewer than a 200-day MA plus its trend lookback → cannot be judged.
+        # Fewer than a full 52-week window → cannot be judged.
         result = get_method("minervini").evaluate(_series([100.0] * 50))
         assert result.available is False
         assert result.fired is False
 
-    def test_signals_mark_template_turning_on(self) -> None:
-        # A steady rise turns the full template on and keeps it on → exactly one
-        # "turns on" marker, tagged as a bullish Trend Template.
-        signals = get_method("minervini").signals(
+    def test_rule8_folds_rs_rank_into_score_when_provided(self) -> None:
+        # A full 7/7 structural template. With a high RS rank (rule 8 passes)
+        # the score is 8/8; with a low RS rank it is 7/8 — but ``fired`` still
+        # tracks the structural template (RS rank is only known cross-sectionally
+        # for the latest session, so it modulates the score, not the marker).
+        rise = _series([100.0 + i * 0.5 for i in range(300)])
+        strong = get_method("minervini").evaluate(rise, rs_rank=90.0)
+        assert strong.score == 100
+        assert strong.detail == "8/8 rules"
+        assert strong.fired is True
+
+        weak = get_method("minervini").evaluate(rise, rs_rank=20.0)
+        assert weak.score == 88  # 7 of 8
+        assert weak.detail == "7/8 rules"
+        assert weak.fired is True  # structural template still on
+
+    def test_no_rs_rank_falls_back_to_structural(self) -> None:
+        # Standalone (no universe) → 7 structural rules, and the label says so.
+        result = get_method("minervini").evaluate(
             _series([100.0 + i * 0.5 for i in range(300)])
         )
-        assert len(signals) >= 1
+        assert result.score == 100
+        assert result.detail == "7/7 structural"
+
+    def test_full_52w_window_required(self) -> None:
+        # Rules 6-7 need a genuine 52-week window (~252 sessions). A stock with
+        # only ~240 bars — enough for the moving averages but not a real year —
+        # must be unavailable, not judged on a truncated window (its 3-month
+        # high must never be read as a fresh 52-week high). Just over the
+        # threshold (~260 bars, the standard production fetch) it evaluates the
+        # last bar normally.
+        assert get_method("minervini").evaluate(
+            _series([100.0 + i * 0.5 for i in range(240)])
+        ).available is False
+        just_enough = get_method("minervini").evaluate(
+            _series([100.0 + i * 0.5 for i in range(260)])
+        )
+        assert just_enough.available is True
+        assert just_enough.fired is True
+
+    def test_signals_mark_template_turning_on(self) -> None:
+        # A base then a rise turns the full template on partway up → exactly one
+        # "turns on" marker (a genuine off->on transition), tagged bullish.
+        signals = get_method("minervini").signals(_flat_then_rise())
+        assert len(signals) == 1
         assert all(s.label == "Trend Template" and s.type == "Bullish" for s in signals)
         # Oldest-first, matching the chart's expectation.
         assert signals == sorted(signals, key=lambda s: s.date)
+
+    def test_signals_no_marker_when_already_on_at_left_edge(self) -> None:
+        # A steady rise that is already a full template at the first evaluable
+        # bar has its true entry BEFORE the window — so no fresh marker is
+        # emitted (the left-edge state is seeded, not reported as an entry).
+        signals = get_method("minervini").signals(
+            _series([100.0 + i * 0.5 for i in range(300)])
+        )
+        assert signals == []
 
     def test_signals_empty_in_a_downtrend(self) -> None:
         signals = get_method("minervini").signals(
@@ -168,6 +229,44 @@ class TestVolumeBreakout:
         assert result.fired is False
         # A downtrend must not lean bullish in the analytics summary (score <= 50).
         assert result.score < 50
+
+    def test_no_base_running_move_does_not_fire(self) -> None:
+        # A stock already running vertically (a wide, steep advance — no tight
+        # base) that pokes a new high on volume must NOT count as a base
+        # breakout: the prior 50 sessions span far more than a proper base.
+        end = date.today()
+        closes = (
+            [100.0] * 150
+            + [100.0 + (i + 1) * 1.5 for i in range(49)]  # steep run 101.5..173.5
+        )
+        closes.append(closes[-1] + 4.0)  # a new-high "breakout" on top of the run
+        n = len(closes)
+        rows = [
+            _quote(end - timedelta(days=n - 1 - i), c, 600_000 if i == n - 1 else 200_000)
+            for i, c in enumerate(closes)
+        ]
+        result = get_method("breakout").evaluate(rows)
+        assert result.available is True
+        assert result.fired is False  # base too deep (a vertical run, no base)
+
+    def test_volume_rising_into_pivot_does_not_fire(self) -> None:
+        # A tight flat base, but volume was RISING into the pivot rather than
+        # drying up — the volume-dry-up precondition (measured on the bar before
+        # the breakout) fails, so it is not a genuine coiled base breakout.
+        end = date.today()
+        rows_spec = (
+            [(100.0, 200_000)] * 190
+            + [(100.0, 400_000)] * 10  # volume expands through the last 10 base bars
+            + [(106.0, 900_000)]       # new-high, high-volume, strong-close bar
+        )
+        n = len(rows_spec)
+        rows = [
+            _quote(end - timedelta(days=n - 1 - i), c, v)
+            for i, (c, v) in enumerate(rows_spec)
+        ]
+        result = get_method("breakout").evaluate(rows)
+        assert result.available is True
+        assert result.fired is False  # no volume dry-up into the pivot
 
     def test_short_history_is_unavailable(self) -> None:
         result = get_method("breakout").evaluate(_series([100.0] * 50))
@@ -316,3 +415,61 @@ class TestRankingAttachesMethods:
         assert results["vsa"].score == rows[0].current_rating
         # The strong uptrend fires the full Minervini template.
         assert results["minervini"].fired is True
+
+    def test_relative_strength_rank_flows_into_minervini(self) -> None:
+        # Two full-template uptrends of different steepness. The steeper one has
+        # the higher relative strength, so it ranks in the top percentile and
+        # Minervini's rule 8 lifts it to a full 8/8; the weaker one ranks bottom
+        # and scores 7/8. This proves the cross-sectional RS pre-pass threads a
+        # per-stock rs_rank into each method's evaluate.
+        companies = [
+            GpwCompany(ticker="aaa", name="Strong", sector="Tech", market_cap=None),
+            GpwCompany(ticker="bbb", name="Weak", sector="Tech", market_cap=None),
+        ]
+        client = _Client({
+            "aaa": _series([100.0 + i * 0.8 for i in range(300)]),
+            "bbb": _series([100.0 + i * 0.3 for i in range(300)]),
+        })
+        rows = asyncio.run(
+            compute_ranking(
+                companies=companies,
+                stooq=client,
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+        by_ticker = {r.ticker: r for r in rows}
+        strong = by_ticker["AAA"].method_results["minervini"]
+        weak = by_ticker["BBB"].method_results["minervini"]
+        assert strong.detail == "8/8 rules" and strong.score == 100
+        assert weak.detail == "7/8 rules" and weak.score == 88
+
+
+class TestRelativeStrength:
+    def test_raw_none_on_short_history(self) -> None:
+        from app.services.ranking_service import _relative_strength_raw
+
+        assert _relative_strength_raw(_series([100.0] * 50)) is None
+
+    def test_raw_higher_for_stronger_performer(self) -> None:
+        from app.services.ranking_service import _relative_strength_raw
+
+        strong = _relative_strength_raw(_series([100.0 + i * 0.8 for i in range(300)]))
+        weak = _relative_strength_raw(_series([100.0 + i * 0.3 for i in range(300)]))
+        assert strong is not None and weak is not None
+        assert strong > weak
+
+    def test_percentile_ranks_span_0_to_100(self) -> None:
+        from app.services.ranking_service import _percentile_ranks
+
+        ranks = _percentile_ranks({"low": 1.0, "mid": 5.0, "high": 9.0})
+        assert ranks["low"] == 0.0
+        assert ranks["high"] == 100.0
+        assert 0.0 < ranks["mid"] < 100.0
+
+    def test_percentile_ranks_need_at_least_two(self) -> None:
+        from app.services.ranking_service import _percentile_ranks
+
+        # A single stock cannot be ranked cross-sectionally → no rank.
+        assert _percentile_ranks({"solo": 3.0}) == {}

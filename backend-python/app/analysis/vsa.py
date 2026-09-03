@@ -105,6 +105,20 @@ _LOW_VOL_MULT = 0.7
 # disqualifies the pattern's straightforward reading.
 _EXCESSIVE_VOL_MULT = 4.0
 
+# ── Trend-context (background) gate ───────────────────────────────────────────
+# Master the Markets insists a signal is only meaningful read against the
+# background: strength shown while the background is weak, or weakness shown
+# while it is strong. We approximate the background with a moving average of the
+# closes over this many prior sessions (no look-ahead — the average is of bars
+# strictly before the one being judged).
+_TREND_LOOKBACK = 30
+# Neutral band around that average, as a fraction. The background is only called
+# "bullish" / "bearish" when the close is clearly (this far) above / below the
+# average; within the band it is "neutral". A generous band means the gate
+# "suppresses only when the background clearly contradicts" the signal, rather
+# than silencing borderline cases.
+_TREND_BAND = 0.03
+
 # Maximum penetration below support, in units of the average spread, for the
 # quiet bullish dips: the low-volume Spring and the Successful Test. The
 # canonical low-volume spring penetrates support only SHALLOWLY; a deeper
@@ -132,6 +146,14 @@ class VsaConfig:
     params: Mapping[SignalName, SignalParams] = field(
         default_factory=lambda: dict(DEFAULT_SIGNAL_PARAMS)
     )
+    # Read each bar's signal against its background trend (Master the Markets:
+    # a signal only means what the background lets it mean). When on (the
+    # default), a bullish pattern is suppressed in a clearly bearish background
+    # and vice versa, and ultra-high-volume up-bars in new-high ground are read
+    # as buying climaxes rather than strength. There is no API/frontend control
+    # for this yet, so in practice it is always True — it exists so the gate can
+    # be turned off in code/tests and so the default hashes as "default".
+    use_trend_context: bool = True
 
     @classmethod
     def default(cls) -> VsaConfig:
@@ -141,7 +163,7 @@ class VsaConfig:
         return self.params.get(name, DEFAULT_SIGNAL_PARAMS[name])
 
     def is_default(self) -> bool:
-        return all(
+        return self.use_trend_context is True and all(
             self.for_signal(name) == DEFAULT_SIGNAL_PARAMS[name] for name in SignalName
         )
 
@@ -149,24 +171,35 @@ class VsaConfig:
         """Stable short hash for cache keys; empty string for the default config.
 
         Keeping the default suffix empty means existing cache keys (and the
-        nightly pre-warmed ranking) keep working unchanged.
+        nightly pre-warmed ranking) keep working unchanged. ``use_trend_context``
+        defaults to True, so a default config still returns "" — only a config
+        that actually deviates (custom thresholds, or the gate disabled) gets a
+        non-empty suffix.
         """
         if self.is_default():
             return ""
         canonical = json.dumps(
             {
-                name.value: [
-                    p.enabled, p.spread_mult, p.vol_mult, p.close_pos, p.lookback,
-                ]
-                for name in SignalName
-                for p in [self.for_signal(name)]
+                "use_trend_context": self.use_trend_context,
+                "params": {
+                    name.value: [
+                        p.enabled, p.spread_mult, p.vol_mult, p.close_pos, p.lookback,
+                    ]
+                    for name in SignalName
+                    for p in [self.for_signal(name)]
+                },
             },
             sort_keys=True,
         )
         return ":" + hashlib.md5(canonical.encode()).hexdigest()[:10]
 
 
-# Minimum warm-up buffer beyond the rolling lookback before signals may fire.
+# History-sufficiency gate (NOT a per-signal warm-up): a series must hold at
+# least this many bars beyond the smallest rolling lookback before the scan runs
+# at all, so a full rolling context window (average spread/volume, support and
+# resistance) exists. It bounds the *length* of the series; the scan loop itself
+# begins at the first bar that has a complete lookback window behind it, so no
+# early signal is dropped by this buffer.
 _WARMUP_BARS = 5
 
 # Maps the Scanner page rule ids (API payload keys) to engine signal names.
@@ -271,6 +304,41 @@ def detect_signals(
     # No Demand / a Test) means lower than BOTH, i.e. below their minimum.
     df["prev_vol_min2"] = df["volume"].rolling(2).min().shift(1)
 
+    # Background trend context: the average close over the prior _TREND_LOOKBACK
+    # sessions (shift(1) → no look-ahead). NaN until enough history exists, in
+    # which case the background is treated as "neutral" (unknown → do not
+    # suppress).
+    use_trend = cfg.use_trend_context
+    df["trend_ma"] = df["close"].rolling(_TREND_LOOKBACK).mean().shift(1)
+
+    def background(row: pd.Series) -> str:
+        """The bar's background trend: 'bullish', 'bearish' or 'neutral'.
+
+        Read from the trend LEADING INTO the bar — the *previous* close vs the
+        trailing average — never the current bar's own close, so a strong
+        breakout bar's own thrust cannot inflate its background (that would make
+        every excessive-volume range breakout look 'extended'). 'neutral' when
+        the gate is disabled, when there is not yet enough history for the trend
+        average, or when the prior close sits within the neutral band around it —
+        so a signal is suppressed only when the background *clearly* contradicts
+        it.
+        """
+        if not use_trend:
+            return "neutral"
+        ma = row["trend_ma"]
+        ref = row["prev_close"]
+        if pd.isna(ma) or ma <= 0 or pd.isna(ref):
+            return "neutral"
+        if ref >= ma * (1 + _TREND_BAND):
+            return "bullish"
+        if ref <= ma * (1 - _TREND_BAND):
+            return "bearish"
+        return "neutral"
+
+    def trend_available(row: pd.Series) -> bool:
+        """Whether a usable background reading exists for this bar."""
+        return use_trend and not pd.isna(row["trend_ma"]) and row["trend_ma"] > 0
+
     def ctx(row: pd.Series, lb: int) -> tuple[float, float, float, float] | None:
         """Rolling context for one lookback, or None when not yet available.
 
@@ -298,6 +366,11 @@ def detect_signals(
         prev_low = row["prev_low"]
         prev_vol_min2 = row["prev_vol_min2"]
         d = row["date"]
+        # Background trend for this bar (see the gate note above). ``bg`` gates
+        # which patterns may fire; ``trend_ok`` says whether the climax
+        # reclassification (which needs a real background reading) can run.
+        bg = background(row)
+        trend_ok = trend_available(row)
 
         matched: VsaSignal | None = None
 
@@ -320,7 +393,10 @@ def detect_signals(
         #     average spreads. Its spread is usually modest, so no
         #     wide-spread requirement.
         # Average, unremarkable volume shows no anomaly and does not qualify.
-        if matched is None and SignalName.SPRING in active:
+        # Trend gate: a Spring is a bullish structure, so it is suppressed when
+        # the background is clearly bearish (a break in a downtrend is a
+        # breakdown, not accumulation).
+        if matched is None and SignalName.SPRING in active and bg != "bearish":
             p = active[SignalName.SPRING]
             c = ctx(row, p.lookback)
             if c is not None:
@@ -348,27 +424,56 @@ def detect_signals(
                         type=SignalType.BULLISH, strength=0.9,
                     )
 
-        # SOS — wide up-bar on high volume closing near the high. High but NOT
-        # excessive: Master the Markets says volume on an up-bar "should not
-        # be excessive, as this is indicative of supply in the background" —
-        # at ultra-high volume a wide up-bar is a potential buying climax
-        # (weakness), so volume is capped at _excessive_cap × average.
+        # SOS — a wide up-bar on high volume closing near the high that pushes
+        # up THROUGH an old area of supply. Two refinements over a plain
+        # wide-up-bar:
+        #   * (2b) it must break resistance — the close clears the prior rolling
+        #     high — because an SOS is "pushing up through supply", not just a
+        #     strong bar somewhere inside the range.
+        #   * (2c) at ultra-high (excessive) volume the reading depends on the
+        #     background. Master the Markets: a buying climax is a top only "in
+        #     new high ground". When the background is already extended (bullish)
+        #     the excessive-volume up-bar is a buying climax → reclassified
+        #     bearish; when it is merely breaking out of a range (neutral
+        #     background) the cap is lifted and it stays a valid SOS. With no
+        #     usable background (too little history) we keep the original
+        #     conservative behaviour: excessive volume yields no signal.
         if matched is None and SignalName.SOS in active:
             p = active[SignalName.SOS]
             c = ctx(row, p.lookback)
             if c is not None:
-                avg_sp, avg_v, _, _ = c
-                if (
+                avg_sp, avg_v, _, prior_high = c
+                wide_strong_up = (
                     spread > avg_sp * p.spread_mult
                     and vol > avg_v * p.vol_mult
-                    and vol <= avg_v * _excessive_cap(p)
                     and cp > p.close_pos
                     and row["close"] > prev_close
-                ):
-                    matched = VsaSignal(
-                        date=d, signal_name=SignalName.SOS,
-                        type=SignalType.BULLISH, strength=1.0,
-                    )
+                )
+                breaks_resistance = prior_high > 0 and row["close"] > prior_high
+                if wide_strong_up and breaks_resistance:
+                    excessive = vol > avg_v * _excessive_cap(p)
+                    if not excessive:
+                        matched = VsaSignal(
+                            date=d, signal_name=SignalName.SOS,
+                            type=SignalType.BULLISH, strength=1.0,
+                        )
+                    elif trend_ok and bg == "bullish":
+                        # Buying climax in new high ground — reuse Upthrust, the
+                        # app's bearish "distribution at the highs" structure.
+                        # (Caveat of the reuse: a climax closes strong, whereas a
+                        # textbook upthrust closes on its low — but both are
+                        # bearish supply at new highs and map to "Strong Sell".)
+                        matched = VsaSignal(
+                            date=d, signal_name=SignalName.UPTHRUST,
+                            type=SignalType.BEARISH, strength=0.85,
+                        )
+                    elif trend_ok:
+                        # Breaking out of a range on a volume surge (not extended)
+                        # — the climax cap is lifted, still a valid SOS.
+                        matched = VsaSignal(
+                            date=d, signal_name=SignalName.SOS,
+                            type=SignalType.BULLISH, strength=1.0,
+                        )
 
         # Successful Test ("no supply") — Master the Markets p.35: "Any
         # down-move dipping into an area of previous selling (previous high
@@ -386,7 +491,10 @@ def detect_signals(
         # not be read as bullish. Volume must be genuinely low: below the
         # rolling average (× vol_mult) AND lower than both of the previous
         # two bars (the standard TradeGuider criterion).
-        if matched is None and SignalName.SUCCESSFUL_TEST in active:
+        # Trend gate: a successful test is bullish, so it is suppressed in a
+        # clearly bearish background (a test of supply only "passes" as strength
+        # when the background is not itself falling apart).
+        if matched is None and SignalName.SUCCESSFUL_TEST in active and bg != "bearish":
             p = active[SignalName.SUCCESSFUL_TEST]
             c = ctx(row, p.lookback)
             if c is not None:
@@ -417,7 +525,10 @@ def detect_signals(
         # trap; only "average, unremarkable" volume is excluded — the book's
         # own example (p.66) of an average-volume up-thrust sees the market
         # simply continue upwards.
-        if matched is None and SignalName.UPTHRUST in active:
+        # Trend gate: an upthrust is bearish, so it is suppressed when the
+        # background is clearly bullish (a poke above resistance inside a strong
+        # uptrend usually just resolves upward — the book's average-volume case).
+        if matched is None and SignalName.UPTHRUST in active and bg != "bullish":
             p = active[SignalName.UPTHRUST]
             c = ctx(row, p.lookback)
             if c is not None:
@@ -435,28 +546,51 @@ def detect_signals(
                         type=SignalType.BEARISH, strength=0.85,
                     )
 
-        # SOW — wide down-bar on high volume closing near the low. High but
-        # NOT excessive, mirroring SOS: at ultra-high volume a wide down-bar
-        # is potential "stopping volume" — professional money buying into the
-        # capitulation (budding strength) — so the same climax cap applies.
-        # (The Upthrust is deliberately NOT capped: an upthrust on ultra-high
-        # volume — a buying climax — is still legitimately bearish.)
+        # SOW — wide down-bar on high volume closing near the low. Mirrors the
+        # SOS handling of excessive volume: at ultra-high volume a wide down-bar
+        # into new-low ground with a clearly bearish background is potential
+        # "stopping volume" — professional money buying into the capitulation
+        # (budding strength), not clean weakness — so no SOW is emitted there.
+        # Elsewhere (excessive volume but NOT in extended new-low ground) the
+        # climax cap is lifted and it is a valid SOW; with no usable background
+        # the original conservative behaviour holds (excessive → no signal). We
+        # deliberately do NOT emit a fresh *bullish* signal off a wide down-close
+        # bar — too aggressive a read for end-of-day data. (The Upthrust remains
+        # uncapped: an upthrust on ultra-high volume is still legitimately
+        # bearish.)
         if matched is None and SignalName.SOW in active:
             p = active[SignalName.SOW]
             c = ctx(row, p.lookback)
             if c is not None:
-                avg_sp, avg_v, _, _ = c
-                if (
+                avg_sp, avg_v, prior_low, _ = c
+                wide_weak_down = (
                     spread > avg_sp * p.spread_mult
                     and vol > avg_v * p.vol_mult
-                    and vol <= avg_v * _excessive_cap(p)
                     and cp < p.close_pos
                     and row["close"] < prev_close
-                ):
-                    matched = VsaSignal(
-                        date=d, signal_name=SignalName.SOW,
-                        type=SignalType.BEARISH, strength=1.0,
+                )
+                if wide_weak_down:
+                    excessive = vol > avg_v * _excessive_cap(p)
+                    stopping_volume = (
+                        trend_ok
+                        and bg == "bearish"
+                        and prior_low > 0
+                        and row["low"] < prior_low
                     )
+                    if not excessive:
+                        matched = VsaSignal(
+                            date=d, signal_name=SignalName.SOW,
+                            type=SignalType.BEARISH, strength=1.0,
+                        )
+                    elif trend_ok and not stopping_volume:
+                        # Excessive volume but not extended selling into new lows
+                        # — cap lifted, still a valid SOW.
+                        matched = VsaSignal(
+                            date=d, signal_name=SignalName.SOW,
+                            type=SignalType.BEARISH, strength=1.0,
+                        )
+                    # else: (excessive & stopping volume) or (excessive & no
+                    # background) → no signal.
 
         # No Demand — narrow up-bar on low volume; professionals not
         # participating. Master the Markets p.32: "a low volume up-bar, on a
@@ -464,7 +598,10 @@ def detect_signals(
         # be lower than both of the previous two bars and the close in the
         # middle or low — a bar closing strongly on its own high isn't a
         # No Demand bar even if narrow and quiet.
-        if matched is None and SignalName.NO_DEMAND in active:
+        # Trend gate: No Demand is bearish (lack of professional buying), so it
+        # is suppressed when the background is clearly bullish — a quiet narrow
+        # up-bar during a strong advance is an unremarkable pause, not a warning.
+        if matched is None and SignalName.NO_DEMAND in active and bg != "bullish":
             p = active[SignalName.NO_DEMAND]
             c = ctx(row, p.lookback)
             if c is not None:

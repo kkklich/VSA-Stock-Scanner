@@ -69,6 +69,49 @@ _SPARKLINE_BARS = 10
 _MAX_SESSION_LAG_DAYS = 10
 
 
+# ── Cross-sectional relative strength (Minervini's rule 8) ────────────────────
+# IBD-style blended trailing performance: the most recent quarter double-
+# weighted, then the three quarters before it. Sessions, not calendar days.
+# Requires a full ~12-month history so every stock is ranked on the same
+# horizons; a stock with less (which is also below Minervini's own 52-week
+# minimum) gets no RS rank and Minervini falls back to its 7 structural rules.
+_RS_OFFSETS = (63, 126, 189, 252)  # ~3 / 6 / 9 / 12 months
+_RS_WEIGHTS = (0.4, 0.2, 0.2, 0.2)
+
+
+def _relative_strength_raw(quotes: Sequence[StooqDailyQuote]) -> float | None:
+    """The stock's raw blended trailing return (percent), or None if too short."""
+    closes = [float(q.close) for q in quotes]
+    n = len(closes)
+    if n <= max(_RS_OFFSETS):
+        return None
+    last = closes[-1]
+    if last <= 0:
+        return None
+    perf = 0.0
+    for off, weight in zip(_RS_OFFSETS, _RS_WEIGHTS, strict=True):
+        past = closes[-1 - off]
+        if past <= 0:
+            return None
+        perf += weight * (last / past - 1.0) * 100.0
+    return perf
+
+
+def _percentile_ranks(raw: dict[str, float]) -> dict[str, float]:
+    """Rank raw RS values into 0-100 percentiles across the universe.
+
+    Lowest raw -> 0, highest -> 100 (ordinal, ties broken by ticker for
+    determinism). Needs at least two stocks; with fewer, a cross-sectional rank
+    is meaningless, so every ticker gets none (Minervini uses the 7 structural
+    rules).
+    """
+    if len(raw) < 2:
+        return {}
+    ordered = sorted(raw.items(), key=lambda kv: (kv[1], kv[0]))
+    m = len(ordered)
+    return {ticker: i / (m - 1) * 100.0 for i, (ticker, _) in enumerate(ordered)}
+
+
 def _to_method_model(method_id: str, result: MethodResult) -> MethodResultModel:
     """Convert a framework ``MethodResult`` dataclass into the API model."""
     return MethodResultModel(
@@ -89,14 +132,17 @@ def _evaluate_methods(
     vsa_rating: int,
     vsa_verdict: str,
     as_of: date,
+    rs_rank: float | None = None,
 ) -> dict[str, MethodResultModel]:
     """Run every registered trading method against one stock's bars.
 
     VSA reuses the signals/rating the ranking already computed for the row, so
     its column equals the Rating/Signal columns exactly and no VSA work is
-    repeated. Every other method evaluates on the full fetched window. A method
-    that raises is skipped (recorded as unavailable) so one bad rule can never
-    break the ranking.
+    repeated. Every other method evaluates on the full fetched window, receiving
+    the stock's cross-sectional ``rs_rank`` (used only by methods with a
+    relative-strength rule, e.g. Minervini's rule 8). A method that raises is
+    skipped (recorded as unavailable) so one bad rule can never break the
+    ranking.
     """
     results: dict[str, MethodResultModel] = {}
     for method in all_methods():
@@ -108,7 +154,7 @@ def _evaluate_methods(
             continue
         try:
             results[method.id] = _to_method_model(
-                method.id, method.evaluate(quotes, config)
+                method.id, method.evaluate(quotes, config, rs_rank=rs_rank)
             )
         except Exception:  # noqa: BLE001
             logger.exception("Method %s failed on a stock; marking unavailable.",
@@ -222,6 +268,7 @@ async def compute_ranking(
 
     async def fetch_and_analyse(
         company: GpwCompany,
+        rs_rank: float | None,
     ) -> tuple[StockRankingItem, date] | None:
         """Analyse one company; returns (item, its last session date) or None."""
         # Capitalisation floor (blueprint §5): market cap must exceed 100M PLN.
@@ -303,6 +350,7 @@ async def compute_ranking(
                 vsa_rating=rating_today,
                 vsa_verdict=verdict,
                 as_of=last_bar_date,
+                rs_rank=rs_rank,
             )
 
             med_vol_list = sorted(q.volume for q in recent[-20:])
@@ -337,9 +385,37 @@ async def compute_ranking(
             logger.exception("Skipping %s: analysis failed.", company.ticker)
             return None
 
+    # Relative-strength pre-pass (Minervini's rule 8): compute each stock's raw
+    # blended trailing return, then rank those into 0-100 percentiles across the
+    # scanned universe. This warms the per-ticker history cache, so the main
+    # analysis pass below reads the SAME quotes back from cache — no extra
+    # network or DB fetch. Stocks below the market-cap floor or without a full
+    # ~12-month history get no rank (Minervini then uses its structural rules).
+    async def rs_raw_for(company: GpwCompany) -> tuple[str, float | None]:
+        if company.market_cap is not None and company.market_cap < _MIN_MARKET_CAP_PLN:
+            return company.ticker, None
+        quotes = await fetch_quotes(company.ticker)
+        return company.ticker, _relative_strength_raw(quotes or [])
+
+    rs_pairs = await asyncio.gather(
+        *(rs_raw_for(c) for c in companies), return_exceptions=True
+    )
+    rs_raw: dict[str, float] = {}
+    for res in rs_pairs:
+        if isinstance(res, BaseException):
+            continue  # a fetch failure here just means "no RS rank" for that stock
+        ticker, raw = res
+        if raw is not None:
+            rs_raw[ticker] = raw
+    rs_rank_by_ticker = _percentile_ranks(rs_raw)
+
     # return_exceptions=True so one failed task can never abort the whole gather.
     results = await asyncio.gather(
-        *(fetch_and_analyse(c) for c in companies), return_exceptions=True
+        *(
+            fetch_and_analyse(c, rs_rank_by_ticker.get(c.ticker))
+            for c in companies
+        ),
+        return_exceptions=True,
     )
     # An exception that escaped fetch_and_analyse's guard (e.g. the DB dying
     # mid-scan) must be logged, or a broken run would look like an empty market.

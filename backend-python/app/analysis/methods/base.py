@@ -115,6 +115,8 @@ class TradingMethod(ABC):
         self,
         bars: Sequence[StooqDailyQuote],
         config: VsaConfig | None = None,
+        *,
+        rs_rank: float | None = None,
     ) -> MethodResult:
         """Evaluate the method on one stock's chronological OHLCV history.
 
@@ -122,6 +124,13 @@ class TradingMethod(ABC):
         the method slices out however much it needs. ``config`` carries the
         user's VSA settings and is used only by methods built on the VSA
         engine — others ignore it.
+
+        ``rs_rank`` is the stock's cross-sectional relative-strength percentile
+        (0-100) across the scanned universe for the latest session, or ``None``
+        when it cannot be computed (too little history, or a single-stock /
+        standalone evaluation with no universe to rank against). Only methods
+        with a cross-sectional rule use it (Minervini's rule 8); the rest ignore
+        it. Keyword-only with a default so every existing caller keeps working.
 
         Must never raise on malformed or short input: return
         ``MethodResult.unavailable()`` instead, so one bad stock can never

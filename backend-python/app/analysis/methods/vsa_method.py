@@ -86,6 +86,8 @@ class VsaMethod(TradingMethod):
         self,
         bars: Sequence[StooqDailyQuote],
         config: VsaConfig | None = None,
+        *,
+        rs_rank: float | None = None,  # cross-sectional; VSA does not use it
     ) -> MethodResult:
         if len(bars) < _MIN_BARS:
             return MethodResult.unavailable("Not enough history")

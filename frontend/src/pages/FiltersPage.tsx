@@ -540,10 +540,13 @@ export function FiltersPage() {
         </div>
       ) : (
         <>
-          {/* min-width (not an overflow wrapper) so the sticky header can pin to
+          {/* ── Desktop table (lg+) ─────────────────────────────────────────
+              min-width (not an overflow wrapper) so the sticky header can pin to
               the page as you scroll; the table stays inside the card and the
-              page scrolls sideways when the viewport is narrower than it. */}
-          <Card className="min-w-[1000px]">
+              page scrolls sideways when the viewport is narrower than it. Below
+              lg the table is hidden and the card list (further down) is shown,
+              so phones and tablets never scroll sideways. */}
+          <Card className="hidden min-w-[1000px] lg:block">
             <table className="w-full min-w-[1000px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-slate-500">
@@ -695,6 +698,71 @@ export function FiltersPage() {
               </tbody>
             </table>
           </Card>
+
+          {/* ── Mobile / tablet cards (below lg) ─────────────────────────── */}
+          <div className="space-y-2.5 lg:hidden">
+            {rows.map((s) => (
+              <div
+                key={s.ticker}
+                onClick={() => navigate(`/stock/${s.ticker.toLowerCase()}`)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${s.ticker} ${s.name}, open details`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    navigate(`/stock/${s.ticker.toLowerCase()}`)
+                  }
+                }}
+                className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 transition-colors hover:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <TickerMark ticker={s.ticker} />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-100">{s.ticker}</div>
+                      <div className="truncate text-xs text-slate-500">{s.name}</div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-medium tabular-nums text-slate-200">
+                      {fmtPrice(s.lastPrice)} PLN
+                    </div>
+                    <div
+                      className={
+                        'text-xs tabular-nums ' + deltaTone(s.priceChangePct)
+                      }
+                    >
+                      {fmtPct(s.priceChangePct)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <RatingMeter rating={s.currentRating} />
+                  <SignalBadge verdict={s.lastSignal} />
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-800/60 pt-2 text-xs text-slate-500">
+                  <span className="min-w-0 truncate">{s.sector ?? '—'}</span>
+                  <span>
+                    {s.daysSinceSignal === 999
+                      ? 'No recent signal'
+                      : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'} ago`}
+                  </span>
+                  <span className="ml-auto flex items-center gap-1">
+                    52w high
+                    <Range52wCell
+                      pct={s.distFrom52wHighPct}
+                      isNew={s.isNew52wHigh}
+                      newLabel="new"
+                      newTone="bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
+                    />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Pager */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-2">

@@ -249,10 +249,13 @@ export function VolumeSurgePage() {
         </div>
       ) : (
         <>
-          {/* min-width (not an overflow wrapper) so the sticky header can pin to
+          {/* ── Desktop table (lg+) ─────────────────────────────────────────
+              min-width (not an overflow wrapper) so the sticky header can pin to
               the page as you scroll; the table stays inside the card and the
-              page scrolls sideways when the viewport is narrower than it. */}
-          <Card className="min-w-[760px]">
+              page scrolls sideways when the viewport is narrower than it. Below
+              lg the table is hidden and the card list (further down) is shown,
+              so phones and tablets never scroll sideways. */}
+          <Card className="hidden min-w-[760px] lg:block">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-slate-500">
@@ -351,6 +354,18 @@ export function VolumeSurgePage() {
               </tbody>
             </table>
           </Card>
+
+          {/* ── Mobile / tablet cards (below lg) ─────────────────────────── */}
+          <div className="space-y-2.5 lg:hidden">
+            {items.map((item) => (
+              <SurgeCard
+                key={item.ticker}
+                item={item}
+                recentDays={meta?.recentDays ?? recentDays}
+                onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
+              />
+            ))}
+          </div>
 
           {/* Infinite-scroll footer */}
           <div className="flex flex-col items-center gap-3 pb-2">
@@ -465,5 +480,96 @@ function SurgeRow({
         <SignalBadge verdict={item.lastSignal as SignalVerdict} />
       </td>
     </tr>
+  )
+}
+
+/** Compact card form of one surge row, shown below lg where the table is hidden. */
+function SurgeCard({
+  item,
+  recentDays,
+  onOpen,
+}: {
+  item: ApiVolumeSurgeItem
+  recentDays: number
+  onOpen: () => void
+}) {
+  return (
+    <div
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      aria-label={`${item.ticker} ${item.name}, open details`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+      className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 transition-colors hover:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <TickerMark ticker={item.ticker} />
+          <div className="min-w-0">
+            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="truncate text-xs text-slate-500">{item.name}</div>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <span
+            className={
+              'inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold tabular-nums ring-1 ring-inset ' +
+              ratioBadgeClass(item.volumeRatio)
+            }
+          >
+            {item.volumeRatio.toFixed(1)}×
+          </span>
+          <div className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-500">
+            RVOL
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-800/60 pt-2 text-xs">
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">Price move</span>
+          <span className={'tabular-nums font-medium ' + deltaTone(item.priceChangePct)}>
+            {fmtPct(item.priceChangePct)}
+          </span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">Price</span>
+          <span className="tabular-nums text-slate-200">{fmtPrice(item.lastPrice)}</span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">Volume</span>
+          <span className="tabular-nums text-slate-300">
+            {fmtCompactPln(item.recentAvgVolume)}
+            <span className="text-slate-500">
+              {' / '}
+              {fmtCompactPln(item.baselineAvgVolume)}
+            </span>
+          </span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">Hot days</span>
+          <span className="tabular-nums text-slate-300">
+            {item.daysAboveBaseline}/{recentDays}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-800/60 pt-2">
+        <span
+          className={
+            'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums ring-1 ring-inset ' +
+            ratingTone(item.currentRating).badge
+          }
+        >
+          VSA {item.currentRating}
+        </span>
+        <SignalBadge verdict={item.lastSignal as SignalVerdict} />
+      </div>
+    </div>
   )
 }

@@ -11,16 +11,19 @@ VSA engine, and it satisfies the owner's brief: volume-driven, held over
 weeks-to-months, and long-only (it profits from the rise).
 
 This reduces to end-of-day OHLCV, so it fits the data the app already stores. A
-breakout **fires** on a bar when all four of these hold:
+breakout **fires** on a bar when all of these hold:
 
     1. Close breaks above the highest high of the prior 50 sessions — a new
        ~10-week base high (the breakout itself).
     2. Volume is at least 1.5x the average of the prior 50 sessions — O'Neil's
        "40-50% above average" test for institutional demand.
-    3. It is an up day whose close sits in the upper half of the bar's range —
-       demand won the session, not a failed poke through resistance.
-    4. Close is above the 50-day moving average — the breakout runs with the
-       trend, it is not a bounce inside a downtrend.
+    3. The close sits in the upper half of the bar's range — demand won the
+       session, not a failed poke through resistance.
+    4. It breaks out of a REAL base: volume dried up going into the pivot (a
+       quiet, coiling base — measured on the bar before the breakout so its own
+       volume spike can't defeat the test) and the prior ~50 sessions formed a
+       tight consolidation (depth within O'Neil's ~12-33% base range), not a
+       news gap or a stock already running vertically with no base underneath.
 
 ``fired`` is a breakout on the latest bar; ``days_since`` is how many calendar
 days ago the most recent breakout fired. The ``score`` (0-100) is a softer read of how
@@ -69,6 +72,10 @@ _NEAR_HIGH = 0.15
 # sessions is no higher than the mean of the _VDU_PRIOR sessions before them.
 _VDU_RECENT = 10
 _VDU_PRIOR = 40
+# Base-tightness cap: the prior _LOOKBACK sessions must span less than this
+# fraction (high→low) to count as a real consolidation rather than a vertical
+# run. O'Neil's proper bases are ~12-33% deep; 35% leaves a little slack.
+_BASE_MAX_DEPTH = 0.35
 # Posture rule 5: a breakout this many calendar days ago still counts as "fresh".
 _RECENT_FIRED = 10
 # How far back to scan for the most recent breakout when reporting days_since.
@@ -101,25 +108,55 @@ def _breakout_fired(
     volumes: Sequence[float],
     idx: int,
 ) -> bool:
-    """Whether a volume-confirmed breakout fires on bar ``idx`` (rules 1-4)."""
+    """Whether a volume-confirmed breakout fires on bar ``idx``.
+
+    Three conditions actually bind:
+
+        1. Close breaks above the highest high of the prior 50 sessions — a new
+           base high (the breakout itself).
+        2. Volume is at least ``_VOL_MULT`` times the average of the prior 50
+           sessions — O'Neil's "40-50% above average" institutional demand test.
+        3. The close sits in the upper half of the bar's range — demand won the
+           session, not a failed poke through resistance.
+
+    Two conditions that used to be listed here — "it is an up day"
+    (``close > closes[idx-1]``) and "close is above the 50-day MA"
+    (``close > sma50``) — were *mathematically always true* whenever condition 1
+    holds: the prior-50-session high is >= every one of those prior closes, and
+    the 50-day MA is an average of 50 closes each below a close that itself
+    exceeds that high. They added nothing and have been removed.
+    """
     if idx < max(_LOOKBACK, _BASELINE, _SMA_SHORT):
         return False
     ceiling = max(highs[idx - _LOOKBACK : idx])  # prior base high (excl. today)
     base_vol = _mean(volumes, idx - _BASELINE, idx)
-    sma50 = _sma(closes, _SMA_SHORT, idx)
-    if base_vol <= 0 or sma50 is None:
+    if base_vol <= 0:
         return False
 
     close = closes[idx]
     rng = highs[idx] - lows[idx]
-    strong_close = (close - lows[idx]) / rng >= 0.5 if rng > 0 else True
-    return (
+    # A zero-range (halted / limit-locked) bar has no meaningful close position,
+    # so it must NOT count as a strong close.
+    strong_close = (close - lows[idx]) / rng >= 0.5 if rng > 0 else False
+    if not (
         close > ceiling                              # 1: new base high
         and volumes[idx] >= base_vol * _VOL_MULT     # 2: volume expansion
-        and close > closes[idx - 1]                  # 3a: up day
-        and strong_close                             # 3b: closes strong
-        and close > sma50                            # 4: with the trend
-    )
+        and strong_close                             # 3: closes strong
+    ):
+        return False
+
+    # 4: a real base under the pivot, not a news gap or a stock already running.
+    #   * Volume dried up going INTO the pivot — measured on the bar BEFORE the
+    #     breakout, so the breakout's own volume spike cannot defeat the test.
+    if not _volume_dry_up(volumes, idx - 1):
+        return False
+    #   * The prior base is a tight consolidation, not a vertical run: its depth
+    #     (high→low over the prior _LOOKBACK sessions) is within O'Neil's range.
+    base_low = min(lows[idx - _LOOKBACK : idx])
+    depth = (ceiling - base_low) / ceiling if ceiling > 0 else 1.0
+    if depth > _BASE_MAX_DEPTH:
+        return False
+    return True
 
 
 def _volume_dry_up(volumes: Sequence[float], idx: int) -> bool:
@@ -149,7 +186,10 @@ def _posture_rules(
         sma50 is not None and close > sma50,                          # 1 uptrend
         sma50 is not None and sma150 is not None and sma50 > sma150,  # 2 structure
         high_52w > 0 and close >= high_52w * (1.0 - _NEAR_HIGH),      # 3 near high
-        _volume_dry_up(volumes, idx),                                # 4 coiling base
+        # 4 coiling base — evaluated on the bar BEFORE ``idx`` so that when
+        # ``idx`` is itself the breakout, its volume spike does not defeat the
+        # volume-dry-up test (which measures the quiet base leading in).
+        _volume_dry_up(volumes, idx - 1),
         days_since <= _RECENT_FIRED,                                 # 5 fresh breakout
     )
     return sum(1 for ok in checks if ok)
@@ -182,6 +222,8 @@ class VolumeBreakout(TradingMethod):
         self,
         bars: Sequence[StooqDailyQuote],
         config: VsaConfig | None = None,
+        *,
+        rs_rank: float | None = None,  # cross-sectional; not used by this method
     ) -> MethodResult:
         if len(bars) < _MIN_BARS:
             return MethodResult.unavailable("Not enough history")

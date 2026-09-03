@@ -239,10 +239,13 @@ export function CapexPage() {
         </div>
       ) : (
         <>
-          {/* min-width (not an overflow wrapper) so the sticky header can pin to
+          {/* ── Desktop table (lg+) ─────────────────────────────────────────
+              min-width (not an overflow wrapper) so the sticky header can pin to
               the page as you scroll; the table stays inside the card and the
-              page scrolls sideways when the viewport is narrower than it. */}
-          <Card className="min-w-[820px]">
+              page scrolls sideways when the viewport is narrower than it. Below
+              lg the table is hidden and the card list (further down) is shown,
+              so phones and tablets never scroll sideways. */}
+          <Card className="hidden min-w-[820px] lg:block">
             <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-slate-500">
@@ -324,6 +327,17 @@ export function CapexPage() {
               </tbody>
             </table>
           </Card>
+
+          {/* ── Mobile / tablet cards (below lg) ─────────────────────────── */}
+          <div className="space-y-2.5 lg:hidden">
+            {items.map((item) => (
+              <CapexCard
+                key={item.ticker}
+                item={item}
+                onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
+              />
+            ))}
+          </div>
 
           {/* Infinite-scroll footer */}
           <div className="flex flex-col items-center gap-3 pb-2">
@@ -434,5 +448,94 @@ function CapexRow({ item, onOpen }: { item: ApiCapexItem; onOpen: () => void }) 
         )}
       </td>
     </tr>
+  )
+}
+
+/** Compact card form of one capex row, shown below lg where the table is hidden. */
+function CapexCard({ item, onOpen }: { item: ApiCapexItem; onOpen: () => void }) {
+  return (
+    <div
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      aria-label={`${item.ticker} ${item.name}, open details`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+      className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 transition-colors hover:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <TickerMark ticker={item.ticker} />
+          <div className="min-w-0">
+            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="truncate text-xs text-slate-500">{item.name}</div>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="font-medium tabular-nums text-slate-200">
+            {item.capex == null ? (
+              <Blank />
+            ) : (
+              <>
+                {fmtMoney(item.capex, item.currency)}
+                {item.basis === 'annual' && (
+                  <span className="ml-1 text-[10px] uppercase text-slate-500">FY</span>
+                )}
+              </>
+            )}
+          </div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-500">
+            Invested
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-800/60 pt-2 text-xs">
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">% of revenue</span>
+          <span className="tabular-nums text-slate-200">
+            {item.capexToRevenuePct == null
+              ? '—'
+              : `${item.capexToRevenuePct.toFixed(1)}%`}
+          </span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">% of cash flow</span>
+          <span className={'tabular-nums ' + ocfTone(item.capexToOcfPct)}>
+            {item.capexToOcfPct == null
+              ? '—'
+              : `${item.capexToOcfPct.toFixed(0)}%`}
+          </span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">vs last year</span>
+          {item.capexGrowthYoyPct == null ? (
+            <span className="text-slate-600">—</span>
+          ) : (
+            <span className={'tabular-nums ' + deltaTone(item.capexGrowthYoyPct)}>
+              {fmtPct(item.capexGrowthYoyPct)}
+            </span>
+          )}
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-slate-500">Cash flow</span>
+          <span className="tabular-nums text-slate-400">
+            {item.operatingCashFlow == null
+              ? '—'
+              : fmtMoney(item.operatingCashFlow, item.currency)}
+          </span>
+        </div>
+      </div>
+
+      {item.sector && (
+        <div className="mt-2 truncate border-t border-slate-800/60 pt-2 text-xs text-slate-500">
+          {item.sector}
+        </div>
+      )}
+    </div>
   )
 }

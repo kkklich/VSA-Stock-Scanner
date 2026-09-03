@@ -18,16 +18,22 @@ averages, so it fits the data we already store. This implementation covers the
     6. Price is at least 30% above its 52-week low.
     7. Price is within 25% of its 52-week high.
 
-The ``score`` is *how many of the seven rules the stock currently satisfies*,
-scaled to 0–100 (all seven = a full trend-template match); a "recent example"
-means every rule lined up on a recent bar. The setup is long-only.
+The ``score`` is *how many of the rules the stock currently satisfies*, scaled
+to 0–100 (all of them = a full trend-template match); a "recent example" means
+the structural rules lined up on a recent bar. The setup is long-only.
 
-KNOWN SCOPE: Minervini's eighth rule — an IBD-style **relative-strength rank ≥
-70 versus the market** — is cross-sectional (it compares a stock to the whole
-universe) and needs a market/index series we do not yet store, so it is a
-planned follow-up (see ``agent/ROADMAP.md`` 23a). This is a faithful example of
-the framework, not yet a back-test-gated, shippable scanner: the roadmap
-requires proving each method on stored GPW history before it ranks money.
+Rule 8 — Minervini's IBD-style **relative-strength rank ≥ 70 versus the
+universe** — is cross-sectional (it compares a stock to every other), so it is
+supplied by the caller as ``rs_rank`` (a 0–100 percentile). The ranking service
+computes it across the scanned universe and passes it in, making the score out
+of 8; a standalone evaluation with no universe (the single-stock page, tests,
+the back-test) receives no ``rs_rank`` and falls back to the 7 structural rules,
+saying so in ``detail``. Because RS rank is only known for the latest session,
+it folds into the score, while ``fired``/recency track the structural template.
+
+KNOWN SCOPE: this is still a framework example, not yet a back-test-gated,
+shippable scanner — the roadmap requires proving each method on stored GPW
+history before it ranks money.
 """
 
 from __future__ import annotations
@@ -58,12 +64,21 @@ _MIN_ABOVE_LOW = 0.30
 # Rule 7: price within 25% of the 52-week high (>= 75% of the high).
 _MAX_BELOW_HIGH = 0.25
 
-# Total structural rules scored.
+# Total structural rules scored (rules 1-7). Minervini's 8th rule — an
+# IBD-style relative-strength rank vs. the market — is cross-sectional and is
+# applied only in the ranking path (see ``evaluate``'s ``rs_rank`` parameter),
+# where the whole universe is known; it is NOT one of these structural rules.
 _TOTAL_RULES = 7
-# Minimum bars to evaluate at all: a 200-day MA plus enough room to also read it
-# ``_TREND_LOOKBACK`` sessions back (rule 3). Below this the stock is too newly
+# Minervini's rule 8: relative-strength rank (0-100 percentile) at least this.
+_RS_RANK_MIN = 70.0
+# Minimum bars to evaluate at all. Rules 6-7 need a genuine 52-week window
+# (``_WEEK52``), which is the binding constraint (it exceeds the 200-day MA +
+# trend lookback the earlier rules need). Below this the stock is too newly
 # listed / too thinly stored to judge, and the method reports "unavailable".
-_MIN_BARS = _SMA_LONG + _TREND_LOOKBACK  # 220
+# A stock with 220-251 bars — enough for the moving averages but not a real
+# year — is therefore (correctly) unavailable rather than judged on a short
+# window; the standard ~260-session production fetch clears this comfortably.
+_MIN_BARS = _WEEK52  # 252
 # How far back to look for the most recent full-template bar (recency).
 _RECENCY_SCAN = 90
 
@@ -99,7 +114,17 @@ def _rules_passed(
     if None in (sma50, sma150, sma200, sma200_prev):
         return None
 
-    window_start = max(0, idx - _WEEK52 + 1)
+    # Rules 6-7 compare price to the 52-week high/low, so they need a genuine
+    # 52-week window. Do NOT clamp a short window to the start of the series:
+    # in production only ~260 sessions are stored, so validating rules 6-7
+    # against a sub-52-week window would report a three-month high as a fresh
+    # 52-week high (the same falsehood the ranking's 52-week context guards
+    # against). When there aren't ``_WEEK52`` prior bars, the bar is not
+    # judgeable — return None so the recency scan and ``signals()`` skip it and
+    # ``evaluate`` reports "unavailable".
+    window_start = idx - _WEEK52 + 1
+    if window_start < 0:
+        return None
     high_52w = max(highs[window_start : idx + 1])
     low_52w = min(lows[window_start : idx + 1])
     if low_52w <= 0 or high_52w <= 0:
@@ -126,11 +151,11 @@ class MinerviniTrendTemplate(TradingMethod):
         "Mark Minervini's mechanical filter for a stock in a confirmed Stage-2 "
         "uptrend: price above rising 50/150/200-day moving averages stacked in "
         "the right order, well off the 52-week low and close to the 52-week "
-        "high. The score is how many of the seven structural rules line up "
-        "(all seven = a full trend-template match); a recent example means they "
-        "all lined up on a recent session. Long-only. (Relative-strength rank "
-        "vs. the market — Minervini's 8th rule — is a planned addition, and the "
-        "method still needs a GPW back-test before it should guide real money.)"
+        "high, plus (in the ranking) a relative-strength rank in the top 30% of "
+        "the market. The score is how many of the rules line up (a full match "
+        "when all do); a recent example means the structural template lined up "
+        "on a recent session. Long-only. (The method still needs a GPW back-test "
+        "before it should guide real money.)"
     )
     source = "Mark Minervini — Trade Like a Stock Market Wizard (2013)"
     source_url = "https://www.minervini.com/"
@@ -139,6 +164,8 @@ class MinerviniTrendTemplate(TradingMethod):
         self,
         bars: Sequence[StooqDailyQuote],
         config: VsaConfig | None = None,
+        *,
+        rs_rank: float | None = None,
     ) -> MethodResult:
         if len(bars) < _MIN_BARS:
             return MethodResult.unavailable("Not enough history")
@@ -148,14 +175,29 @@ class MinerviniTrendTemplate(TradingMethod):
         lows = [float(q.low) for q in bars]
         last_idx = len(bars) - 1
 
-        passed = _rules_passed(closes, highs, lows, last_idx)
-        if passed is None:
+        structural = _rules_passed(closes, highs, lows, last_idx)
+        if structural is None:
             return MethodResult.unavailable("Not enough history")
 
-        score = round(passed / _TOTAL_RULES * 100)
-        detail = f"{passed}/{_TOTAL_RULES} rules"
+        # Rule 8 — the cross-sectional relative-strength rank (>= 70 percentile
+        # vs. the scanned universe). It is only knowable for the latest session
+        # (RS rank is not stored per historical bar), so it folds into the SCORE
+        # and detail; the ``fired``/``days_since`` marker tracks the *structural*
+        # template (the chartable entry the ``signals()`` overlay draws), which
+        # keeps the ``fired == (days_since == 0)`` contract intact. When no
+        # ``rs_rank`` is supplied (single-stock page, tests, back-test), the
+        # method falls back to the 7 structural rules and says so in ``detail``.
+        if rs_rank is not None:
+            passed = structural + (1 if rs_rank >= _RS_RANK_MIN else 0)
+            total = _TOTAL_RULES + 1  # 8: the full canonical template
+            detail = f"{passed}/{total} rules"
+        else:
+            passed = structural
+            total = _TOTAL_RULES
+            detail = f"{passed}/{total} structural"
+        score = round(passed / total * 100)
 
-        # Recency: the most recent bar on which all seven rules held.
+        # Recency: the most recent bar on which all seven structural rules held.
         days_since = NEVER_FIRED
         last_date = bars[last_idx].date
         floor = max(_MIN_BARS - 1, last_idx - _RECENCY_SCAN)
@@ -167,7 +209,7 @@ class MinerviniTrendTemplate(TradingMethod):
         return MethodResult(
             score=score,
             days_since=days_since,
-            fired=passed == _TOTAL_RULES,
+            fired=structural == _TOTAL_RULES,
             detail=detail,
             available=True,
         )
@@ -192,8 +234,13 @@ class MinerviniTrendTemplate(TradingMethod):
         lows = [float(q.low) for q in bars]
 
         out: list[MethodSignal] = []
-        prev_full = False
-        for i in range(_MIN_BARS - 1, len(bars)):
+        # Seed the prior state from the FIRST evaluable bar without emitting it,
+        # then only emit genuine off->on transitions. Otherwise a template that
+        # is already ON at the left edge of the window (its true entry lies
+        # before the data we hold) would be mis-reported as a fresh entry here.
+        first = _MIN_BARS - 1
+        prev_full = _rules_passed(closes, highs, lows, first) == _TOTAL_RULES
+        for i in range(_MIN_BARS, len(bars)):
             full = _rules_passed(closes, highs, lows, i) == _TOTAL_RULES
             if full and not prev_full:
                 out.append(
