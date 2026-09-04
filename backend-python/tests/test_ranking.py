@@ -263,3 +263,48 @@ class TestAnalysisWindowUnchanged:
         assert item.dist_from_52w_high_pct <= 0
         assert item.dist_from_52w_low_pct is not None
         assert item.dist_from_52w_low_pct >= 0
+
+    def test_weekly_fields_present_on_long_history(self) -> None:
+        # ~48 weeks of daily bars resample to enough weekly candles for the
+        # multi-timeframe read to be available.
+        company = GpwCompany(
+            ticker="kgh", name="KGHM", sector="Basic Materials", market_cap=None
+        )
+        quotes = _series([100.0 + (i % 7) for i in range(340)])
+        client = _PerTickerStooqClient({"kgh": quotes})
+        result = asyncio.run(
+            compute_ranking(
+                companies=[company],
+                stooq=client,
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+        item = result[0]
+        assert item.weekly_rating is not None
+        assert 0 <= item.weekly_rating <= 100
+        assert item.weekly_signal is not None
+        assert item.weekly_agreement in {"confirms", "conflicts", "neutral"}
+
+    def test_weekly_fields_none_on_short_history(self) -> None:
+        # ~9 weeks of daily bars is below the weekly-analysis floor, so the
+        # multi-timeframe fields are honestly blank rather than a shaky read.
+        company = GpwCompany(
+            ticker="kgh", name="KGHM", sector="Basic Materials", market_cap=None
+        )
+        quotes = _series([100.0 + (i % 5) for i in range(60)])
+        client = _PerTickerStooqClient({"kgh": quotes})
+        result = asyncio.run(
+            compute_ranking(
+                companies=[company],
+                stooq=client,
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+        item = result[0]
+        assert item.weekly_rating is None
+        assert item.weekly_signal is None
+        assert item.weekly_agreement is None

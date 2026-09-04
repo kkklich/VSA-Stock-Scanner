@@ -64,3 +64,21 @@ export const fmtRefreshTime = (iso: string): string => {
 /** Directional text color for a numeric delta. */
 export const deltaTone = (n: number): string =>
   n > 0 ? 'text-emerald-400' : n < 0 ? 'text-rose-400' : 'text-slate-400'
+
+/**
+ * Return `url` only if it is a well-formed http(s) URL, otherwise `null`.
+ *
+ * Used before putting an externally-sourced value into an `<a href>`. React
+ * does not sanitise href, so a `javascript:` / `data:` URL there would run on
+ * click. Company websites come from curated data today, but validating the
+ * scheme keeps that one link safe no matter where the value originates.
+ */
+export function safeHttpUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null
+  } catch {
+    return null
+  }
+}

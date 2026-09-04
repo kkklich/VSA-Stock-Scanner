@@ -13,6 +13,16 @@
     "nextPage": "Next page",
     "page": "Page {{page}}"
   },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "settingsTitle": "Appearance",
+    "settingsHint": "Choose how StockPilot looks. \"System\" follows your operating system's light or dark setting.",
+    "active": "Currently showing the {{theme}} theme.",
+    "cycle": "Theme — switch to {{next}}"
+  },
   "language": {
     "label": "Language",
     "en": "English",
@@ -81,11 +91,26 @@
     },
     "combinedInfo": "Average of the scores from the methods you've selected (0–100). Ranks companies highest across all the chosen methods together."
   },
+  "weekly": {
+    "label": "1W",
+    "confirmsInfo": "Weekly VSA agrees with the daily signal — the weekly chart reads {{verdict}} ({{rating}}/100). Higher-timeframe confirmation.",
+    "conflictsInfo": "Weekly VSA contradicts the daily signal — the weekly chart reads {{verdict}} ({{rating}}/100). Treat the daily call with caution.",
+    "filterLabel": "Weekly confirms daily",
+    "filterInfo": "Only stocks whose weekly VSA verdict leans the same way as the daily one (both bullish, or both bearish). Weekly candles are the stored daily bars resampled to weeks and run through the same VSA engine.",
+    "column": "Weekly",
+    "columnInfo": "The same VSA engine run on weekly candles. Blank when the stock has under ~30 weeks of stored history."
+  },
   "chart": {
     "loading": "Loading chart data…",
     "failedToLoad": "{{ticker}} — failed to load",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessions",
+    "bars_one": "{{count}} bar",
+    "bars_other": "{{count}} bars",
+    "intervalGroup": "Chart bar size",
+    "intervalHint": "Bar size: 30m, 1H and 4H are intraday; 1D and 1W are end-of-day",
+    "intervalTitle": "{{interval}} candles",
+    "intradayNote": "Intraday {{interval}} candles are fetched live and reach back to {{from}}; the rating above and the trading-method overlays stay on daily bars.",
     "timeRangeGroup": "Chart time range",
     "timeRangeHint": "Scroll or zoom the chart to change the range automatically",
     "rangeTitleMax": "All stored history",

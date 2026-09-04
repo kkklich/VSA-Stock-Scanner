@@ -29,6 +29,7 @@ from app.analysis.vsa import (
     detect_signals,
     verdict_from_signals,
 )
+from app.analysis.weekly import compute_weekly_view, weekly_agreement
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, MethodResultModel, StockRankingItem, StooqDailyQuote
 from app.services.cache import TTLCache
@@ -317,6 +318,17 @@ async def compute_ranking(
 
             verdict, days_since = verdict_from_signals(signals, last_bar_date)
 
+            # Multi-timeframe check: run the same VSA engine on the weekly
+            # resampling of the full fetched window (not the 120-day slice —
+            # weekly VSA needs ~30 weekly bars of context). "confirms" when the
+            # weekly verdict leans the same way as the daily one.
+            weekly = compute_weekly_view(quotes or [], config)
+            weekly_agree = (
+                weekly_agreement(verdict, weekly.verdict)
+                if weekly.available and weekly.verdict is not None
+                else None
+            )
+
             # Local AI-insight second opinion — reuses the quotes/signals/rating
             # already computed above (no extra I/O). We only surface its
             # confidence here; the full narrative lives on the detail endpoint.
@@ -379,6 +391,9 @@ async def compute_ranking(
                 is_new_52w_high=new_high,
                 is_new_52w_low=new_low,
                 method_results=method_results,
+                weekly_rating=weekly.rating,
+                weekly_signal=weekly.verdict,
+                weekly_agreement=weekly_agree,
             )
             return item, last_bar_date
         except Exception:  # noqa: BLE001

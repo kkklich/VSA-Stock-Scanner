@@ -4,6 +4,7 @@
 import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { ThemeToggle } from './ThemeToggle'
 
 // ── Warsaw-time helpers ───────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ export function TopBar({
           </span>
         </span>
 
+        <ThemeToggle />
         <LanguageSwitcher />
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-300 ring-1 ring-slate-700">
           AM

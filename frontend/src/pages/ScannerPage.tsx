@@ -404,7 +404,7 @@ function MiniCandles({ closePosition }: { closePosition: number }) {
     <svg width="150" height="72" className="overflow-visible">
       {bars.map((b, i) => {
         const x = 8 + i * 20
-        const color = b.up ? '#10B981' : '#F43F5E'
+        const color = b.up ? 'var(--color-emerald-500)' : 'var(--color-rose-500)'
         // Close marker position within the bar, driven by closePosition %.
         const closeY = b.y + b.h * (1 - closePosition / 100)
         return (
@@ -423,7 +423,7 @@ function MiniCandles({ closePosition }: { closePosition: number }) {
               x2={x + 6}
               y1={closeY}
               y2={closeY}
-              stroke="#e2e8f0"
+              stroke="var(--color-slate-200)"
               strokeWidth={1}
               opacity={0.5}
             />
@@ -443,13 +443,20 @@ function EffectivenessDonut({ profit }: { profit: number }) {
   return (
     <div className="relative grid place-items-center">
       <svg width="160" height="160" viewBox="0 0 160 160">
-        <circle cx="80" cy="80" r={r} fill="none" stroke="#1e293b" strokeWidth="18" />
         <circle
           cx="80"
           cy="80"
           r={r}
           fill="none"
-          stroke="#10B981"
+          stroke="var(--color-slate-800)"
+          strokeWidth="18"
+        />
+        <circle
+          cx="80"
+          cy="80"
+          r={r}
+          fill="none"
+          stroke="var(--color-emerald-500)"
           strokeWidth="18"
           strokeDasharray={`${profitLen} ${c - profitLen}`}
           strokeDashoffset={c / 4}
@@ -584,25 +591,25 @@ function EffectivenessStats({
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
             <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
               onClick={() => toggleSort('signal')}
             >
               Signal{arrow('signal')}
             </th>
             <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
               onClick={() => toggleSort('successPct')}
             >
               Success%{arrow('successPct')}
             </th>
             <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
               onClick={() => toggleSort('rewardRisk')}
             >
               R/R{arrow('rewardRisk')}
             </th>
             <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 text-right font-medium shadow-[inset_0_-1px_0_#1e293b] hover:text-slate-300"
+              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
               onClick={() => toggleSort('count')}
             >
               Trades{arrow('count')}

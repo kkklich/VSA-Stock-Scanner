@@ -61,7 +61,16 @@ export interface ApiRankingItem {
   methodResults: Record<string, ApiMethodResult>
   /** Mean of the selected methods' scores (0–100), or null. */
   combinedScore: number | null
+  /** Weekly (multi-timeframe) VSA rating 0–100; null when history too short. */
+  weeklyRating: number | null
+  /** Weekly VSA verdict badge; null when history too short. */
+  weeklySignal: SignalVerdict | null
+  /** How the weekly timeframe relates to the daily verdict; null when history too short. */
+  weeklyAgreement: WeeklyAgreement | null
 }
+
+/** How the weekly VSA verdict relates to the daily one. */
+export type WeeklyAgreement = 'confirms' | 'conflicts' | 'neutral'
 
 /** Catalogue entry for one selectable trading method. */
 export interface ApiTradingMethod {
@@ -93,6 +102,7 @@ export type RankingSortKey =
   | 'aiConfidence'
   | 'distFrom52wHighPct'
   | 'distFrom52wLowPct'
+  | 'weeklyRating'
   | 'combinedScore'
 
 export type SortDir = 'asc' | 'desc'
@@ -127,6 +137,8 @@ export interface RankingQuery {
   /** Only stocks whose latest session set a new 52-week high / low. */
   new52wHigh?: boolean
   new52wLow?: boolean
+  /** Only stocks whose weekly VSA verdict confirms their daily one. */
+  weeklyConfirms?: boolean
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
   /**
@@ -164,6 +176,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     maxDistFrom52wLowPct,
     new52wHigh,
     new52wLow,
+    weeklyConfirms,
     tickers,
     methods,
     settings,
@@ -198,6 +211,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   }
   if (new52wHigh) params.set('new52wHigh', 'true')
   if (new52wLow) params.set('new52wLow', 'true')
+  if (weeklyConfirms) params.set('weeklyConfirms', 'true')
   if (tickers) params.set('tickers', tickers.join(','))
   if (methods && methods.length) params.set('methods', methods.join(','))
   if (settings) params.set('settings', settings)
@@ -537,18 +551,37 @@ export interface ApiStockSignals {
    * when that method never fired in the window.
    */
   methodSignals: ApiMethodSignalGroup[]
+  /** Bar size of `history` / `vsaSignals` — see `ChartInterval`. */
+  interval: ChartInterval
+  /** True when the bars are intraday moments rather than whole sessions. */
+  intraday: boolean
+  /**
+   * Oldest bar the source could actually serve (YYYY-MM-DD). Intraday history
+   * is capped upstream (~60 days at 30m), so this can start later than the
+   * requested `fromDate` — the chart says so rather than pretending.
+   */
+  historyStart: string | null
 }
+
+/**
+ * Chart bar sizes. `1d` is the app's native timeframe (everything else on the
+ * page — rating, ranking, methods — is computed on daily bars); `1w` is
+ * aggregated from it, and the intraday ones are fetched just for the chart.
+ */
+export type ChartInterval = '30m' | '1h' | '4h' | '1d' | '1w'
 
 export async function fetchSignals(
   ticker: string,
   fromDate?: string,
   toDate?: string,
   settings?: string,
+  interval?: ChartInterval,
 ): Promise<ApiStockSignals> {
   const params = new URLSearchParams()
   if (fromDate) params.set('fromDate', fromDate)
   if (toDate) params.set('toDate', toDate)
   if (settings) params.set('settings', settings)
+  if (interval) params.set('interval', interval)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiStockSignals>(`/api/stocks/${encodeURIComponent(ticker)}/signals${qs}`)
 }

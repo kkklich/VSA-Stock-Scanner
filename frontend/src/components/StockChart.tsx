@@ -13,12 +13,42 @@ import {
   type Time,
 } from 'lightweight-charts'
 import type { Candle, VsaSignal } from '../types'
-
-const BULL = '#10B981'
-const BEAR = '#F43F5E'
+import { useChartPalette } from '../lib/chartTheme'
 
 /** Empty slots kept to the right of the newest bar (time-scale `rightOffset`). */
 const RIGHT_OFFSET = 4
+
+/** Matches the trailing UTC offset of an ISO timestamp: "+02:00", "-05:00", "Z". */
+const ISO_OFFSET = /(?:Z|([+-])(\d{2}):(\d{2}))$/
+
+/**
+ * Convert an API bar time into what Lightweight Charts wants.
+ *
+ * A daily/weekly bar arrives as "2026-09-04" and is handed over unchanged — the
+ * library's own business-day format. An intraday bar arrives as a full ISO
+ * timestamp ("2026-09-04T13:00:00+02:00") and must become UNIX seconds.
+ *
+ * The library has no timezone support: it renders every timestamp as UTC. Left
+ * alone, a bar that traded at 13:00 in Warsaw would be labelled 11:00, so the
+ * exchange's own offset is folded into the number — the standard way to pin the
+ * axis to exchange time. Reading the offset off each bar keeps the same chart
+ * correct across a daylight-saving change (+01:00 on March bars, +02:00 on
+ * September ones).
+ */
+export function toChartTime(value: string): Time {
+  if (!value.includes('T')) return value as Time // business day, as-is
+  const ms = Date.parse(value)
+  if (Number.isNaN(ms)) return value as Time
+  const m = ISO_OFFSET.exec(value)
+  const offsetMinutes =
+    m && m[1] ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : 0
+  return (Math.floor(ms / 1000) + offsetMinutes * 60) as Time
+}
+
+/** True when this series is intraday — its bars carry a time of day. */
+function isIntraday(candles: Candle[]): boolean {
+  return candles.length > 0 && candles[0].time.includes('T')
+}
 
 /**
  * One trading method's overlay layer on the chart: its historical firings
@@ -74,6 +104,14 @@ export function StockChart({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Chart colours for the active theme. Lightweight Charts paints to a canvas
+  // and cannot read CSS variables, so a theme change rebuilds the chart (the
+  // effect below lists `palette` as a dependency); the visible range is kept,
+  // because the candles are the same objects, so the rebuild is invisible
+  // apart from the colours.
+  const palette = useChartPalette()
+  const { bull: BULL, bear: BEAR } = palette
+
   // Keep the latest callback without re-creating the chart when it changes.
   const spanCb = useRef(onSpanSettled)
   spanCb.current = onSpanSettled
@@ -90,18 +128,27 @@ export function StockChart({
     const el = containerRef.current
     if (!el) return
 
+    // Intraday bars need the time of day on the axis and in the crosshair
+    // label; on a daily/weekly chart the date alone is the right label.
+    const intraday = isIntraday(candles)
+
     const chart: IChartApi = createChart(el, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#94a3b8',
+        textColor: palette.axisText,
         fontFamily: 'inherit',
       },
       grid: {
-        vertLines: { color: 'rgba(148,163,184,0.06)' },
-        horzLines: { color: 'rgba(148,163,184,0.06)' },
+        vertLines: { color: palette.grid },
+        horzLines: { color: palette.grid },
       },
-      rightPriceScale: { borderColor: 'rgba(148,163,184,0.15)' },
-      timeScale: { borderColor: 'rgba(148,163,184,0.15)', rightOffset: RIGHT_OFFSET },
+      rightPriceScale: { borderColor: palette.scaleBorder },
+      timeScale: {
+        borderColor: palette.scaleBorder,
+        rightOffset: RIGHT_OFFSET,
+        timeVisible: intraday,
+        secondsVisible: false,
+      },
       crosshair: { mode: 0 },
       width: el.clientWidth,
       height: el.clientHeight,
@@ -117,7 +164,7 @@ export function StockChart({
     })
     candleSeries.setData(
       candles.map((c) => ({
-        time: c.time as Time,
+        time: toChartTime(c.time),
         open: c.open,
         high: c.high,
         low: c.low,
@@ -135,18 +182,24 @@ export function StockChart({
     })
     volumeSeries.setData(
       candles.map((c) => ({
-        time: c.time as Time,
+        time: toChartTime(c.time),
         value: c.volume,
         color:
-          c.close >= c.open ? 'rgba(16,185,129,0.5)' : 'rgba(244,63,94,0.5)',
+          c.close >= c.open ? palette.bullVolume : palette.bearVolume,
       })),
     )
 
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
-    const vsaMarkers: SeriesMarker<Time>[] = signals.map((s) => {
+    // `sortKey` keeps the original API date string so the merge below can order
+    // markers by it: the converted times are strings on a daily chart but
+    // numbers on an intraday one, which do not compare the same way.
+    type Marker = SeriesMarker<Time> & { sortKey: string }
+
+    const vsaMarkers: Marker[] = signals.map((s) => {
       const bull = s.type === 'Bullish'
       return {
-        time: s.date as Time,
+        time: toChartTime(s.date),
+        sortKey: s.date,
         position: bull ? 'belowBar' : 'aboveBar',
         color: bull ? BULL : BEAR,
         shape: bull ? 'arrowUp' : 'arrowDown',
@@ -156,11 +209,12 @@ export function StockChart({
 
     // Other methods' markers — coloured circles so each method reads as its
     // own layer (bullish below the bar, bearish above), told apart by colour.
-    const overlayMarkers: SeriesMarker<Time>[] = (overlays ?? []).flatMap((o) =>
+    const overlayMarkers: Marker[] = (overlays ?? []).flatMap((o) =>
       o.signals.map((s) => {
         const bull = s.type === 'Bullish'
         return {
-          time: s.date as Time,
+          time: toChartTime(s.date),
+          sortKey: s.date,
           position: bull ? ('belowBar' as const) : ('aboveBar' as const),
           color: o.color,
           shape: 'circle' as const,
@@ -170,11 +224,11 @@ export function StockChart({
     )
 
     // Lightweight Charts requires markers in ascending time order; merging the
-    // VSA + overlay layers interleaves them, so sort the combined set by date
-    // (the `time` values are YYYY-MM-DD strings, which sort lexicographically).
-    const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers].sort(
-      (a, b) => String(a.time).localeCompare(String(b.time)),
-    )
+    // VSA + overlay layers interleaves them, so sort the combined set by the
+    // API date string, which is chronological as text in both bar formats.
+    const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers]
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .map(({ sortKey: _sortKey, ...marker }) => marker)
     createSeriesMarkers(candleSeries, markers)
 
     // Choose the initial view for this freshly built chart. Setting the range
@@ -242,7 +296,7 @@ export function StockChart({
       window.removeEventListener('resize', onResize)
       chart.remove()
     }
-  }, [candles, signals, overlays, preserveViewRef])
+  }, [candles, signals, overlays, preserveViewRef, palette, BULL, BEAR])
 
   return <div ref={containerRef} className="h-full w-full" />
 }

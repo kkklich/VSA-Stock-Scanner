@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -30,6 +31,14 @@ from app.analysis.ai_insight import analyze_stock
 from app.analysis.analytics_summary import build_analytics_summary
 from app.analysis.methods import all_methods, get_method, method_ids
 from app.analysis.returns import compute_price_returns
+from app.analysis.timeframe import (
+    TimeframeSpec,
+    bars_per_session,
+    clamp_lookback_days,
+    get_timeframe,
+    group_intraday,
+    timeframe_ids,
+)
 from app.analysis.trust_score import compute_trust_score
 from app.analysis.vsa import (
     VsaConfig,
@@ -37,6 +46,7 @@ from app.analysis.vsa import (
     config_from_settings,
     detect_signals,
 )
+from app.analysis.weekly import resample_weekly
 from app.config import settings
 from app.db.repository import QuoteRepository
 from app.dependencies import (
@@ -115,6 +125,32 @@ _VSA_METHOD_ID = "vsa"
 # range. ~400 calendar days comfortably covers 220 trading sessions plus gaps.
 _METHOD_LOOKBACK_DAYS = 400
 
+# Bars of run-up fetched *before* an intraday chart's display window, so the
+# VSA engine's rolling context (20-bar averages) is warm by the first bar the
+# user actually sees, instead of the left edge being silently marker-free.
+_INTRADAY_WARMUP_BARS = 30
+
+# How long a fetched intraday series is reused. The shared history cache holds
+# end-of-day bars for a day, which is right for data that changes once a day and
+# badly wrong here: a 30-minute chart cached that long would show yesterday's
+# session until tomorrow. Five minutes keeps the chart current through the
+# trading day while a user flipping between bar sizes still gets cache hits.
+_INTRADAY_CACHE_SECONDS = 5 * 60
+
+# The chart timeframe that is the app's own native one: everything else is
+# derived from it (weekly) or fetched just for the chart (intraday).
+_DAILY_TIMEFRAME_ID = "1d"
+
+
+def _bar_day(item) -> date:
+    """Calendar date of a bar or signal, whether it is dated or timestamped.
+
+    Daily/weekly bars carry a ``date``; intraday ones carry a ``datetime``.
+    Comparing the two directly raises, so window clipping goes through here.
+    """
+    value = item.date
+    return value.date() if isinstance(value, datetime) else value
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -135,6 +171,8 @@ _RANKING_SORT_KEYS: dict[str, str] = {
     "aiConfidence": "ai_confidence",
     "distFrom52wHighPct": "dist_from_52w_high_pct",
     "distFrom52wLowPct": "dist_from_52w_low_pct",
+    # Weekly (multi-timeframe) VSA rating.
+    "weeklyRating": "weekly_rating",
     # Combined cross-method score (mean of the selected methods' scores).
     "combinedScore": "combined_score",
 }
@@ -203,6 +241,7 @@ def _query_ranking(
     max_dist_from_52w_low_pct: float | None = None,
     new_52w_high: bool = False,
     new_52w_low: bool = False,
+    weekly_confirms: bool = False,
     tickers: set[str] | None,
     selected_methods: list[str] | None = None,
     sort_by: str,
@@ -268,6 +307,10 @@ def _query_ranking(
         rows = [r for r in rows if r.is_new_52w_high]
     if new_52w_low:
         rows = [r for r in rows if r.is_new_52w_low]
+    if weekly_confirms:
+        # Only stocks whose weekly VSA verdict agrees with their daily one —
+        # the higher-timeframe confirmation a VSA trader looks for.
+        rows = [r for r in rows if r.weekly_agreement == "confirms"]
 
     # Attach the combined cross-method score only to the rows that survived the
     # filters above (no filter reads it; the sort below does). Doing it here
@@ -546,6 +589,7 @@ async def get_ranking(
     ] = None,
     new_52w_high: Annotated[bool, Query(alias="new52wHigh")] = False,
     new_52w_low: Annotated[bool, Query(alias="new52wLow")] = False,
+    weekly_confirms: Annotated[bool, Query(alias="weeklyConfirms")] = False,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     methods: Annotated[str | None, Query(max_length=512)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
@@ -610,6 +654,7 @@ async def get_ranking(
         max_dist_from_52w_low_pct=max_dist_from_52w_low_pct,
         new_52w_high=new_52w_high,
         new_52w_low=new_52w_low,
+        weekly_confirms=weekly_confirms,
         tickers=ticker_set,
         selected_methods=selected_methods,
         sort_by=sort_by,
@@ -1136,6 +1181,61 @@ async def get_history(
     return response
 
 
+async def _timeframe_bars(
+    spec: TimeframeSpec,
+    ticker: str,
+    from_date: date,
+    to_date: date | None,
+    daily_context: list[StooqDailyQuote],
+    cache: TTLCache,
+    stooq: StooqClient,
+) -> list:
+    """Chart bars for one non-daily timeframe, *including* run-up context.
+
+    The full series is returned — context bars before ``from_date`` as well as
+    the displayed ones — because the VSA engine needs a warm rolling window to
+    detect anything. The caller runs the engine over all of it and then clips
+    both bars and markers to the display window, the same way the per-method
+    overlays already work.
+
+    Weekly bars are aggregated from the daily history the endpoint has already
+    fetched (no new request). Intraday bars are not stored by this app at all,
+    so they are fetched live from Yahoo and cached briefly per (ticker,
+    interval, window).
+    """
+    if not spec.intraday:
+        # 1w — the stock's own daily bars, aggregated into ISO-week candles.
+        return resample_weekly(daily_context)
+
+    # Enough extra calendar days for the engine's rolling context to be warm by
+    # the first displayed bar (plus slack for weekends/holidays).
+    warmup_days = math.ceil(_INTRADAY_WARMUP_BARS / bars_per_session(spec)) + 5
+    requested_days = (date.today() - from_date).days + warmup_days
+    days = clamp_lookback_days(spec, requested_days)
+
+    cache_key = f"intraday:{ticker}:{spec.id}:{days}"
+    bars = cache.get(cache_key)
+    if bars is None:
+        try:
+            raw = await stooq.get_intraday_history(
+                ticker, spec.yahoo_interval or spec.id, days
+            )
+        except StooqAccessError as exc:
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                detail=(
+                    f"No {spec.label} intraday data available for '{ticker.upper()}': {exc}"
+                ),
+            ) from exc
+        # Yahoo has no 4-hour bar, so it is built from the hourly ones.
+        bars = group_intraday(raw, spec.group)
+        cache.set(cache_key, bars, _INTRADAY_CACHE_SECONDS)
+
+    if to_date is not None:
+        bars = [b for b in bars if b.date.date() <= to_date]
+    return bars
+
+
 # ── Endpoint 5: OHLCV + VSA signals ──────────────────────────────────────────
 
 
@@ -1145,7 +1245,7 @@ async def get_history(
     response_model_by_alias=True,
     summary="OHLCV history and VSA signal overlay for a ticker",
     responses={
-        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker or date range"},
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker, date range or interval"},
         status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
     },
 )
@@ -1158,9 +1258,16 @@ async def get_signals(
     from_date: Annotated[date | None, Query(alias="fromDate")] = None,
     to_date: Annotated[date | None, Query(alias="toDate")] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    interval: Annotated[str | None, Query(alias="interval")] = None,
 ) -> StockSignalsResponse:
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+    spec = get_timeframe(interval)
+    if spec is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Unknown interval '{interval}'. Supported: {', '.join(timeframe_ids())}.",
+        )
     if from_date is not None and to_date is not None and from_date > to_date:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "'fromDate' must not be later than 'toDate'."
@@ -1194,39 +1301,77 @@ async def get_signals(
 
     company = companies.find(normalized)
 
-    signals = detect_signals(quotes, config)
+    # Daily bars the rating is read from. On a daily chart that is simply the
+    # requested window, exactly as before. On an intraday one it must NOT be:
+    # those windows are short by nature (five days of 30-minute candles is five
+    # daily bars — fewer than the engine's rolling lookback), which would detect
+    # nothing and collapse the page's rating to a neutral 50 the moment someone
+    # switched timeframe. So a non-daily chart rates the stock over the standard
+    # ~1-year daily window instead, keeping the header rating the same number
+    # the dashboard and the summary cards show.
+    rating_quotes = quotes
+    if spec.id != _DAILY_TIMEFRAME_ID and overlay_quotes:
+        cutoff = overlay_quotes[-1].date - timedelta(days=_SIGNALS_DEFAULT_DAYS)
+        rating_quotes = [q for q in overlay_quotes if q.date >= cutoff]
+
+    signals = detect_signals(rating_quotes, config)
 
     # Ratings are keyed to the last session date, not the wall-clock date, so
     # identical data yields identical ratings regardless of when it is viewed;
     # ratingChange measures what the newest session changed (see ranking).
-    if quotes:
-        as_of = quotes[-1].date
+    if rating_quotes:
+        as_of = rating_quotes[-1].date
         rating = compute_rating(signals, as_of)
-        if len(quotes) >= 2:
+        if len(rating_quotes) >= 2:
             prior_signals = [s for s in signals if s.date < as_of]
-            rating_change = rating - compute_rating(prior_signals, quotes[-2].date)
+            rating_change = rating - compute_rating(prior_signals, rating_quotes[-2].date)
         else:
             rating_change = 0
     else:
         rating = 50
         rating_change = 0
 
-    last_close = float(quotes[-1].close) if quotes else 0.0
-    prev_close = float(quotes[-2].close) if len(quotes) >= 2 else last_close
+    last_close = float(rating_quotes[-1].close) if rating_quotes else 0.0
+    prev_close = (
+        float(rating_quotes[-2].close) if len(rating_quotes) >= 2 else last_close
+    )
     price_change_pct = (
         round((last_close - prev_close) / prev_close * 100, 2) if prev_close else 0.0
     )
 
+    # ── Chart series ─────────────────────────────────────────────────────────
+    # Everything above is the DAILY read of the stock and stays daily whatever
+    # the chart shows: the rating, verdict and price in the page header are the
+    # same numbers the dashboard, the ranking and every other card use, and a
+    # 30-minute chart must not quietly redefine them.
+    #
+    # What the timeframe selector changes is the chart itself — the candles and
+    # the VSA markers on them. VSA is timeframe-agnostic (the same spread/volume
+    # relationships are read on any bar size), so the unchanged engine simply
+    # runs over the chosen series.
+    chart_bars: list = quotes
+    chart_signals = [s for s in signals if s.date >= (quotes[0].date if quotes else effective_from)]
+    if spec.id != _DAILY_TIMEFRAME_ID:
+        all_bars = await _timeframe_bars(
+            spec, normalized, effective_from, effective_to, overlay_quotes, cache, stooq
+        )
+        all_signals = detect_signals(all_bars, config)
+        # Clip context bars (and their markers) back off, so the user gets the
+        # window they asked for — with markers that had real history behind them.
+        chart_bars = [b for b in all_bars if _bar_day(b) >= effective_from]
+        cutoff = _bar_day(chart_bars[0]) if chart_bars else effective_from
+        chart_signals = [s for s in all_signals if _bar_day(s) >= cutoff]
+
     history = [
         CandleBar(
-            time=q.date,
-            open=float(q.open),
-            high=float(q.high),
-            low=float(q.low),
-            close=float(q.close),
-            volume=q.volume,
+            time=b.date,
+            open=float(b.open),
+            high=float(b.high),
+            low=float(b.low),
+            close=float(b.close),
+            volume=b.volume,
         )
-        for q in quotes
+        for b in chart_bars
     ]
 
     vsa_signal_responses = [
@@ -1235,7 +1380,7 @@ async def get_signals(
             signal_name=s.signal_name.value,
             type=s.type.value,  # type: ignore[arg-type]
         )
-        for s in signals
+        for s in chart_signals
     ]
 
     # Per-method chart overlays for every OTHER registered method (Minervini,
@@ -1250,7 +1395,12 @@ async def get_signals(
     display_start = quotes[0].date if quotes else effective_from
 
     method_signals: list[MethodSignalGroup] = []
-    for method in all_methods():
+    # Only on the daily chart. Minervini's template is built on a 200-*day*
+    # moving average and the breakout on a 50-*day* base; run over 30-minute
+    # bars those become a 200-bar (≈ 2-week) MA and a two-day "base" — a
+    # different rule wearing the method's name. Better no layer than a wrong
+    # one, so the chart shows VSA alone on non-daily timeframes.
+    for method in all_methods() if spec.id == _DAILY_TIMEFRAME_ID else ():
         if method.id == _VSA_METHOD_ID:
             continue
         try:
@@ -1284,6 +1434,9 @@ async def get_signals(
         history=history,
         vsa_signals=vsa_signal_responses,
         method_signals=method_signals,
+        interval=spec.id,
+        intraday=spec.intraday,
+        history_start=_bar_day(chart_bars[0]) if chart_bars else None,
     )
 
 

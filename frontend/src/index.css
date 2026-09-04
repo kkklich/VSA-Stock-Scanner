@@ -1,14 +1,122 @@
 @import 'tailwindcss';
 
 /*
-  StockPilot — strict dark-mode theme.
+  StockPilot — two themes: dark (the original look, and the default) and light.
+
+  HOW THEMING WORKS HERE
+  ----------------------
+  Every component styles itself with Tailwind's neutral ramp (`bg-slate-950`,
+  `text-slate-100`, `border-slate-800`, …) used *semantically*: 950 is the page,
+  900 a card, 800 a border or chip, 500 a muted label, 100 the primary text.
+  Tailwind v4 compiles those utilities to `var(--color-slate-N)`, so a theme is
+  nothing more than a different set of values for those variables — no component
+  has to know which theme is active.
+
+  `.dark` on <html> restores the original dark values; the bare `:root` block
+  holds the light ones, where the ramp is *reversed* (950 = the lightest
+  surface, 100 = the darkest text) so the same semantic reading still holds.
+  Accent steps (emerald / rose / amber / …) are darkened in the light theme,
+  because a shade picked to glow on near-black is unreadable on white.
+
+  Adding `.dark` to <html> is done by an inline script in `index.html` before
+  first paint (see `src/lib/theme.ts`), so the page never flashes.
+
   Accent tokens map to the VSA convention:
     bullish / strength = emerald (#10B981)
     bearish / weakness = rose    (#F43F5E)
 */
+
+/* Drive `dark:` utilities off the class on <html>, not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-bull: #10b981;
   --color-bear: #f43f5e;
+}
+
+/* ── Light theme ───────────────────────────────────────────────────────────
+   The neutral ramp reversed: 950 is the page background, 900 the (white) card
+   surface, 800/700 borders and chips, 500–100 text from muted to primary.
+   Text steps are picked for contrast on white comparable to what the same
+   step gives on near-black in the dark theme. */
+:root {
+  color-scheme: light;
+
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a; /* primary text            (17.6:1 on white) */
+  --color-slate-200: #1e293b; /* strong text             (14.7:1) */
+  --color-slate-300: #334155; /* body text               (10.4:1) */
+  --color-slate-400: #475569; /* secondary text          ( 7.5:1) */
+  --color-slate-500: #5b6675; /* muted labels            ( 5.8:1) */
+  --color-slate-600: #75808f; /* dimmest hint text / rules ( 4.0:1) */
+  --color-slate-700: #cbd5e1; /* strong border, active chip */
+  --color-slate-800: #e2e8f0; /* border, chip, hover surface */
+  --color-slate-900: #ffffff; /* card surface */
+  --color-slate-950: #eef2f7; /* page background */
+
+  /* Accents: the light theme uses the darker steps so text and thin strokes
+     stay legible on white, while /10–/20 tints still read as soft colour. */
+  --color-emerald-300: #065f46;
+  --color-emerald-400: #047857;
+  --color-emerald-500: #047857;
+  --color-emerald-600: #065f46;
+  --color-rose-300: #9f1239;
+  --color-rose-400: #be123c;
+  --color-rose-500: #be123c;
+  --color-rose-600: #9f1239;
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-amber-500: #d97706;
+  --color-amber-600: #b45309;
+  --color-sky-400: #0369a1;
+  --color-sky-600: #075985;
+  --color-violet-400: #6d28d9;
+  --color-violet-600: #5b21b6;
+  --color-indigo-400: #4338ca;
+  --color-indigo-600: #3730a3;
+  --color-blue-500: #1d4ed8;
+  --color-yellow-500: #a16207;
+}
+
+/* ── Dark theme (the original look — unchanged) ────────────────────────────
+   These are Tailwind's own default values, copied verbatim from
+   `tailwindcss/theme.css`. Restating them here (rather than leaving the
+   defaults in place) is what lets the light block above override the same
+   variables at `:root` without touching the dark theme by a single shade. */
+.dark {
+  color-scheme: dark;
+
+  --color-slate-50: oklch(98.4% 0.003 247.858);
+  --color-slate-100: oklch(96.8% 0.007 247.896);
+  --color-slate-200: oklch(92.9% 0.013 255.508);
+  --color-slate-300: oklch(86.9% 0.022 252.894);
+  --color-slate-400: oklch(70.4% 0.04 256.788);
+  --color-slate-500: oklch(55.4% 0.046 257.417);
+  --color-slate-600: oklch(44.6% 0.043 257.281);
+  --color-slate-700: oklch(37.2% 0.044 257.287);
+  --color-slate-800: oklch(27.9% 0.041 260.031);
+  --color-slate-900: oklch(20.8% 0.042 265.755);
+  --color-slate-950: oklch(12.9% 0.042 264.695);
+  --color-emerald-300: oklch(84.5% 0.143 164.978);
+  --color-emerald-400: oklch(76.5% 0.177 163.223);
+  --color-emerald-500: oklch(69.6% 0.17 162.48);
+  --color-emerald-600: oklch(59.6% 0.145 163.225);
+  --color-rose-300: oklch(81% 0.117 11.638);
+  --color-rose-400: oklch(71.2% 0.194 13.428);
+  --color-rose-500: oklch(64.5% 0.246 16.439);
+  --color-rose-600: oklch(58.6% 0.253 17.585);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
+  --color-amber-500: oklch(76.9% 0.188 70.08);
+  --color-amber-600: oklch(66.6% 0.179 58.318);
+  --color-sky-400: oklch(74.6% 0.16 232.661);
+  --color-sky-600: oklch(58.8% 0.158 241.966);
+  --color-violet-400: oklch(70.2% 0.183 293.541);
+  --color-violet-600: oklch(54.1% 0.281 293.009);
+  --color-indigo-400: oklch(67.3% 0.182 276.935);
+  --color-indigo-600: oklch(51.1% 0.262 276.966);
+  --color-blue-500: oklch(62.3% 0.214 259.815);
+  --color-yellow-500: oklch(79.5% 0.184 86.047);
 }
 
 html,
@@ -19,23 +127,23 @@ body,
 
 body {
   margin: 0;
-  background-color: #020617; /* slate-950 */
-  color: #f1f5f9; /* slate-100 */
+  background-color: var(--color-slate-950);
+  color: var(--color-slate-100);
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Thin dark scrollbars to match the dashboard aesthetic. */
+/* Thin scrollbars in the theme's own mid-grey. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: var(--color-slate-700) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--color-slate-700);
   border-radius: 9999px;
 }

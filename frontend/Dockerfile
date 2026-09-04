@@ -27,6 +27,12 @@ FROM nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Validate the Nginx config at BUILD time. A syntax error (or a misplaced
+# rate-limit directive) then fails the CI/deploy build loudly instead of
+# crash-looping the container in production. `nginx -t` checks config only —
+# it does not bind ports or resolve the `api` upstream.
+RUN nginx -t
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

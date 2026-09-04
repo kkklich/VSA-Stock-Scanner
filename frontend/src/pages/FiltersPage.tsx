@@ -189,6 +189,7 @@ export function FiltersPage() {
       maxPrice: applied.maxPrice ?? undefined,
       minVolume: applied.minVolume ?? undefined,
       ...range52wParams(applied.range52w),
+      weeklyConfirms: applied.weeklyConfirms || undefined,
     }),
     [page, sortBy, sortDir, applied],
   )
@@ -414,6 +415,20 @@ export function FiltersPage() {
                   {o.label}
                 </option>
               ))}
+            </select>
+          </Field>
+
+          <Field
+            label="Weekly timeframe"
+            info="Multi-timeframe confirmation. The stored daily bars are resampled into weekly candles and run through the same VSA engine; 'Confirms daily' keeps only stocks whose weekly verdict leans the same way as the daily one (both bullish, or both bearish). VSA traders treat a daily signal the weekly chart agrees with as far more reliable. Stocks with under ~30 weeks of stored history have no weekly reading and are excluded by this filter."
+          >
+            <select
+              value={filters.weeklyConfirms ? 'confirms' : 'any'}
+              onChange={(e) => set('weeklyConfirms', e.target.value === 'confirms')}
+              className={inputClass}
+            >
+              <option value="any">Any</option>
+              <option value="confirms">Confirms daily</option>
             </select>
           </Field>
 

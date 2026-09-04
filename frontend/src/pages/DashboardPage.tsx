@@ -30,6 +30,7 @@ import {
   SortHeader,
   Sparkline,
   TickerMark,
+  WeeklyBadge,
 } from '../components/ui'
 import type { SignalVerdict, StockRankingItem } from '../types'
 
@@ -181,7 +182,7 @@ export function DashboardPage() {
 
   // Table min-width grows with the number of method columns so the layout
   // never crushes; the page scrolls horizontally when it exceeds the viewport.
-  const tableMinWidth = 820 + selectedMethodDefs.length * 130
+  const tableMinWidth = 870 + selectedMethodDefs.length * 130
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
@@ -337,7 +338,7 @@ export function DashboardPage() {
           <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_#1e293b]">
+                <th className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)]">
                   #
                 </th>
                 <SortHeader
@@ -365,7 +366,7 @@ export function DashboardPage() {
                 {selectedMethodDefs.map((m) => (
                   <th
                     key={m.id}
-                    className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_#1e293b]"
+                    className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)]"
                   >
                     <span className="inline-flex items-center gap-1 text-right normal-case">
                       <span className="whitespace-normal leading-tight">{m.name}</span>
@@ -455,8 +456,15 @@ export function DashboardPage() {
                       {s.name}
                     </CompanyLink>
                   </td>
-                  <td className="px-4 py-3">
-                    <SignalBadge verdict={s.lastSignal} />
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex flex-nowrap items-center gap-1.5">
+                      <SignalBadge verdict={s.lastSignal} />
+                      <WeeklyBadge
+                        agreement={s.weeklyAgreement}
+                        rating={s.weeklyRating}
+                        signal={s.weeklySignal}
+                      />
+                    </div>
                   </td>
                   {selectedMethodDefs.map((m) => (
                     <td key={m.id} className="px-4 py-3 text-right">
@@ -527,8 +535,13 @@ export function DashboardPage() {
                       <span className="font-semibold text-slate-100">{s.ticker}</span>
                       <span className="truncate text-xs text-slate-500">{s.name}</span>
                     </div>
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-1.5">
                       <SignalBadge verdict={s.lastSignal} />
+                      <WeeklyBadge
+                        agreement={s.weeklyAgreement}
+                        rating={s.weeklyRating}
+                        signal={s.weeklySignal}
+                      />
                     </div>
                   </div>
                   <div className="text-right">

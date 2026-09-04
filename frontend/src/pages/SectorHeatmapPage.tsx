@@ -12,6 +12,7 @@ import { useHeatmap } from '../hooks/useHeatmap'
 import { usePersistentState } from '../hooks/usePersistentState'
 import type { ApiHeatmapItem } from '../api/stocksApi'
 import { fmtCompactPln, fmtPct } from '../lib/format'
+import { useChartPalette, type ChartPalette } from '../lib/chartTheme'
 
 /* ── Color modes ────────────────────────────────────────────────────────── */
 
@@ -48,10 +49,9 @@ function changeFor(item: ApiHeatmapItem, mode: Exclude<ColorMode, 'rating'>) {
 
 /* ── Colors ─────────────────────────────────────────────────────────────── */
 
-const NEG: [number, number, number] = [244, 63, 94] // rose-500  #F43F5E
-const MID: [number, number, number] = [51, 65, 85] // slate-700 #334155
-const POS: [number, number, number] = [16, 185, 129] // emerald-500 #10B981
-const MISSING_BG = '#1E293B' // slate-800 — horizon not available for this stock
+// The tile ramp (negative → neutral → positive) and the "no data" grey come
+// from the theme palette, because the light theme needs darker, less luminous
+// tiles for the white tile text to stay readable on a white page.
 
 function mix(
   a: [number, number, number],
@@ -62,17 +62,23 @@ function mix(
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-/** Diverging rose → slate → emerald color for t in [-1, +1]. */
-function diverging(t: number): string {
+/** Diverging rose → neutral → emerald color for t in [-1, +1]. */
+function diverging(t: number, palette: ChartPalette): string {
   const clamped = Math.max(-1, Math.min(1, t))
-  return clamped < 0 ? mix(MID, NEG, -clamped) : mix(MID, POS, clamped)
+  return clamped < 0
+    ? mix(palette.heatmapNeutral, palette.heatmapNegative, -clamped)
+    : mix(palette.heatmapNeutral, palette.heatmapPositive, clamped)
 }
 
-function tileColor(item: ApiHeatmapItem, mode: ColorMode): string {
-  if (mode === 'rating') return diverging((item.currentRating - 50) / 50)
+function tileColor(
+  item: ApiHeatmapItem,
+  mode: ColorMode,
+  palette: ChartPalette,
+): string {
+  if (mode === 'rating') return diverging((item.currentRating - 50) / 50, palette)
   const change = changeFor(item, mode)
-  if (change === null) return MISSING_BG
-  return diverging(change / CHANGE_SCALE[mode])
+  if (change === null) return palette.heatmapMissing
+  return diverging(change / CHANGE_SCALE[mode], palette)
 }
 
 function tileValueLabel(item: ApiHeatmapItem, mode: ColorMode): string {
@@ -196,8 +202,9 @@ function buildLayout(groups: { sector: string; tiles: TileDatum[] }[], w: number
 
 /* ── Legend ─────────────────────────────────────────────────────────────── */
 
-function Legend({ mode }: { mode: ColorMode }) {
-  const gradient = `linear-gradient(to right, rgb(${NEG.join(',')}), rgb(${MID.join(',')}), rgb(${POS.join(',')}))`
+function Legend({ mode, palette }: { mode: ColorMode; palette: ChartPalette }) {
+  const stop = (c: [number, number, number]) => `rgb(${c.join(',')})`
+  const gradient = `linear-gradient(to right, ${stop(palette.heatmapNegative)}, ${stop(palette.heatmapNeutral)}, ${stop(palette.heatmapPositive)})`
   const scale = mode === 'rating' ? null : CHANGE_SCALE[mode]
   const [lo, mid, hi] =
     scale === null ? ['0', '50', '100'] : [`-${scale}%`, '0%', `+${scale}%`]
@@ -280,6 +287,7 @@ function HeatmapTooltip({
 
 export function SectorHeatmapPage() {
   const { data, loading, error, refetch } = useHeatmap()
+  const palette = useChartPalette()
   const [mode, setMode] = usePersistentState<ColorMode>(
     'stockpilot:heatmap:colorMode',
     'rating',
@@ -372,7 +380,7 @@ export function SectorHeatmapPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Legend mode={mode} />
+          <Legend mode={mode} palette={palette} />
           <div
             role="group"
             aria-label="Tile color"
@@ -492,7 +500,7 @@ export function SectorHeatmapPage() {
                     top: rect.y,
                     width: rect.w,
                     height: rect.h,
-                    backgroundColor: tileColor(item, mode),
+                    backgroundColor: tileColor(item, mode, palette),
                   }}
                 >
                   {showTicker && (

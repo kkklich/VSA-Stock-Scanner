@@ -13,6 +13,16 @@
     "nextPage": "Następna strona",
     "page": "Strona {{page}}"
   },
+  "theme": {
+    "label": "Motyw",
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "Systemowy",
+    "settingsTitle": "Wygląd",
+    "settingsHint": "Wybierz wygląd StockPilota. „Systemowy” podąża za ustawieniem jasnego lub ciemnego trybu w Twoim systemie.",
+    "active": "Aktualnie wyświetlany motyw: {{theme}}.",
+    "cycle": "Motyw — przełącz na: {{next}}"
+  },
   "language": {
     "label": "Język",
     "en": "English",
@@ -81,6 +91,15 @@
     },
     "combinedInfo": "Średnia ocen z wybranych przez Ciebie metod (0–100). Najwyżej ustawia spółki najlepsze łącznie we wszystkich wybranych metodach."
   },
+  "weekly": {
+    "label": "1T",
+    "confirmsInfo": "Tygodniowa analiza VSA potwierdza sygnał dzienny — wykres tygodniowy wskazuje {{verdict}} ({{rating}}/100). Potwierdzenie z wyższego interwału.",
+    "conflictsInfo": "Tygodniowa analiza VSA przeczy sygnałowi dziennemu — wykres tygodniowy wskazuje {{verdict}} ({{rating}}/100). Podchodź do sygnału dziennego ostrożnie.",
+    "filterLabel": "Tydzień potwierdza dzień",
+    "filterInfo": "Tylko spółki, których tygodniowy werdykt VSA jest zgodny z dziennym (oba bycze albo oba niedźwiedzie). Świece tygodniowe powstają z zapisanych świec dziennych i przechodzą przez ten sam silnik VSA.",
+    "column": "Tydzień",
+    "columnInfo": "Ten sam silnik VSA uruchomiony na świecach tygodniowych. Puste, gdy spółka ma mniej niż ~30 tygodni historii."
+  },
   "chart": {
     "loading": "Ładowanie danych wykresu…",
     "failedToLoad": "{{ticker}} — nie udało się załadować",
@@ -88,6 +107,14 @@
     "sessions_few": "{{count}} sesje",
     "sessions_many": "{{count}} sesji",
     "sessions_other": "{{count}} sesji",
+    "bars_one": "{{count}} świeca",
+    "bars_few": "{{count}} świece",
+    "bars_many": "{{count}} świec",
+    "bars_other": "{{count}} świec",
+    "intervalGroup": "Interwał wykresu",
+    "intervalHint": "Interwał: 30m, 1H i 4H są śróddzienne; 1D i 1W to dane na koniec dnia",
+    "intervalTitle": "Świece {{interval}}",
+    "intradayNote": "Świece śróddzienne {{interval}} pobierane są na bieżąco i sięgają do {{from}}; ocena powyżej i nakładki metod pozostają na danych dziennych.",
     "timeRangeGroup": "Zakres czasu wykresu",
     "timeRangeHint": "Przewiń lub przybliż wykres, aby automatycznie zmienić zakres",
     "rangeTitleMax": "Cała zapisana historia",

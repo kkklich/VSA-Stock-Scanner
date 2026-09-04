@@ -71,6 +71,9 @@ function makeRow(over: Partial<ApiRankingItem> = {}): ApiRankingItem {
       },
     },
     combinedScore: 72,
+    weeklyRating: null,
+    weeklySignal: null,
+    weeklyAgreement: null,
     ...over,
   }
 }
@@ -132,6 +135,47 @@ describe('DashboardPage ranking table', () => {
     expect(
       screen.getByText(/No stocks match your search or filters/i),
     ).toBeInTheDocument()
+  })
+
+  it('flags weekly agreement next to the daily signal', () => {
+    useInfiniteRankingMock.mockReturnValue(
+      result({
+        items: [
+          makeRow({
+            ticker: 'KGH',
+            weeklyAgreement: 'confirms',
+            weeklyRating: 78,
+            weeklySignal: 'Buy',
+          }),
+          makeRow({
+            ticker: 'PKN',
+            weeklyAgreement: 'conflicts',
+            weeklyRating: 22,
+            weeklySignal: 'Sell',
+          }),
+        ],
+        total: 2,
+      }),
+    )
+    renderWithProviders(<DashboardPage />)
+    // Rendered in both the desktop table and the mobile card list.
+    expect(screen.getAllByText(/1W ✓/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/1W ✗/).length).toBeGreaterThan(0)
+  })
+
+  it('shows no weekly chip when the weekly read is neutral or unavailable', () => {
+    useInfiniteRankingMock.mockReturnValue(
+      result({
+        items: [
+          makeRow({ ticker: 'KGH', weeklyAgreement: 'neutral', weeklyRating: 50 }),
+          makeRow({ ticker: 'PKN' }), // no weekly reading at all
+        ],
+        total: 2,
+      }),
+    )
+    renderWithProviders(<DashboardPage />)
+    expect(screen.queryByText(/1W ✓/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1W ✗/)).not.toBeInTheDocument()
   })
 
   it('re-sorts through the data hook when a column header is clicked', async () => {

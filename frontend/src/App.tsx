@@ -16,7 +16,7 @@ import { SectorHeatmapPage } from './pages/SectorHeatmapPage'
 import { VolumeSurgePage } from './pages/VolumeSurgePage'
 import { CapexPage } from './pages/CapexPage'
 import { FiltersPage } from './pages/FiltersPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { HelpPage } from './pages/HelpPage'
 import { usePageSeo } from './lib/seo'
 
@@ -76,7 +76,7 @@ export default function App() {
         <Route path="capex" element={<CapexPage />} />
         <Route path="stock/:ticker" element={<ChartsPage />} />
         <Route path="filters" element={<FiltersPage />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="help" element={<HelpPage />} />
         {/* Unknown paths fall back to the home page */}
         <Route path="*" element={<Navigate to="/" replace />} />

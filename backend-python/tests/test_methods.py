@@ -1,8 +1,8 @@
 """Tests for the pluggable trading-method framework (app/analysis/methods).
 
-Covers the registry, the two shipped methods (VSA + Minervini Trend Template),
-the combined cross-method score, and that the ranking attaches per-method
-results to every row.
+Covers the registry, every shipped method (VSA, Minervini Trend Template,
+Volume Breakout, VSA Glinicki V1), the combined cross-method score, and that
+the ranking attaches per-method results to every row.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from app.analysis.methods import get_method, method_ids
-from app.analysis.methods.base import MethodResult
+from app.analysis.methods.base import NEVER_FIRED, MethodResult
 from app.models import GpwCompany, StooqDailyQuote
 from app.routers.stocks import _with_combined_score
 from app.services.cache import TTLCache
@@ -78,6 +78,16 @@ class TestRegistry:
         assert "breakout" in ids
         # order: vsa (10) < minervini (20) < breakout (30)
         assert ids.index("breakout") > ids.index("minervini")
+
+    def test_glinicki_is_registered_last(self) -> None:
+        ids = method_ids()
+        assert "glinicki" in ids
+        # order: vsa (10) < minervini (20) < breakout (30) < glinicki (40)
+        assert ids.index("glinicki") > ids.index("breakout")
+        m = get_method("glinicki")
+        assert m.name == "VSA Glinicki V1"
+        assert m.direction == "Bullish"  # long-only: the course's buying half
+        assert m.source and m.source_url
 
 
 # ── Minervini Trend Template ──────────────────────────────────────────────────
@@ -291,6 +301,223 @@ class TestVolumeBreakout:
 
     def test_signals_empty_on_short_history(self) -> None:
         assert get_method("breakout").signals(_series([100.0] * 50)) == []
+
+
+# ── VSA Glinicki V1 ───────────────────────────────────────────────────────────
+
+
+def _bar(
+    i: int, o: float, h: float, low: float, c: float, v: int = 200_000
+) -> StooqDailyQuote:
+    """One fully specified OHLCV bar, ``i`` days after a fixed epoch."""
+    return StooqDailyQuote(
+        date=date(2026, 1, 1) + timedelta(days=i),
+        open=Decimal(str(o)),
+        high=Decimal(str(h)),
+        low=Decimal(str(low)),
+        close=Decimal(str(c)),
+        volume=v,
+    )
+
+
+def _glinicki_base(n: int = 79, vol: int = 200_000) -> list[StooqDailyQuote]:
+    """A flat 98-102 range on steady volume: lows bottom out at 96, spread 4.
+
+    Gives every Glinicki gate what it needs *except* the formation itself: the
+    phase reads "accumulation" (the lows stop being deepened), bar 96 is the
+    support zone, and the range highs supply the down-wave into a dip.
+    """
+    pattern = [100.0, 102.0, 100.0, 98.0]
+    return [
+        _bar(i, c, c + 2, c - 2, c, vol)
+        for i, c in ((i, pattern[i % len(pattern)]) for i in range(n))
+    ]
+
+
+def _rising_base(n: int = 78) -> list[StooqDailyQuote]:
+    """A steady climb, so the phase reads "markup" (price above a rising MA)."""
+    return [
+        _bar(i, c, c + 2, c - 2, c)
+        for i, c in ((i, 80.0 + i * 0.5) for i in range(n))
+    ]
+
+
+class TestVsaGlinicki:
+    """The six bullish formations, and the three gates that disqualify them."""
+
+    def test_hammer_at_support_on_high_volume_fires(self) -> None:
+        bars = [*_glinicki_base(), _bar(79, 98.8, 99.5, 96.5, 99.3, 400_000)]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.days_since == 0
+        assert result.detail == "Hammer"
+
+    def test_hammer_on_average_volume_does_not_fire(self) -> None:
+        # "Average volume is neutral and weakens the formation" — the course's
+        # third disqualifier: no volume confirmation, no setup.
+        bars = [*_glinicki_base(), _bar(79, 98.8, 99.5, 96.5, 99.3, 210_000)]
+        assert get_method("glinicki").evaluate(bars).fired is False
+
+    def test_tiny_hammer_shaped_bar_does_not_fire(self) -> None:
+        # Same hammer PROPORTIONS as the firing case (small body high in the
+        # range, long lower shadow, no upper shadow) but the whole bar spans
+        # 0.3 of the average spread — far too small to have recorded a deep
+        # push down and its absorption. Proportions are scale-free, so without
+        # the relative-spread floor this would match.
+        bars = [*_glinicki_base(), _bar(79, 97.32, 97.4, 96.2, 97.38, 400_000)]
+        assert get_method("glinicki").evaluate(bars).fired is False
+
+    def test_bullish_engulfing_fires(self) -> None:
+        bars = [
+            *_glinicki_base(78),
+            _bar(78, 100.0, 100.5, 96.0, 96.5),              # bearish candle 1
+            _bar(79, 96.2, 101.0, 96.0, 100.5, 320_000),     # engulfs its body
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.detail == "Bullish Engulfing"
+
+    def test_engulfing_on_falling_volume_does_not_fire(self) -> None:
+        # The engulfing candle's volume must beat the engulfed one's — an
+        # engulfing on falling volume is "an empty move", the classic trap.
+        bars = [
+            *_glinicki_base(78),
+            _bar(78, 100.0, 100.5, 96.0, 96.5, 400_000),
+            _bar(79, 96.2, 101.0, 96.0, 100.5, 300_000),
+        ]
+        assert get_method("glinicki").evaluate(bars).fired is False
+
+    def test_piercing_line_fires(self) -> None:
+        bars = [
+            *_glinicki_base(78),
+            _bar(78, 101.0, 101.5, 96.0, 96.5),              # long bearish, mid 98.75
+            _bar(79, 96.0, 100.0, 95.8, 99.5, 300_000),      # closes past the midpoint
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.detail == "Piercing Line"
+
+    def test_morning_star_fires(self) -> None:
+        bars = [
+            *_glinicki_base(77),
+            _bar(77, 101.0, 101.5, 96.5, 96.8, 400_000),     # candle 1: capitulation
+            _bar(78, 96.0, 96.4, 95.0, 96.2, 150_000),       # candle 2: quiet doji
+            _bar(79, 96.5, 100.0, 96.3, 99.5, 300_000),      # candle 3: demand returns
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.detail == "Morning Star"
+
+    def test_outside_bar_closing_high_fires(self) -> None:
+        # The previous bar is bullish, so a Bullish Engulfing (which outranks
+        # the Outside Bar) cannot match and this isolates the bar formation.
+        bars = [
+            *_glinicki_base(78),
+            _bar(78, 97.0, 99.5, 96.5, 99.0),
+            _bar(79, 98.5, 100.5, 96.0, 99.8, 320_000),      # takes out both extremes
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.detail == "Outside Bar"
+
+    def test_inside_bar_breakout_fires_in_a_rising_background(self) -> None:
+        bars = [
+            *_rising_base(),
+            _bar(78, 118.0, 118.5, 117.0, 117.5, 120_000),   # compression
+            _bar(79, 117.8, 122.0, 117.5, 121.5, 320_000),   # break on rising volume
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is True
+        assert result.detail == "Inside Bar breakout"
+
+    def test_inside_bar_breakout_on_flat_volume_does_not_fire(self) -> None:
+        # "The break must come on rising volume — a break on low volume has no
+        # capital behind it."
+        bars = [
+            *_rising_base(),
+            _bar(78, 118.0, 118.5, 117.0, 117.5, 120_000),
+            _bar(79, 117.8, 122.0, 117.5, 121.5, 119_000),
+        ]
+        assert get_method("glinicki").evaluate(bars).fired is False
+
+    def test_formation_far_above_support_does_not_fire(self) -> None:
+        # A textbook formation that is nowhere near a level identified from the
+        # earlier bars: the course's second disqualifier. The formation is still
+        # DETECTED — it is the zone gate, not the pattern, that rejects it.
+        from app.analysis.methods.vsa_glinicki import (
+            _formation_at,
+            _phase_state,
+            _Series,
+            _setup_at,
+        )
+
+        bars = _glinicki_base(70)
+        bars += [_bar(70 + k, c, c + 2, c - 2, c) for k, c in
+                 ((k, 104.0 + k * 1.4) for k in range(7))]          # rally away
+        bars += [
+            _bar(77, 112.0, 112.5, 108.0, 108.5),
+            _bar(78, 108.5, 109.0, 107.5, 108.0),
+            _bar(79, 109.3, 110.0, 107.0, 109.8, 400_000),          # formation up high
+        ]
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        assert _formation_at(s, last) is not None
+        assert _phase_state(s, last) is not None
+        assert _setup_at(s, last) is None
+        assert get_method("glinicki").evaluate(bars).fired is False
+
+    def test_downtrend_does_not_fire_and_scores_low(self) -> None:
+        # Markdown still making lower lows: the course's first disqualifier —
+        # no bullish setup is even allowed to be looked for. The score must stay
+        # below the analytics summary's bullish-lean threshold (57.5).
+        bars = [
+            _bar(i, c, c + 2, c - 2, c, 300_000 if i % 3 else 700_000)
+            for i, c in ((i, 200.0 - i * 1.2) for i in range(80))
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is False
+        assert result.days_since == NEVER_FIRED
+        assert result.score < 50
+
+    def test_recency_reported_after_the_formation(self) -> None:
+        bars = [*_glinicki_base(), _bar(79, 98.8, 99.5, 96.5, 99.3, 400_000)]
+        bars += [
+            _bar(80 + k, c, c + 0.4, c - 0.4, c, 120_000)
+            for k, c in ((k, 99.5 + k * 0.1) for k in range(5))
+        ]
+        result = get_method("glinicki").evaluate(bars)
+        assert result.fired is False
+        assert result.days_since == 5
+        assert result.detail == "Hammer 5d ago"
+
+    def test_short_history_is_unavailable(self) -> None:
+        result = get_method("glinicki").evaluate(_glinicki_base(40))
+        assert result.available is False
+
+    def test_signals_mark_each_firing(self) -> None:
+        bars = [*_glinicki_base(), _bar(79, 98.8, 99.5, 96.5, 99.3, 400_000)]
+        overlay = get_method("glinicki").signals(bars)
+        assert [(s.label, s.type) for s in overlay] == [("Hammer", "Bullish")]
+        assert overlay[0].date == bars[-1].date
+
+    def test_signals_empty_in_a_downtrend(self) -> None:
+        bars = [
+            _bar(i, c, c + 2, c - 2, c)
+            for i, c in ((i, 200.0 - i * 1.2) for i in range(80))
+        ]
+        assert get_method("glinicki").signals(bars) == []
+
+    def test_signals_empty_on_short_history(self) -> None:
+        assert get_method("glinicki").signals(_glinicki_base(40)) == []
+
+    def test_frozen_and_empty_series_never_raise(self) -> None:
+        # A suspended listing prints zero-spread, zero-volume bars; the rolling
+        # context fails closed rather than making every "wide bar" test true.
+        frozen = [_bar(i, 10.0, 10.0, 10.0, 10.0, 0) for i in range(80)]
+        assert get_method("glinicki").evaluate(frozen).fired is False
+        assert get_method("glinicki").signals(frozen) == []
+        assert get_method("glinicki").evaluate([]).available is False
+        assert get_method("glinicki").signals([]) == []
 
 
 # ── VSA method wrapper ────────────────────────────────────────────────────────

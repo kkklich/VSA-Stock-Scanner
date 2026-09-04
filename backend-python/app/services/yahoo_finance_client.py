@@ -16,7 +16,9 @@ import logging
 import math
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo
 
+from app.analysis.timeframe import IntradayBar
 from app.models import (
     CashflowPeriod,
     FinancialMetrics,
@@ -28,6 +30,9 @@ from app.services.exceptions import StooqAccessError
 logger = logging.getLogger(__name__)
 
 _FOUR = Decimal("0.0001")
+
+# GPW trades on Warsaw time; intraday bars are labelled in it (see below).
+_EXCHANGE_TZ = ZoneInfo("Europe/Warsaw")
 
 # Cash-flow statement rows we read, in fallback order. Yahoo labels the capex
 # line "Capital Expenditure" for most companies; a minority only carry
@@ -155,6 +160,111 @@ class YahooFinanceClient:
             )
 
         return sorted(quotes, key=lambda q: q.date)
+
+    # ── Intraday bars (chart timeframes) ─────────────────────────────────────
+
+    async def get_intraday_history(
+        self,
+        ticker: str,
+        interval: str,
+        lookback_days: int,
+    ) -> list[IntradayBar]:
+        """Download intraday OHLCV bars for a GPW ticker.
+
+        Unlike the EOD history, intraday bars are **not stored** by this app —
+        Yahoo only serves a limited recent window of them (60 days at 30m, 730
+        at 1h), so they are fetched on demand when someone opens an intraday
+        chart and cached briefly by the caller.
+
+        Args:
+            ticker:        Lowercase GPW ticker, e.g. ``'jsw'``.
+            interval:      Yahoo interval string, ``'30m'`` or ``'1h'``.
+            lookback_days: How many calendar days back to request.
+
+        Raises:
+            ValueError:       Ticker is empty.
+            StooqAccessError: Yahoo Finance returned no usable intraday data.
+        """
+        if not ticker or not ticker.strip():
+            raise ValueError("Ticker must be provided.")
+
+        yf_ticker = ticker.strip().upper() + ".WA"
+        async with self._get_semaphore():
+            return await asyncio.to_thread(
+                self._fetch_intraday_sync, yf_ticker, interval, max(1, lookback_days)
+            )
+
+    def _fetch_intraday_sync(
+        self,
+        yf_ticker: str,
+        interval: str,
+        lookback_days: int,
+    ) -> list[IntradayBar]:
+        """Synchronous intraday download — runs inside a ThreadPoolExecutor thread."""
+        import yfinance as yf  # deferred: yfinance is a heavy import
+
+        try:
+            df = yf.Ticker(yf_ticker).history(
+                period=f"{lookback_days}d",
+                interval=interval,
+                auto_adjust=True,
+                actions=False,
+                raise_errors=False,
+            )
+        except Exception as exc:
+            raise StooqAccessError(
+                f"Yahoo Finance intraday request failed for '{yf_ticker}': {exc}"
+            ) from exc
+
+        if df is None or df.empty:
+            raise StooqAccessError(
+                f"Yahoo Finance returned no {interval} data for '{yf_ticker}'."
+            )
+
+        df.columns = [c.capitalize() for c in df.columns]
+
+        bars: list[IntradayBar] = []
+        for ts, row in df.iterrows():
+            try:
+                open_ = float(row["Open"])
+                high = float(row["High"])
+                low = float(row["Low"])
+                close = float(row["Close"])
+                volume = int(row.get("Volume", 0) or 0)
+
+                if any(math.isnan(v) for v in (open_, high, low, close)):
+                    continue
+
+                # Yahoo stamps GPW bars in the exchange's own timezone; anything
+                # else (a naive or UTC index) is converted to it, so a bar is
+                # always labelled with the Warsaw wall-clock time it traded.
+                stamp = ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
+                if stamp.tzinfo is None:
+                    stamp = stamp.replace(tzinfo=_EXCHANGE_TZ)
+                else:
+                    stamp = stamp.astimezone(_EXCHANGE_TZ)
+
+                bars.append(
+                    IntradayBar(
+                        date=stamp,
+                        open=Decimal(str(open_)).quantize(_FOUR, rounding=ROUND_HALF_UP),
+                        high=Decimal(str(high)).quantize(_FOUR, rounding=ROUND_HALF_UP),
+                        low=Decimal(str(low)).quantize(_FOUR, rounding=ROUND_HALF_UP),
+                        close=Decimal(str(close)).quantize(_FOUR, rounding=ROUND_HALF_UP),
+                        volume=volume,
+                    )
+                )
+            except Exception:
+                logger.debug(
+                    "Skipping malformed %s row for %s on %s.", interval, yf_ticker, ts
+                )
+
+        if not bars:
+            raise StooqAccessError(
+                f"Yahoo Finance returned no parseable {interval} rows for '{yf_ticker}'."
+            )
+
+        return sorted(bars, key=lambda b: b.date)
 
     # ── Fundamentals ──────────────────────────────────────────────────────────
 

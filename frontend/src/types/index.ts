@@ -37,9 +37,24 @@ export interface StockRankingItem {
   methodResults: Record<string, MethodResult>
   /** Mean of the selected methods' scores (0–100), or null. */
   combinedScore: number | null
+  /**
+   * Multi-timeframe (weekly) confirmation — the same VSA engine run on the
+   * daily bars resampled to weekly candles. All three are null when the stored
+   * history is too short to form enough weekly bars to analyse.
+   */
+  weeklyRating: number | null
+  weeklySignal: SignalVerdict | null
+  weeklyAgreement: WeeklyAgreement | null
   /** Whether the ticker is starred into the watchlist. */
   starred: boolean
 }
+
+/**
+ * How the weekly VSA verdict relates to the daily one: `confirms` (both lean
+ * the same non-neutral way — the higher-timeframe agreement VSA traders look
+ * for), `conflicts` (opposite leans), `neutral` (either side is Hold).
+ */
+export type WeeklyAgreement = 'confirms' | 'conflicts' | 'neutral'
 
 /** One trading method's read of one stock — a cell in the multi-method list. */
 export interface MethodResult {
@@ -74,7 +89,13 @@ export type SignalVerdict = 'Strong Buy' | 'Buy' | 'Hold' | 'Sell' | 'Strong Sel
 
 /** One OHLCV bar for the candlestick chart. */
 export interface Candle {
-  time: string // YYYY-MM-DD
+  /**
+   * "YYYY-MM-DD" for a daily/weekly bar (a whole session), or a full ISO
+   * timestamp with the exchange's offset — "2026-09-04T13:00:00+02:00" — for an
+   * intraday one, where two bars can share a date. `toChartTime` in StockChart
+   * converts either form for Lightweight Charts.
+   */
+  time: string
   open: number
   high: number
   low: number

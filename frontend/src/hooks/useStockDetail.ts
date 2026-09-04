@@ -3,7 +3,11 @@
 // detected with the same VSA rules the user configured.
 
 import { useEffect, useRef, useState } from 'react'
-import { fetchSignals, type ApiStockSignals } from '../api/stocksApi'
+import {
+  fetchSignals,
+  type ApiStockSignals,
+  type ChartInterval,
+} from '../api/stocksApi'
 import { settingsQueryValue } from '../lib/vsaSettings'
 
 export interface UseStockDetailResult {
@@ -15,6 +19,8 @@ export interface UseStockDetailResult {
 export function useStockDetail(
   ticker: string | null,
   fromDate?: string,
+  /** Chart bar size; omitted = daily, the endpoint's own default. */
+  interval?: ChartInterval,
 ): UseStockDetailResult {
   const [data, setData] = useState<ApiStockSignals | null>(null)
   const [loading, setLoading] = useState(false)
@@ -37,7 +43,7 @@ export function useStockDetail(
       setData(null)
     }
 
-    fetchSignals(ticker, fromDate, undefined, settingsQueryValue())
+    fetchSignals(ticker, fromDate, undefined, settingsQueryValue(), interval)
       .then((result) => {
         if (!cancelled) {
           setData(result)
@@ -54,7 +60,7 @@ export function useStockDetail(
     return () => {
       cancelled = true
     }
-  }, [ticker, fromDate])
+  }, [ticker, fromDate, interval])
 
   return { data, loading, error }
 }

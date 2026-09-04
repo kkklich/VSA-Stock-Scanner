@@ -37,6 +37,11 @@ export interface ScreenFilters {
   minVolume: number | null
   /** Position in the 52-week range; 'any' = no filter. */
   range52w: Range52w
+  /**
+   * Only stocks whose weekly VSA verdict confirms the daily one (both lean
+   * the same way) — the higher-timeframe agreement VSA traders look for.
+   */
+  weeklyConfirms: boolean
 }
 
 export interface FilterPreset {
@@ -59,6 +64,7 @@ export const EMPTY_FILTERS: ScreenFilters = {
   maxPrice: null,
   minVolume: null,
   range52w: 'any',
+  weeklyConfirms: false,
 }
 
 /** Read the persisted presets (safe if localStorage is unavailable). */
@@ -110,7 +116,8 @@ export function filtersActive(f: ScreenFilters): boolean {
     f.minPrice !== null ||
     f.maxPrice !== null ||
     f.minVolume !== null ||
-    f.range52w !== 'any'
+    f.range52w !== 'any' ||
+    f.weeklyConfirms
   )
 }
 

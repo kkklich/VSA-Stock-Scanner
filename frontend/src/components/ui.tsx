@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Info,
 } from 'lucide-react'
-import type { SignalVerdict } from '../types'
+import type { SignalVerdict, WeeklyAgreement } from '../types'
 import { ratingTone } from '../lib/format'
 
 /**
@@ -252,7 +252,7 @@ export function SortHeader<T extends string>({
       // the rows passing underneath; the inset shadow draws the bottom divider
       // (a plain border-bottom can disappear on scroll with collapsed borders).
       className={
-        'sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_#1e293b] ' +
+        'sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] ' +
         className
       }
       aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
@@ -385,7 +385,7 @@ export function Sparkline({
     })
     .join(' ')
   const up = data[data.length - 1] >= data[0]
-  const stroke = up ? '#10B981' : '#F43F5E'
+  const stroke = up ? 'var(--color-emerald-500)' : 'var(--color-rose-500)'
   return (
     <svg width={width} height={height} className="overflow-visible">
       <polyline
@@ -397,5 +397,49 @@ export function Sparkline({
         strokeLinejoin="round"
       />
     </svg>
+  )
+}
+
+/**
+ * Multi-timeframe confirmation chip shown next to a row's daily signal badge.
+ *
+ * VSA traders trust a daily signal far more when the weekly chart tells the
+ * same story, so this surfaces the weekly verdict's relationship to the daily
+ * one at a glance: green "1W ✓" when the weekly confirms, rose "1W ✗" when it
+ * contradicts. Renders nothing when the weekly is neutral (it neither backs nor
+ * opposes the daily call) or unavailable (too little stored history) — an
+ * always-present chip would be noise on every row without saying anything.
+ */
+export function WeeklyBadge({
+  agreement,
+  rating,
+  signal,
+}: {
+  agreement: WeeklyAgreement | null
+  rating: number | null
+  signal: SignalVerdict | null
+}) {
+  const { t } = useTranslation()
+  if (agreement !== 'confirms' && agreement !== 'conflicts') return null
+
+  const confirms = agreement === 'confirms'
+  const tip = t(confirms ? 'weekly.confirmsInfo' : 'weekly.conflictsInfo', {
+    verdict: signal ?? '—',
+    rating: rating ?? '—',
+  })
+  return (
+    <span
+      title={tip}
+      aria-label={tip}
+      className={
+        'inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ' +
+        (confirms
+          ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30'
+          : 'bg-rose-500/10 text-rose-400 ring-rose-500/30')
+      }
+    >
+      {t('weekly.label')}
+      {confirms ? ' ✓' : ' ✗'}
+    </span>
   )
 }

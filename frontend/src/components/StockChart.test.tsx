@@ -49,7 +49,7 @@ vi.mock('lightweight-charts', () => ({
   ColorType: lib.ColorType,
 }))
 
-import { StockChart } from './StockChart'
+import { StockChart, toChartTime } from './StockChart'
 
 const CANDLES: Candle[] = [
   { time: '2026-01-01', open: 10, high: 12, low: 9, close: 11, volume: 1000 },
@@ -60,6 +60,13 @@ const CANDLES: Candle[] = [
 const SIGNALS: VsaSignal[] = [
   { date: '2026-01-01', signalName: 'Spring', type: 'Bullish' },
   { date: '2026-01-02', signalName: 'Upthrust', type: 'Bearish' },
+]
+
+// Intraday bars: full ISO timestamps in the exchange's own timezone.
+const INTRADAY_CANDLES: Candle[] = [
+  { time: '2026-09-04T09:00:00+02:00', open: 10, high: 12, low: 9, close: 11, volume: 1000 },
+  { time: '2026-09-04T13:00:00+02:00', open: 11, high: 13, low: 10, close: 10, volume: 1500 },
+  { time: '2026-09-07T09:00:00+02:00', open: 10, high: 11, low: 9, close: 11, volume: 900 },
 ]
 
 beforeEach(() => {
@@ -141,5 +148,95 @@ describe('StockChart', () => {
     unmount()
     expect(lib.chart.remove).toHaveBeenCalledTimes(1)
     expect(lib.timeScale.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalled()
+  })
+})
+
+describe('toChartTime', () => {
+  it('passes a daily bar through as a business-day string', () => {
+    expect(toChartTime('2026-01-01')).toBe('2026-01-01')
+  })
+
+  it('renders an intraday bar at the time it actually traded', () => {
+    // Lightweight Charts has no timezone support and labels every timestamp as
+    // UTC, so the exchange's offset is folded in. A bar that traded at 13:00 in
+    // Warsaw must therefore read back as 13:00, not 11:00.
+    const seconds = toChartTime('2026-09-04T13:00:00+02:00') as number
+    expect(new Date(seconds * 1000).toISOString()).toBe('2026-09-04T13:00:00.000Z')
+  })
+
+  it('keeps the label right across a daylight-saving change', () => {
+    // Warsaw is +01:00 in March and +02:00 in September; 09:00 is 09:00 in both.
+    const winter = toChartTime('2026-03-02T09:00:00+01:00') as number
+    const summer = toChartTime('2026-09-02T09:00:00+02:00') as number
+    expect(new Date(winter * 1000).toISOString()).toBe('2026-03-02T09:00:00.000Z')
+    expect(new Date(summer * 1000).toISOString()).toBe('2026-09-02T09:00:00.000Z')
+  })
+
+  it('handles a UTC (Z) timestamp without shifting it', () => {
+    const seconds = toChartTime('2026-09-04T13:00:00Z') as number
+    expect(new Date(seconds * 1000).toISOString()).toBe('2026-09-04T13:00:00.000Z')
+  })
+
+  it('orders intraday bars chronologically', () => {
+    const times = INTRADAY_CANDLES.map((c) => toChartTime(c.time) as number)
+    expect(times).toEqual([...times].sort((a, b) => a - b))
+  })
+})
+
+describe('StockChart on an intraday series', () => {
+  it('converts bars to timestamps and turns on the clock in the axis', () => {
+    render(<StockChart candles={INTRADAY_CANDLES} signals={[]} />)
+
+    const options = lib.createChart.mock.calls.at(-1)?.[1] as {
+      timeScale: { timeVisible: boolean; secondsVisible: boolean }
+    }
+    expect(options.timeScale.timeVisible).toBe(true)
+    expect(options.timeScale.secondsVisible).toBe(false)
+
+    const candleData = lib.candleSeries.setData.mock.calls.at(-1)?.[0] as Array<{
+      time: number
+    }>
+    expect(candleData).toHaveLength(INTRADAY_CANDLES.length)
+    expect(typeof candleData[0].time).toBe('number')
+  })
+
+  it('leaves the clock off on a daily series', () => {
+    render(<StockChart candles={CANDLES} signals={SIGNALS} />)
+    const options = lib.createChart.mock.calls.at(-1)?.[1] as {
+      timeScale: { timeVisible: boolean }
+    }
+    expect(options.timeScale.timeVisible).toBe(false)
+  })
+
+  it('sorts merged intraday markers by time, and strips the sort key', () => {
+    render(
+      <StockChart
+        candles={INTRADAY_CANDLES}
+        signals={[
+          { date: '2026-09-07T09:00:00+02:00', signalName: 'SOS', type: 'Bullish' },
+          { date: '2026-09-04T09:00:00+02:00', signalName: 'SOW', type: 'Bearish' },
+        ]}
+        overlays={[
+          {
+            methodId: 'demo',
+            color: '#F59E0B',
+            signals: [
+              { date: '2026-09-04T13:00:00+02:00', label: 'Demo', type: 'Bullish' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
+      unknown,
+      Array<{ time: number; text: string; sortKey?: string }>,
+    ]
+    expect(markers.map((m) => m.text)).toEqual(['SOW', 'Demo', 'SOS'])
+    expect(markers.map((m) => m.time)).toEqual(
+      [...markers.map((m) => m.time)].sort((a, b) => a - b),
+    )
+    // The internal ordering key must not leak into the charting library.
+    expect(markers[0]).not.toHaveProperty('sortKey')
   })
 })

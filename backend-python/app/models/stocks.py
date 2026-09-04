@@ -7,7 +7,7 @@ so JSON responses match the TypeScript frontend's expectations.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -208,6 +208,18 @@ class StockRankingItem(_CamelModel):
     # ranking. Set per request from the ``methods`` query parameter (None until
     # computed, and when the row can evaluate none of the selected methods).
     combined_score: int | None = None
+    # Multi-timeframe (weekly) confirmation: the same VSA engine run on the
+    # daily bars resampled to weekly candles (app/analysis/weekly.py). VSA
+    # traders trust a daily signal more when the weekly chart agrees. All three
+    # are None when the stored history is too short to form enough weekly bars.
+    #
+    # The weekly VSA rating (0–100) and its verdict badge.
+    weekly_rating: int | None = None
+    weekly_signal: str | None = None
+    # How the weekly timeframe relates to the daily verdict: "confirms" (same
+    # non-neutral direction), "conflicts" (opposite), or "neutral" (either side
+    # is Hold — the weekly neither backs nor contradicts the daily call).
+    weekly_agreement: Literal["confirms", "conflicts", "neutral"] | None = None
 
 
 # ── New models: sector heatmap endpoint ───────────────────────────────────────
@@ -341,7 +353,12 @@ class CandleBar(_CamelModel):
     """One OHLCV bar in the chart history (``GET /api/stocks/{ticker}/signals``)."""
 
     # The frontend expects the key "time", not "date", for TradingView compatibility.
-    time: date
+    #
+    # A daily/weekly bar is a whole session and serialises as "2026-09-04"
+    # exactly as it always has; an intraday bar is a moment and serialises as
+    # "2026-09-04T13:00:00+02:00" (Warsaw wall-clock, the time it traded), so
+    # two bars of the same day stay apart. See ``app.analysis.timeframe``.
+    time: date | datetime
     open: float
     high: float
     low: float
@@ -352,7 +369,9 @@ class CandleBar(_CamelModel):
 class VsaSignalResponse(_CamelModel):
     """A detected VSA pattern marker for the chart overlay."""
 
-    date: date
+    # Dated like the bar it sits on: a session for daily/weekly charts, a
+    # timestamp on intraday ones (see ``CandleBar.time``).
+    date: date | datetime
     # e.g. "Spring", "SOS", "Upthrust" — the display label on the chart.
     signal_name: str
     type: Literal["Bullish", "Bearish"]
@@ -361,7 +380,7 @@ class VsaSignalResponse(_CamelModel):
 class MethodSignalItem(_CamelModel):
     """One bar where a trading method's setup fired — a chart overlay marker."""
 
-    date: date
+    date: date | datetime
     # Short on-chart tag, e.g. "Spring", "Trend Template".
     label: str
     type: Literal["Bullish", "Bearish"]
@@ -402,7 +421,21 @@ class StockSignalsResponse(_CamelModel):
     # Per-method chart overlays for every OTHER registered trading method
     # (Minervini, …); VSA stays in ``vsa_signals`` above. Additive — an older
     # client that ignores this field still gets the unchanged VSA chart.
+    # Empty on non-daily charts: those methods are defined on daily bars
+    # (a 200-*day* MA, a 50-*day* base) and mean nothing on 30-minute ones.
     method_signals: list[MethodSignalGroup] = []
+    # Which bar size ``history``/``vsa_signals`` are in ("30m", "1h", "4h",
+    # "1d", "1w"). Defaults to "1d" — the only thing this endpoint used to
+    # return — so an older client reading the field still sees the truth.
+    interval: str = "1d"
+    # True when the bars are intraday moments (the chart must then show times,
+    # not just dates). Derivable from ``interval``; sent so the client does not
+    # have to keep its own copy of that table.
+    intraday: bool = False
+    # Oldest bar the source could actually serve for this interval. Yahoo caps
+    # intraday history (60 days at 30m, ~2 years at 1h), so a request for more
+    # is silently trimmed — this says what was really covered.
+    history_start: date | None = None
 
 
 # ── New models: fundamentals endpoint ─────────────────────────────────────────

@@ -30,7 +30,7 @@ import { useMethods } from '../hooks/useMethods'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { useFundamentals } from '../hooks/useFundamentals'
 import { useTickerVolume } from '../hooks/useTickerVolume'
-import type { ApiFundamentals } from '../api/stocksApi'
+import type { ApiFundamentals, ChartInterval } from '../api/stocksApi'
 import type { Candle, SignalFlag, VsaSignal } from '../types'
 import {
   deltaTone,
@@ -39,7 +39,9 @@ import {
   fmtPrice,
   fmtSigned,
   ratingTone,
+  safeHttpUrl,
 } from '../lib/format'
+import { useChartPalette } from '../lib/chartTheme'
 
 // ── Signal filtering (driven by the detection-settings panel) ─────────────────
 
@@ -50,21 +52,12 @@ const DEFAULT_CONTEXT_WINDOW = 120
 
 /** Method id whose overlay is the built-in VSA arrows (from `vsaSignals`). */
 const VSA_METHOD_ID = 'vsa'
-/** VSA's marker/legend colour (emerald = strength, matching the arrows). */
-const VSA_COLOR = '#10B981'
-/**
- * Distinct marker colours for the OTHER methods, assigned in backend display
- * order. Chosen to read clearly on dark candlesticks and stay apart from the
- * emerald/rose VSA arrows.
+/*
+ * VSA's marker/legend colour is the palette's bullish emerald; the OTHER
+ * methods get `methodColors`, assigned in backend display order. Both come
+ * from `lib/chartTheme` so they follow the light/dark theme — the light theme
+ * uses darker shades that still read on white candlesticks.
  */
-const OVERLAY_COLORS = [
-  '#F59E0B', // amber
-  '#6366F1', // indigo
-  '#EC4899', // pink
-  '#06B6D4', // cyan
-  '#A855F7', // purple
-  '#84CC16', // lime
-] as const
 
 /** localStorage key for which methods are drawn on the stock chart. */
 const CHART_METHODS_KEY = 'stockpilot:chart-methods:v1'
@@ -76,17 +69,108 @@ const CHART_METHODS_KEY = 'stockpilot:chart-methods:v1'
  * back as stored data goes); `sessions` is the matching signal context window
  * (~21 trading sessions per month) applied when the user picks the range.
  */
-const RANGE_OPTIONS = [
-  { key: '3M', months: 3, sessions: 63 },
-  { key: '6M', months: 6, sessions: 126 },
-  { key: '1Y', months: 12, sessions: 252 },
-  { key: '2Y', months: 24, sessions: 504 },
-  { key: 'MAX', months: null, sessions: 2520 },
-] as const
+/**
+ * Selectable chart bar sizes, in the order they appear on the toolbar.
+ *
+ * `1d` is the app's native timeframe — the rating, the ranking and the trading
+ * methods are all computed on daily bars, and stay daily whichever timeframe
+ * the chart shows. The others change only what is drawn: `1w` is aggregated
+ * from the same daily bars, and the intraday sizes are fetched live for the
+ * chart (the app does not store intraday history, so how far back they reach is
+ * capped by the data provider — see `maxDays`).
+ *
+ * `barsPerSession` converts a window in calendar days into a bar count for the
+ * signal-context window; GPW trades 09:00–17:00, so a session is ~17 half-hour
+ * bars, ~9 hourly, ~2 four-hourly, and a week is one weekly bar per 5 sessions.
+ */
+const INTERVAL_OPTIONS = [
+  { key: '30m', label: '30m', barsPerSession: 17, maxDays: 60 },
+  { key: '1h', label: '1H', barsPerSession: 9, maxDays: 730 },
+  { key: '4h', label: '4H', barsPerSession: 2, maxDays: 730 },
+  { key: '1d', label: '1D', barsPerSession: 1, maxDays: null },
+  { key: '1w', label: '1W', barsPerSession: 0.2, maxDays: null },
+] as const satisfies readonly {
+  key: ChartInterval
+  label: string
+  barsPerSession: number
+  maxDays: number | null
+}[]
 
-type RangeKey = (typeof RANGE_OPTIONS)[number]['key']
+const DEFAULT_INTERVAL: ChartInterval = '1d'
 
-const DEFAULT_RANGE: RangeKey = '1Y'
+/**
+ * Time ranges offered per bar size. They differ because the useful — and the
+ * *available* — window does: two years of 30-minute candles is both unreadable
+ * and more than the provider serves, while three months of weekly ones is 13
+ * candles. Each range is a number of calendar days back (`null` = everything
+ * stored).
+ */
+const INTERVAL_RANGES: Record<
+  ChartInterval,
+  readonly { key: string; days: number | null }[]
+> = {
+  '30m': [
+    { key: '5D', days: 7 },
+    { key: '10D', days: 14 },
+    { key: '1M', days: 30 },
+    { key: '2M', days: 60 },
+  ],
+  '1h': [
+    { key: '1M', days: 30 },
+    { key: '3M', days: 92 },
+    { key: '6M', days: 183 },
+    { key: '1Y', days: 365 },
+    { key: '2Y', days: 730 },
+  ],
+  '4h': [
+    { key: '1M', days: 30 },
+    { key: '3M', days: 92 },
+    { key: '6M', days: 183 },
+    { key: '1Y', days: 365 },
+    { key: '2Y', days: 730 },
+  ],
+  '1d': [
+    { key: '3M', days: 92 },
+    { key: '6M', days: 183 },
+    { key: '1Y', days: 365 },
+    { key: '2Y', days: 730 },
+    { key: 'MAX', days: null },
+  ],
+  '1w': [
+    { key: '1Y', days: 365 },
+    { key: '2Y', days: 730 },
+    { key: '5Y', days: 1826 },
+    { key: 'MAX', days: null },
+  ],
+}
+
+/** Range each bar size opens on — enough candles to read, not so many they blur. */
+const DEFAULT_RANGE: Record<ChartInterval, string> = {
+  '30m': '1M',
+  '1h': '3M',
+  '4h': '6M',
+  '1d': '1Y',
+  '1w': '2Y',
+}
+
+function intervalOption(interval: ChartInterval) {
+  return INTERVAL_OPTIONS.find((o) => o.key === interval) ?? INTERVAL_OPTIONS[3]
+}
+
+function rangesFor(interval: ChartInterval) {
+  return INTERVAL_RANGES[interval]
+}
+
+/**
+ * Signal-context window (in bars) that covers a range, so picking a range shows
+ * markers across the whole visible chart rather than only its recent end.
+ * ~252 trading sessions a year, times the bars each session produces.
+ */
+function contextBarsFor(interval: ChartInterval, days: number | null): number {
+  const perSession = intervalOption(interval).barsPerSession
+  const sessions = days == null ? 2520 : Math.round((days * 252) / 365)
+  return Math.max(20, Math.round(sessions * perSession))
+}
 
 /**
  * Scroll-to-change-range tuning. "Show me further back" is either panning more
@@ -104,11 +188,11 @@ const ZOOM_IN_FRACTION = 0.3
 const STEP_COOLDOWN_MS = 700
 
 /** API `fromDate` (YYYY-MM-DD) for a range; MAX asks far enough back for everything. */
-function rangeFromDate(key: RangeKey): string {
-  const opt = RANGE_OPTIONS.find((r) => r.key === key)
+function rangeFromDate(interval: ChartInterval, key: string): string {
+  const opt = rangesFor(interval).find((r) => r.key === key)
+  if (opt?.days == null) return '2000-01-01'
   const d = new Date()
-  if (opt?.months == null) return '2000-01-01'
-  d.setMonth(d.getMonth() - opt.months)
+  d.setDate(d.getDate() - opt.days)
   return d.toISOString().slice(0, 10)
 }
 
@@ -163,6 +247,18 @@ function filterSignals(
 const STRENGTH_SIGNAL_NAMES = ['Spring', 'Successful Test', 'SOS']
 const WEAKNESS_SIGNAL_NAMES = ['Upthrust', 'No Demand', 'SOW']
 
+/**
+ * Display form of a signal's bar time. Daily/weekly markers are already a bare
+ * date; an intraday one arrives as a full ISO timestamp, which is far too long
+ * for the checklist's right-hand column — trim it to "09-04 13:00", dropping
+ * the year and the offset (every bar on the chart is exchange-local anyway).
+ */
+function formatSignalDate(value: string): string {
+  if (!value.includes('T')) return value
+  const [day, time = ''] = value.split('T')
+  return `${day.slice(5)} ${time.slice(0, 5)}`
+}
+
 function deriveSignalFlags(vsaSignals: VsaSignal[]): {
   strength: SignalFlag[]
   weakness: SignalFlag[]
@@ -176,13 +272,13 @@ function deriveSignalFlags(vsaSignals: VsaSignal[]): {
   const strength: SignalFlag[] = STRENGTH_SIGNAL_NAMES.map((name) => ({
     name,
     present: lastOccurrence.has(name),
-    date: lastOccurrence.get(name) ?? '—',
+    date: formatSignalDate(lastOccurrence.get(name) ?? '—'),
   }))
 
   const weakness: SignalFlag[] = WEAKNESS_SIGNAL_NAMES.map((name) => ({
     name,
     present: lastOccurrence.has(name),
-    date: lastOccurrence.get(name) ?? '—',
+    date: formatSignalDate(lastOccurrence.get(name) ?? '—'),
   }))
 
   return { strength, weakness }
@@ -469,17 +565,17 @@ function FundamentalsCard({
               </div>
             ))}
 
-            {data?.website && (
+            {safeHttpUrl(data?.website) && (
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">{t('chart.fundamentals.www')}</dt>
                 <dd className="text-right font-medium">
                   <a
-                    href={data.website}
+                    href={safeHttpUrl(data?.website)!}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
                   >
-                    {data.website.replace(/^https?:\/\/(www\.)?/, '')}
+                    {data!.website!.replace(/^https?:\/\/(www\.)?/, '')}
                     <ExternalLink size={12} />
                   </a>
                 </dd>
@@ -568,10 +664,13 @@ export function ChartsPage() {
   const { t } = useTranslation()
   const { ticker = 'kgh' } = useParams<{ ticker: string }>()
 
-  // Chart time range — drives the fromDate sent to the signals endpoint.
-  const [range, setRange] = useState<RangeKey>(DEFAULT_RANGE)
-  const fromDate = useMemo(() => rangeFromDate(range), [range])
-  const { data, loading, error } = useStockDetail(ticker, fromDate)
+  // Chart bar size and time range — together they drive the interval and
+  // fromDate sent to the signals endpoint. The range list depends on the bar
+  // size (a 30-minute chart has no "2Y"), so the two move together below.
+  const [interval, setIntervalKey] = useState<ChartInterval>(DEFAULT_INTERVAL)
+  const [range, setRange] = useState<string>(DEFAULT_RANGE[DEFAULT_INTERVAL])
+  const fromDate = useMemo(() => rangeFromDate(interval, range), [interval, range])
+  const { data, loading, error } = useStockDetail(ticker, fromDate, interval)
 
   // Company fundamentals — fetched once here and shared by the Fundamentals and
   // Investment cards (both read the same payload; one fetch, not two). Volume
@@ -595,11 +694,26 @@ export function ChartsPage() {
 
   // Picking a range also widens the signal context window to cover it, so
   // markers appear across the whole visible chart, not just the recent part.
-  const selectRange = useCallback((key: RangeKey, preserveView = false) => {
-    preserveViewRef.current = preserveView
-    setRange(key)
-    const opt = RANGE_OPTIONS.find((r) => r.key === key)
-    if (opt) setContextWindow(opt.sessions)
+  const selectRange = useCallback(
+    (key: string, preserveView = false) => {
+      preserveViewRef.current = preserveView
+      setRange(key)
+      const opt = rangesFor(interval).find((r) => r.key === key)
+      if (opt) setContextWindow(contextBarsFor(interval, opt.days))
+    },
+    [interval],
+  )
+
+  // Switching bar size also resets the range: the ranges on offer differ per
+  // interval, so the one that was selected may not exist on the new one (and
+  // "2Y" of 30-minute candles is not something the provider serves anyway).
+  const selectInterval = useCallback((next: ChartInterval) => {
+    preserveViewRef.current = false
+    const nextRange = DEFAULT_RANGE[next]
+    setIntervalKey(next)
+    setRange(nextRange)
+    const opt = rangesFor(next).find((r) => r.key === nextRange)
+    if (opt) setContextWindow(contextBarsFor(next, opt.days))
   }, [])
 
   // Scroll-driven range switching: scrolling/zooming out past the oldest loaded
@@ -614,9 +728,8 @@ export function ChartsPage() {
       if (loading || totalBars === 0) return
       if (Date.now() < stepCooldown.current) return
 
-      // eslint-disable-next-line no-console
-      console.log('[span]', range, 'before=' + barsBefore.toFixed(1), 'vis=' + visibleBars.toFixed(1), 'total=' + totalBars)
-      const index = RANGE_OPTIONS.findIndex((r) => r.key === range)
+      const options = rangesFor(interval)
+      const index = options.findIndex((r) => r.key === range)
       // Either the view runs off the left of the loaded slice, or it has been
       // zoomed out wider than the slice — both mean "show me further back".
       const wantsOlder =
@@ -625,9 +738,9 @@ export function ChartsPage() {
       const wantsNarrower = visibleBars < totalBars * ZOOM_IN_FRACTION
 
       const next = wantsOlder
-        ? RANGE_OPTIONS[index + 1]
+        ? options[index + 1]
         : wantsNarrower
-          ? RANGE_OPTIONS[index - 1]
+          ? options[index - 1]
           : undefined
       if (!next) return
 
@@ -636,7 +749,7 @@ export function ChartsPage() {
       // seamlessly instead of the chart snapping to fit the new range.
       selectRange(next.key, true)
     },
-    [loading, range, selectRange],
+    [loading, interval, range, selectRange],
   )
 
   const visibleSignals = useMemo(
@@ -656,6 +769,7 @@ export function ChartsPage() {
   // Which methods are drawn on the chart. `null` (default) = show all. VSA's
   // markers are the built-in arrows (from `vsaSignals`); every other method's
   // markers come from `data.methodSignals`.
+  const palette = useChartPalette()
   const { methods: catalogue } = useMethods()
   const [chartMethods, setChartMethods] = usePersistentState<string[] | null>(
     CHART_METHODS_KEY,
@@ -672,9 +786,9 @@ export function ChartsPage() {
     () =>
       (data?.methodSignals ?? []).map((g, i) => ({
         ...g,
-        color: OVERLAY_COLORS[i % OVERLAY_COLORS.length],
+        color: palette.methodColors[i % palette.methodColors.length],
       })),
-    [data],
+    [data, palette],
   )
 
   const allChartMethodIds = useMemo(
@@ -715,7 +829,7 @@ export function ChartsPage() {
       {
         id: VSA_METHOD_ID,
         name: vsaName,
-        color: VSA_COLOR,
+        color: palette.bull,
         count: visibleSignals.length,
         selected: isMethodShown(VSA_METHOD_ID),
       },
@@ -727,7 +841,7 @@ export function ChartsPage() {
         selected: isMethodShown(g.methodId),
       })),
     ]
-  }, [data, catalogue, methodGroups, visibleSignals.length, isMethodShown])
+  }, [data, catalogue, methodGroups, visibleSignals.length, isMethodShown, palette])
 
   if (loading && !data) return <LoadingState />
   if (error) return <ErrorState message={error} ticker={ticker} />
@@ -737,8 +851,10 @@ export function ChartsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-6">
-      {/* Asset header */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {/* Asset header — pinned under the top bar (negative margins let it span
+          the full width) so the company, price and rating stay in view while
+          scrolling through the cards below. */}
+      <div className="sticky top-0 z-30 -mx-4 -mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-800 bg-slate-950/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mt-6 sm:px-6">
         <CompanyPicker ticker={data.ticker} name={data.name} />
         <span className="text-xl font-semibold text-slate-200">
           {fmtPrice(data.lastPrice)} {t('common.pln')}
@@ -779,42 +895,84 @@ export function ChartsPage() {
           <Card className="p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                {data.ticker} · 1D
+                {data.ticker} · {intervalOption(interval).label}
                 <span className="text-xs font-normal text-slate-500">
-                  {t('chart.sessions', { count: data.history.length })}
+                  {intervalOption(interval).barsPerSession === 1
+                    ? t('chart.sessions', { count: data.history.length })
+                    : t('chart.bars', { count: data.history.length })}
                 </span>
                 {loading && (
                   <Loader2 size={14} className="animate-spin text-slate-500" />
                 )}
               </span>
-              <div
-                role="group"
-                aria-label={t('chart.timeRangeGroup')}
-                title={t('chart.timeRangeHint')}
-                className="flex overflow-hidden rounded-lg border border-slate-700"
-              >
-                {RANGE_OPTIONS.map(({ key }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => selectRange(key)}
-                    title={
-                      key === 'MAX'
-                        ? t('chart.rangeTitleMax')
-                        : t('chart.rangeTitleLast', { range: key })
-                    }
-                    className={
-                      'px-2.5 py-1 text-xs font-medium transition-colors ' +
-                      (range === key
-                        ? 'bg-slate-700 text-slate-100'
-                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200')
-                    }
-                  >
-                    {key}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <div
+                  role="group"
+                  aria-label={t('chart.intervalGroup')}
+                  title={t('chart.intervalHint')}
+                  className="flex overflow-hidden rounded-lg border border-slate-700"
+                >
+                  {INTERVAL_OPTIONS.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => selectInterval(option.key)}
+                      aria-pressed={interval === option.key}
+                      title={t('chart.intervalTitle', { interval: option.label })}
+                      className={
+                        'px-2.5 py-1 text-xs font-medium transition-colors ' +
+                        (interval === option.key
+                          ? 'bg-slate-700 text-slate-100'
+                          : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200')
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  role="group"
+                  aria-label={t('chart.timeRangeGroup')}
+                  title={t('chart.timeRangeHint')}
+                  className="flex overflow-hidden rounded-lg border border-slate-700"
+                >
+                  {rangesFor(interval).map(({ key }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => selectRange(key)}
+                      aria-pressed={range === key}
+                      title={
+                        key === 'MAX'
+                          ? t('chart.rangeTitleMax')
+                          : t('chart.rangeTitleLast', { range: key })
+                      }
+                      className={
+                        'px-2.5 py-1 text-xs font-medium transition-colors ' +
+                        (range === key
+                          ? 'bg-slate-700 text-slate-100'
+                          : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200')
+                      }
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+            {/* On an intraday chart, say plainly what is different: the bars are
+                fetched live (the app stores only end-of-day history, so how far
+                back they go is capped), and the daily-calibrated method overlays
+                are switched off rather than silently recomputed on the wrong
+                bar size. The rating in the header stays the daily one. */}
+            {data.intraday && (
+              <p className="mb-2 px-1 text-xs text-slate-500">
+                {t('chart.intradayNote', {
+                  from: data.historyStart ?? '—',
+                  interval: intervalOption(interval).label,
+                })}
+              </p>
+            )}
             <ChartMethodLegend items={legendItems} onToggle={toggleChartMethod} />
             <div className="h-[300px] w-full sm:h-[420px]">
               <StockChart

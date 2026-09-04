@@ -99,8 +99,8 @@ export function RatingHistoryCard({ ticker }: { ticker: string }) {
           >
             <defs>
               <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10B981" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--color-emerald-500)" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="var(--color-emerald-500)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -157,7 +157,7 @@ export function RatingHistoryCard({ ticker }: { ticker: string }) {
             <path
               d={linePath}
               fill="none"
-              stroke="#10B981"
+              stroke="var(--color-emerald-500)"
               strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -166,7 +166,7 @@ export function RatingHistoryCard({ ticker }: { ticker: string }) {
             {/* Latest value: dot + direct label */}
             {last && (
               <>
-                <circle cx={x(n - 1, n)} cy={y(last.rating)} r="3.5" fill="#10B981" />
+                <circle cx={x(n - 1, n)} cy={y(last.rating)} r="3.5" fill="var(--color-emerald-500)" />
                 <text
                   x={x(n - 1, n) - 6}
                   y={y(last.rating) - 8}
@@ -195,7 +195,7 @@ export function RatingHistoryCard({ ticker }: { ticker: string }) {
                   cx={x(hover, n)}
                   cy={y(hovered.rating)}
                   r="4"
-                  fill="#10B981"
+                  fill="var(--color-emerald-500)"
                   className="stroke-slate-950"
                   strokeWidth="2"
                 />

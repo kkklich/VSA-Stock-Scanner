@@ -25,6 +25,44 @@
     <meta name="theme-color" content="#020617" />
     <link rel="canonical" href="https://stocksignal.pl/" />
 
+    <!--
+      Apply the saved light/dark theme BEFORE the first paint, so the page never
+      flashes the wrong one. Kept deliberately tiny and inline (no imports) —
+      it must run before the stylesheet and the app bundle. The key name, the
+      class name and the "dark by default" rule mirror src/lib/theme.ts.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('stockpilot:theme')
+          var dark =
+            saved === 'light'
+              ? false
+              : saved === 'system'
+                ? !window.matchMedia('(prefers-color-scheme: light)').matches
+                : true
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#020617' : '#eef2f7')
+        } catch (e) {
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
+    <style>
+      /* Colours for the pre-React fallback below, which paints before the app
+         stylesheet has loaded. */
+      html { background: #020617; }
+      html:not(.dark) { background: #eef2f7; }
+      #boot-fallback { color: #e2e8f0; }
+      #boot-fallback p { color: #94a3b8; }
+      #boot-fallback .boot-dim { color: #64748b; }
+      html:not(.dark) #boot-fallback { color: #1e293b; }
+      html:not(.dark) #boot-fallback p { color: #475569; }
+      html:not(.dark) #boot-fallback .boot-dim { color: #64748b; }
+    </style>
+
     <!-- Icons / PWA -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -83,17 +121,17 @@
       meaningful, crawlable description of the application.
     -->
     <div id="root">
-      <main style="max-width: 680px; margin: 12vh auto; padding: 0 24px; font-family: system-ui, sans-serif; color: #e2e8f0;">
+      <main id="boot-fallback" style="max-width: 680px; margin: 12vh auto; padding: 0 24px; font-family: system-ui, sans-serif;">
         <h1 style="font-size: 1.9rem; margin-bottom: 0.5rem;">
           StockPilot — VSA scanner for the GPW
         </h1>
-        <p style="color: #94a3b8; line-height: 1.6;">
+        <p style="line-height: 1.6;">
           StockPilot analyses stocks listed on the Warsaw Stock Exchange (GPW)
           using Volume Spread Analysis (VSA). The app ranks stocks by their VSA
           rating (0–100), draws interactive candlestick charts and detects
           signals such as Spring, Upthrust, Test, SOS, SOW and No Demand.
         </p>
-        <p style="color: #64748b;">Loading the app…</p>
+        <p class="boot-dim">Loading the app…</p>
         <noscript>
           This app requires JavaScript. Please enable JavaScript in your browser
           to use the StockPilot VSA scanner.
