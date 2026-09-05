@@ -37,7 +37,9 @@ export function RatingHistoryCard({ ticker }: { ticker: string }) {
   const [hover, setHover] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
-  const points = data?.points ?? []
+  // Memoised so the `?? []` fallback is not a fresh array on every render,
+  // which would re-run the two path memos below each time.
+  const points = useMemo(() => data?.points ?? [], [data])
   const n = points.length
 
   const linePath = useMemo(() => buildPath(points), [points])

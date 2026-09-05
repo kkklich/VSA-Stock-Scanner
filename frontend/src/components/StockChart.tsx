@@ -190,35 +190,41 @@ export function StockChart({
     )
 
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
-    // `sortKey` keeps the original API date string so the merge below can order
-    // markers by it: the converted times are strings on a daily chart but
-    // numbers on an intraday one, which do not compare the same way.
-    type Marker = SeriesMarker<Time> & { sortKey: string }
+    // Each marker travels next to `sortKey`, the original API date string, so
+    // the merge below can order markers by it: the converted times are strings
+    // on a daily chart but numbers on an intraday one, which do not compare the
+    // same way. Keeping the key beside the marker rather than inside it means
+    // nothing has to be stripped off again before handing it to the chart.
+    type SortedMarker = { sortKey: string; marker: SeriesMarker<Time> }
 
-    const vsaMarkers: Marker[] = signals.map((s) => {
+    const vsaMarkers: SortedMarker[] = signals.map((s) => {
       const bull = s.type === 'Bullish'
       return {
-        time: toChartTime(s.date),
         sortKey: s.date,
-        position: bull ? 'belowBar' : 'aboveBar',
-        color: bull ? BULL : BEAR,
-        shape: bull ? 'arrowUp' : 'arrowDown',
-        text: s.signalName,
+        marker: {
+          time: toChartTime(s.date),
+          position: bull ? ('belowBar' as const) : ('aboveBar' as const),
+          color: bull ? BULL : BEAR,
+          shape: bull ? ('arrowUp' as const) : ('arrowDown' as const),
+          text: s.signalName,
+        },
       }
     })
 
     // Other methods' markers — coloured circles so each method reads as its
     // own layer (bullish below the bar, bearish above), told apart by colour.
-    const overlayMarkers: Marker[] = (overlays ?? []).flatMap((o) =>
+    const overlayMarkers: SortedMarker[] = (overlays ?? []).flatMap((o) =>
       o.signals.map((s) => {
         const bull = s.type === 'Bullish'
         return {
-          time: toChartTime(s.date),
           sortKey: s.date,
-          position: bull ? ('belowBar' as const) : ('aboveBar' as const),
-          color: o.color,
-          shape: 'circle' as const,
-          text: s.label,
+          marker: {
+            time: toChartTime(s.date),
+            position: bull ? ('belowBar' as const) : ('aboveBar' as const),
+            color: o.color,
+            shape: 'circle' as const,
+            text: s.label,
+          },
         }
       }),
     )
@@ -228,7 +234,7 @@ export function StockChart({
     // API date string, which is chronological as text in both bar formats.
     const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers]
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-      .map(({ sortKey: _sortKey, ...marker }) => marker)
+      .map((m) => m.marker)
     createSeriesMarkers(candleSeries, markers)
 
     // Choose the initial view for this freshly built chart. Setting the range
