@@ -92,7 +92,7 @@ export interface Candle {
   /**
    * "YYYY-MM-DD" for a daily/weekly bar (a whole session), or a full ISO
    * timestamp with the exchange's offset — "2026-09-04T13:00:00+02:00" — for an
-   * intraday one, where two bars can share a date. `toChartTime` in StockChart
+   * intraday one, where two bars can share a date. `toChartTime` in lib/chartTime
    * converts either form for Lightweight Charts.
    */
   time: string

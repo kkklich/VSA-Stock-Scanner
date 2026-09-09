@@ -25,4 +25,15 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Fast Refresh is a dev-server feature for the app bundle; test modules are
+    // never hot-swapped, so a test helper that exports both a provider wrapper
+    // and plain utilities is fine. (It is also the only sane shape for one:
+    // src/test/utils.tsx deliberately re-exports Testing Library so every test
+    // imports from one place.)
+    files: ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )

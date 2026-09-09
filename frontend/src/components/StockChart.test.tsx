@@ -49,7 +49,8 @@ vi.mock('lightweight-charts', () => ({
   ColorType: lib.ColorType,
 }))
 
-import { StockChart, toChartTime } from './StockChart'
+import { StockChart } from './StockChart'
+import { toChartTime } from '../lib/chartTime'
 
 const CANDLES: Candle[] = [
   { time: '2026-01-01', open: 10, high: 12, low: 9, close: 11, volume: 1000 },

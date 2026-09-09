@@ -373,7 +373,7 @@ details.** Summary (2026-07-03):
   the ranking. Backend: `app/analysis/timeframe.py` +
   `YahooFinanceClient.get_intraday_history` + the `interval` parameter on
   `GET /{ticker}/signals`; frontend: `INTERVAL_OPTIONS`/`INTERVAL_RANGES` in
-  `ChartsPage` and `toChartTime` in `StockChart`.
+  `ChartsPage` and `toChartTime` in `src/lib/chartTime.ts`.
 - **Tests:** backend `pytest` — **642 passing** (measured 2026-09-09; 4 of them
   are the 2026-09-09 weekly-on-the-stock-page fields, `TestGetSignals` in
   `tests/test_api.py`: present with enough history, `null` below the
