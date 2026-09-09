@@ -9,8 +9,8 @@ from decimal import Decimal
 import pytest
 
 from app.analysis.vsa import (
-    DEFAULT_SIGNAL_PARAMS,
     _WARMUP_BARS,
+    DEFAULT_SIGNAL_PARAMS,
     SignalName,
     SignalParams,
     SignalType,
