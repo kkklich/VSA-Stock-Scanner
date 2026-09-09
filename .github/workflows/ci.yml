@@ -1,8 +1,10 @@
 # StockPilot — continuous integration.
 #
-# Runs on every push and pull request: lints and tests the Python backend, then
-# type-checks and builds the React frontend. Nothing is deployed here — that is
-# deploy.yml, which waits for this workflow to pass.
+# Runs on every push and pull request, in this order: lint + test the Python
+# backend and lint + type-check + build the React frontend (in parallel), and
+# only if BOTH are green, test-build the two Docker images. Nothing is deployed
+# here — that is deploy.yml, which is triggered by this workflow finishing
+# successfully, so nothing reaches the server until these checks pass.
 
 name: CI
 
@@ -35,11 +37,11 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt ruff
 
       - name: Lint (Ruff)
-        # Advisory, not blocking: the repo currently has 14 pre-existing findings
-        # (line length in tests, import order in alembic revisions, UP042/B904).
-        # Findings show up in the job log without turning the whole run red.
-        # Flip this to blocking once they are cleaned up.
-        continue-on-error: true
+        # Blocking. The backlog this step used to tolerate (over-long lines in
+        # the tests, unsorted imports in the alembic revisions, UP042 on the VSA
+        # enums, B904 on the health probe) was cleared in 2026-09-06, so a new
+        # finding now means a new finding — and letting those pile up silently in
+        # a green log is how the backlog happened in the first place.
         run: ruff check .
 
       - name: Tests (pytest)
@@ -75,6 +77,10 @@ jobs:
   docker:
     name: Docker images build
     runs-on: ubuntu-latest
+    # Last, not in parallel: there is no point spending minutes building images
+    # out of code that failed its tests or its type check. If either job above
+    # is red this one is skipped, and the whole workflow is red either way.
+    needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
 

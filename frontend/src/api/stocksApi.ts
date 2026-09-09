@@ -8,6 +8,10 @@
 import { apiFetch, apiFetchWithHeaders } from './client'
 import type { Candle, SignalVerdict, VsaSignal } from '../types'
 
+// Re-exported so a page can take the whole payload's vocabulary from this one
+// module (ChartsPage imports SignalVerdict alongside ChartInterval).
+export type { SignalVerdict }
+
 // ── GET /api/stocks (tracked GPW companies) ───────────────────────────────────
 
 export interface ApiCompany {
@@ -561,6 +565,16 @@ export interface ApiStockSignals {
    * requested `fromDate` — the chart says so rather than pretending.
    */
   historyStart: string | null
+  /**
+   * Multi-timeframe (weekly) confirmation of the DAILY read — the same three
+   * fields the ranking rows carry, from the same engine and window, so the
+   * stock page and the dashboard's "1W" chip always agree. Like the rating,
+   * these do NOT follow the chart's `interval`. All three are null when the
+   * stock has under ~30 weeks of stored history (and on older backends).
+   */
+  weeklyRating: number | null
+  weeklySignal: SignalVerdict | null
+  weeklyAgreement: WeeklyAgreement | null
 }
 
 /**

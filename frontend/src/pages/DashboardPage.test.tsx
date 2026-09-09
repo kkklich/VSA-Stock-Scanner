@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen } from '../test/utils'
 import type { ApiRankingItem } from '../api/stocksApi'
 import type { UseInfiniteRankingResult } from '../hooks/useRanking'
+import { FAVORITES_KEY } from '../lib/favorites'
 
 const { useInfiniteRankingMock } = vi.hoisted(() => ({
   useInfiniteRankingMock: vi.fn(),
@@ -98,6 +99,8 @@ function result(over: Partial<UseInfiniteRankingResult> = {}): UseInfiniteRankin
 }
 
 beforeEach(() => {
+  // The page reads favorites and column choices from localStorage at mount.
+  localStorage.clear()
   useInfiniteRankingMock.mockReturnValue(result())
 })
 
@@ -188,12 +191,77 @@ describe('DashboardPage ranking table', () => {
       sortDir: 'desc',
     })
 
-    await user.click(screen.getByRole('button', { name: 'Sort by Symbol' }))
+    await user.click(screen.getByRole('button', { name: 'Sort by Company' }))
 
     // The last render requested a ticker-sorted page (ascending for a label col).
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
       sortBy: 'ticker',
       sortDir: 'asc',
+    })
+  })
+
+  // Below `lg` the table is swapped for a card list with no column headers,
+  // so the toolbar's Sort menu is the only way to re-order there.
+  it('re-sorts from the mobile Sort menu', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<DashboardPage />)
+
+    // The trigger names the column currently sorted on.
+    await user.click(screen.getByRole('button', { name: 'Combined' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'Price' }))
+
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      sortBy: 'lastPrice',
+      sortDir: 'desc',
+    })
+
+    // Flipping the direction re-requests the same column ascending.
+    await user.click(screen.getByRole('button', { name: 'Price' }))
+    await user.click(screen.getByRole('button', { name: /Ascending/ }))
+
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      sortBy: 'lastPrice',
+      sortDir: 'asc',
+    })
+  })
+
+  // The stars live in localStorage, so "favorites only" cannot be a client-side
+  // filter — the backend gets the starred tickers as an allow-list.
+  describe('favorites filter', () => {
+    it('sends the starred tickers when the toggle is on', async () => {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify({ PKN: true, KGH: false }))
+      const user = userEvent.setup()
+      renderWithProviders(<DashboardPage />)
+
+      // Off by default: the whole ranking, no allow-list.
+      expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0].tickers).toBeUndefined()
+
+      await user.click(screen.getByRole('button', { name: /Favorites/i }))
+      expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        tickers: ['PKN'],
+      })
+
+      // Toggling back off drops the allow-list again.
+      await user.click(screen.getByRole('button', { name: /Favorites/i }))
+      expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0].tickers).toBeUndefined()
+    })
+
+    it('explains an empty favorites list instead of blaming the filters', async () => {
+      useInfiniteRankingMock.mockReturnValue(result({ items: [], total: 0 }))
+      const user = userEvent.setup()
+      renderWithProviders(<DashboardPage />)
+
+      await user.click(screen.getByRole('button', { name: /Favorites/i }))
+      expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        tickers: [],
+      })
+      expect(
+        screen.getByText(/You have not starred any company yet/i),
+      ).toBeInTheDocument()
+
+      // And offers a way back to the full list.
+      await user.click(screen.getByRole('button', { name: /Show all companies/i }))
+      expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0].tickers).toBeUndefined()
     })
   })
 })

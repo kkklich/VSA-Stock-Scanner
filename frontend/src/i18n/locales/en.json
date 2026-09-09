@@ -8,6 +8,10 @@
     "dash": "—",
     "moreInfo": "More information",
     "sortBy": "Sort by {{label}}",
+    "sort": "Sort",
+    "sortHeading": "Sort by",
+    "sortAsc": "Ascending",
+    "sortDesc": "Descending",
     "openTickerDetails": "Open {{ticker}} details",
     "prevPage": "Previous page",
     "nextPage": "Next page",
@@ -40,7 +44,8 @@
     "help": "Help",
     "settings": "Settings",
     "closeMenu": "Close menu",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "system": "System"
   },
   "topbar": {
     "lastSync": "Last sync:",
@@ -59,7 +64,9 @@
     "filters": "Filters",
     "settings": "Settings",
     "help": "How to use StockPilot",
-    "app": "StockPilot"
+    "app": "StockPilot",
+    "legal": "Legal information",
+    "system": "System status"
   },
   "dashboard": {
     "heading": "Best stocks today",
@@ -89,7 +96,64 @@
       "change": "Change",
       "changeSub": "% & sparkline"
     },
-    "combinedInfo": "Average of the scores from the methods you've selected (0–100). Ranks companies highest across all the chosen methods together."
+    "combinedInfo": "Average of the scores from the methods you've selected (0–100). Ranks companies highest across all the chosen methods together.",
+    "favorites": "Favorites",
+    "favoritesTooltip": "Show only the companies you starred",
+    "showAll": "Show all companies",
+    "emptyNoFavorites": "You have not starred any company yet. Click the star next to a company to add it here."
+  },
+  "columns": {
+    "button": "Columns",
+    "tooltip": "Choose which columns to show",
+    "heading": "Show columns",
+    "resetTooltip": "Restore the default columns",
+    "locked": "always on",
+    "new": "new",
+    "label": {
+      "rank": "#",
+      "company": "Company",
+      "name": "Name",
+      "sector": "Sector",
+      "lastPrice": "Price",
+      "priceChangePct": "Change",
+      "dist52wHigh": "From 52w high",
+      "dist52wLow": "From 52w low",
+      "rating": "Rating (0–100)",
+      "ratingChange": "Rating Δ",
+      "signal": "Signal",
+      "daysSinceSignal": "Days ago",
+      "volume": "Volume",
+      "aiConfidence": "AI",
+      "trend": "Trend"
+    },
+    "menu": {
+      "lastPrice": "Last price",
+      "priceChangePct": "Price change",
+      "rating": "VSA rating",
+      "ratingChange": "Rating change",
+      "daysSinceSignal": "Signal age",
+      "volume": "Median volume",
+      "aiConfidence": "AI confidence",
+      "trend": "Trend (sparkline)"
+    },
+    "info": {
+      "priceChangePct": "The latest session’s price change, percent.",
+      "dist52wHigh": "How far below the 52-week high the last close sits. 0% means it closed at the high; a “NEW” chip marks a session that set a fresh 52-week high.",
+      "dist52wLow": "How far above the 52-week low the last close sits. A “NEW” chip marks a session that set a fresh 52-week low.",
+      "rating": "VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution).",
+      "ratingChange": "Change in the VSA rating versus the previous session — the day-over-day mover.",
+      "signal": "Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell. No recent pattern → Hold.",
+      "daysSinceSignal": "Sessions since the last VSA pattern fired. Fresh signals matter most in VSA — old ones fade.",
+      "volume": "20-session median daily volume, in shares — a liquidity gauge.",
+      "aiConfidence": "Confidence of the built-in AI-insight engine in its verdict, 0–100.",
+      "trend": "Recent price path over the analysis window."
+    },
+    "mobile": {
+      "rating": "Rating"
+    },
+    "reorderHint": "Tick the columns to show; use the arrows to change their order in the table.",
+    "moveUp": "Move the {{column}} column left",
+    "moveDown": "Move the {{column}} column right"
   },
   "weekly": {
     "label": "1W",
@@ -103,6 +167,8 @@
   "chart": {
     "loading": "Loading chart data…",
     "failedToLoad": "{{ticker}} — failed to load",
+    "noIntradayTitle": "No {{interval}} data for {{ticker}}",
+    "noIntradayBody": "Yahoo Finance does not publish intraday candles for every GPW listing. Pick 1D or 1W above — the daily and weekly charts, and everything else on this page, are unaffected.",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessions",
     "bars_one": "{{count}} bar",
@@ -173,7 +239,16 @@
       "title": "VSA Rating",
       "info": "0–100 score built from all detected VSA signals with time decay: recent signals count more, old ones fade out (half impact after ~30 days). Above 70 = strong accumulation (green), around 50 = neutral, below 30 = distribution (red).",
       "outOf": "/ 100",
-      "ratingChange": "Rating change"
+      "ratingChange": "Rating change",
+      "daily": "Daily (1D)",
+      "weekly": "Weekly (1W)",
+      "weeklyInfo": "The same VSA engine run on weekly candles — the stored daily bars resampled into weeks, over the last 52 weeks. VSA traders trust a daily signal far more when the higher timeframe tells the same story. Independent of the chart's bar size: this is always the weekly read of the stock.",
+      "weeklyUnavailable": "Not enough history — a weekly read needs about 30 weeks of stored daily bars.",
+      "agreement": {
+        "confirms": "The weekly chart confirms the daily signal — both lean the same way.",
+        "conflicts": "The weekly chart contradicts the daily signal — treat the daily call with caution.",
+        "neutral": "The weekly chart is neutral — it neither backs nor contradicts the daily signal."
+      }
     },
     "methods": {
       "legend": "Show on chart:",
@@ -225,5 +300,234 @@
     "updated": "Updated {{time}}",
     "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after the GPW close (18:00).",
     "titleFailed": "Refresh failed: {{error}}"
+  },
+  "legal": {
+    "pageTitle": "Legal information",
+    "intro": "StockPilot is a free, automated technical-analysis tool for companies listed on the Warsaw Stock Exchange (GPW). What follows describes what the ratings published here are — and are not — who is responsible for the site, and what data it processes.",
+    "updated": "Last updated: 8 September 2026",
+    "inlineNote": "Automated technical analysis of historical data — this is not investment advice.",
+    "inlineLink": "Legal information",
+    "footerNote": "This site is informational and educational. The ratings shown are produced by automated technical analysis of historical data and are neither investment advice nor a personal recommendation. Investing carries the risk of losing your capital.",
+    "footerLink": "Legal information, terms of service and privacy policy",
+    "contents": "On this page",
+    "publisher": {
+      "title": "Site publisher",
+      "nameLabel": "Publisher",
+      "name": "Krzysztof Klich",
+      "emailLabel": "Contact",
+      "email": "kklich97@gmail.com",
+      "addressLabel": "Address",
+      "address": "",
+      "siteLabel": "Site",
+      "site": "stocksignal.pl"
+    },
+    "disclaimer": {
+      "title": "Legal disclaimer",
+      "what": {
+        "heading": "What this site is",
+        "body": "StockPilot analyses the historical price and volume data of GPW-listed companies using Volume Spread Analysis (VSA) and several other mechanical technical-analysis methods. The output is a numeric rating on a 0–100 scale plus a description of the pattern detected on the chart. The site is free to use."
+      },
+      "method": {
+        "heading": "Methodology",
+        "body": "Every rating is produced by the algorithms described in the Help section, from the open, close, high, low and volume of recent trading sessions. The analysis does not take into account company filings or periodic reports, inside information, or any source other than the market data named below. The historical signal effectiveness shown on the site comes from tests on past data and is no guarantee of future results."
+      },
+      "meaning": {
+        "heading": "What the ratings mean",
+        "body": "A high rating means only that the algorithm recognised a pattern historically associated with buyers being in control — it is not a recommendation to buy the instrument. A low rating means a pattern associated with sellers being in control and is not a recommendation to sell. The analysis horizon is a few to a few dozen trading sessions."
+      },
+      "nature": {
+        "heading": "The nature of the information published",
+        "body": "The content published here is neither investment advice nor a personal recommendation within the meaning of the Polish Act of 29 July 2005 on Trading in Financial Instruments. It is addressed to an undefined audience and takes no account of the individual situation, knowledge, experience or investment objectives of any reader. It is also not an offer or an inducement to buy or sell any financial instrument."
+      },
+      "risk": {
+        "heading": "Risk",
+        "body": "Investing in financial instruments carries the risk of losing part or all of the money invested. Share prices can move sharply. Investment decisions are yours alone, to be made after your own analysis and, where needed, after consulting a licensed investment adviser. The publisher accepts no liability for the consequences of decisions taken on the basis of this site."
+      },
+      "sources": {
+        "heading": "Data sources",
+        "body": "Quotes come from Yahoo Finance and, as a fallback, from stooq.pl; the company financials shown come from the same sources. This is end-of-day historical data — not real-time data — and it may contain errors, gaps or delays. The publisher is not the source of this data, does not verify its accuracy and does not guarantee its completeness."
+      },
+      "conflict": {
+        "heading": "Conflicts of interest",
+        "body": "The publisher may hold positions in the companies shown on the site. The site is not sponsored by any issuer or financial-market institution and carries no advertising, paid placements or affiliate links. The ordering and the ratings of companies follow from the algorithm alone."
+      },
+      "dating": {
+        "heading": "Dating of the ratings",
+        "body": "Every rating carries the date of the trading session it was computed for. Data refreshes automatically once a day after the GPW close. A rating computed earlier may no longer match the current state of the market."
+      }
+    },
+    "terms": {
+      "title": "Terms of service",
+      "scope": {
+        "heading": "1. General provisions",
+        "body": "These terms govern the use of the StockPilot website at stocksignal.pl. The service provider is the entity named under “Site publisher”. Using the site means accepting these terms."
+      },
+      "service": {
+        "heading": "2. The service",
+        "body": "The service consists of making the results of automated technical analysis of GPW-listed companies — the ranking, charts, signals and indicators — available electronically, free of charge. No registration or account is required. The agreement is concluded for a definite period and ends when you leave the site."
+      },
+      "requirements": {
+        "heading": "3. Technical requirements",
+        "body": "You need an internet-connected device and a current browser with JavaScript and local storage (localStorage) enabled. Disabling local storage prevents your settings from being remembered but does not block access to the content."
+      },
+      "rules": {
+        "heading": "4. Rules of use",
+        "body": "Supplying unlawful content is prohibited, as is any action that disrupts the site — in particular automated bulk downloading of content (scraping), placing excessive load on the server, and circumventing technical limits. The content of the site may be used for your own personal purposes only."
+      },
+      "availability": {
+        "heading": "5. Availability",
+        "body": "The site is provided “as is”. The service provider does not guarantee uninterrupted availability, nor the completeness and accuracy of the data shown, and reserves the right to take the service down for maintenance and to change or discontinue it at any time."
+      },
+      "liability": {
+        "heading": "6. Liability",
+        "body": "The site is informational and educational. The service provider accepts no liability for investment decisions taken on the basis of its content, or for their financial consequences. See the “Legal disclaimer” section for details."
+      },
+      "complaints": {
+        "heading": "7. Complaints",
+        "body": "Comments and complaints about the site can be sent to the email address given under “Site publisher”. Please describe the problem. A reply is sent to the sender's email address within 14 days."
+      },
+      "changes": {
+        "heading": "8. Changes to these terms",
+        "body": "The service provider may amend these terms; a new version takes effect when it is published on the site. The date of the last update is shown at the top of this page."
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "controller": {
+        "heading": "Data controller",
+        "body": "The controller of personal data processed in connection with your use of the site is the entity named under “Site publisher”. For data-protection matters, use the email address given above."
+      },
+      "scope": {
+        "heading": "What data is processed",
+        "body": "The site requires no registration, keeps no user accounts and contains no forms that collect data. The server logs automatically record: IP address, the date and time of the request, the resource requested, the browser and operating-system type, and the referring page. These records are a standard part of how any web server operates."
+      },
+      "purpose": {
+        "heading": "Purpose and legal basis",
+        "body": "Log data is processed to keep the site secure, diagnose faults and prevent abuse, on the basis of the controller's legitimate interest (Article 6(1)(f) GDPR). It is not used for profiling or for marketing."
+      },
+      "retention": {
+        "heading": "Retention",
+        "body": "Server logs are kept for as long as the purposes above require — typically no more than a few weeks — after which log rotation overwrites them automatically."
+      },
+      "recipients": {
+        "heading": "Recipients",
+        "body": "Data is not sold or passed to third parties for marketing. The hosting provider has access to the server infrastructure and acts as a processor. The site uses no analytics tools (such as Google Analytics), no advertising and no social-media plugins, so it passes no information about your visit to third parties."
+      },
+      "storage": {
+        "heading": "Browser local storage",
+        "body": "The site uses no cookies. It does use your browser's local storage (localStorage) to remember your settings: the chosen theme and language, your list of favourite companies, saved filter presets and the VSA engine settings. This data stays on your device only; it is never sent to the server or shared with anyone, and you can remove it by clearing the site's data in your browser. Because it serves only the functions you asked for yourself, storing it does not require consent."
+      },
+      "rights": {
+        "heading": "Your rights",
+        "body": "You have the right to access your data, to have it rectified, erased or its processing restricted, to object to processing, and to lodge a complaint with the President of the Personal Data Protection Office (UODO). Given how narrow the data collected is (technical logs only), exercising some of these rights may require details that let the relevant entries be found."
+      },
+      "external": {
+        "heading": "External links",
+        "body": "The site may link to external pages, for example to data sources or to material describing the analysis methods. The publisher is not responsible for the content or the privacy practices of those pages."
+      }
+    }
+  },
+  "system": {
+    "title": "System status",
+    "subtitle": "Did the nightly data refresh run, is the stored data current, and what has been failing? This page reads the app’s own record of what it did.",
+    "refreshNow": "Check again",
+    "lastChecked": "checked {{time}}",
+    "version": "Version / uptime",
+    "status": {
+      "ok": "Healthy",
+      "warn": "Needs a look",
+      "error": "Problem"
+    },
+    "ingest": {
+      "title": "Data refresh",
+      "status": {
+        "ok": "Ran",
+        "running": "Running",
+        "stale": "Did not run",
+        "failed": "Failed",
+        "never": "Never ran"
+      },
+      "summaryOk": "The last refresh finished {{hours}} h ago and fetched {{fetched}} companies.",
+      "summaryRunning": "A refresh is running right now.",
+      "summaryStale": "Nothing ran when the refresh came due on {{expected}} — the last successful one was {{last}}.",
+      "summaryFailed": "The last refresh failed: {{error}}",
+      "summaryNever": "No refresh has been recorded yet.",
+      "summaryNoScheduler": "No refresh has been recorded, and no nightly schedule is running (the app has no database configured).",
+      "lastRun": "Last run",
+      "duration": "Took",
+      "trigger": "Started by",
+      "nextRun": "Next run",
+      "noScheduler": "not scheduled",
+      "fetched": "Fetched",
+      "skipped": "Skipped",
+      "failed": "Failed",
+      "bars": "Bars written"
+    },
+    "data": {
+      "title": "Stored data",
+      "status": {
+        "ok": "Current",
+        "stale": "Behind",
+        "empty": "Empty",
+        "disabled": "No database",
+        "error": "Unreadable",
+        "updating": "Updating"
+      },
+      "summaryOk": "{{current}} of {{tracked}} companies are current as of {{date}}.",
+      "summaryStale": "The newest stored session is {{date}} ({{days}} days old) and {{current}} of {{tracked}} companies have it.",
+      "summaryEmpty": "No price bars are stored yet — run a refresh.",
+      "summaryDisabled": "No database is configured, so nothing is stored: every screen is computed live and no history is kept.",
+      "summaryError": "The database could not be read to check the stored data.",
+      "latestSession": "Newest session",
+      "coverage": "Companies current",
+      "historyFrom": "History from",
+      "bars": "Bars stored",
+      "snapshots": "Newest rating",
+      "behind": "Behind",
+      "summaryUpdating": "A refresh is in progress — {{current}} of {{tracked}} companies updated to {{date}} so far."
+    },
+    "errors": {
+      "title": "Errors",
+      "chipNone": "None",
+      "chipSome": "{{count}} in 24 h",
+      "none": "No errors recorded in the last {{hours}} h.",
+      "intro": "Errors in the last {{hours}} h: {{count}} (distinct problems: {{groups}}).",
+      "sourceDatabase": "Read from the database, so this survives restarts.",
+      "sourceMemory": "Read from memory — only what this process has seen since it started.",
+      "lastSeen": "last seen",
+      "showTrace": "Show details",
+      "hideTrace": "Hide details"
+    },
+    "log": {
+      "title": "Recent actions",
+      "healthTitle": "Action log",
+      "kind": {
+        "all": "All",
+        "request": "API calls",
+        "job": "Jobs",
+        "error": "Errors"
+      },
+      "time": "When",
+      "action": "Action",
+      "outcome": "Outcome",
+      "duration": "Took",
+      "total": "{{count}} recorded",
+      "empty": "Nothing recorded yet.",
+      "storage": "Stored in",
+      "storageDatabase": "File + database",
+      "storageMemory": "File + memory",
+      "recorded": "Recorded",
+      "dropped": "Dropped"
+    },
+    "access": {
+      "title": "Access",
+      "hint": "This page shows stack traces, file paths and visitor IP addresses. Set STOCKPILOT_ADMIN_TOKEN on the backend to require a token, then paste the same token here — it is remembered in this browser only.",
+      "openWarning": "The admin API has no token configured, so anyone who knows the URL can read this page. Set STOCKPILOT_ADMIN_TOKEN on the server.",
+      "unauthorized": "The admin API requires a token. Paste it below to read the system status.",
+      "tokenLabel": "Admin token",
+      "tokenPlaceholder": "Admin token",
+      "save": "Save",
+      "saved": "Saved"
+    }
   }
 }

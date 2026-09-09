@@ -51,16 +51,55 @@
       })()
     </script>
     <style>
-      /* Colours for the pre-React fallback below, which paints before the app
-         stylesheet has loaded. */
+      /* Colours + spinner for the pre-React boot screen below, which paints
+         before the app stylesheet has loaded. */
       html { background: #020617; }
       html:not(.dark) { background: #eef2f7; }
-      #boot-fallback { color: #e2e8f0; }
-      #boot-fallback p { color: #94a3b8; }
-      #boot-fallback .boot-dim { color: #64748b; }
-      html:not(.dark) #boot-fallback { color: #1e293b; }
-      html:not(.dark) #boot-fallback p { color: #475569; }
-      html:not(.dark) #boot-fallback .boot-dim { color: #64748b; }
+      #boot-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      #boot-fallback .boot-spinner {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 3px solid #1e293b;
+        border-top-color: #10b981;
+        animation: boot-spin 0.9s linear infinite;
+      }
+      html:not(.dark) #boot-fallback .boot-spinner {
+        border-color: #cbd5e1;
+        border-top-color: #059669;
+      }
+      /* Kept for crawlers and screen readers: the description is still in the
+         markup, it is simply not painted over the spinner. */
+      #boot-fallback .boot-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
+      #boot-fallback noscript {
+        max-width: 420px;
+        padding: 0 24px;
+        font-family: system-ui, sans-serif;
+        line-height: 1.6;
+        text-align: center;
+        color: #94a3b8;
+      }
+      html:not(.dark) #boot-fallback noscript { color: #475569; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-fallback .boot-spinner { animation-duration: 2.4s; }
+      }
     </style>
 
     <!-- Icons / PWA -->
@@ -121,17 +160,17 @@
       meaningful, crawlable description of the application.
     -->
     <div id="root">
-      <main id="boot-fallback" style="max-width: 680px; margin: 12vh auto; padding: 0 24px; font-family: system-ui, sans-serif;">
-        <h1 style="font-size: 1.9rem; margin-bottom: 0.5rem;">
-          StockPilot — VSA scanner for the GPW
-        </h1>
-        <p style="line-height: 1.6;">
-          StockPilot analyses stocks listed on the Warsaw Stock Exchange (GPW)
-          using Volume Spread Analysis (VSA). The app ranks stocks by their VSA
-          rating (0–100), draws interactive candlestick charts and detects
-          signals such as Spring, Upthrust, Test, SOS, SOW and No Demand.
-        </p>
-        <p class="boot-dim">Loading the app…</p>
+      <main id="boot-fallback">
+        <div class="boot-spinner" role="status" aria-label="Loading StockPilot"></div>
+        <div class="boot-sr">
+          <h1>StockPilot — VSA scanner for the GPW</h1>
+          <p>
+            StockPilot analyses stocks listed on the Warsaw Stock Exchange (GPW)
+            using Volume Spread Analysis (VSA). The app ranks stocks by their VSA
+            rating (0–100), draws interactive candlestick charts and detects
+            signals such as Spring, Upthrust, Test, SOS, SOW and No Demand.
+          </p>
+        </div>
         <noscript>
           This app requires JavaScript. Please enable JavaScript in your browser
           to use the StockPilot VSA scanner.

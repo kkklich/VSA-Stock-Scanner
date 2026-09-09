@@ -27,19 +27,21 @@ export function RefreshButton({ onRefreshed }: { onRefreshed: () => void }) {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Icon only — the tooltip (and the screen-reader label) carry the word.
+          The caption beside it already says when the data was last refreshed. */}
       <button
         onClick={refresh}
         disabled={refreshing}
         title={title}
+        aria-label={t('refresh.button')}
         className={
-          'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
+          'inline-flex items-center justify-center rounded-lg border p-2.5 text-sm transition-colors ' +
           (error && !refreshing
             ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
             : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70')
         }
       >
-        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-        <span className="hidden sm:inline">{t('refresh.button')}</span>
+        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
       </button>
       {caption && (
         <span

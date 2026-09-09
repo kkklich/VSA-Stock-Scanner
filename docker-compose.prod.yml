@@ -55,6 +55,23 @@ services:
       STOCKPILOT_INGEST_HOUR: ${STOCKPILOT_INGEST_HOUR:-18}
       STOCKPILOT_INGEST_MINUTE: ${STOCKPILOT_INGEST_MINUTE:-0}
       TZ: Europe/Warsaw
+      # Action log (audit trail). Rows also go to the action_logs table; this
+      # is the file half.
+      STOCKPILOT_ACTION_LOG_RETENTION_DAYS: ${STOCKPILOT_ACTION_LOG_RETENTION_DAYS:-30}
+      # Shared secret for /api/admin/* (the System page: health, errors, logs).
+      # Empty leaves those endpoints open — set it in .env.prod on a public
+      # deployment, because they expose tracebacks and visitor IP addresses.
+      STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:-}
+    volumes:
+      # The rotating JSON-lines action log, bind-mounted to a REAL FOLDER ON
+      # THE SERVER (./logs next to this file, i.e. ~/stockpilot/logs). A named
+      # volume would hide it inside /var/lib/docker and force `docker compose
+      # exec` to read it; this way `tail -f ~/stockpilot/logs/actions.jsonl`
+      # just works, and the file survives `down`, rebuilds and `docker prune`.
+      # The folder must be writable by the container's user (uid 10001) —
+      # deploy/deploy.sh prepares it. Size is capped by the app itself
+      # (10 MB x 6 files), so it cannot fill the disk.
+      - ./logs:/app/logs
     # No `ports:` — only the web container talks to it, over the compose network.
     logging:
       driver: json-file

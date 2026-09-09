@@ -47,6 +47,7 @@ from app.analysis.vsa import (
     detect_signals,
     verdict_from_signals,
 )
+from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import (
     GpwCompany,
@@ -54,7 +55,7 @@ from app.models import (
     VolumeSurgeItem,
     VolumeSurgeResponse,
 )
-from app.services.cache import TTLCache
+from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
 from app.services.exceptions import StooqAccessError
 from app.services.ranking_service import CONTEXT_HISTORY_DAYS
 from app.services.stooq_client import StooqClient
@@ -165,6 +166,11 @@ async def compute_volume_surge(
     from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
     analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+    # Separate gate for the DB reads: this scan fans out over the whole
+    # universe, and ~290 simultaneous queries against a 15-connection pool
+    # would time out rather than queue. See DB_SCAN_CONCURRENCY in
+    # app/db/base.py for how the number ties back to the pool size.
+    db_semaphore = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
 
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote] | None:
         """Return quotes from cache → repo → stooq, in that priority order."""
@@ -176,7 +182,8 @@ async def compute_volume_surge(
             return quotes
 
         if repo is not None:
-            quotes = await repo.get_quotes(ticker, from_date)
+            async with db_semaphore:
+                quotes = await repo.get_quotes(ticker, from_date)
             if quotes:
                 history_cache.set(cache_key, quotes, history_cache_ttl)
                 return quotes
@@ -185,7 +192,19 @@ async def compute_volume_surge(
             try:
                 quotes = await stooq.get_daily_history(ticker, from_date=from_date)
             except StooqAccessError as exc:
-                logger.warning("Volume surge: skipping %s: stooq error: %s", ticker, exc)
+                logger.warning(
+                    "Volume surge: skipping %s: data provider error: %s", ticker, exc
+                )
+                # A provider that answers "I have nothing for this ticker"
+                # is remembered for a while, so a listing renamed or delisted
+                # on the GPW is not re-requested — and re-logged as an error —
+                # by every scan for the rest of the day. The window is short on
+                # purpose; see NEGATIVE_CACHE_SECONDS.
+                history_cache.set(
+                    cache_key,
+                    [],
+                    min(history_cache_ttl, NEGATIVE_CACHE_SECONDS),
+                )
                 return None
             except Exception as exc:  # noqa: BLE001
                 logger.error(

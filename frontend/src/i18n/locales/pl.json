@@ -8,6 +8,10 @@
     "dash": "—",
     "moreInfo": "Więcej informacji",
     "sortBy": "Sortuj według: {{label}}",
+    "sort": "Sortuj",
+    "sortHeading": "Sortuj według",
+    "sortAsc": "Rosnąco",
+    "sortDesc": "Malejąco",
     "openTickerDetails": "Otwórz szczegóły {{ticker}}",
     "prevPage": "Poprzednia strona",
     "nextPage": "Następna strona",
@@ -40,7 +44,8 @@
     "help": "Pomoc",
     "settings": "Ustawienia",
     "closeMenu": "Zamknij menu",
-    "openMenu": "Otwórz menu"
+    "openMenu": "Otwórz menu",
+    "system": "System"
   },
   "topbar": {
     "lastSync": "Ostatnia synchronizacja:",
@@ -59,7 +64,9 @@
     "filters": "Filtry",
     "settings": "Ustawienia",
     "help": "Jak korzystać ze StockPilot",
-    "app": "StockPilot"
+    "app": "StockPilot",
+    "legal": "Informacje prawne",
+    "system": "Stan systemu"
   },
   "dashboard": {
     "heading": "Najlepsze spółki dziś",
@@ -89,7 +96,64 @@
       "change": "Zmiana",
       "changeSub": "% i wykres"
     },
-    "combinedInfo": "Średnia ocen z wybranych przez Ciebie metod (0–100). Najwyżej ustawia spółki najlepsze łącznie we wszystkich wybranych metodach."
+    "combinedInfo": "Średnia ocen z wybranych przez Ciebie metod (0–100). Najwyżej ustawia spółki najlepsze łącznie we wszystkich wybranych metodach.",
+    "favorites": "Ulubione",
+    "favoritesTooltip": "Pokaż tylko spółki oznaczone gwiazdką",
+    "showAll": "Pokaż wszystkie spółki",
+    "emptyNoFavorites": "Nie masz jeszcze ulubionych spółek. Kliknij gwiazdkę obok spółki, żeby dodać ją tutaj."
+  },
+  "columns": {
+    "button": "Kolumny",
+    "tooltip": "Wybierz, które kolumny pokazać",
+    "heading": "Pokazuj kolumny",
+    "resetTooltip": "Przywróć domyślne kolumny",
+    "locked": "zawsze",
+    "new": "nowy",
+    "label": {
+      "rank": "#",
+      "company": "Spółka",
+      "name": "Nazwa",
+      "sector": "Sektor",
+      "lastPrice": "Cena",
+      "priceChangePct": "Zmiana",
+      "dist52wHigh": "Od szczytu 52 tyg.",
+      "dist52wLow": "Od dołka 52 tyg.",
+      "rating": "Rating (0–100)",
+      "ratingChange": "Rating Δ",
+      "signal": "Sygnał",
+      "daysSinceSignal": "Dni temu",
+      "volume": "Wolumen",
+      "aiConfidence": "AI",
+      "trend": "Trend"
+    },
+    "menu": {
+      "lastPrice": "Ostatnia cena",
+      "priceChangePct": "Zmiana ceny",
+      "rating": "Rating VSA",
+      "ratingChange": "Zmiana ratingu",
+      "daysSinceSignal": "Wiek sygnału",
+      "volume": "Mediana wolumenu",
+      "aiConfidence": "Pewność AI",
+      "trend": "Trend (wykres)"
+    },
+    "info": {
+      "priceChangePct": "Zmiana ceny na ostatniej sesji, w procentach.",
+      "dist52wHigh": "Jak daleko poniżej szczytu z 52 tygodni znajduje się ostatnie zamknięcie. 0% oznacza zamknięcie na szczycie; plakietka „NOWY” oznacza sesję, która ustanowiła nowy szczyt 52-tygodniowy.",
+      "dist52wLow": "Jak daleko powyżej dołka z 52 tygodni znajduje się ostatnie zamknięcie. Plakietka „NOWY” oznacza sesję, która ustanowiła nowy dołek 52-tygodniowy.",
+      "rating": "Ocena VSA z wygaszaniem w czasie: świeże sygnały byka podnoszą ją powyżej 50, sygnały niedźwiedzia obniżają. Zielona powyżej 70 (silna akumulacja), czerwona poniżej 30 (dystrybucja).",
+      "ratingChange": "Zmiana ratingu VSA względem poprzedniej sesji — kto najmocniej ruszył się dzień do dnia.",
+      "signal": "Werdykt z ostatniej formacji VSA: Spring / SOS → Mocne kupno, Udany test → Kupno, Brak popytu → Sprzedaż, Upthrust / SOW → Mocna sprzedaż. Brak świeżej formacji → Trzymaj.",
+      "daysSinceSignal": "Ile sesji minęło od ostatniej formacji VSA. W VSA najważniejsze są świeże sygnały — stare tracą znaczenie.",
+      "volume": "Mediana dziennego wolumenu z 20 sesji, w sztukach — miara płynności.",
+      "aiConfidence": "Pewność wbudowanego silnika AI co do jego werdyktu, 0–100.",
+      "trend": "Przebieg ceny w oknie analizy."
+    },
+    "mobile": {
+      "rating": "Rating"
+    },
+    "reorderHint": "Zaznacz, które kolumny pokazać; strzałkami zmień ich kolejność w tabeli.",
+    "moveUp": "Przesuń kolumnę {{column}} w lewo",
+    "moveDown": "Przesuń kolumnę {{column}} w prawo"
   },
   "weekly": {
     "label": "1T",
@@ -103,6 +167,8 @@
   "chart": {
     "loading": "Ładowanie danych wykresu…",
     "failedToLoad": "{{ticker}} — nie udało się załadować",
+    "noIntradayTitle": "Brak danych {{interval}} dla {{ticker}}",
+    "noIntradayBody": "Yahoo Finance nie publikuje świec śróddziennych dla każdej spółki z GPW. Wybierz powyżej 1D lub 1W — wykresy dzienny i tygodniowy oraz wszystko inne na tej stronie działają bez zmian.",
     "sessions_one": "{{count}} sesja",
     "sessions_few": "{{count}} sesje",
     "sessions_many": "{{count}} sesji",
@@ -177,7 +243,16 @@
       "title": "Rating VSA",
       "info": "Ocena 0–100 zbudowana ze wszystkich wykrytych sygnałów VSA z zanikiem w czasie: najnowsze sygnały liczą się bardziej, stare zanikają (połowa wpływu po ~30 dniach). Powyżej 70 = silna akumulacja (zielony), około 50 = neutralnie, poniżej 30 = dystrybucja (czerwony).",
       "outOf": "/ 100",
-      "ratingChange": "Zmiana ratingu"
+      "ratingChange": "Zmiana ratingu",
+      "daily": "Dzienny (1D)",
+      "weekly": "Tygodniowy (1T)",
+      "weeklyInfo": "Ten sam silnik VSA uruchomiony na świecach tygodniowych — zapisane świece dzienne złożone w tygodnie, z ostatnich 52 tygodni. Traderzy VSA znacznie bardziej ufają sygnałowi dziennemu, gdy wyższy interwał mówi to samo. Niezależne od wybranego interwału wykresu: to zawsze tygodniowy odczyt spółki.",
+      "weeklyUnavailable": "Za mało historii — odczyt tygodniowy wymaga około 30 tygodni zapisanych świec dziennych.",
+      "agreement": {
+        "confirms": "Wykres tygodniowy potwierdza sygnał dzienny — oba wskazują w tę samą stronę.",
+        "conflicts": "Wykres tygodniowy przeczy sygnałowi dziennemu — podchodź do sygnału dziennego ostrożnie.",
+        "neutral": "Wykres tygodniowy jest neutralny — ani nie wspiera, ani nie podważa sygnału dziennego."
+      }
     },
     "methods": {
       "legend": "Pokaż na wykresie:",
@@ -233,5 +308,234 @@
     "updated": "Zaktualizowano {{time}}",
     "title": "Pobierz świeże dane z Yahoo Finance i przelicz wszystkie ratingi VSA. Dane aktualizują się automatycznie raz dziennie po zamknięciu GPW (18:00).",
     "titleFailed": "Odświeżanie nie powiodło się: {{error}}"
+  },
+  "legal": {
+    "pageTitle": "Informacje prawne",
+    "intro": "StockPilot jest bezpłatnym, automatycznym narzędziem analizy technicznej spółek notowanych na Giełdzie Papierów Wartościowych w Warszawie. Poniżej opisujemy, czym są — i czym nie są — publikowane tu oceny, kto odpowiada za serwis oraz jakie dane są przetwarzane.",
+    "updated": "Ostatnia aktualizacja: 8 września 2026",
+    "inlineNote": "Automatyczna analiza techniczna danych historycznych — nie jest to porada inwestycyjna.",
+    "inlineLink": "Informacje prawne",
+    "footerNote": "Serwis ma charakter informacyjny i edukacyjny. Prezentowane oceny są wynikiem automatycznej analizy technicznej danych historycznych i nie stanowią porady inwestycyjnej ani rekomendacji osobistej. Inwestowanie wiąże się z ryzykiem utraty kapitału.",
+    "footerLink": "Informacje prawne, regulamin i polityka prywatności",
+    "contents": "Na tej stronie",
+    "publisher": {
+      "title": "Wydawca serwisu",
+      "nameLabel": "Wydawca",
+      "name": "Krzysztof Klich",
+      "emailLabel": "Kontakt",
+      "email": "kklich97@gmail.com",
+      "addressLabel": "Adres",
+      "address": "",
+      "siteLabel": "Serwis",
+      "site": "stocksignal.pl"
+    },
+    "disclaimer": {
+      "title": "Zastrzeżenia prawne",
+      "what": {
+        "heading": "Czym jest ten serwis",
+        "body": "StockPilot analizuje historyczne dane cenowe i wolumenowe spółek notowanych na GPW metodą Volume Spread Analysis (VSA) oraz kilkoma innymi mechanicznymi metodami analizy technicznej. Wynikiem jest ocena liczbowa w skali 0–100 oraz opis układu wykrytego na wykresie. Korzystanie z serwisu jest bezpłatne."
+      },
+      "method": {
+        "heading": "Metodyka",
+        "body": "Wszystkie oceny wylicza algorytm opisany w dziale Pomoc, na podstawie kursów otwarcia, zamknięcia, maksimum, minimum oraz wolumenu z ostatnich sesji giełdowych. Analiza nie uwzględnia raportów bieżących i okresowych, informacji poufnych ani żadnych źródeł spoza wskazanych danych giełdowych. Prezentowana w serwisie skuteczność historyczna sygnałów pochodzi z testów na danych przeszłych i nie stanowi gwarancji wyników w przyszłości."
+      },
+      "meaning": {
+        "heading": "Co oznaczają oceny",
+        "body": "Wysoka ocena oznacza wyłącznie, że algorytm rozpoznał w danych układ historycznie kojarzony z przewagą kupujących — nie jest to zalecenie nabycia instrumentu. Niska ocena oznacza układ kojarzony z przewagą sprzedających i nie jest zaleceniem zbycia. Horyzont czasowy analizy to od kilku do kilkunastu sesji giełdowych."
+      },
+      "nature": {
+        "heading": "Charakter publikowanych informacji",
+        "body": "Treści publikowane w serwisie nie stanowią doradztwa inwestycyjnego ani rekomendacji osobistej w rozumieniu ustawy z dnia 29 lipca 2005 r. o obrocie instrumentami finansowymi. Kierowane są do nieoznaczonego kręgu odbiorców i nie uwzględniają indywidualnej sytuacji, wiedzy, doświadczenia ani celów inwestycyjnych żadnego z nich. Nie stanowią również oferty ani zachęty do nabycia lub zbycia jakiegokolwiek instrumentu finansowego."
+      },
+      "risk": {
+        "heading": "Ryzyko",
+        "body": "Inwestowanie w instrumenty finansowe wiąże się z ryzykiem utraty części lub całości zainwestowanych środków. Kursy akcji mogą podlegać gwałtownym zmianom. Decyzje inwestycyjne podejmujesz wyłącznie na własną odpowiedzialność, po samodzielnej analizie i — w razie potrzeby — po konsultacji z licencjonowanym doradcą inwestycyjnym. Wydawca nie ponosi odpowiedzialności za skutki decyzji podjętych na podstawie treści serwisu."
+      },
+      "sources": {
+        "heading": "Źródła danych",
+        "body": "Notowania pochodzą z serwisu Yahoo Finance oraz, pomocniczo, ze stooq.pl; stamtąd pochodzą również prezentowane dane finansowe spółek. Są to dane historyczne po zamknięciu sesji — nie są danymi czasu rzeczywistego — i mogą zawierać błędy, luki lub opóźnienia. Wydawca nie jest źródłem tych danych, nie weryfikuje ich poprawności i nie gwarantuje ich kompletności."
+      },
+      "conflict": {
+        "heading": "Konflikt interesów",
+        "body": "Wydawca może posiadać pozycje w spółkach prezentowanych w serwisie. Serwis nie jest sponsorowany przez emitentów ani przez żaden podmiot rynku finansowego, nie zawiera treści reklamowych, płatnych publikacji ani linków afiliacyjnych. Kolejność i oceny spółek wynikają wyłącznie z działania algorytmu."
+      },
+      "dating": {
+        "heading": "Datowanie ocen",
+        "body": "Każda ocena opatrzona jest datą sesji giełdowej, na którą została wyliczona. Dane odświeżane są automatycznie raz dziennie po zamknięciu sesji na GPW. Ocena wyliczona wcześniej może nie odpowiadać bieżącej sytuacji rynkowej."
+      }
+    },
+    "terms": {
+      "title": "Regulamin serwisu",
+      "scope": {
+        "heading": "§1. Postanowienia ogólne",
+        "body": "Regulamin określa zasady korzystania z serwisu internetowego StockPilot, dostępnego pod adresem stocksignal.pl. Usługodawcą jest podmiot wskazany w sekcji „Wydawca serwisu”. Rozpoczęcie korzystania z serwisu oznacza akceptację niniejszego regulaminu."
+      },
+      "service": {
+        "heading": "§2. Rodzaj i zakres usługi",
+        "body": "Usługa polega na nieodpłatnym udostępnianiu drogą elektroniczną wyników automatycznej analizy technicznej spółek notowanych na GPW: rankingu, wykresów, sygnałów i wskaźników. Serwis nie wymaga rejestracji ani zakładania konta. Umowa o świadczenie usługi zawierana jest na czas oznaczony i rozwiązuje się z chwilą opuszczenia serwisu."
+      },
+      "requirements": {
+        "heading": "§3. Wymagania techniczne",
+        "body": "Do korzystania z serwisu potrzebne jest urządzenie z dostępem do internetu i aktualna przeglądarka z włączoną obsługą JavaScript oraz pamięci lokalnej (localStorage). Wyłączenie pamięci lokalnej uniemożliwia zapamiętanie ustawień, nie blokuje jednak dostępu do treści."
+      },
+      "rules": {
+        "heading": "§4. Zasady korzystania",
+        "body": "Zabronione jest dostarczanie treści o charakterze bezprawnym oraz podejmowanie działań zakłócających funkcjonowanie serwisu, w szczególności automatycznego, masowego pobierania treści (scraping), nadmiernego obciążania serwera i omijania ograniczeń technicznych. Treści serwisu można wykorzystywać wyłącznie na własny użytek."
+      },
+      "availability": {
+        "heading": "§5. Dostępność",
+        "body": "Serwis udostępniany jest w stanie „takim, jaki jest”. Usługodawca nie gwarantuje nieprzerwanej dostępności serwisu ani kompletności i poprawności prezentowanych danych; zastrzega sobie prawo do przerw technicznych oraz do zmiany lub zakończenia świadczenia usługi w dowolnym momencie."
+      },
+      "liability": {
+        "heading": "§6. Odpowiedzialność",
+        "body": "Serwis ma charakter informacyjny i edukacyjny. Usługodawca nie ponosi odpowiedzialności za decyzje inwestycyjne podjęte na podstawie treści serwisu ani za ich skutki majątkowe. Szczegóły w sekcji „Zastrzeżenia prawne”."
+      },
+      "complaints": {
+        "heading": "§7. Reklamacje",
+        "body": "Uwagi i reklamacje dotyczące działania serwisu można zgłaszać na adres e-mail wskazany w sekcji „Wydawca serwisu”. Zgłoszenie powinno zawierać opis problemu. Odpowiedź udzielana jest na adres e-mail zgłaszającego w terminie 14 dni."
+      },
+      "changes": {
+        "heading": "§8. Zmiany regulaminu",
+        "body": "Usługodawca może zmienić regulamin; nowa wersja obowiązuje od chwili opublikowania jej w serwisie. Data ostatniej aktualizacji wskazana jest na górze tej strony."
+      }
+    },
+    "privacy": {
+      "title": "Polityka prywatności",
+      "controller": {
+        "heading": "Administrator danych",
+        "body": "Administratorem danych osobowych przetwarzanych w związku z korzystaniem z serwisu jest podmiot wskazany w sekcji „Wydawca serwisu”. Kontakt w sprawach danych osobowych: adres e-mail podany powyżej."
+      },
+      "scope": {
+        "heading": "Jakie dane są przetwarzane",
+        "body": "Serwis nie wymaga rejestracji, nie prowadzi kont użytkowników i nie zawiera formularzy zbierających dane. Automatycznie, w logach serwera, zapisywane są: adres IP, data i godzina zapytania, adres żądanego zasobu, typ przeglądarki i systemu operacyjnego oraz adres strony odsyłającej. Zapisy te są standardowym elementem działania każdego serwera WWW."
+      },
+      "purpose": {
+        "heading": "Cel i podstawa prawna",
+        "body": "Dane z logów przetwarzane są w celu zapewnienia bezpieczeństwa serwisu, diagnozowania awarii i przeciwdziałania nadużyciom — na podstawie prawnie uzasadnionego interesu administratora (art. 6 ust. 1 lit. f RODO). Nie są wykorzystywane do profilowania ani do celów marketingowych."
+      },
+      "retention": {
+        "heading": "Okres przechowywania",
+        "body": "Logi serwera przechowywane są przez okres niezbędny do celów wskazanych powyżej — zwykle nie dłużej niż kilka tygodni — po czym są automatycznie nadpisywane przez mechanizm rotacji logów."
+      },
+      "recipients": {
+        "heading": "Odbiorcy danych",
+        "body": "Dane nie są sprzedawane ani przekazywane innym podmiotom w celach marketingowych. Dostęp do infrastruktury serwera ma dostawca hostingu, działający jako podmiot przetwarzający. Serwis nie korzysta z narzędzi analitycznych (np. Google Analytics), z reklam ani z wtyczek serwisów społecznościowych, dlatego nie przekazuje informacji o Twoich odwiedzinach podmiotom trzecim."
+      },
+      "storage": {
+        "heading": "Pamięć lokalna przeglądarki",
+        "body": "Serwis nie używa plików cookies. Korzysta natomiast z pamięci lokalnej przeglądarki (localStorage), aby zapamiętać Twoje ustawienia: wybrany motyw i język, listę obserwowanych spółek, zapisane zestawy filtrów oraz ustawienia silnika VSA. Dane te pozostają wyłącznie na Twoim urządzeniu, nie są wysyłane na serwer ani nikomu udostępniane; możesz je usunąć, czyszcząc dane witryny w przeglądarce. Ponieważ służą wyłącznie realizacji funkcji, o które sam prosisz, ich zapisanie nie wymaga zgody."
+      },
+      "rights": {
+        "heading": "Twoje prawa",
+        "body": "Przysługuje Ci prawo dostępu do swoich danych, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo sprzeciwu wobec przetwarzania oraz prawo wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych. Ze względu na wąski zakres zbieranych danych (wyłącznie logi techniczne) realizacja części tych praw może wymagać podania informacji pozwalających odnaleźć odpowiednie wpisy."
+      },
+      "external": {
+        "heading": "Odesłania zewnętrzne",
+        "body": "Serwis może zawierać odesłania do stron zewnętrznych, na przykład do źródeł danych lub materiałów opisujących metody analizy. Wydawca nie odpowiada za treść ani za politykę prywatności tych stron."
+      }
+    }
+  },
+  "system": {
+    "title": "Stan systemu",
+    "subtitle": "Czy nocne odświeżenie danych się wykonało, czy dane są aktualne i co się psuje? Ta strona czyta własny zapis działań aplikacji.",
+    "refreshNow": "Sprawdź ponownie",
+    "lastChecked": "sprawdzono {{time}}",
+    "version": "Wersja / czas działania",
+    "status": {
+      "ok": "W porządku",
+      "warn": "Do sprawdzenia",
+      "error": "Problem"
+    },
+    "ingest": {
+      "title": "Odświeżanie danych",
+      "status": {
+        "ok": "Wykonało się",
+        "running": "W trakcie",
+        "stale": "Nie wykonało się",
+        "failed": "Błąd",
+        "never": "Nigdy"
+      },
+      "summaryOk": "Ostatnie odświeżenie zakończyło się {{hours}} godz. temu i pobrało {{fetched}} spółek.",
+      "summaryRunning": "Odświeżanie właśnie trwa.",
+      "summaryStale": "Nic się nie wykonało, choć odświeżenie było zaplanowane na {{expected}} — ostatnie udane: {{last}}.",
+      "summaryFailed": "Ostatnie odświeżenie zakończyło się błędem: {{error}}",
+      "summaryNever": "Nie zarejestrowano jeszcze żadnego odświeżenia.",
+      "summaryNoScheduler": "Nie zarejestrowano żadnego odświeżenia i nie działa nocny harmonogram (aplikacja nie ma skonfigurowanej bazy danych).",
+      "lastRun": "Ostatnie uruchomienie",
+      "duration": "Czas trwania",
+      "trigger": "Uruchomione przez",
+      "nextRun": "Następne uruchomienie",
+      "noScheduler": "brak harmonogramu",
+      "fetched": "Pobrane",
+      "skipped": "Pominięte",
+      "failed": "Nieudane",
+      "bars": "Zapisane notowania"
+    },
+    "data": {
+      "title": "Zapisane dane",
+      "status": {
+        "ok": "Aktualne",
+        "stale": "Zaległe",
+        "empty": "Puste",
+        "disabled": "Brak bazy",
+        "error": "Błąd odczytu",
+        "updating": "Aktualizacja"
+      },
+      "summaryOk": "{{current}} z {{tracked}} spółek ma dane na dzień {{date}}.",
+      "summaryStale": "Najnowsza zapisana sesja to {{date}} (sprzed {{days}} dni), ma ją {{current}} z {{tracked}} spółek.",
+      "summaryEmpty": "Brak zapisanych notowań — uruchom odświeżanie.",
+      "summaryDisabled": "Nie skonfigurowano bazy danych, więc nic nie jest zapisywane: każdy ekran liczony jest na żywo, bez historii.",
+      "summaryError": "Nie udało się odczytać bazy danych, aby sprawdzić zapisane dane.",
+      "latestSession": "Najnowsza sesja",
+      "coverage": "Spółki aktualne",
+      "historyFrom": "Historia od",
+      "bars": "Zapisane notowania",
+      "snapshots": "Najnowszy rating",
+      "behind": "Zaległe",
+      "summaryUpdating": "Trwa odświeżanie — na razie {{current}} z {{tracked}} spółek ma dane na {{date}}."
+    },
+    "errors": {
+      "title": "Błędy",
+      "chipNone": "Brak",
+      "chipSome": "{{count}} w 24 godz.",
+      "none": "Brak błędów w ostatnich {{hours}} godz.",
+      "intro": "Błędy w ostatnich {{hours}} godz.: {{count}} (różnych przyczyn: {{groups}}).",
+      "sourceDatabase": "Odczytane z bazy danych, więc przeżywają restart.",
+      "sourceMemory": "Odczytane z pamięci — tylko to, co widział bieżący proces.",
+      "lastSeen": "ostatnio",
+      "showTrace": "Pokaż szczegóły",
+      "hideTrace": "Ukryj szczegóły"
+    },
+    "log": {
+      "title": "Ostatnie działania",
+      "healthTitle": "Dziennik działań",
+      "kind": {
+        "all": "Wszystko",
+        "request": "Wywołania API",
+        "job": "Zadania",
+        "error": "Błędy"
+      },
+      "time": "Kiedy",
+      "action": "Działanie",
+      "outcome": "Wynik",
+      "duration": "Czas",
+      "total": "zapisanych: {{count}}",
+      "empty": "Nic jeszcze nie zapisano.",
+      "storage": "Zapis w",
+      "storageDatabase": "Plik + baza danych",
+      "storageMemory": "Plik + pamięć",
+      "recorded": "Zapisane",
+      "dropped": "Porzucone"
+    },
+    "access": {
+      "title": "Dostęp",
+      "hint": "Ta strona pokazuje ślady błędów, ścieżki plików i adresy IP odwiedzających. Ustaw STOCKPILOT_ADMIN_TOKEN po stronie serwera, aby wymagać tokenu, i wklej ten sam token tutaj — zostanie zapamiętany tylko w tej przeglądarce.",
+      "openWarning": "API administracyjne nie ma ustawionego tokenu, więc każdy, kto zna adres, może odczytać tę stronę. Ustaw STOCKPILOT_ADMIN_TOKEN na serwerze.",
+      "unauthorized": "API administracyjne wymaga tokenu. Wklej go poniżej, aby zobaczyć stan systemu.",
+      "tokenLabel": "Token administratora",
+      "tokenPlaceholder": "Token administratora",
+      "save": "Zapisz",
+      "saved": "Zapisano"
+    }
   }
 }

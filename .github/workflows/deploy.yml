@@ -1,8 +1,17 @@
 # StockPilot — deploy to the Cyber_Folks VPS.
 #
-# Triggered by a push to main/master (or manually from the Actions tab). It logs
-# into the server over SSH and runs deploy/deploy.sh there: git pull, rebuild the
-# containers, restart, health-check.
+# Triggered by the CI workflow finishing SUCCESSFULLY on main/master (or
+# manually from the Actions tab). It logs into the server over SSH and runs
+# deploy/deploy.sh there: git pull, rebuild the containers, restart,
+# health-check.
+#
+# Why not "on: push"? Because then the VPS rebuild raced the tests: both
+# workflows started at the same moment, so the server could be rebuilding a
+# commit that CI was in the middle of failing. Waiting for the CI run means a
+# red build never reaches the server.
+#
+# Note: GitHub only honours a workflow_run trigger from the copy of this file on
+# the DEFAULT branch, so edits to the trigger take effect once they are on main.
 #
 # ── Required GitHub repository secrets ────────────────────────────────────────
 # Settings → Secrets and variables → Actions → "New repository secret":
@@ -23,7 +32,11 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    # The name: field of ci.yml.
+    workflows: [CI]
+    types: [completed]
+    # The branch the CI run was for — not the branch this workflow reads from.
     branches: [main, master]
   workflow_dispatch:
 
@@ -37,8 +50,32 @@ jobs:
     name: Rebuild and restart on the VPS
     runs-on: ubuntu-latest
     environment: production
+    # workflow_run fires whether CI passed or failed, so the gate lives here:
+    # deploy when a push-triggered CI run went green, or when a human clicks
+    # "Run workflow" in the Actions tab (the manual escape hatch).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
 
     steps:
+      - name: Say what is being deployed and why
+        # Everything is passed as an env var rather than substituted into the
+        # script text, for the same shell-injection reason as REF_NAME below.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual deploy of $BRANCH, started by $ACTOR."
+          else
+            echo "CI run $CI_RUN_ID went green for commit $CI_SHA on $BRANCH."
+            echo "Deploying the tip of $BRANCH."
+          fi
+
       - name: Check that the deploy secrets are configured
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -61,7 +98,11 @@ jobs:
           # the script text. Interpolating ${{ github.ref_name }} straight into
           # the script is a shell-injection sink — a crafted branch/ref name
           # could inject commands. As an env var it is plain data.
-          REF_NAME: ${{ github.ref_name }}
+          #
+          # On a workflow_run event github.ref_name is always the default branch,
+          # so the branch CI actually tested (head_branch) comes first; the
+          # fallback is for the manual "Run workflow" button.
+          REF_NAME: ${{ github.event.workflow_run.head_branch || github.ref_name }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}

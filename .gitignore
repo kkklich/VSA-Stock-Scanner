@@ -15,3 +15,11 @@
 
 # Database dumps written by deploy/backup-db.sh
 /backups/
+
+# Action log (audit trail) — the rotating JSON-lines file the backend writes at
+# runtime. Local to each machine; never committed.
+#   backend-python/logs/  when running the backend directly (Windows, dev)
+#   /logs/                on the VPS — docker-compose.prod.yml bind-mounts this
+#                         folder into the api container as /app/logs
+backend-python/logs/
+/logs/

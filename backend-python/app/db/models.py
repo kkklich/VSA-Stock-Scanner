@@ -10,6 +10,9 @@ Tables:
   * ``rating_snapshots``           — one VSA rating per (ticker, date), written by
                                      the refresh pipeline so the rating's evolution
                                      over time can be charted
+  * ``action_logs``                — audit trail: one row per API call and per
+                                     background job (what was done, when, how it
+                                     ended)
 
 Per-request VSA signals are still computed on-the-fly from the raw OHLCV bars
 (and cached in-process); only the daily rating snapshot is persisted.
@@ -21,13 +24,16 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Date,
     DateTime,
     Float,
+    Index,
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -158,3 +164,50 @@ class CompanyQuarterlyRow(Base):
     net_income: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     operating_income: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     eps: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class ActionLogRow(Base):
+    """One recorded action — an API call or a background job.
+
+    Written by ``app/services/action_log.py`` (batched, off the request path).
+    Rows older than ``STOCKPILOT_ACTION_LOG_RETENTION_DAYS`` are deleted by the
+    log's own periodic prune, so the table cannot grow without bound.
+
+    Deliberately denormalised and index-light: this table is written on every
+    single request, so each extra index is a cost paid ~thousands of times a
+    day to speed up an admin screen opened occasionally. ``started_at`` (the
+    default ordering and the retention prune's predicate) and ``action`` (the
+    natural grouping) are the two that earn their place.
+    """
+
+    __tablename__ = "action_logs"
+    __table_args__ = (
+        Index("ix_action_logs_started_at", "started_at"),
+        Index("ix_action_logs_action", "action"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # When the action STARTED, in UTC. Stored timezone-aware so the Warsaw
+    # local time in the JSON-lines file and this column can never drift apart.
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Correlates a row with the X-Request-Id header the caller received, and a
+    # job with the request that started it.
+    request_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    # "request" (an HTTP call) or "job" (refresh, ingest, scheduler).
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    # The route template ("/api/stocks/{ticker}/signals") or the job name.
+    action: Mapped[str] = mapped_column(String(200), nullable=False)
+    # ok | client_error | server_error | started | finished | failed | skipped.
+    outcome: Mapped[str] = mapped_column(String(20), nullable=False)
+    duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    method: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Sanitised: the `settings` blob is hashed and credential-like names masked.
+    query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    response_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    client_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # Job counters and error text. JSON so a new job can add its own numbers
+    # without a migration.
+    detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)

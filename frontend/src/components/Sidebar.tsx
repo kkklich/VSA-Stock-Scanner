@@ -10,6 +10,7 @@ import {
   Filter,
   LayoutDashboard,
   LayoutGrid,
+  HeartPulse,
   LineChart,
   Settings,
   Star,
@@ -156,6 +157,14 @@ export function Sidebar({
           >
             <BookOpen size={18} />
             {t('nav.help')}
+          </Link>
+          <Link
+            to="/system"
+            onClick={onClose}
+            className={linkClass(pathname.startsWith('/system'))}
+          >
+            <HeartPulse size={18} />
+            {t('nav.system')}
           </Link>
           <Link
             to="/settings"

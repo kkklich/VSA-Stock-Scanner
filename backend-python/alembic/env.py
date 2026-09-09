@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+import app.db.models  # noqa: F401 — registers all ORM models on Base.metadata
+from alembic import context
 
 # Import ORM models so Alembic can diff against the current DB schema.
 from app.config import settings
 from app.db.base import Base
-import app.db.models  # noqa: F401 — registers all ORM models on Base.metadata
 
 config = context.config
 

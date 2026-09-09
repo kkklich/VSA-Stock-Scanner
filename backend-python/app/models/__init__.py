@@ -1,5 +1,17 @@
 """Pydantic models describing the API contract (see agent/DOCUMENTATION.md §5)."""
 
+from app.models.admin import (
+    ActionLogItem,
+    ActionLogResponse,
+    ActionLogSummaryResponse,
+    DataHealth,
+    ErrorGroupItem,
+    ErrorHealth,
+    ErrorListResponse,
+    IngestHealth,
+    LogHealth,
+    SystemHealthResponse,
+)
 from app.models.stocks import (
     AiAnalysisResponse,
     AiSignalAssessment,
@@ -41,6 +53,9 @@ from app.models.stocks import (
 )
 
 __all__ = [
+    "ActionLogItem",
+    "ActionLogResponse",
+    "ActionLogSummaryResponse",
     "AiAnalysisResponse",
     "AiSignalAssessment",
     "AnalyticsOpinionSource",
@@ -51,10 +66,16 @@ __all__ = [
     "CapexSummary",
     "CashflowPeriod",
     "CompanyFundamentalsResponse",
+    "DataHealth",
+    "ErrorGroupItem",
+    "ErrorHealth",
+    "ErrorListResponse",
     "FinancialMetrics",
     "GpwCompany",
     "HeatmapItem",
     "HeatmapResponse",
+    "IngestHealth",
+    "LogHealth",
     "MethodBacktestResponse",
     "MethodResultModel",
     "MethodSignalGroup",
@@ -69,6 +90,7 @@ __all__ = [
     "StockRankingItem",
     "StockSignalsResponse",
     "StooqDailyQuote",
+    "SystemHealthResponse",
     "TickerVolumeResponse",
     "TradingMethodInfo",
     "TrustScoreEvent",

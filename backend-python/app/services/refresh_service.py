@@ -24,13 +24,19 @@ One full run:
      the very first refresh instead of growing one point per day.
 
 The service also tracks its own status (idle/running, last refresh time,
-last error) for the ``GET /api/stocks/refresh/status`` endpoint.
+last error) for the ``GET /api/stocks/refresh/status`` endpoint, and records
+every run in the **action log** (``app/services/action_log.py``) as
+``job.refresh`` / ``job.ingest`` entries — started, finished or failed, with
+what the run actually did. A background job is accepted with a 202 long before
+it succeeds or fails, so its HTTP status says nothing about the outcome; those
+entries are what make a nightly run that quietly fetched nothing visible.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -45,6 +51,13 @@ from app.models import (
     RefreshStatusResponse,
     StockRankingItem,
     StooqDailyQuote,
+)
+from app.services.action_log import (
+    OUTCOME_FAILED,
+    OUTCOME_FINISHED,
+    OUTCOME_SKIPPED,
+    OUTCOME_STARTED,
+    ActionLogService,
 )
 from app.services.cache import TTLCache
 from app.services.ranking_service import CONTEXT_HISTORY_DAYS, compute_ranking
@@ -74,6 +87,7 @@ class RefreshService:
         ranking_cache: TTLCache,
         repo: QuoteRepository | None = None,
         ingest: IngestService | None = None,
+        action_log: ActionLogService | None = None,
     ) -> None:
         self._companies = companies
         self._stooq = stooq
@@ -81,7 +95,12 @@ class RefreshService:
         self._ranking_cache = ranking_cache
         self._repo = repo
         self._ingest = ingest
+        # Optional: the pipeline works without it, so tests and any other
+        # caller can build a RefreshService without wiring up a log.
+        self._action_log = action_log
         self._running = asyncio.Lock()
+        # Id of the HTTP request that started the run in progress, if any.
+        self._run_request_id: str | None = None
         self._task: asyncio.Task | None = None
 
         # Status, exposed via GET /api/stocks/refresh/status.
@@ -89,6 +108,9 @@ class RefreshService:
         self.last_refresh_at: datetime | None = None
         self.last_error: str | None = None
         self.stocks_ranked: int | None = None
+        # How many stocks got rating snapshots written on the last run — kept
+        # so the run's log entry can report it.
+        self.snapshots_written: int | None = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -111,31 +133,126 @@ class RefreshService:
             db_enabled=self._repo is not None,
         )
 
-    def start(self, full: bool = False) -> bool:
+    def start(
+        self,
+        full: bool = False,
+        trigger: str = "manual",
+        request_id: str | None = None,
+    ) -> bool:
         """Kick off a refresh in the background.
+
+        ``trigger`` says who asked — ``manual`` (the Refresh button),
+        ``bootstrap`` (an empty database on startup) or ``nightly`` (the 18:00
+        scheduler). It is recorded, so the log can tell an owner-initiated run
+        from an automatic one. ``request_id`` carries the id of the HTTP call
+        that pressed the button, so the request entry and the job entries it
+        set off share one id in the action log.
 
         Returns ``True`` if a new run was started, ``False`` when one is
         already in progress (the in-flight run is left alone).
         """
         if self.is_running:
+            self._log_job(
+                "job.refresh",
+                OUTCOME_SKIPPED,
+                detail={"trigger": trigger, "reason": "already running"},
+                request_id=request_id,
+            )
             return False
-        self._task = asyncio.create_task(self.run(full=full), name="data_refresh")
+        self._task = asyncio.create_task(
+            self.run(full=full, trigger=trigger, request_id=request_id),
+            name="data_refresh",
+        )
         return True
 
-    async def run(self, full: bool = False) -> None:
-        """Execute the full pipeline; safe to call from the scheduler."""
+    async def run(
+        self,
+        full: bool = False,
+        trigger: str = "nightly",
+        request_id: str | None = None,
+    ) -> None:
+        """Execute the full pipeline; safe to call from the scheduler.
+
+        The scheduler calls this directly, so ``nightly`` is the default
+        trigger — ``start()`` passes its own.
+        """
         if self._running.locked():
             logger.warning("Refresh already running — skipping duplicate trigger.")
+            self._log_job(
+                "job.refresh",
+                OUTCOME_SKIPPED,
+                detail={"trigger": trigger, "reason": "already running"},
+                request_id=request_id,
+            )
             return
         async with self._running:
             self.last_started_at = datetime.now(tz=UTC)
             self.last_error = None
+            started = time.perf_counter()
+            # Held for the duration of the run so the ingest step's own entry
+            # carries the same id as the refresh that contains it.
+            self._run_request_id = request_id
+            self._log_job(
+                "job.refresh",
+                OUTCOME_STARTED,
+                detail={"trigger": trigger, "full": full},
+                request_id=request_id,
+            )
             try:
                 await self._do_run(full=full)
                 self.last_refresh_at = datetime.now(tz=UTC)
+                self._log_job(
+                    "job.refresh",
+                    OUTCOME_FINISHED,
+                    duration_ms=(time.perf_counter() - started) * 1000.0,
+                    detail={
+                        "trigger": trigger,
+                        "full": full,
+                        "stocksRanked": self.stocks_ranked,
+                        "snapshotsWritten": self.snapshots_written,
+                        "dbEnabled": self._repo is not None,
+                    },
+                    request_id=request_id,
+                )
             except Exception as exc:  # noqa: BLE001 — background job must not crash the app
                 self.last_error = str(exc)
                 logger.exception("Data refresh failed.")
+                self._log_job(
+                    "job.refresh",
+                    OUTCOME_FAILED,
+                    duration_ms=(time.perf_counter() - started) * 1000.0,
+                    detail={
+                        "trigger": trigger,
+                        "full": full,
+                        "error": f"{type(exc).__name__}: {exc}"[:500],
+                    },
+                    request_id=request_id,
+                )
+
+    def _log_job(
+        self,
+        action: str,
+        outcome: str,
+        *,
+        duration_ms: float | None = None,
+        detail: dict | None = None,
+        request_id: str | None = None,
+    ) -> None:
+        """Record one pipeline event, if an action log was wired in.
+
+        ``request_id`` defaults to the id of the run in progress, so a step
+        logged from inside the pipeline (the ingest) is tied to the refresh
+        that contains it and, in turn, to the button press that started it.
+        """
+        if self._action_log is None:
+            return
+        self._action_log.log_job(
+            action,
+            outcome,
+            duration_ms=duration_ms,
+            detail=detail,
+            request_id=request_id or self._run_request_id,
+        )
 
     # ── Pipeline body ─────────────────────────────────────────────────────────
 
@@ -145,7 +262,20 @@ class RefreshService:
         # 1. Fresh bars from Yahoo Finance.
         if self._ingest is not None:
             # Persists to PostgreSQL and clears both caches when done.
-            await self._ingest.run(full=full)
+            stats = await self._ingest.run(full=full)
+            if stats is not None:
+                self._log_job(
+                    "job.ingest",
+                    OUTCOME_FINISHED if stats.failed == 0 else OUTCOME_FAILED,
+                    duration_ms=stats.duration_ms,
+                    detail=stats.as_detail(),
+                )
+            else:
+                self._log_job(
+                    "job.ingest",
+                    OUTCOME_SKIPPED,
+                    detail={"reason": "already running"},
+                )
         else:
             # No DB: just drop the caches so the ranking below live-fetches.
             self._history_cache.clear()
@@ -167,13 +297,14 @@ class RefreshService:
 
         # 3. Persist rating snapshots so the rating's evolution can be charted.
         if self._repo is not None:
-            await self._snapshot_ratings(ranking, today)
+            self.snapshots_written = await self._snapshot_ratings(ranking, today)
         else:
+            self.snapshots_written = None
             logger.info("Refresh: no database configured — rating history not stored.")
 
     async def _snapshot_ratings(
         self, ranking: list[StockRankingItem], today: date
-    ) -> None:
+    ) -> int:
         assert self._repo is not None
         from_date = today - timedelta(days=_HISTORY_DAYS)
         context_from = today - timedelta(days=CONTEXT_HISTORY_DAYS)
@@ -195,6 +326,7 @@ class RefreshService:
             written,
             len(ranking),
         )
+        return written
 
     async def _load_quotes(
         self, ticker: str, from_date: date, context_from: date
@@ -231,12 +363,19 @@ def build_rating_points(quotes: list[StooqDailyQuote]) -> list[RatingPoint]:
     points: list[RatingPoint] = []
     for q in quotes:
         day = q.date
+        # Both the rating and the verdict are fed the SAME list of signals that
+        # had already happened by ``day``. ``compute_rating`` also ignores
+        # future-dated signals internally, so passing the full list would give
+        # the same numbers today — but only by accident, and an accident that
+        # would break the moment either function's decay changed. Making the
+        # "no lookahead" rule explicit is what guarantees a stored snapshot is
+        # what the engine really would have said on that day.
         past_signals = [s for s in signals if s.date <= day]
         verdict, _ = verdict_from_signals(past_signals, day)
         points.append(
             RatingPoint(
                 date=day,
-                rating=compute_rating(signals, day),
+                rating=compute_rating(past_signals, day),
                 verdict=verdict,
                 close=float(q.close),
             )

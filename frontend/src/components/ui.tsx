@@ -443,3 +443,24 @@ export function WeeklyBadge({
     </span>
   )
 }
+
+/**
+ * One-line "this is not investment advice" note with a link to the full legal
+ * page. Rendered on the surfaces that actually publish a buy/sell-shaped
+ * opinion — the ranking and the stock detail page — so the caveat sits next to
+ * the verdict rather than only in the footer.
+ */
+export function DisclaimerNote({ className = '' }: { className?: string }) {
+  const { t } = useTranslation()
+  return (
+    <p className={'text-xs text-slate-500 ' + className}>
+      {t('legal.inlineNote')}{' '}
+      <Link
+        to="/legal"
+        className="underline-offset-2 hover:text-emerald-400 hover:underline"
+      >
+        {t('legal.inlineLink')}
+      </Link>
+    </p>
+  )
+}

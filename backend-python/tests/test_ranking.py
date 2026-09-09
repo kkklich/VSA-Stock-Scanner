@@ -17,13 +17,21 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 
+from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
 from app.models import GpwCompany, StooqDailyQuote
-from app.services.cache import TTLCache
+from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
+from app.services.exceptions import StooqAccessError
 from app.services.ranking_service import (
+    _HISTORY_DAYS,
     _MIN_52W_COVERAGE_DAYS,
+    _RS_OFFSETS,
+    CONTEXT_HISTORY_DAYS,
+    _relative_strength_raw,
     compute_52w_context,
     compute_ranking,
 )
+from app.services.scanner_service import compute_scanner_stats
+from app.services.volume_surge_service import compute_volume_surge
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -308,3 +316,434 @@ class TestAnalysisWindowUnchanged:
         assert item.weekly_rating is None
         assert item.weekly_signal is None
         assert item.weekly_agreement is None
+
+
+# ── The fetch window vs. the relative-strength rank ───────────────────────────
+#
+# ``CONTEXT_HISTORY_DAYS`` is a CALENDAR figure; everything that reads it
+# downstream counts SESSIONS. The gap between the two is where this section
+# lives.
+#
+# The window used to be 380 days, sized purely for the 52-week high/low context
+# (365 days plus a fortnight of slack). But Minervini's rule 8 needs a blended
+# 3/6/9/12-month return, whose longest offset is 252 *sessions*, and Minervini
+# itself refuses to evaluate below 252 bars. GPW trades ~250 sessions a year, so
+# 380 calendar days is only ~262-273 sessions — single-digit-to-twenty bars of
+# margin — and a stock that misses the odd session (an exchange holiday, a thin
+# listing, a gap in what the DB stored) fell under the line, silently lost its
+# RS rank, and was scored on 7 rules while its neighbours were scored on 8.
+#
+# Rule 8 being applied to some rows and not others is worse than not applying it
+# at all: the ranking's Minervini column then compares two different scales.
+
+# A stock that trades most weekdays but not all: roughly one weekday in twelve
+# is missing, which is about what exchange holidays plus a thinly traded listing
+# produce. Nothing exotic — this is an ordinary GPW small cap.
+_THIN_SKIP_EVERY = 12
+# The window as it was before the widening, for the before/after comparison.
+_OLD_CONTEXT_HISTORY_DAYS = 380
+
+
+def _thin_session_dates(span_days: int, end: date | None = None) -> list[date]:
+    """Weekday dates over ``span_days``, dropping every twelfth one."""
+    if end is None:
+        end = date.today()
+    out: list[date] = []
+    weekday_no = 0
+    for offset in range(span_days, -1, -1):
+        d = end - timedelta(days=offset)
+        if d.weekday() >= 5:
+            continue
+        weekday_no += 1
+        if weekday_no % _THIN_SKIP_EVERY == 0:
+            continue
+        out.append(d)
+    return out
+
+
+def _thin_series(
+    span_days: int, end: date | None = None, start_price: float = 40.0
+) -> list[StooqDailyQuote]:
+    """A thinly traded but steadily rising stock over ``span_days`` calendar days."""
+    dates = _thin_session_dates(span_days, end)
+    return [
+        _quote(d, close=start_price + i * 0.2 + (i % 5) * 0.05)
+        for i, d in enumerate(dates)
+    ]
+
+
+def _within(quotes: list[StooqDailyQuote], days: int) -> list[StooqDailyQuote]:
+    """The bars a fetch window of ``days`` calendar days would have returned."""
+    cutoff = date.today() - timedelta(days=days)
+    return [q for q in quotes if q.date >= cutoff]
+
+
+class TestFetchWindowCoversTheRelativeStrengthRank:
+    def test_the_old_window_starved_a_thinly_traded_stock_of_its_rs_rank(self) -> None:
+        # The regression, stated in the units that actually matter: sessions.
+        quotes = _thin_series(700)
+        old_window = _within(quotes, _OLD_CONTEXT_HISTORY_DAYS)
+
+        assert len(old_window) <= max(_RS_OFFSETS)
+        assert _relative_strength_raw(old_window) is None
+
+    def test_the_current_window_gives_the_same_stock_an_rs_rank(self) -> None:
+        quotes = _thin_series(700)
+        current_window = _within(quotes, CONTEXT_HISTORY_DAYS)
+
+        assert _relative_strength_raw(current_window) is not None
+
+    def test_the_window_keeps_real_margin_over_the_longest_rs_offset(self) -> None:
+        # Not "just enough" — enough that no realistic amount of gappiness eats
+        # through it, which is precisely what 380 days did not have.
+        sessions = len(_within(_thin_series(700), CONTEXT_HISTORY_DAYS))
+        assert sessions >= max(_RS_OFFSETS) + 50
+
+    def test_the_window_still_covers_the_52_week_context_it_was_sized_for(self) -> None:
+        # Widening for one reader must not shorten it for the other.
+        assert CONTEXT_HISTORY_DAYS >= _MIN_52W_COVERAGE_DAYS
+        assert CONTEXT_HISTORY_DAYS > 365
+
+    def test_minervini_is_scored_on_all_eight_rules_in_the_ranking(self) -> None:
+        # End to end: a cross-sectional rank needs a universe, so two companies.
+        companies = [
+            GpwCompany(ticker="aaa", name="Alpha SA", sector="Industry",
+                       market_cap=None),
+            GpwCompany(ticker="bbb", name="Beta SA", sector="Industry",
+                       market_cap=None),
+        ]
+        client = _PerTickerStooqClient(
+            {
+                "aaa": _thin_series(700, start_price=40.0),
+                "bbb": _thin_series(700, start_price=25.0),
+            }
+        )
+        result = asyncio.run(
+            compute_ranking(
+                companies=companies,
+                stooq=client,
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+
+        assert len(result) == 2
+        for item in result:
+            minervini = item.method_results["minervini"]
+            assert minervini.available is True
+            # "/8 rules" is the ranking path (rule 8 applied); "/7 structural"
+            # is the fallback for a stock with no universe-wide rank.
+            assert minervini.detail.endswith("/8 rules"), minervini.detail
+
+
+# ── The wider fetch must not move a single rating ─────────────────────────────
+
+
+class TestWiderFetchChangesNoRating:
+    """The invariant the widening rests on.
+
+    Every VSA metric runs on the 120-day analysis slice; the 52-week context is
+    measured back from the last bar; and the weekly read is capped at 52 weekly
+    candles inside ``app/analysis/weekly.py``. So bars that only the WIDER
+    window can see — the 380-to-520-day band — feed the relative-strength rank
+    and nothing else.
+    """
+
+    @staticmethod
+    def _rank_one(quotes: list[StooqDailyQuote]):
+        company = GpwCompany(
+            ticker="kgh", name="KGHM", sector="Basic Materials", market_cap=None
+        )
+        result = asyncio.run(
+            compute_ranking(
+                companies=[company],
+                stooq=_PerTickerStooqClient({"kgh": quotes}),
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+        assert len(result) == 1
+        return result[0]
+
+    def test_rating_matches_the_120_day_slice_computed_directly(self) -> None:
+        # Not "the two runs agree with each other" but "the run agrees with the
+        # engine run on the slice alone" — the strongest form of the claim.
+        quotes = _thin_series(700)
+        item = self._rank_one(quotes)
+
+        analysis_from = date.today() - timedelta(days=_HISTORY_DAYS)
+        recent = [q for q in quotes if q.date >= analysis_from]
+        expected_signals = detect_signals(recent)
+        expected_rating = compute_rating(expected_signals, recent[-1].date)
+        expected_verdict, expected_days = verdict_from_signals(
+            expected_signals, recent[-1].date
+        )
+
+        assert item.current_rating == expected_rating
+        assert item.last_signal == expected_verdict
+        assert item.days_since_signal == expected_days
+
+    def test_bars_only_the_wider_window_can_see_change_nothing_visible(self) -> None:
+        # Same stock, two histories that are identical inside 380 days and
+        # differ only in the band the widening newly reaches.
+        full = _thin_series(700)
+        as_the_old_window_saw_it = _within(full, _OLD_CONTEXT_HISTORY_DAYS)
+
+        narrow = self._rank_one(as_the_old_window_saw_it)
+        wide = self._rank_one(full)
+
+        assert wide.current_rating == narrow.current_rating
+        assert wide.rating_change == narrow.rating_change
+        assert wide.last_signal == narrow.last_signal
+        assert wide.days_since_signal == narrow.days_since_signal
+        assert wide.last_price == narrow.last_price
+        assert wide.price_change_pct == narrow.price_change_pct
+        assert wide.volume == narrow.volume
+        # The 52-week context is measured back from the last bar, so the extra
+        # bars fall outside it.
+        assert wide.dist_from_52w_high_pct == narrow.dist_from_52w_high_pct
+        assert wide.dist_from_52w_low_pct == narrow.dist_from_52w_low_pct
+        assert wide.is_new_52w_high == narrow.is_new_52w_high
+        assert wide.is_new_52w_low == narrow.is_new_52w_low
+        # The weekly read is capped at 52 weekly candles inside weekly.py, so a
+        # longer fetch cannot reach it either.
+        assert wide.weekly_rating == narrow.weekly_rating
+        assert wide.weekly_signal == narrow.weekly_signal
+
+
+# ── The 52-week context is anchored to the stock, not to the fetch ────────────
+
+
+class TestContextAnchoringUnderTheWiderWindow:
+    """More old bars now reach ``compute_52w_context``, so its bounds matter more."""
+
+    def test_a_spike_older_than_52_weeks_never_becomes_the_52_week_high(self) -> None:
+        # 450 days ago is inside the 520-day fetch and outside the 52-week
+        # window. Before the widening this bar was never even fetched, so the
+        # window bound was doing no work; now it is the only thing standing
+        # between a year-and-a-half-old spike and the screener's "% from high".
+        end = date.today()
+        quotes = [
+            _quote(end - timedelta(days=450), close=180, high=200, low=170),
+            _quote(end - timedelta(days=_COVERED_SPAN), close=100, high=105, low=95),
+            _quote(end - timedelta(days=10), close=100, high=105, low=95),
+            _quote(end, close=100, high=101, low=99),
+        ]
+        dist_high, _, _, _ = compute_52w_context(quotes)
+        assert dist_high == round((100 - 105) / 105 * 100, 2)
+
+    def test_the_window_moves_with_the_last_session_not_with_today(self) -> None:
+        # A stock whose last print is a month old: its 52-week window ends
+        # there, so a bar 380 days before TODAY is only 350 days before its last
+        # session and is therefore still inside the window.
+        last_session = date.today() - timedelta(days=30)
+        quotes = [
+            _quote(last_session - timedelta(days=350), close=100, high=140, low=95),
+            _quote(last_session - timedelta(days=200), close=100, high=105, low=95),
+            _quote(last_session, close=100, high=101, low=99),
+        ]
+        dist_high, _, _, _ = compute_52w_context(quotes)
+        # 140 counts: it is within 52 weeks of the LAST BAR.
+        assert dist_high == round((100 - 140) / 140 * 100, 2)
+
+    def test_a_long_fetch_of_a_short_listing_still_reports_nothing(self) -> None:
+        # The coverage rule is about what the bars SPAN, not how many days were
+        # asked for: a company listed four months ago has no 52-week anything,
+        # however wide the fetch window is.
+        quotes = _thin_series(120)
+        assert compute_52w_context(quotes) == (None, None, False, False)
+
+
+# ── One cached history, shared by all three full-universe scans ───────────────
+
+
+class _CountingPerTickerClient(_PerTickerStooqClient):
+    """Records every live fetch, and the from_date each scan asked for."""
+
+    def __init__(self, by_ticker: dict[str, list[StooqDailyQuote]]) -> None:
+        super().__init__(by_ticker)
+        self.calls: list[tuple[str, date | None]] = []
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        self.calls.append((ticker, from_date))
+        return await super().get_daily_history(ticker, from_date, to_date)
+
+
+class TestSharedHistoryCache:
+    """Ranking, volume-surge and scanner-stats must reuse ONE cached history.
+
+    The cache key embeds the ``from_date`` each derives from
+    ``CONTEXT_HISTORY_DAYS``. If any of them ever computed its window
+    differently the keys would stop matching, every scan would re-download the
+    whole universe, and nothing would look broken — just three times the load on
+    Yahoo and the database.
+    """
+
+    _COMPANY = GpwCompany(
+        ticker="kgh", name="KGHM", sector="Basic Materials", market_cap=None
+    )
+
+    def test_three_scans_fetch_each_ticker_once_between_them(self) -> None:
+        client = _CountingPerTickerClient({"kgh": _thin_series(700)})
+        shared = TTLCache()
+
+        async def run_all() -> None:
+            await compute_ranking(
+                companies=[self._COMPANY], stooq=client, history_cache=shared,
+                history_cache_ttl=600, repo=None,
+            )
+            await compute_volume_surge(
+                companies=[self._COMPANY], stooq=client, history_cache=shared,
+                history_cache_ttl=600, repo=None,
+            )
+            await compute_scanner_stats(
+                companies=[self._COMPANY], stooq=client, history_cache=shared,
+                history_cache_ttl=600, repo=None,
+            )
+
+        asyncio.run(run_all())
+
+        fetched = [c for c in client.calls if c[0] == "kgh"]
+        assert len(fetched) == 1, (
+            "the three scans no longer share one cached history — "
+            f"{len(fetched)} fetches for one ticker"
+        )
+
+    def test_all_three_ask_for_the_same_window(self) -> None:
+        # The cache key is built from this date, so agreeing on it IS the
+        # sharing. Each scan runs with its own cache so every one really fetches.
+        client = _CountingPerTickerClient({"kgh": _thin_series(700)})
+
+        async def run_all() -> None:
+            await compute_ranking(
+                companies=[self._COMPANY], stooq=client, history_cache=TTLCache(),
+                history_cache_ttl=600, repo=None,
+            )
+            await compute_volume_surge(
+                companies=[self._COMPANY], stooq=client, history_cache=TTLCache(),
+                history_cache_ttl=600, repo=None,
+            )
+            await compute_scanner_stats(
+                companies=[self._COMPANY], stooq=client, history_cache=TTLCache(),
+                history_cache_ttl=600, repo=None,
+            )
+
+        asyncio.run(run_all())
+
+        windows = {from_date for _, from_date in client.calls}
+        assert len(windows) == 1
+        assert windows == {date.today() - timedelta(days=CONTEXT_HISTORY_DAYS)}
+
+    def test_the_shared_entry_is_stored_under_the_documented_key(self) -> None:
+        client = _CountingPerTickerClient({"kgh": _thin_series(700)})
+        shared = TTLCache()
+        asyncio.run(
+            compute_ranking(
+                companies=[self._COMPANY], stooq=client, history_cache=shared,
+                history_cache_ttl=600, repo=None,
+            )
+        )
+        from_date = date.today() - timedelta(days=CONTEXT_HISTORY_DAYS)
+        assert shared.get(f"history:kgh:{from_date}:None") is not None
+
+
+# ── A ticker the provider cannot serve is not re-asked every scan ─────────────
+
+
+class _DeadTickerClient(_CountingPerTickerClient):
+    """Answers normally, except for tickers the provider has no data for."""
+
+    def __init__(
+        self, by_ticker: dict[str, list[StooqDailyQuote]], dead: set[str]
+    ) -> None:
+        super().__init__(by_ticker)
+        self._dead = dead
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        self.calls.append((ticker, from_date))
+        if ticker in self._dead:
+            raise StooqAccessError(
+                f"Yahoo Finance returned no data for '{ticker.upper()}.WA'."
+            )
+        return await _PerTickerStooqClient.get_daily_history(
+            self, ticker, from_date, to_date
+        )
+
+
+class TestDeadTickerNegativeCache:
+    """A listing the data provider cannot serve must be asked about ONCE.
+
+    GPW listings get renamed, merged and withdrawn a few times a year, and
+    Yahoo simply 404s the old symbol from then on. Without a negative cache
+    every scan re-requests each dead ticker and logs an error for it, so a run
+    that handled the situation perfectly prints a wall of errors and pays a
+    failed round-trip per dead listing — every time anyone loads the dashboard.
+
+    The remembered failure is deliberately capped by the caller's own TTL
+    (``min(history_cache_ttl, NEGATIVE_CACHE_SECONDS)``): a passing provider
+    hiccup must not be able to hide a healthy stock for a whole trading day.
+    """
+
+    _LIVE = GpwCompany(
+        ticker="kgh", name="KGHM", sector="Basic Materials", market_cap=None
+    )
+    _DEAD = GpwCompany(
+        ticker="ccc", name="Renamed away", sector="Consumer Cyclical", market_cap=None
+    )
+
+    def _client(self) -> _DeadTickerClient:
+        return _DeadTickerClient({"kgh": _thin_series(700)}, dead={"ccc"})
+
+    async def _rank(self, client, cache, ttl):
+        return await compute_ranking(
+            companies=[self._LIVE, self._DEAD],
+            stooq=client,
+            history_cache=cache,
+            history_cache_ttl=ttl,
+            repo=None,
+        )
+
+    def test_dead_ticker_is_fetched_once_across_repeated_scans(self) -> None:
+        client = self._client()
+        shared = TTLCache()
+
+        async def run_twice():
+            first = await self._rank(client, shared, 600)
+            second = await self._rank(client, shared, 600)
+            return first, second
+
+        first, second = asyncio.run(run_twice())
+
+        dead_calls = [t for t, _ in client.calls if t == "ccc"]
+        assert dead_calls == ["ccc"], "the dead ticker was re-requested"
+        # And the rest of the market is unaffected by its neighbour's failure.
+        assert [i.ticker for i in first] == ["KGH"]
+        assert [i.ticker for i in second] == ["KGH"]
+
+    def test_remembered_failure_never_outlives_the_configured_ttl(self) -> None:
+        # With a zero-second history TTL the negative entry must expire at
+        # once too — proving the failure is capped by the caller's TTL rather
+        # than pinned open for NEGATIVE_CACHE_SECONDS.
+        client = self._client()
+        shared = TTLCache()
+
+        def dead_calls() -> int:
+            return len([t for t, _ in client.calls if t == "ccc"])
+
+        async def run_twice() -> tuple[int, int]:
+            await self._rank(client, shared, 0)
+            after_first = dead_calls()
+            await self._rank(client, shared, 0)
+            return after_first, dead_calls()
+
+        after_first, after_second = asyncio.run(run_twice())
+
+        assert after_first >= 1
+        assert after_second > after_first, "the failure outlived the configured TTL"
+
+    def test_negative_window_is_shorter_than_the_daily_history_ttl(self) -> None:
+        # A full-day negative TTL would keep a stock that failed once out of
+        # the ranking until the next nightly refresh.
+        assert NEGATIVE_CACHE_SECONDS < 24 * 60 * 60

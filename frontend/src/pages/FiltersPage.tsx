@@ -5,22 +5,21 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { BookmarkPlus, Loader2, RotateCcw, X } from 'lucide-react'
-import {
-  Card,
-  CompanyLink,
-  InfoTip,
-  Pagination,
-  RatingMeter,
-  SignalBadge,
-  SortHeader,
-  TickerMark,
-} from '../components/ui'
+import { Card, InfoTip, Pagination } from '../components/ui'
+import { ColumnPicker } from '../components/ColumnPicker'
+import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SortMenu } from '../components/SortMenu'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
+import {
+  sortOptionsFrom,
+  useRankingColumns,
+} from '../hooks/useRankingColumns'
+import { initialSortDir, tableMinWidth } from '../lib/rankingColumns'
 import type { RankingSortKey, SortDir } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
-import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
   EMPTY_FILTERS,
@@ -36,9 +35,6 @@ import {
 } from '../lib/filterPresets'
 
 const PAGE_SIZE = 25
-
-/** Columns that read naturally A→Z on the first click. */
-const TEXT_COLUMNS: RankingSortKey[] = ['ticker', 'name', 'sector']
 
 const RECENCY_OPTIONS = [
   { value: null, label: 'Any time' },
@@ -88,39 +84,6 @@ function Field({
   )
 }
 
-/**
- * One 52-week distance cell: the percentage plus a "NEW" chip when the latest
- * session actually set the extreme (a breakout/breakdown, not just proximity).
- */
-function Range52wCell({
-  pct,
-  isNew,
-  newLabel,
-  newTone,
-}: {
-  pct: number | null
-  isNew: boolean
-  newLabel: string
-  newTone: string
-}) {
-  if (pct === null) return <span className="text-slate-600">—</span>
-  return (
-    <span className="inline-flex items-center justify-end gap-1.5">
-      {isNew && (
-        <span
-          className={
-            'rounded px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ' +
-            newTone
-          }
-        >
-          {newLabel}
-        </span>
-      )}
-      <span className="tabular-nums text-slate-300">{fmtPct(pct)}</span>
-    </span>
-  )
-}
-
 /** Parse a number input's value; empty/invalid → null (no filter). */
 function numOrNull(raw: string): number | null {
   if (raw.trim() === '') return null
@@ -130,6 +93,7 @@ function numOrNull(raw: string): number | null {
 
 export function FiltersPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const [filters, setFilters] = useState<ScreenFilters>(EMPTY_FILTERS)
   // Debounced copy — typing in the text/number inputs shouldn't fire a
@@ -151,8 +115,8 @@ export function FiltersPage() {
   }, [presets])
 
   useEffect(() => {
-    const t = setTimeout(() => setApplied(filters), 300)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setApplied(filters), 300)
+    return () => clearTimeout(timer)
   }, [filters])
 
   // Back to page 1 whenever the effective query changes.
@@ -204,9 +168,19 @@ export function FiltersPage() {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortBy(col)
-      setSortDir(TEXT_COLUMNS.includes(col) ? 'asc' : 'desc')
+      setSortDir(initialSortDir(col))
     }
   }
+
+  const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
+
+  // Which columns to show — shared with the Dashboard and Watchlist, and used
+  // by both the wide table and the card list below `lg`.
+  const columns = useRankingColumns()
+  const sortOptions = useMemo(
+    () => sortOptionsFrom(columns.renderColumns, sortBy, t),
+    [columns.renderColumns, sortBy, t],
+  )
 
   const applyPreset = (preset: FilterPreset) => {
     setFilters({ ...preset.filters })
@@ -555,229 +529,43 @@ export function FiltersPage() {
         </div>
       ) : (
         <>
-          {/* ── Desktop table (lg+) ─────────────────────────────────────────
-              min-width (not an overflow wrapper) so the sticky header can pin to
-              the page as you scroll; the table stays inside the card and the
-              page scrolls sideways when the viewport is narrower than it. Below
-              lg the table is hidden and the card list (further down) is shown,
-              so phones and tablets never scroll sideways. */}
-          <Card className="hidden min-w-[1000px] lg:block">
-            <table className="w-full min-w-[1000px] text-left text-sm">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-wider text-slate-500">
-                  <SortHeader
-                    label="Company"
-                    col="ticker"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                  />
-                  <SortHeader
-                    label="Sector"
-                    col="sector"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    className="hidden lg:table-cell"
-                  />
-                  <SortHeader
-                    label="Price"
-                    col="lastPrice"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    className="text-right"
-                  />
-                  <SortHeader
-                    label="Change"
-                    col="priceChangePct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    className="text-right"
-                  />
-                  <SortHeader
-                    label="From 52w high"
-                    col="distFrom52wHighPct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    info="How far below the 52-week high the last close sits. 0% means it closed at the high; a “NEW” chip marks a session that set a fresh 52-week high."
-                    className="hidden text-right md:table-cell"
-                  />
-                  <SortHeader
-                    label="From 52w low"
-                    col="distFrom52wLowPct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    info="How far above the 52-week low the last close sits. A “NEW” chip marks a session that set a fresh 52-week low."
-                    className="hidden text-right xl:table-cell"
-                  />
-                  <SortHeader
-                    label="Rating (0–100)"
-                    col="currentRating"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    info="VSA score with time decay: recent bullish signals push it above 50, bearish ones below."
-                  />
-                  <SortHeader
-                    label="Signal"
-                    col="lastSignal"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                  />
-                  <SortHeader
-                    label="Days ago"
-                    col="daysSinceSignal"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    info="Sessions since the last VSA pattern fired."
-                    className="hidden text-right md:table-cell"
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s) => (
-                  <tr
-                    key={s.ticker}
-                    onClick={() => navigate(`/stock/${s.ticker.toLowerCase()}`)}
-                    className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/40"
-                  >
-                    <td className="px-4 py-3">
-                      <CompanyLink
-                        ticker={s.ticker}
-                        title={s.name}
-                        className="flex items-center gap-2.5"
-                      >
-                        <TickerMark ticker={s.ticker} />
-                        <div className="min-w-0">
-                          <div className="font-semibold text-slate-100">
-                            {s.ticker}
-                          </div>
-                          <div className="max-w-[200px] truncate text-xs text-slate-500">
-                            {s.name}
-                          </div>
-                        </div>
-                      </CompanyLink>
-                    </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-400 lg:table-cell">
-                      {s.sector ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm tabular-nums text-slate-200">
-                      {fmtPrice(s.lastPrice)}
-                    </td>
-                    <td
-                      className={
-                        'px-4 py-3 text-right text-sm font-medium tabular-nums ' +
-                        deltaTone(s.priceChangePct)
-                      }
-                    >
-                      {fmtPct(s.priceChangePct)}
-                    </td>
-                    <td className="hidden px-4 py-3 text-right text-sm md:table-cell">
-                      <Range52wCell
-                        pct={s.distFrom52wHighPct}
-                        isNew={s.isNew52wHigh}
-                        newLabel="new"
-                        newTone="bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
-                      />
-                    </td>
-                    <td className="hidden px-4 py-3 text-right text-sm xl:table-cell">
-                      <Range52wCell
-                        pct={s.distFrom52wLowPct}
-                        isNew={s.isNew52wLow}
-                        newLabel="new"
-                        newTone="bg-rose-500/15 text-rose-400 ring-rose-500/30"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <RatingMeter rating={s.currentRating} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <SignalBadge verdict={s.lastSignal} />
-                    </td>
-                    <td className="hidden px-4 py-3 text-right text-xs tabular-nums text-slate-400 md:table-cell">
-                      {s.daysSinceSignal === 999 ? '—' : s.daysSinceSignal}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-
-          {/* ── Mobile / tablet cards (below lg) ─────────────────────────── */}
-          <div className="space-y-2.5 lg:hidden">
-            {rows.map((s) => (
-              <div
-                key={s.ticker}
-                onClick={() => navigate(`/stock/${s.ticker.toLowerCase()}`)}
-                role="button"
-                tabIndex={0}
-                aria-label={`${s.ticker} ${s.name}, open details`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    navigate(`/stock/${s.ticker.toLowerCase()}`)
-                  }
-                }}
-                className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 transition-colors hover:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <TickerMark ticker={s.ticker} />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-100">{s.ticker}</div>
-                      <div className="truncate text-xs text-slate-500">{s.name}</div>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-medium tabular-nums text-slate-200">
-                      {fmtPrice(s.lastPrice)} PLN
-                    </div>
-                    <div
-                      className={
-                        'text-xs tabular-nums ' + deltaTone(s.priceChangePct)
-                      }
-                    >
-                      {fmtPct(s.priceChangePct)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <RatingMeter rating={s.currentRating} />
-                  <SignalBadge verdict={s.lastSignal} />
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-800/60 pt-2 text-xs text-slate-500">
-                  <span className="min-w-0 truncate">{s.sector ?? '—'}</span>
-                  <span>
-                    {s.daysSinceSignal === 999
-                      ? 'No recent signal'
-                      : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'} ago`}
-                  </span>
-                  <span className="ml-auto flex items-center gap-1">
-                    52w high
-                    <Range52wCell
-                      pct={s.distFrom52wHighPct}
-                      isNew={s.isNew52wHigh}
-                      newLabel="new"
-                      newTone="bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
-                    />
-                  </span>
-                </div>
-              </div>
-            ))}
+          {/* Results toolbar: column picker, plus a sort menu for the card
+              list below `lg` (which has no headers to tap). */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <SortMenu
+              className="lg:hidden"
+              options={sortOptions}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+              onSortDirChange={setSortDir}
+            />
+            <ColumnPicker
+              value={columns.stored}
+              order={columns.order}
+              onToggle={columns.toggle}
+              onMove={columns.move}
+              onReset={columns.reset}
+              customized={columns.customized}
+              visibleCount={columns.count}
+            />
           </div>
+
+          <RankingTable
+            columns={columns.renderColumns}
+            rows={rows}
+            onOpen={openTicker}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            minWidth={tableMinWidth(columns.renderColumns)}
+          />
+
+          <RankingCardList
+            columns={columns.renderColumns}
+            rows={rows}
+            onOpen={openTicker}
+          />
 
           {/* Pager */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-2">

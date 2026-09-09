@@ -436,6 +436,18 @@ class StockSignalsResponse(_CamelModel):
     # intraday history (60 days at 30m, ~2 years at 1h), so a request for more
     # is silently trimmed — this says what was really covered.
     history_start: date | None = None
+    # Multi-timeframe (weekly) confirmation of the DAILY read above — the same
+    # three fields the ranking rows carry, computed by the same
+    # ``app/analysis/weekly.py`` over the same 52-week window, so the stock page
+    # and the dashboard's "1W" chip can never disagree.
+    #
+    # Like the rating, this is a daily-derived read and does NOT follow the
+    # chart's ``interval``: a 30-minute chart still reports the weekly VSA of
+    # the stock. All three are None when the stored history is too short to form
+    # enough weekly bars (~30) to trust.
+    weekly_rating: int | None = None
+    weekly_signal: str | None = None
+    weekly_agreement: Literal["confirms", "conflicts", "neutral"] | None = None
 
 
 # ── New models: fundamentals endpoint ─────────────────────────────────────────

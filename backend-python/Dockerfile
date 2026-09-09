@@ -26,6 +26,12 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 
+# Action log (audit trail) directory. In production docker-compose bind-mounts
+# the server's own ./logs folder over this path (deploy/deploy.sh makes that
+# folder writable by uid 10001), but the directory has to exist in the image
+# too — for `docker run` without the mount, and so the chown below covers it.
+RUN mkdir -p /app/logs
+
 # Run as a non-root user — a container break-out lands on an unprivileged account.
 RUN useradd --create-home --uid 10001 stockpilot && chown -R stockpilot:stockpilot /app
 USER stockpilot

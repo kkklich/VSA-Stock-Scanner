@@ -21,6 +21,27 @@ class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
 
 
+# ── Connection-pool budget ───────────────────────────────────────────────────
+# These two numbers are the hard ceiling on how many PostgreSQL connections
+# this process can hold open. Anything that fans out over the whole ~290-company
+# universe has to be sized against them, or the 291st concurrent read waits for
+# a connection until SQLAlchemy's pool timeout fires and the ticker is dropped
+# from the scan — which reads, on the dashboard, as a thin market rather than a
+# broken one. Keep them here so the scans can import the budget instead of
+# guessing at it.
+POOL_SIZE = 5
+MAX_OVERFLOW = 10
+MAX_DB_CONNECTIONS = POOL_SIZE + MAX_OVERFLOW  # 15
+
+# How many database reads a full-universe scan may have in flight at once.
+# Deliberately below MAX_DB_CONNECTIONS: the scan is never the only thing
+# asking for a connection (the rating-snapshot writer, the health probe and any
+# other request being served share the same pool), so it takes two thirds and
+# leaves the rest. Waiting on this semaphore is cheap; waiting on an exhausted
+# pool ends in a timeout and lost data.
+DB_SCAN_CONCURRENCY = max(1, MAX_DB_CONNECTIONS * 2 // 3)  # 10
+
+
 def build_engine(database_url: str) -> AsyncEngine:
     """Create an async SQLAlchemy engine for the given URL.
 
@@ -44,8 +65,8 @@ def build_engine(database_url: str) -> AsyncEngine:
         database_url,
         echo=False,
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
+        pool_size=POOL_SIZE,
+        max_overflow=MAX_OVERFLOW,
         connect_args=connect_args,
     )
 

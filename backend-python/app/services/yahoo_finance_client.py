@@ -25,7 +25,7 @@ from app.models import (
     QuarterlyReport,
     StooqDailyQuote,
 )
-from app.services.exceptions import StooqAccessError
+from app.services.exceptions import NoIntradayDataError, StooqAccessError
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,24 @@ _FCF_ROWS = ("Free Cash Flow",)
 # 5 years covers the year-on-year comparison with room to spare.
 _MAX_QUARTERS = 8
 _MAX_YEARS = 5
+
+
+def _volume_or_nan(row) -> float:
+    """A bar's volume as a float, or NaN when Yahoo did not report one.
+
+    Returning NaN rather than 0 lets the callers treat a missing volume exactly
+    like a missing price — one ``math.isnan`` check drops the bar — instead of
+    the two download paths quietly disagreeing about it, which is how the daily
+    path came to skip such bars (``int(nan)`` raised into a blanket ``except``)
+    while the intraday one turned them into zero-volume candles.
+    """
+    raw = row.get("Volume")
+    if raw is None:
+        return float("nan")
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return float("nan")
 
 
 class YahooFinanceClient:
@@ -136,9 +154,16 @@ class YahooFinanceClient:
                 high = float(row["High"])
                 low = float(row["Low"])
                 close = float(row["Close"])
-                volume = int(row.get("Volume", 0))
+                volume = _volume_or_nan(row)
 
-                if any(math.isnan(v) for v in (open_, high, low, close)):
+                # A bar with a missing volume is dropped, not defaulted to
+                # zero. VSA reads volume, and several of its rules fire on
+                # UNUSUALLY LOW volume (No Demand, the Test), so a fabricated
+                # zero is not a harmless placeholder — it is the quietest bar
+                # the stock has ever printed, and it would manufacture bearish
+                # signals out of a gap in Yahoo's data. Losing one candle is
+                # the cheaper mistake. The intraday path does the same.
+                if any(math.isnan(v) for v in (open_, high, low, close, volume)):
                     continue
 
                 quotes.append(
@@ -148,7 +173,7 @@ class YahooFinanceClient:
                         high=Decimal(str(high)).quantize(_FOUR, rounding=ROUND_HALF_UP),
                         low=Decimal(str(low)).quantize(_FOUR, rounding=ROUND_HALF_UP),
                         close=Decimal(str(close)).quantize(_FOUR, rounding=ROUND_HALF_UP),
-                        volume=volume,
+                        volume=int(volume),
                     )
                 )
             except Exception:
@@ -216,8 +241,12 @@ class YahooFinanceClient:
                 f"Yahoo Finance intraday request failed for '{yf_ticker}': {exc}"
             ) from exc
 
+        # The request itself succeeded and came back empty: Yahoo has no
+        # intraday history for this listing. That is a fact about the ticker,
+        # not an outage, so it gets its own exception type — see
+        # NoIntradayDataError for why the distinction matters.
         if df is None or df.empty:
-            raise StooqAccessError(
+            raise NoIntradayDataError(
                 f"Yahoo Finance returned no {interval} data for '{yf_ticker}'."
             )
 
@@ -230,9 +259,12 @@ class YahooFinanceClient:
                 high = float(row["High"])
                 low = float(row["Low"])
                 close = float(row["Close"])
-                volume = int(row.get("Volume", 0) or 0)
+                volume = _volume_or_nan(row)
 
-                if any(math.isnan(v) for v in (open_, high, low, close)):
+                # Same rule as the daily path above: a bar whose volume Yahoo
+                # did not report is dropped rather than defaulted to zero, so
+                # the VSA engine never sees a fabricated "quietest bar ever".
+                if any(math.isnan(v) for v in (open_, high, low, close, volume)):
                     continue
 
                 # Yahoo stamps GPW bars in the exchange's own timezone; anything
@@ -251,7 +283,7 @@ class YahooFinanceClient:
                         high=Decimal(str(high)).quantize(_FOUR, rounding=ROUND_HALF_UP),
                         low=Decimal(str(low)).quantize(_FOUR, rounding=ROUND_HALF_UP),
                         close=Decimal(str(close)).quantize(_FOUR, rounding=ROUND_HALF_UP),
-                        volume=volume,
+                        volume=int(volume),
                     )
                 )
             except Exception:
@@ -260,7 +292,7 @@ class YahooFinanceClient:
                 )
 
         if not bars:
-            raise StooqAccessError(
+            raise NoIntradayDataError(
                 f"Yahoo Finance returned no parseable {interval} rows for '{yf_ticker}'."
             )
 

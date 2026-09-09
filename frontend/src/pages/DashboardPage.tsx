@@ -16,23 +16,25 @@ import {
 } from '../hooks/useRanking'
 import { useMethods } from '../hooks/useMethods'
 import { usePersistentState } from '../hooks/usePersistentState'
+import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
 import type { RankingSortKey, SortDir } from '../api/stocksApi'
 import { RefreshButton } from '../components/RefreshButton'
+import { ColumnPicker } from '../components/ColumnPicker'
 import { MethodPicker } from '../components/MethodPicker'
+import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SortMenu } from '../components/SortMenu'
 import { CombinedScoreCell, MethodScoreCell } from '../components/MethodCells'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
-import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
-  CompanyLink,
-  InfoTip,
-  SignalBadge,
-  SortHeader,
-  Sparkline,
-  TickerMark,
-  WeeklyBadge,
-} from '../components/ui'
+  initialSortDir,
+  spliceAfter,
+  tableMinWidth,
+  type RenderColumn,
+} from '../lib/rankingColumns'
+import { DisclaimerNote, InfoTip } from '../components/ui'
 import type { SignalVerdict, StockRankingItem } from '../types'
+import { useDropdownPosition } from '../hooks/useDropdownPosition'
 
 /** Rows fetched per request — each scroll to the bottom appends one page. */
 const PAGE_SIZE = 25
@@ -40,13 +42,11 @@ const PAGE_SIZE = 25
 /** localStorage key for the dashboard's selected trading methods. */
 const METHODS_KEY = 'stockpilot:dashboard-methods:v1'
 
-/* ── Server-side sorting ─────────────────────────────────────────────────── */
+/** Width the leading rank ("#") column adds to the table's minimum width. */
+const RANK_COLUMN_WIDTH = 60
 
-/** The core (non per-method) columns this page can sort by. */
-type DashboardSortKey = Extract<
-  RankingSortKey,
-  'ticker' | 'name' | 'lastSignal' | 'combinedScore' | 'lastPrice' | 'priceChangePct'
->
+/** Width one per-method (or the combined) score column gets. */
+const METHOD_COLUMN_WIDTH = 130
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -64,10 +64,18 @@ export function DashboardPage() {
   }, [query])
 
   // The combined cross-method score is the headline ranking by default.
-  const [sortBy, setSortBy] = useState<DashboardSortKey>('combinedScore')
+  const [sortBy, setSortBy] = useState<RankingSortKey>('combinedScore')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
+  // "Favorites only": narrows the ranking to the starred tickers. The stars
+  // live in localStorage, so the allow-list is sent to the backend as
+  // `tickers` rather than filtered client-side (which would only ever see the
+  // pages already scrolled into view).
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+
   const [filterOpen, setFilterOpen] = useState(false)
+  const { buttonRef: filterButtonRef, style: filterStyle } =
+    useDropdownPosition(filterOpen, 240)
   const [minRating, setMinRating] = useState(0)
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
   const filtersActive = minRating > 0 || signalFilter !== 'all'
@@ -104,6 +112,14 @@ export function DashboardPage() {
     saveFavorites(stars)
   }, [stars])
 
+  // Tickers currently starred — the allow-list sent to the backend while the
+  // favorites-only view is on. An empty list legitimately matches nothing.
+  const favTickers = useMemo(
+    () => Object.keys(stars).filter((ticker) => stars[ticker]),
+    [stars],
+  )
+  const favCount = favTickers.length
+
   // Everything is computed by the backend — this hook just requests pages
   // with the right sort/filter/search/methods, appending them as the user
   // scrolls. `methods` drives the combined score and its sort.
@@ -115,6 +131,7 @@ export function DashboardPage() {
       q: debouncedSearch || undefined,
       minRating: minRating || undefined,
       signal: signalFilter,
+      tickers: favoritesOnly ? favTickers : undefined,
       // Send `methods` only when the user has customized the selection. While
       // "all methods" is selected (the default, including before the catalogue
       // has loaded) the param is omitted — the backend treats absent as "all"
@@ -123,7 +140,17 @@ export function DashboardPage() {
       methods:
         methodsCustomized && selectedMethods.length ? selectedMethods : undefined,
     }),
-    [sortBy, sortDir, debouncedSearch, minRating, signalFilter, methodsCustomized, selectedMethods],
+    [
+      sortBy,
+      sortDir,
+      debouncedSearch,
+      minRating,
+      signalFilter,
+      favoritesOnly,
+      favTickers,
+      methodsCustomized,
+      selectedMethods,
+    ],
   )
   const {
     items,
@@ -141,14 +168,72 @@ export function DashboardPage() {
 
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
 
-  const onSort = (col: DashboardSortKey) => {
+  const onSort = (col: RankingSortKey) => {
     if (col === sortBy) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortBy(col)
-      setSortDir(col === 'ticker' || col === 'name' ? 'asc' : 'desc')
+      setSortDir(initialSortDir(col))
     }
   }
+
+  // Which columns to show — shared with the Watchlist and Filters pages.
+  const columns = useRankingColumns()
+
+  // VSA is both a registry column (the rating meter) and a trading method, so
+  // selecting both would print the same 0–100 score twice. The registry column
+  // wins when it is on — its "fired N days ago" half is already the Days-ago
+  // column — and the method column takes over when the user hides it.
+  const ratingColumnShown = columns.renderColumns.some((c) => c.key === 'rating')
+
+  // One column per selected trading method, plus the combined cross-method
+  // score. These are built here rather than in the registry because they
+  // depend on the catalogue the backend advertises; they travel down the same
+  // render path as the registry columns, so they appear in the card list too.
+  const methodColumns = useMemo<RenderColumn[]>(
+    () => [
+      // Hiding VSA's column here is display-only: the combined score is still
+      // computed by the backend over every selected method.
+      ...selectedMethodDefs
+        .filter((m) => !(ratingColumnShown && m.id === 'vsa'))
+        .map(
+          (m): RenderColumn => ({
+            key: m.id,
+            label: m.name,
+            info: `${m.description}  ·  ${t('dashboard.methodSource')} ${m.source}`,
+            // Per-method scores are computed per row, not sorted by the backend.
+            sortKey: null,
+            align: 'right' as const,
+            width: METHOD_COLUMN_WIDTH,
+            headerClassName: 'normal-case',
+            cell: (row) => <MethodScoreCell result={row.methodResults[m.id]} />,
+          }),
+        ),
+      {
+        key: 'combined',
+        label: t('dashboard.cols.combined'),
+        info: t('dashboard.combinedInfo'),
+        sortKey: 'combinedScore' as const,
+        align: 'left' as const,
+        width: METHOD_COLUMN_WIDTH,
+        cell: (row) => <CombinedScoreCell score={row.combinedScore} />,
+      },
+    ],
+    [selectedMethodDefs, ratingColumnShown, t],
+  )
+
+  // Method columns sit next to the Signal they qualify, not at the far right.
+  const tableColumns = useMemo(
+    () => spliceAfter(columns.renderColumns, 'signal', methodColumns),
+    [columns.renderColumns, methodColumns],
+  )
+
+  // The card list below `lg` has no headers to tap, so its sort menu offers
+  // whatever the table headers would have — the columns the user kept.
+  const sortOptions = useMemo(
+    () => sortOptionsFrom(tableColumns, sortBy, t),
+    [tableColumns, sortBy, t],
+  )
 
   const clearFilters = () => {
     setMinRating(0)
@@ -180,9 +265,6 @@ export function DashboardPage() {
     return () => observer.disconnect()
   }, [hasMore, loading, loadingMore, error, loadMore])
 
-  // Table min-width grows with the number of method columns so the layout
-  // never crushes; the page scrolls horizontally when it exceeds the viewport.
-  const tableMinWidth = 870 + selectedMethodDefs.length * 130
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
@@ -194,6 +276,7 @@ export function DashboardPage() {
             <InfoTip text={t('dashboard.headingInfo')} />
           </h2>
           <p className="text-sm text-slate-500">{t('dashboard.subtitle')}</p>
+          <DisclaimerNote className="mt-1" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -211,6 +294,31 @@ export function DashboardPage() {
             />
           </div>
 
+          {/* Favorites-only toggle — the starred companies, nothing else. */}
+          <button
+            type="button"
+            onClick={() => setFavoritesOnly((v) => !v)}
+            aria-pressed={favoritesOnly}
+            title={t('dashboard.favoritesTooltip')}
+            className={
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
+              (favoritesOnly
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
+            }
+          >
+            <Star
+              size={14}
+              className={favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}
+            />
+            <span className="hidden sm:inline">{t('dashboard.favorites')}</span>
+            {favCount > 0 && (
+              <span className="rounded bg-slate-800/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-400">
+                {favCount}
+              </span>
+            )}
+          </button>
+
           {/* Method selector */}
           <MethodPicker
             methods={catalogue}
@@ -220,9 +328,32 @@ export function DashboardPage() {
             customized={methodsCustomized}
           />
 
+          {/* Column selector — the same choice on the table and the cards. */}
+          <ColumnPicker
+            value={columns.stored}
+            order={columns.order}
+            onToggle={columns.toggle}
+            onMove={columns.move}
+            onReset={columns.reset}
+            customized={columns.customized}
+            visibleCount={columns.count}
+          />
+
+          {/* Sort — phones/tablets only; the wide-screen table sorts by its
+              column headers instead. */}
+          <SortMenu
+            className="lg:hidden"
+            options={sortOptions}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            onSortDirChange={setSortDir}
+          />
+
           {/* Filter dropdown */}
           <div className="relative">
             <button
+              ref={filterButtonRef}
               onClick={() => setFilterOpen((v) => !v)}
               className={
                 'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
@@ -244,56 +375,61 @@ export function DashboardPage() {
                   className="fixed inset-0 z-10"
                   onClick={() => setFilterOpen(false)}
                 />
-                <div className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-slate-800 bg-slate-900 p-3 shadow-xl">
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    {t('dashboard.minRating')}
-                  </p>
-                  <div className="mb-3 flex flex-col gap-1">
-                    {RATING_OPTIONS.map((o) => (
-                      <button
-                        key={o.value}
-                        onClick={() => setMinRating(o.value)}
-                        className={
-                          'rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
-                          (minRating === o.value
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'text-slate-300 hover:bg-slate-800')
-                        }
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
+                {filterStyle && (
+                  <div
+                    style={filterStyle}
+                    className="z-20 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900 p-3 shadow-xl"
+                  >
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      {t('dashboard.minRating')}
+                    </p>
+                    <div className="mb-3 flex flex-col gap-1">
+                      {RATING_OPTIONS.map((o) => (
+                        <button
+                          key={o.value}
+                          onClick={() => setMinRating(o.value)}
+                          className={
+                            'rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
+                            (minRating === o.value
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'text-slate-300 hover:bg-slate-800')
+                          }
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
 
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    {t('dashboard.signal')}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SIGNAL_OPTIONS.map((sig) => (
-                      <button
-                        key={sig}
-                        onClick={() => setSignalFilter(sig)}
-                        className={
-                          'rounded-md px-2 py-1 text-xs transition-colors ' +
-                          (signalFilter === sig
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700')
-                        }
-                      >
-                        {sig === 'all' ? t('dashboard.all') : sig}
-                      </button>
-                    ))}
-                  </div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      {t('dashboard.signal')}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SIGNAL_OPTIONS.map((sig) => (
+                        <button
+                          key={sig}
+                          onClick={() => setSignalFilter(sig)}
+                          className={
+                            'rounded-md px-2 py-1 text-xs transition-colors ' +
+                            (signalFilter === sig
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700')
+                          }
+                        >
+                          {sig === 'all' ? t('dashboard.all') : sig}
+                        </button>
+                      ))}
+                    </div>
 
-                  {filtersActive && (
-                    <button
-                      onClick={clearFilters}
-                      className="mt-3 w-full rounded-md border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
-                    >
-                      {t('dashboard.clearFilters')}
-                    </button>
-                  )}
-                </div>
+                    {filtersActive && (
+                      <button
+                        onClick={clearFilters}
+                        className="mt-3 w-full rounded-md border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
+                      >
+                        {t('dashboard.clearFilters')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -324,253 +460,32 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* ── Desktop table (lg+) ──────────────────────────────────────────── */}
-      {/* No overflow wrapper: the table scrolls with the page so its header can
-          stay pinned (position: sticky) as you scroll; min-width keeps the
-          columns from crushing and grows with the number of method columns.
-          The table is wide (grows with the method columns), so it only appears
-          from lg up; phones and tablets get the card list below instead. */}
+      {/* Desktop table (lg+) and phone/tablet cards (below lg) — both
+          rendered from the same column list, so hiding a column in the picker
+          hides it in both layouts. The per-method columns are spliced in right
+          after the Signal they qualify. */}
       {!loading && !error && rows.length > 0 && (
-        <div
-          className="hidden rounded-xl border border-slate-800 bg-slate-900/40 lg:block"
-          style={{ minWidth: tableMinWidth }}
-        >
-          <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)]">
-                  #
-                </th>
-                <SortHeader
-                  label={t('dashboard.cols.symbol')}
-                  col="ticker"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  label={t('dashboard.cols.name')}
-                  col="name"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  label={t('dashboard.cols.signal')}
-                  col="lastSignal"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                {/* One header per selected method (not server-sortable yet). */}
-                {selectedMethodDefs.map((m) => (
-                  <th
-                    key={m.id}
-                    className="sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)]"
-                  >
-                    <span className="inline-flex items-center gap-1 text-right normal-case">
-                      <span className="whitespace-normal leading-tight">{m.name}</span>
-                      <InfoTip
-                        align="center"
-                        text={`${m.description}  ·  ${t('dashboard.methodSource')} ${m.source}`}
-                      />
-                    </span>
-                  </th>
-                ))}
-                <SortHeader
-                  label={t('dashboard.cols.combined')}
-                  col="combinedScore"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                  info={t('dashboard.combinedInfo')}
-                />
-                <SortHeader
-                  label={t('dashboard.cols.price')}
-                  col="lastPrice"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                  align="right"
-                />
-                <SortHeader
-                  label={t('dashboard.cols.change')}
-                  col="priceChangePct"
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                  align="right"
-                  subLabel={t('dashboard.cols.changeSub')}
-                />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((s, i) => (
-                <tr
-                  key={s.ticker}
-                  onClick={() => openTicker(s.ticker)}
-                  tabIndex={0}
-                  aria-label={t('dashboard.openDetails', { ticker: s.ticker, name: s.name })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      openTicker(s.ticker)
-                    }
-                  }}
-                  className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/30 focus:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
-                >
-                  <td className="px-4 py-3 text-center tabular-nums text-slate-500">
-                    {i + 1}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleStar(s.ticker)
-                        }}
-                        className="text-slate-600 hover:text-amber-400"
-                        aria-label={t('dashboard.toggleFavorite')}
-                      >
-                        <Star
-                          size={15}
-                          className={s.starred ? 'fill-amber-400 text-amber-400' : ''}
-                        />
-                      </button>
-                      <CompanyLink
-                        ticker={s.ticker}
-                        title={s.name}
-                        className="flex items-center gap-2.5 font-semibold text-slate-100"
-                      >
-                        <TickerMark ticker={s.ticker} />
-                        {s.ticker}
-                      </CompanyLink>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">
-                    <CompanyLink
-                      ticker={s.ticker}
-                      title={s.name}
-                      className="block max-w-[220px] truncate hover:text-slate-200"
-                    >
-                      {s.name}
-                    </CompanyLink>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <div className="flex flex-nowrap items-center gap-1.5">
-                      <SignalBadge verdict={s.lastSignal} />
-                      <WeeklyBadge
-                        agreement={s.weeklyAgreement}
-                        rating={s.weeklyRating}
-                        signal={s.weeklySignal}
-                      />
-                    </div>
-                  </td>
-                  {selectedMethodDefs.map((m) => (
-                    <td key={m.id} className="px-4 py-3 text-right">
-                      <MethodScoreCell result={s.methodResults[m.id]} />
-                    </td>
-                  ))}
-                  <td className="px-4 py-3">
-                    <CombinedScoreCell score={s.combinedScore} />
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-200">
-                    {fmtPrice(s.lastPrice)} {t('common.pln')}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-3">
-                      <Sparkline data={s.sparkline} />
-                      <span
-                        className={'w-16 text-right text-xs ' + deltaTone(s.priceChangePct)}
-                      >
-                        {fmtPct(s.priceChangePct)}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        <>
+          <RankingTable
+            columns={tableColumns}
+            rows={rows}
+            onOpen={openTicker}
+            onToggleStar={toggleStar}
+            showRank
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            minWidth={tableMinWidth(tableColumns, RANK_COLUMN_WIDTH)}
+          />
 
-      {/* ── Mobile / tablet cards (below lg) ─────────────────────────────── */}
-      {!loading && !error && rows.length > 0 && (
-        <ul className="flex flex-col gap-2 lg:hidden">
-          {rows.map((s, i) => (
-            <li key={s.ticker}>
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label={t('dashboard.openDetails', { ticker: s.ticker, name: s.name })}
-                onClick={() => openTicker(s.ticker)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    openTicker(s.ticker)
-                  }
-                }}
-                className="flex cursor-pointer flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/40 p-3 transition-colors hover:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-5 text-center text-sm font-semibold tabular-nums text-slate-500">
-                    {i + 1}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleStar(s.ticker)
-                    }}
-                    className="text-slate-600 hover:text-amber-400"
-                    aria-label={t('dashboard.toggleFavorite')}
-                  >
-                    <Star
-                      size={15}
-                      className={s.starred ? 'fill-amber-400 text-amber-400' : ''}
-                    />
-                  </button>
-                  <TickerMark ticker={s.ticker} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-100">{s.ticker}</span>
-                      <span className="truncate text-xs text-slate-500">{s.name}</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <SignalBadge verdict={s.lastSignal} />
-                      <WeeklyBadge
-                        agreement={s.weeklyAgreement}
-                        rating={s.weeklyRating}
-                        signal={s.weeklySignal}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-slate-200">
-                      {fmtPrice(s.lastPrice)} {t('common.pln')}
-                    </div>
-                    <div className={'text-sm ' + deltaTone(s.priceChangePct)}>
-                      {fmtPct(s.priceChangePct)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Combined + per-method scores */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-slate-800/60 pt-2">
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                    {t('dashboard.cols.combined')}
-                    <CombinedScoreCell score={s.combinedScore} />
-                  </span>
-                  {selectedMethodDefs.map((m) => (
-                    <span key={m.id} className="flex items-center gap-1.5 text-xs text-slate-500">
-                      {m.name.split(' ')[0]}
-                      <MethodScoreCell result={s.methodResults[m.id]} />
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+          <RankingCardList
+            columns={tableColumns}
+            rows={rows}
+            onOpen={openTicker}
+            onToggleStar={toggleStar}
+            showRank
+          />
+        </>
       )}
 
       {/* Infinite-scroll sentinel: fetches the next page when scrolled into
@@ -591,11 +506,23 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state. "No favorites yet" is its own message: the list isn't
+          empty because nothing matched, it's empty because nothing was starred
+          — so it explains how to star a company instead. */}
       {!loading && !error && rows.length === 0 && items && (
         <div className="py-16 text-center text-slate-500">
           <p>
-            {t('dashboard.emptyNoMatch')}
+            {favoritesOnly && favCount === 0
+              ? t('dashboard.emptyNoFavorites')
+              : t('dashboard.emptyNoMatch')}
+            {favoritesOnly && (
+              <button
+                onClick={() => setFavoritesOnly(false)}
+                className="ml-2 text-emerald-400 hover:underline"
+              >
+                {t('dashboard.showAll')}
+              </button>
+            )}
             {filtersActive && (
               <button
                 onClick={clearFilters}

@@ -85,7 +85,7 @@ class TestRegistry:
         # order: vsa (10) < minervini (20) < breakout (30) < glinicki (40)
         assert ids.index("glinicki") > ids.index("breakout")
         m = get_method("glinicki")
-        assert m.name == "VSA Glinicki V1"
+        assert m.name == "VSA V1"
         assert m.direction == "Bullish"  # long-only: the course's buying half
         assert m.source and m.source_url
 

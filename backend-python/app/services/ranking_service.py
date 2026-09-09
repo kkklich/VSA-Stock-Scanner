@@ -30,9 +30,10 @@ from app.analysis.vsa import (
     verdict_from_signals,
 )
 from app.analysis.weekly import compute_weekly_view, weekly_agreement
+from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, MethodResultModel, StockRankingItem, StooqDailyQuote
-from app.services.cache import TTLCache
+from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
 from app.services.exceptions import StooqAccessError
 from app.services.stooq_client import StooqClient
 
@@ -42,12 +43,29 @@ logger = logging.getLogger(__name__)
 # other per-stock metric except the 52-week context are computed on this slice,
 # so results are identical to the pre-52w engine.
 _HISTORY_DAYS = 120
-# Fetch window (calendar days): 52 weeks for the high/low context plus two
-# weeks of slack, because the 52-week window is anchored to the stock's last
-# SESSION date, which can trail today by a few days. Shared with the
-# volume-surge and scanner-stats services so all three reuse one cached
-# per-ticker history (the cache key embeds the from_date derived from this).
-CONTEXT_HISTORY_DAYS = 380
+# Fetch window (calendar days). Two things read it, and the larger one wins:
+#
+#   * the 52-week high/low context, which needs 365 days anchored to the
+#     stock's last SESSION date (which can trail today by a few days); and
+#   * the cross-sectional relative-strength rank below, whose longest offset is
+#     252 *sessions* — Minervini's rule 8.
+#
+# 380 days used to cover only the first. GPW trades ~252 sessions a year, so
+# 380 calendar days is ~262 sessions: barely eight bars above the 253 the RS
+# calculation needs, and any holiday-thinned or gappy series fell under it,
+# silently lost its RS rank and dropped Minervini back to its 7 structural
+# rules — so rule 8 was applied to some stocks and not others. 520 days is
+# ~359 sessions, a hundred bars of margin, which no realistic amount of
+# gappiness eats through. It also lifts the same starvation from Minervini's
+# own 252-bar minimum.
+#
+# Widening the FETCH changes no rating: everything except the 52-week context
+# runs on the 120-day analysis slice below, and the 52-week window is measured
+# back from the last bar, so the extra bars fall outside it and are ignored.
+# Shared with the volume-surge and scanner-stats services so all three reuse
+# one cached per-ticker history (the cache key embeds the from_date derived
+# from this constant, so it must stay a single shared value).
+CONTEXT_HISTORY_DAYS = 520
 # The 52-week window itself, anchored to the last bar.
 _WEEK52_DAYS = 365
 # Minimum span the stored bars must actually cover before a "52-week" figure is
@@ -230,6 +248,12 @@ async def compute_ranking(
     from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
     analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+    # The DB read needs its own gate. Without one, a scan launches ~290
+    # simultaneous queries against a 15-connection pool, and the ones that
+    # cannot get a connection eventually time out — so a perfectly healthy
+    # database quietly drops most of the market from the ranking. See
+    # DB_SCAN_CONCURRENCY in app/db/base.py for the sizing.
+    db_semaphore = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
 
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote] | None:
         """Return quotes from cache → repo → stooq, in that priority order."""
@@ -240,7 +264,8 @@ async def compute_ranking(
 
         # Try the DB.
         if repo is not None:
-            quotes = await repo.get_quotes(ticker, from_date)
+            async with db_semaphore:
+                quotes = await repo.get_quotes(ticker, from_date)
             if quotes:
                 history_cache.set(cache_key, quotes, history_cache_ttl)
                 return quotes
@@ -250,7 +275,17 @@ async def compute_ranking(
             try:
                 quotes = await stooq.get_daily_history(ticker, from_date=from_date)
             except StooqAccessError as exc:
-                logger.warning("Skipping %s: stooq error: %s", ticker, exc)
+                logger.warning("Skipping %s: data provider error: %s", ticker, exc)
+                # A provider that answers "I have nothing for this ticker"
+                # is remembered for a while, so a listing renamed or delisted
+                # on the GPW is not re-requested — and re-logged as an error —
+                # by every scan for the rest of the day. The window is short on
+                # purpose; see NEGATIVE_CACHE_SECONDS.
+                history_cache.set(
+                    cache_key,
+                    [],
+                    min(history_cache_ttl, NEGATIVE_CACHE_SECONDS),
+                )
                 return None
             except Exception as exc:  # noqa: BLE001
                 logger.error("Skipping %s: unexpected error: %s", ticker, exc)
@@ -267,6 +302,11 @@ async def compute_ranking(
         history_cache.set(cache_key, quotes or [], history_cache_ttl)
         return quotes or []
 
+    # How many companies were dropped because their data could not be read at
+    # all (as opposed to not qualifying). Reported once at the end, so a
+    # degraded run says so instead of looking like a quiet market.
+    data_failures: list[str] = []
+
     async def fetch_and_analyse(
         company: GpwCompany,
         rs_rank: float | None,
@@ -279,7 +319,21 @@ async def compute_ranking(
             logger.debug("Skipping %s: market cap below floor.", company.ticker)
             return None
 
-        quotes = await fetch_quotes(company.ticker)
+        # Guarded separately from the analysis below, because the two failures
+        # mean opposite things. "The analysis said no" is a normal outcome — the
+        # stock did not qualify. "The data could not be read" (a pool timeout, a
+        # dead connection) is an outage, and if both were logged the same way a
+        # half-broken run would be indistinguishable from a thin market.
+        try:
+            quotes = await fetch_quotes(company.ticker)
+        except Exception:
+            data_failures.append(company.ticker)
+            logger.exception(
+                "Ranking: could not read data for %s — excluded from this run.",
+                company.ticker,
+            )
+            return None
+
         # Everything below except the 52-week context runs on the 120-day
         # analysis slice, so the longer fetch window (CONTEXT_HISTORY_DAYS)
         # never changes ratings, signals or the pre-filters.
@@ -412,6 +466,10 @@ async def compute_ranking(
         quotes = await fetch_quotes(company.ticker)
         return company.ticker, _relative_strength_raw(quotes or [])
 
+    # Both passes below fan out over the whole universe. The DB reads inside
+    # fetch_quotes are gated by db_semaphore and the live fetches by semaphore,
+    # so the gather is wide but the I/O underneath it is not.
+
     rs_pairs = await asyncio.gather(
         *(rs_raw_for(c) for c in companies), return_exceptions=True
     )
@@ -438,6 +496,18 @@ async def compute_ranking(
         if isinstance(result, BaseException):
             logger.error("Ranking: skipping %s: %s", company.ticker, result)
     pairs = [r for r in results if isinstance(r, tuple)]
+
+    if data_failures:
+        # One line the owner can act on: a run missing a chunk of the market
+        # because the database would not answer must not look like a quiet day.
+        logger.error(
+            "Ranking: %d of %d companies excluded because their data could not "
+            "be read (%s%s). This run is incomplete.",
+            len(data_failures),
+            len(companies),
+            ", ".join(data_failures[:10]),
+            ", …" if len(data_failures) > 10 else "",
+        )
 
     # Recency pre-filter (see _MAX_SESSION_LAG_DAYS): a ticker whose last bar
     # lags the newest session in this run by more than the tolerance has

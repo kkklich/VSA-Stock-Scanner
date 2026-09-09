@@ -10,6 +10,7 @@ import pytest
 
 from app.analysis.vsa import (
     DEFAULT_SIGNAL_PARAMS,
+    _WARMUP_BARS,
     SignalName,
     SignalParams,
     SignalType,
@@ -43,7 +44,9 @@ def _bar(
     )
 
 
-def _normal_bars(n: int = 30, base_price: float = 100.0, base_vol: int = 50_000) -> list[StooqDailyQuote]:
+def _normal_bars(
+    n: int = 30, base_price: float = 100.0, base_vol: int = 50_000
+) -> list[StooqDailyQuote]:
     """Generate ``n`` bland, statistically average bars — no signal should trigger."""
     start = date(2026, 1, 2)
     bars: list[StooqDailyQuote] = []
@@ -417,8 +420,12 @@ class TestDetectSignals:
 
     def test_signals_are_chronological(self) -> None:
         bars = _normal_bars(n=25)
-        bars.append(_bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000))
-        bars.append(_bar("2026-01-28", open_=101.0, high=102.0, low=90.0, close=91.0, volume=130_000))
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000)
+        )
+        bars.append(
+            _bar("2026-01-28", open_=101.0, high=102.0, low=90.0, close=91.0, volume=130_000)
+        )
 
         signals = detect_signals(bars)
         dates = [s.date for s in signals]
@@ -426,7 +433,9 @@ class TestDetectSignals:
 
     def test_bullish_signal_has_correct_type(self) -> None:
         bars = _normal_bars(n=25)
-        bars.append(_bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000))
+        bars.append(
+            _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000)
+        )
         signals = detect_signals(bars)
         sos_signals = [s for s in signals if s.signal_name == SignalName.SOS]
         assert all(s.type == SignalType.BULLISH for s in sos_signals)
@@ -480,8 +489,12 @@ class TestComputeRating:
         assert compute_rating([future], self.TODAY) == 50
 
     def test_balanced_signals_near_50(self) -> None:
-        bull = VsaSignal(date=self.TODAY, signal_name=SignalName.SOS, type=SignalType.BULLISH, strength=1.0)
-        bear = VsaSignal(date=self.TODAY, signal_name=SignalName.SOW, type=SignalType.BEARISH, strength=1.0)
+        bull = VsaSignal(
+            date=self.TODAY, signal_name=SignalName.SOS, type=SignalType.BULLISH, strength=1.0
+        )
+        bear = VsaSignal(
+            date=self.TODAY, signal_name=SignalName.SOW, type=SignalType.BEARISH, strength=1.0
+        )
         rating = compute_rating([bull, bear], self.TODAY)
         assert rating == 50
 
@@ -821,3 +834,79 @@ class TestTrendContextGate:
             _bar("2026-01-27", open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000)
         )
         assert SignalName.SOS in {s.signal_name for s in detect_signals(bars)}
+
+
+# ── Where the scan starts ─────────────────────────────────────────────────────
+
+
+class TestScanStartsAtTheFirstAnalysableBar:
+    """The scan must begin on the first bar that HAS a rolling context.
+
+    With ``.rolling(lb).mean().shift(1)`` the first non-NaN context value lands
+    on index ``lb``: ``rolling`` fills index ``lb - 1``, and the shift moves it
+    one to the right. So index ``lb`` — the smallest enabled lookback — is the
+    first bar the engine can judge.
+
+    The loop used to start one bar later, which silently threw away one session
+    of every series ever scanned. It never showed up as an error: the missing
+    bar is 20 sessions back from the left edge of the window, so on a chart it
+    is off in the run-up nobody looks at, and on the ranking it only ever meant
+    a signal that quietly failed to exist.
+
+    The counterpart matters just as much: starting one bar EARLIER would read a
+    bar whose context columns are still NaN. That is guarded separately — every
+    rule takes its context through ``ctx()``, which returns None while the
+    columns are NaN, and fails closed.
+    """
+
+    # All six default rules use a 20-session lookback, so this is the value the
+    # loop starts from. Derived rather than hard-coded, so retuning a default
+    # lookback moves the test with it.
+    LOOKBACK = min(p.lookback for p in DEFAULT_SIGNAL_PARAMS.values())
+
+    @classmethod
+    def _series_with_strength_at(cls, index: int, length: int = 25):
+        """Bland bars, with the Sign-of-Strength bar placed at ``index``."""
+        bars = _normal_bars(n=length)
+        bars[index] = _bar(
+            bars[index].date.isoformat(),
+            open_=99.5, high=108.0, low=99.2, close=107.5, volume=120_000,
+        )
+        return bars
+
+    def test_a_signal_on_the_very_first_analysable_bar_is_detected(self) -> None:
+        bars = self._series_with_strength_at(self.LOOKBACK)
+        signals = detect_signals(bars)
+
+        assert [s.signal_name for s in signals] == [SignalName.SOS]
+        # …and it is the bar at exactly index ``lookback``, the one the old
+        # ``range(min_lookback + 1, …)`` skipped.
+        assert signals[0].date == bars[self.LOOKBACK].date
+
+    def test_the_bar_before_it_has_no_context_and_stays_silent(self) -> None:
+        # One session earlier the rolling average spread/volume are still NaN.
+        # A rule must not guess: ``ctx()`` returns None and every rule fails
+        # closed, so the same bar shape produces nothing at all.
+        bars = self._series_with_strength_at(self.LOOKBACK - 1)
+        assert detect_signals(bars) == []
+
+    def test_a_series_shorter_than_the_history_gate_is_not_scanned(self) -> None:
+        # ``_WARMUP_BARS`` bounds the LENGTH of the series, not where the loop
+        # starts: below lookback + 5 bars the scan does not run at all.
+        short = self._series_with_strength_at(
+            self.LOOKBACK, length=self.LOOKBACK + _WARMUP_BARS - 1
+        )
+        assert detect_signals(short) == []
+
+    def test_the_shortest_accepted_series_still_scans_its_first_bar(self) -> None:
+        # Exactly at the gate: lookback + warm-up bars. The first analysable bar
+        # is inside that series, so it must be judged, not skipped as slack.
+        bars = self._series_with_strength_at(
+            self.LOOKBACK, length=self.LOOKBACK + _WARMUP_BARS
+        )
+        assert [s.signal_name for s in detect_signals(bars)] == [SignalName.SOS]
+
+    def test_bland_bars_gain_no_signal_from_the_extra_bar(self) -> None:
+        # Scanning one bar earlier must not INVENT anything either: the newly
+        # included bar is judged by the same rules as every other.
+        assert detect_signals(_normal_bars(n=self.LOOKBACK + _WARMUP_BARS)) == []

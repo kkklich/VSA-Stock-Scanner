@@ -29,7 +29,7 @@ from app.dependencies import get_stooq_client, history_cache, ranking_cache
 from app.main import app
 from app.models import StooqDailyQuote
 from app.routers.stocks import _backfill_attempted
-from app.services.exceptions import StooqAccessError
+from app.services.exceptions import NoIntradayDataError, StooqAccessError
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 
@@ -380,3 +380,149 @@ class TestSignalsInterval:
             body = client.get("/api/stocks/kgh/signals", params={"interval": "1h"}).json()
         shown = {bar["time"] for bar in body["history"]}
         assert all(sig["date"] in shown for sig in body["vsaSignals"])
+
+
+# ── "No intraday data" is a 404, not a 502 ────────────────────────────────────
+
+
+class _CountingIntradayClient(_FakeTimeframeClient):
+    """Fake client that reports how many times the provider was actually asked."""
+
+    def __init__(self, daily, error: Exception) -> None:
+        super().__init__(daily, intraday_error=error)
+
+    @property
+    def provider_calls(self) -> int:
+        return len(self.intraday_calls)
+
+
+class TestNoIntradayDataIsNotAnOutage:
+    """Two different failures that used to answer with the same status code.
+
+    Yahoo publishes no intraday candles for many thinly traded GPW listings.
+    That is a settled fact about the ticker, not a fault: nothing is broken,
+    nothing will change by asking again, and the daily and weekly charts still
+    work. It answers **404**.
+
+    A provider that cannot be reached is the opposite — temporary, and worth
+    retrying. It still answers **502**.
+
+    The distinction is not cosmetic. The frontend retries 502 five times over
+    ~15 seconds (see ``RETRYABLE_STATUSES`` in ``src/api/client.ts``), so
+    returning 502 for a permanent absence asked Yahoo the same settled question
+    six times per page view, and made the user wait fifteen seconds to be told
+    something that was knowable immediately.
+    """
+
+    def test_a_stock_without_intraday_history_answers_404(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeTimeframeClient(
+            _daily(),
+            intraday_error=NoIntradayDataError(
+                "Yahoo Finance returned no 30m data for 'TST.WA'."
+            ),
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/tst/signals", params={"interval": "30m"})
+
+        assert resp.status_code == 404
+        detail = resp.json()["detail"]
+        # Written for the reader: it names the stock and the way out, and does
+        # not read like a crash.
+        assert "TST" in detail
+        assert "daily and weekly charts still work" in detail
+
+    def test_an_unreachable_provider_still_answers_502(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeTimeframeClient(
+            _daily(), intraday_error=StooqAccessError("connection reset by peer")
+        )
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/signals", params={"interval": "30m"})
+
+        assert resp.status_code == 502
+        assert "connection reset by peer" in resp.json()["detail"]
+
+    def test_the_two_failures_are_told_apart_by_type_alone(self) -> None:
+        # NoIntradayDataError subclasses StooqAccessError so every existing
+        # ``except StooqAccessError`` handler keeps working — which is exactly
+        # why the router must catch the narrower one FIRST. If that order ever
+        # flipped, the 404 would silently become a 502 again.
+        assert issubclass(NoIntradayDataError, StooqAccessError)
+
+    def test_the_negative_answer_is_cached_instead_of_re_asked(self) -> None:
+        fake = _CountingIntradayClient(
+            _daily(), NoIntradayDataError("no 1h data for 'TST.WA'")
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: fake
+
+        with TestClient(app) as client:
+            first = client.get("/api/stocks/tst/signals", params={"interval": "1h"})
+            asked_once = fake.provider_calls
+            second = client.get("/api/stocks/tst/signals", params={"interval": "1h"})
+
+        assert first.status_code == 404
+        assert second.status_code == 404
+        assert asked_once == 1
+        assert fake.provider_calls == 1, "the settled 'no' was asked upstream again"
+        # The repeat is answered from the cache but says exactly the same thing.
+        assert second.json()["detail"] == first.json()["detail"]
+
+    def test_a_cached_no_is_not_served_as_an_empty_chart(self) -> None:
+        # The remembered value is a marker object, not an empty list: caching
+        # ``[]`` would make the endpoint answer 200 with a blank chart, which
+        # looks like a stock that did not trade rather than one with no
+        # intraday data at all.
+        fake = _CountingIntradayClient(
+            _daily(), NoIntradayDataError("no 30m data for 'TST.WA'")
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: fake
+        with TestClient(app) as client:
+            client.get("/api/stocks/tst/signals", params={"interval": "30m"})
+            repeat = client.get("/api/stocks/tst/signals", params={"interval": "30m"})
+
+        assert repeat.status_code == 404
+        assert "history" not in repeat.json()
+
+    def test_only_the_missing_bar_size_is_refused(self) -> None:
+        """The rest of the page keeps working, which is what the message claims."""
+        fake = _CountingIntradayClient(
+            _daily(), NoIntradayDataError("no 30m data for 'TST.WA'")
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: fake
+
+        with TestClient(app) as client:
+            assert (
+                client.get(
+                    "/api/stocks/tst/signals", params={"interval": "30m"}
+                ).status_code
+                == 404
+            )
+            daily = client.get("/api/stocks/tst/signals")
+            weekly = client.get("/api/stocks/tst/signals", params={"interval": "1w"})
+
+        assert daily.status_code == 200
+        assert len(daily.json()["history"]) > 0
+        assert weekly.status_code == 200
+        assert len(weekly.json()["history"]) > 0
+
+    def test_a_different_bar_size_is_asked_for_separately(self) -> None:
+        # The negative is remembered per (ticker, interval, window), not per
+        # ticker: 30-minute history being absent says nothing about hourly.
+        fake = _CountingIntradayClient(
+            _daily(), NoIntradayDataError("nothing here")
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: fake
+
+        with TestClient(app) as client:
+            client.get("/api/stocks/tst/signals", params={"interval": "30m"})
+            client.get("/api/stocks/tst/signals", params={"interval": "1h"})
+
+        assert [call[1] for call in fake.intraday_calls] == ["30m", "1h"]
+
+    def test_the_404_is_documented_on_the_endpoint(self) -> None:
+        # The response is part of the contract, so a client author reading the
+        # OpenAPI schema learns not to retry it.
+        with TestClient(app) as client:
+            schema = client.get("/openapi.json").json()
+        responses = schema["paths"]["/api/stocks/{ticker}/signals"]["get"]["responses"]
+        assert "404" in responses
+        assert "do not retry" in responses["404"]["description"]

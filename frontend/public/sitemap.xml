@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Replace the domain with your real one once registered. Today the app is a
-  single-page app served at "/", so there is one URL. When real per-page routes
-  are added (e.g. /stock/KGH), list each one here so Google can index them.
+  Replace the domain with your real one once registered. The app is a
+  single-page app served at "/", so the home page is the main entry. Real
+  per-page routes that are worth indexing on their own are listed below; add
+  new ones (e.g. /stock/KGH) here so Google can find them.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://stocksignal.pl/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/legal</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

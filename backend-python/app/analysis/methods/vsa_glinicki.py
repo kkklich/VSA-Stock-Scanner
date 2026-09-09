@@ -635,7 +635,7 @@ def _posture_rules(s: _Series, i: int, days_since: int) -> int:
 class VsaGlinicki(TradingMethod):
     id = "glinicki"
     order = 40
-    name = "VSA Glinicki V1"
+    name = "VSA V1"
     description = (
         "The buying half of Rafal Glinicki's VSA course, applied end-to-end as "
         "he teaches it. It only looks for a buy where the course allows one — "

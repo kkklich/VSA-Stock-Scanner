@@ -31,6 +31,7 @@ from datetime import date, timedelta
 from statistics import median
 
 from app.analysis.vsa import SignalType, VsaConfig, detect_signals
+from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
@@ -98,6 +99,11 @@ async def compute_scanner_stats(
     from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
     analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+    # Separate gate for the DB reads: this scan fans out over the whole
+    # universe, and ~290 simultaneous queries against a 15-connection pool
+    # would time out rather than queue. See DB_SCAN_CONCURRENCY in
+    # app/db/base.py for how the number ties back to the pool size.
+    db_semaphore = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
 
     acc: dict[str, _Acc] = {name: _Acc() for name in SIGNAL_DISPLAY.values()}
 
@@ -108,7 +114,8 @@ async def compute_scanner_stats(
             return cached
 
         if repo is not None:
-            rows = await repo.get_quotes(ticker, from_date)
+            async with db_semaphore:
+                rows = await repo.get_quotes(ticker, from_date)
             if rows:
                 history_cache.set(cache_key, rows, history_cache_ttl)
                 return rows

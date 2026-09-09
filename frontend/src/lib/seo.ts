@@ -7,7 +7,13 @@ import { useEffect } from 'react'
 
 const BRAND = 'StockPilot'
 
-type SeoEntry = { title: string; description: string }
+type SeoEntry = {
+  title: string
+  description: string
+  /** Keep this page out of search results. Set for operational screens that
+   *  are of no use to a visitor and should not be indexed. */
+  noindex?: boolean
+}
 
 const DEFAULT_ENTRY: SeoEntry = {
   title: 'VSA Scanner for the GPW',
@@ -70,6 +76,23 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
       title: 'GPW Stock Screener — filters and saved presets',
       description:
         'Screen GPW stocks by sector, VSA rating band, signal and its age, price range and liquidity — and save filter combinations as one-click presets.',
+    },
+  },
+  {
+    test: (p) => p.startsWith('/legal'),
+    entry: {
+      title: 'Legal information — disclaimer, terms and privacy',
+      description:
+        'StockPilot legal information: what the automated VSA ratings are and are not (they are not investment advice), the publisher and contact details, the terms of service and the privacy policy.',
+    },
+  },
+  {
+    test: (p) => p.startsWith('/system'),
+    entry: {
+      title: 'System status',
+      description:
+        'Operational status of the StockPilot backend: the last data refresh, how current the stored data is, and recent errors.',
+      noindex: true,
     },
   },
   {
@@ -136,6 +159,12 @@ export function usePageSeo(pathname: string) {
     const title = `${entry.title} | ${BRAND}`
     document.title = title
     setMetaByName('description', entry.description)
+    // index.html ships "index, follow"; an operational page overrides it, and
+    // every other route puts it back on the way out.
+    setMetaByName(
+      'robots',
+      entry.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large',
+    )
     setMetaByProperty('og:title', title)
     setMetaByProperty('og:description', entry.description)
     setMetaByName('twitter:title', title)

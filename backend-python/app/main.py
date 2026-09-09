@@ -5,15 +5,18 @@ Run locally with:
 
 Lifespan sequence
 -----------------
+0. Open the action log's rotating file (the audit trail of every API call and
+   background job - see app/services/action_log.py).
 1. Open shared stooq HTTP client.
 2. (If DATABASE_URL is set) Create async DB engine, conditionally create tables,
-   build repo.
+   build repo, and start the action log's database writer.
 3. Bootstrap: if fewer than 90% of tickers have today's data in DB, trigger a
    full ingest in the background (non-blocking — first API call may still hit
    stooq.pl while ingest runs).
 4. Start nightly APScheduler job (18:00 Warsaw time).
 5. Yield (app is live).
-6. Shutdown: stop scheduler, dispose DB engine, close HTTP client.
+6. Shutdown: stop scheduler, flush and stop the action log, dispose DB engine,
+   close HTTP client.
 """
 
 from __future__ import annotations
@@ -32,21 +35,42 @@ from app import __version__
 from app.config import settings
 from app.db.repository import QuoteRepository
 from app.dependencies import (
+    action_log,
     create_http_client,
+    error_tracker,
     get_quote_repository,
     gpw_company_service,
     history_cache,
     ranking_cache,
+    set_action_log_repository,
+    set_data_health_repository,
     set_http_client,
     set_quote_repository,
     set_refresh_service,
+    set_scheduler,
 )
-from app.routers import stocks
+from app.routers import admin, stocks
+from app.services.action_log import (
+    OUTCOME_FINISHED,
+    OUTCOME_STARTED,
+    ActionLogMiddleware,
+)
+from app.services.error_tracker import ErrorTrackingHandler
 from app.services.refresh_service import RefreshService
 from app.services.yahoo_finance_client import YahooFinanceClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# yfinance logs its own ERROR line for every symbol Yahoo cannot serve
+# ("possibly delisted; no price data found"). Every call into it is already
+# wrapped by YahooFinanceClient, which raises StooqAccessError, and each caller
+# logs the skip itself with the ticker and the reason — so the library's line
+# is a duplicate. Left at ERROR it also misreports the situation: a GPW listing
+# that was renamed or withdrawn is an expected fact about the market, not a
+# fault in this app, and a scan that handled it correctly should not print a
+# screen of errors. Silence the library and keep our own message.
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 # Columns added to an ALREADY-EXISTING table by a later version of the app.
 # `create_all` can only create whole missing tables, so these are applied on
@@ -83,6 +107,21 @@ def _validate_ddl_column(table: str, column: str, coltype: str) -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # ── 0. Action log ───────────────────────────────────────────────
+    # Opened before anything else, so the startup itself is on the record.
+    action_log.open_file()
+    # Error tracking rides on the logging the app already does: this handler
+    # turns every ERROR-level line, from anywhere in the code, into a grouped
+    # and counted error readable at GET /api/admin/errors. Attached to the root
+    # logger, so no call site has to know it exists.
+    error_handler = ErrorTrackingHandler(error_tracker)
+    logging.getLogger().addHandler(error_handler)
+    action_log.log_job(
+        "job.startup",
+        OUTCOME_STARTED,
+        detail={"version": __version__, "dbConfigured": settings.db_enabled},
+    )
+
     # ── 1. HTTP client ────────────────────────────────────────────────────────
     client = create_http_client()
     set_http_client(client)
@@ -95,7 +134,9 @@ async def lifespan(_app: FastAPI):
         if settings.db_enabled:
             from sqlalchemy import text
 
+            from app.db.action_log_repository import ActionLogRepository
             from app.db.base import Base, build_engine, build_session_factory
+            from app.db.health_repository import DataHealthRepository
             from app.db.repository import PostgresQuoteRepository
             from app.jobs.daily_ingest import IngestService, build_scheduler
 
@@ -140,6 +181,7 @@ async def lifespan(_app: FastAPI):
                         stooq=YahooFinanceClient(),
                         history_cache=history_cache,
                         ranking_cache=ranking_cache,
+                        action_log=action_log,
                     )
                 )
             else:
@@ -169,6 +211,18 @@ async def lifespan(_app: FastAPI):
                 repo = PostgresQuoteRepository(session_factory)
                 set_quote_repository(repo)
 
+                # Mirror the action log into the action_logs table as well as
+                # the file, and start its periodic retention prune.
+                log_repo = ActionLogRepository(session_factory)
+                set_action_log_repository(log_repo)
+                # Whole-table reads for GET /api/admin/health: how fresh the
+                # stored data actually is, independent of what the jobs said.
+                set_data_health_repository(DataHealthRepository(session_factory))
+                if settings.action_log_to_db:
+                    await action_log.start_db_writer(
+                        log_repo, settings.action_log_retention_days
+                    )
+
                 companies = gpw_company_service.get_companies()
                 stooq = YahooFinanceClient()
 
@@ -189,13 +243,14 @@ async def lifespan(_app: FastAPI):
                     ranking_cache=ranking_cache,
                     repo=repo,
                     ingest=ingest_svc,
+                    action_log=action_log,
                 )
                 set_refresh_service(refresh_svc)
 
                 # ── 3. Bootstrap refresh ──────────────────────────────────────
                 if await ingest_svc.needs_bootstrap():
                     logger.info("DB has no data for today — starting bootstrap refresh.")
-                    refresh_svc.start(full=True)
+                    refresh_svc.start(full=True, trigger="bootstrap")
                 else:
                     logger.info("DB bootstrap not needed — today's data already present.")
 
@@ -206,6 +261,10 @@ async def lifespan(_app: FastAPI):
                     minute=settings.ingest_minute,
                 )
                 scheduler.start()
+                # Exposed so the health endpoint can report the next run time
+                # from the scheduler itself rather than from the setting that
+                # was meant to configure it.
+                set_scheduler(scheduler)
                 logger.info(
                     "Scheduler started — next refresh at %02d:%02d Europe/Warsaw.",
                     settings.ingest_hour,
@@ -225,15 +284,30 @@ async def lifespan(_app: FastAPI):
                     stooq=YahooFinanceClient(),
                     history_cache=history_cache,
                     ranking_cache=ranking_cache,
+                    action_log=action_log,
                 )
             )
 
+        action_log.log_job(
+            "job.startup",
+            OUTCOME_FINISHED,
+            detail={"dbActive": action_log.db_active},
+        )
         yield
 
     finally:
         # ── 6. Graceful shutdown ──────────────────────────────────────────────
         if scheduler is not None and scheduler.running:
             scheduler.shutdown(wait=False)
+        set_scheduler(None)
+        action_log.log_job("job.shutdown", OUTCOME_FINISHED)
+        # Flush the queued rows BEFORE the engine goes away, or the tail of the
+        # log would be dropped exactly when a shutdown is worth explaining.
+        await action_log.stop_db_writer()
+        action_log.close_file()
+        logging.getLogger().removeHandler(error_handler)
+        set_action_log_repository(None)
+        set_data_health_repository(None)
         if engine is not None:
             await engine.dispose()
         set_http_client(None)
@@ -255,12 +329,23 @@ app.add_middleware(
     allow_credentials=False,
     # POST is needed only by /api/stocks/refresh (the manual Refresh button).
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
-    # Let the browser read the pagination total the ranking endpoint sets.
-    expose_headers=["X-Total-Count"],
+    # X-Admin-Token is the optional shared secret for /api/admin/*; the browser
+    # may only send it if CORS says so.
+    allow_headers=["Content-Type", "X-Admin-Token"],
+    # Let the browser read the pagination total the ranking endpoint sets and
+    # the id that ties a response to its action-log entry.
+    expose_headers=["X-Total-Count", "X-Request-Id"],
+)
+
+# Added AFTER CORSMiddleware, which means it runs INSIDE it: browser preflight
+# OPTIONS calls are answered by CORS and never reach the log, where they would
+# double every recorded action without saying anything about what the app did.
+app.add_middleware(
+    ActionLogMiddleware, service=action_log, error_tracker=error_tracker
 )
 
 app.include_router(stocks.router)
+app.include_router(admin.router)
 
 
 @app.get("/health", tags=["meta"], summary="Liveness probe")
@@ -272,10 +357,12 @@ async def health(
         try:
             await repo.has_today_data("kgh")
             db_status = "ok"
-        except Exception:
+        except Exception as exc:
             logger.exception("Health check DB probe failed.")
+            # `from exc` keeps the database error attached to the 503, so the
+            # traceback says WHY the probe failed rather than just that it did.
             raise HTTPException(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail={"status": "degraded", "db": "unreachable"},
-            )
+            ) from exc
     return {"status": "ok", "version": __version__, "db": db_status}

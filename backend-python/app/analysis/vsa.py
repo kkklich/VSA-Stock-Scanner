@@ -21,14 +21,22 @@ import pandas as pd
 from app.models import StooqDailyQuote, VsaSettings
 
 
-class SignalType(str, enum.Enum):
+# Both enums below are ``StrEnum`` rather than the older ``(str, enum.Enum)``
+# pair. The wire format is unchanged: every place these reach an API payload,
+# a cache key or a dict lookup goes through ``.value`` or a ``==`` comparison,
+# and a StrEnum member is still a real ``str`` that compares, hashes and
+# JSON-serialises exactly as before. The one thing StrEnum does differently is
+# ``str(member)`` / f-string interpolation, which now yields "Bullish" instead
+# of "SignalType.BULLISH" — nothing in this app or its tests interpolates them,
+# and where it ever does, the new answer is the one a reader wants.
+class SignalType(enum.StrEnum):
     """Whether a VSA signal points to strength (bullish) or weakness (bearish)."""
 
     BULLISH = "Bullish"
     BEARISH = "Bearish"
 
 
-class SignalName(str, enum.Enum):
+class SignalName(enum.StrEnum):
     """The VSA patterns the scanner detects (DOCUMENTATION.md §7)."""
 
     SPRING = "Spring"
@@ -356,7 +364,15 @@ def detect_signals(
 
     signals: list[VsaSignal] = []
 
-    for i in range(min_lookback + 1, len(df)):
+    # Start at the first bar whose rolling context actually exists. With
+    # ``.rolling(lb).mean().shift(1)`` the first non-NaN value lands on index
+    # ``lb`` (rolling fills index lb-1, the shift moves it one to the right), so
+    # ``min_lookback`` — not ``min_lookback + 1`` — is the first analysable bar.
+    # The loop used to skip it, quietly ignoring one session of every series.
+    # Bars whose own signal needs a LONGER lookback are still safe: ``ctx()``
+    # returns None while that lookback's columns are NaN, and every rule fails
+    # closed on it.
+    for i in range(min_lookback, len(df)):
         row = df.iloc[i]
 
         cp = row["close_pos"]

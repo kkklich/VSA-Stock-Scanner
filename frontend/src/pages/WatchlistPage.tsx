@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Download,
   Loader2,
@@ -25,42 +26,17 @@ import {
   type SortDir,
 } from '../api/stocksApi'
 import type { SignalVerdict, StockRankingItem } from '../types'
-import { deltaTone, fmtPct, fmtPrice } from '../lib/format'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
 import { settingsQueryValue } from '../lib/vsaSettings'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
-import {
-  CompanyLink,
-  Pagination,
-  RatingMeter,
-  SignalBadge,
-  SortHeader,
-  Sparkline,
-  TickerMark,
-} from '../components/ui'
+import { Pagination } from '../components/ui'
 import { RefreshButton } from '../components/RefreshButton'
-
-/** Star toggle shown on each row (module-scope to avoid remount churn). */
-function FavoriteStar({
-  active,
-  onToggle,
-}: {
-  active: boolean
-  onToggle: () => void
-}) {
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        onToggle()
-      }}
-      className="text-slate-600 hover:text-amber-400"
-      aria-label="Toggle favorite"
-    >
-      <Star size={15} className={active ? 'fill-amber-400 text-amber-400' : ''} />
-    </button>
-  )
-}
+import { ColumnPicker } from '../components/ColumnPicker'
+import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SortMenu } from '../components/SortMenu'
+import { useDropdownPosition } from '../hooks/useDropdownPosition'
+import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
+import { initialSortDir, tableMinWidth } from '../lib/rankingColumns'
 
 /** Full-page loading skeleton for the ranking table. */
 function LoadingSkeleton() {
@@ -99,12 +75,15 @@ const PAGE_SIZE = 50
 
 export function WatchlistPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const [query, setQuery] = useState('')
   // Debounced search text — avoids firing a request on every keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
+  const { buttonRef: filterButtonRef, style: filterStyle } =
+    useDropdownPosition(filterOpen, 240)
   const [minRating, setMinRating] = useState(0)
   const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -123,8 +102,8 @@ export function WatchlistPage() {
 
   // Debounce the search box (300 ms) before it becomes a query parameter.
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(query.trim()), 300)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDebouncedSearch(query.trim()), 300)
+    return () => clearTimeout(timer)
   }, [query])
 
   const toggleStar = (ticker: string) =>
@@ -192,9 +171,17 @@ export function WatchlistPage() {
     } else {
       setSortBy(col)
       // Text columns read best ascending; metrics best descending.
-      setSortDir(col === 'ticker' || col === 'name' ? 'asc' : 'desc')
+      setSortDir(initialSortDir(col))
     }
   }
+
+  // Which columns to show — shared with the Dashboard and Filters pages, and
+  // used by both the wide table and the card list below `lg`.
+  const columns = useRankingColumns()
+  const sortOptions = useMemo(
+    () => sortOptionsFrom(columns.renderColumns, sortBy, t),
+    [columns.renderColumns, sortBy, t],
+  )
 
   const clearFilters = () => {
     setMinRating(0)
@@ -320,6 +307,7 @@ export function WatchlistPage() {
           {/* Filter dropdown */}
           <div className="relative">
             <button
+              ref={filterButtonRef}
               onClick={() => setFilterOpen((v) => !v)}
               className={
                 'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
@@ -341,61 +329,87 @@ export function WatchlistPage() {
                   className="fixed inset-0 z-10"
                   onClick={() => setFilterOpen(false)}
                 />
-                <div className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-slate-800 bg-slate-900 p-3 shadow-xl">
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Minimum VSA rating
-                  </p>
-                  <div className="mb-3 flex flex-col gap-1">
-                    {RATING_OPTIONS.map((o) => (
-                      <button
-                        key={o.value}
-                        onClick={() => setMinRating(o.value)}
-                        className={
-                          'rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
-                          (minRating === o.value
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'text-slate-300 hover:bg-slate-800')
-                        }
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
+                {filterStyle && (
+                  <div
+                    style={filterStyle}
+                    className="z-20 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900 p-3 shadow-xl"
+                  >
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Minimum VSA rating
+                    </p>
+                    <div className="mb-3 flex flex-col gap-1">
+                      {RATING_OPTIONS.map((o) => (
+                        <button
+                          key={o.value}
+                          onClick={() => setMinRating(o.value)}
+                          className={
+                            'rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
+                            (minRating === o.value
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'text-slate-300 hover:bg-slate-800')
+                          }
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
 
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Signal
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SIGNAL_OPTIONS.map((sig) => (
-                      <button
-                        key={sig}
-                        onClick={() => setSignalFilter(sig)}
-                        className={
-                          'rounded-md px-2 py-1 text-xs transition-colors ' +
-                          (signalFilter === sig
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700')
-                        }
-                      >
-                        {sig === 'all' ? 'All' : sig}
-                      </button>
-                    ))}
-                  </div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Signal
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SIGNAL_OPTIONS.map((sig) => (
+                        <button
+                          key={sig}
+                          onClick={() => setSignalFilter(sig)}
+                          className={
+                            'rounded-md px-2 py-1 text-xs transition-colors ' +
+                            (signalFilter === sig
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700')
+                          }
+                        >
+                          {sig === 'all' ? 'All' : sig}
+                        </button>
+                      ))}
+                    </div>
 
-                  {filtersActive && (
-                    <button
-                      onClick={clearFilters}
-                      className="mt-3 w-full rounded-md border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
+                    {filtersActive && (
+                      <button
+                        onClick={clearFilters}
+                        className="mt-3 w-full rounded-md border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
 
           {/* Refresh — runs the full backend pipeline (Yahoo → ratings → DB) */}
+          {/* Column selector — the same choice on the table and the cards. */}
+          <ColumnPicker
+            value={columns.stored}
+            order={columns.order}
+            onToggle={columns.toggle}
+            onMove={columns.move}
+            onReset={columns.reset}
+            customized={columns.customized}
+            visibleCount={columns.count}
+          />
+
+          {/* Sort — phones/tablets only; the wide table sorts by its headers. */}
+          <SortMenu
+            className="lg:hidden"
+            options={sortOptions}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            onSortDirChange={setSortDir}
+          />
+
           <RefreshButton onRefreshed={refetch} />
 
           {/* Export CSV */}
@@ -419,235 +433,45 @@ export function WatchlistPage() {
       {loading && <LoadingSkeleton />}
       {error && !loading && <ErrorBanner message={error} onRetry={refetch} />}
 
-      {/* ── Desktop table (lg+) ──────────────────────────────────────────── */}
-      {/* No overflow wrapper: the table scrolls with the page so its header can
-          stay pinned (position: sticky) as you scroll; min-width keeps it inside
-          the card when the viewport is narrower than the table. The table is
-          wide (1100px), so it only appears from lg up; phones and tablets get
-          the card list below instead. */}
+      {/* Desktop table (lg+) and phone/tablet cards (below lg), both rendered
+          from the same user-chosen column list, so hiding a column hides it in
+          both layouts. */}
       {!loading && !error && rows.length > 0 && (
-        <div className="hidden min-w-[1100px] rounded-xl border border-slate-800 bg-slate-900/40 lg:block">
-          <table className="w-full min-w-[1100px] table-fixed text-sm">
-            <colgroup>
-                <col className="w-40" />
-                <col />
-                <col className="w-40" />
-                <col className="w-44" />
-                <col className="w-36" />
-                <col className="w-32" />
-                <col className="w-40" />
-              </colgroup>
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
-                  <SortHeader
-                    label="Symbol"
-                    col="ticker"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                  />
-                  <SortHeader
-                    label="Name"
-                    col="name"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                  />
-                  <SortHeader
-                    label="Last Price"
-                    col="lastPrice"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                  />
-                  <SortHeader
-                    label="Rating (0–100)"
-                    col="currentRating"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    info="VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution). Computed with your Scanner settings."
-                  />
-                  <SortHeader
-                    label="Last Signal"
-                    col="lastSignal"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    info="Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell. No recent pattern → Hold."
-                  />
-                  <SortHeader
-                    label="Days Since Signal"
-                    col="daysSinceSignal"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    info="How many days ago the last VSA pattern fired. Fresh signals (0–5 days) matter most — their influence fades over time (time decay)."
-                  />
-                  <SortHeader
-                    label="Change"
-                    col="priceChangePct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSort={onSort}
-                    align="right"
-                    subLabel="+/- % & sparkline"
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s) => (
-                  <tr
-                    key={s.ticker}
-                    onClick={() => openTicker(s.ticker)}
-                    tabIndex={0}
-                    aria-label={`${s.ticker} ${s.name}, open details`}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        openTicker(s.ticker)
-                      }
-                    }}
-                    className="cursor-pointer border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/30 focus:bg-slate-800/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <FavoriteStar
-                          active={!!stars[s.ticker]}
-                          onToggle={() => toggleStar(s.ticker)}
-                        />
-                        <CompanyLink
-                          ticker={s.ticker}
-                          title={s.name}
-                          className="flex items-center gap-2.5 font-semibold text-slate-100"
-                        >
-                          <TickerMark ticker={s.ticker} />
-                          {s.ticker}
-                        </CompanyLink>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      <CompanyLink
-                        ticker={s.ticker}
-                        title={s.name}
-                        className="block truncate hover:text-slate-200"
-                      >
-                        {s.name}
-                      </CompanyLink>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-medium text-slate-200">
-                        {fmtPrice(s.lastPrice)} PLN
-                      </span>
-                      <span
-                        className={'ml-2 text-xs ' + deltaTone(s.priceChangePct)}
-                      >
-                        {fmtPct(s.priceChangePct)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <RatingMeter rating={s.currentRating} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <SignalBadge verdict={s.lastSignal} />
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      {s.daysSinceSignal === 999
-                        ? '—'
-                        : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'}`}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-3">
-                        <Sparkline data={s.sparkline} />
-                        <span
-                          className={
-                            'w-16 text-right text-xs ' +
-                            deltaTone(s.priceChangePct)
-                          }
-                        >
-                          {fmtPct(s.priceChangePct)}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-          <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
-            <span>
-              {total === 0
-                ? '0 stocks'
-                : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} of ${total} stocks`}
-            </span>
-            {totalPages > 1 && (
-              <Pagination
-                current={currentPage}
-                total={totalPages}
-                onChange={setCurrentPage}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Mobile / tablet cards (below lg) ─────────────────────────────── */}
-      {!loading && !error && rows.length > 0 && (
-        <div className="space-y-3 lg:hidden">
-          {rows.map((s) => (
-            <div
-              key={s.ticker}
-              onClick={() => openTicker(s.ticker)}
-              role="button"
-              tabIndex={0}
-              aria-label={`${s.ticker} ${s.name}, open details`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  openTicker(s.ticker)
-                }
-              }}
-              className="w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-left transition-colors hover:bg-slate-800/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <FavoriteStar
-                    active={!!stars[s.ticker]}
-                    onToggle={() => toggleStar(s.ticker)}
-                  />
-                  <TickerMark ticker={s.ticker} />
-                  <div>
-                    <div className="font-semibold text-slate-100">{s.ticker}</div>
-                    <div className="text-xs text-slate-500">{s.name}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium text-slate-200">
-                    {fmtPrice(s.lastPrice)} PLN
-                  </div>
-                  <div className={'text-xs ' + deltaTone(s.priceChangePct)}>
-                    {fmtPct(s.priceChangePct)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <RatingMeter rating={s.currentRating} />
-                <Sparkline data={s.sparkline} />
-              </div>
-
-              <div className="mt-3 flex items-center justify-between">
-                <SignalBadge verdict={s.lastSignal} />
-                <span className="text-xs text-slate-500">
-                  {s.daysSinceSignal === 999
-                    ? '—'
-                    : `${s.daysSinceSignal} ${s.daysSinceSignal === 1 ? 'day' : 'days'} ago`}
+        <>
+          <RankingTable
+            columns={columns.renderColumns}
+            rows={rows}
+            onOpen={openTicker}
+            onToggleStar={toggleStar}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            minWidth={tableMinWidth(columns.renderColumns)}
+            footer={
+              <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
+                <span>
+                  {total === 0
+                    ? '0 stocks'
+                    : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} of ${total} stocks`}
                 </span>
+                {totalPages > 1 && (
+                  <Pagination
+                    current={currentPage}
+                    total={totalPages}
+                    onChange={setCurrentPage}
+                  />
+                )}
               </div>
-            </div>
-          ))}
-        </div>
+            }
+          />
+
+          <RankingCardList
+            columns={columns.renderColumns}
+            rows={rows}
+            onOpen={openTicker}
+            onToggleStar={toggleStar}
+          />
+        </>
       )}
 
       {/* Mobile / tablet pagination */}

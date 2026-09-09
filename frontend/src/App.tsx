@@ -8,6 +8,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { Footer } from './components/Footer'
 import { DashboardPage } from './pages/DashboardPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { ChartsPage } from './pages/ChartsPage'
@@ -17,7 +18,9 @@ import { VolumeSurgePage } from './pages/VolumeSurgePage'
 import { CapexPage } from './pages/CapexPage'
 import { FiltersPage } from './pages/FiltersPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SystemPage } from './pages/SystemPage'
 import { HelpPage } from './pages/HelpPage'
+import { LegalPage } from './pages/LegalPage'
 import { usePageSeo } from './lib/seo'
 
 /** Translation key (under `pageTitles`) for the top-bar title of the current path. */
@@ -31,7 +34,9 @@ function titleKeyForPath(pathname: string): string {
   if (pathname.startsWith('/stock/')) return 'pageTitles.stock'
   if (pathname.startsWith('/filters')) return 'pageTitles.filters'
   if (pathname.startsWith('/settings')) return 'pageTitles.settings'
+  if (pathname.startsWith('/system')) return 'pageTitles.system'
   if (pathname.startsWith('/help')) return 'pageTitles.help'
+  if (pathname.startsWith('/legal')) return 'pageTitles.legal'
   return 'pageTitles.app'
 }
 
@@ -55,6 +60,8 @@ function Layout() {
 
         <main className="min-h-0 flex-1 overflow-y-auto">
           <Outlet />
+          {/* Legal notice + publisher contact, on every page. */}
+          <Footer />
         </main>
       </div>
     </div>
@@ -77,7 +84,9 @@ export default function App() {
         <Route path="stock/:ticker" element={<ChartsPage />} />
         <Route path="filters" element={<FiltersPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="system" element={<SystemPage />} />
         <Route path="help" element={<HelpPage />} />
+        <Route path="legal" element={<LegalPage />} />
         {/* Unknown paths fall back to the home page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -73,7 +73,11 @@ def _with_year_of_history(quotes: list[StooqDailyQuote]) -> list[StooqDailyQuote
 class _FakeStooqClient:
     """Returns canned data so no network calls are made."""
 
-    def __init__(self, quotes: list[StooqDailyQuote] | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        quotes: list[StooqDailyQuote] | None = None,
+        error: Exception | None = None,
+    ) -> None:
         self._quotes = quotes or []
         self._error = error
 
@@ -624,6 +628,75 @@ class TestGetSignals:
             for s in g["signals"]:
                 assert "date" in s and "label" in s
                 assert s["type"] in ("Bullish", "Bearish")
+
+    # ── Weekly (multi-timeframe) confirmation on the stock page ──────────────
+    # The ranking has carried this since 2026-09-04; the stock-detail page now
+    # shows it too, so the endpoint that feeds that page has to send it.
+
+    def test_weekly_read_present_with_enough_history(self) -> None:
+        # ~43 ISO weeks of bars — comfortably past the ~30 weekly bars the
+        # weekly engine needs before it will answer at all.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes(300)
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/kgh/signals").json()
+
+        assert 0 <= body["weeklyRating"] <= 100
+        assert body["weeklySignal"] in (
+            "Strong Buy",
+            "Buy",
+            "Hold",
+            "Sell",
+            "Strong Sell",
+        )
+        assert body["weeklyAgreement"] in ("confirms", "conflicts", "neutral")
+
+    def test_weekly_read_is_null_when_history_too_short(self) -> None:
+        # Six weeks of bars: a weekly verdict guessed from a handful of weekly
+        # candles is worse than no verdict, so all three fields stay null and
+        # the card says so instead of printing a number.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes(40)
+        )
+        with TestClient(app) as client:
+            body = client.get("/api/stocks/kgh/signals").json()
+
+        assert body["weeklyRating"] is None
+        assert body["weeklySignal"] is None
+        assert body["weeklyAgreement"] is None
+
+    def test_weekly_read_does_not_follow_the_chart_interval(self) -> None:
+        # Like the rating and the price, the weekly read is the app's DAILY
+        # answer about the stock. Switching the chart's bar size must not move
+        # it — otherwise a 1W chart would report a "weekly of the weekly".
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes(300)
+        )
+        with TestClient(app) as client:
+            daily = client.get("/api/stocks/kgh/signals?interval=1d").json()
+            weekly_chart = client.get("/api/stocks/kgh/signals?interval=1w").json()
+
+        for field in ("weeklyRating", "weeklySignal", "weeklyAgreement"):
+            assert daily[field] == weekly_chart[field]
+
+    def test_weekly_read_matches_the_ranking_row(self) -> None:
+        # The stock page and the dashboard's "1W" chip must never disagree:
+        # both run app/analysis/weekly.py over the same capped 52-week window.
+        # Only the rating and verdict are compared — the agreement additionally
+        # depends on each caller's own daily verdict, which the ranking reads
+        # from its 120-day analysis slice and this endpoint from ~1 year.
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes(300)
+        )
+        with TestClient(app) as client:
+            signals = client.get("/api/stocks/kgh/signals").json()
+            rows = client.get("/api/stocks/ranking?tickers=kgh").json()
+
+        assert len(rows) == 1
+        row = rows[0]
+        assert signals["weeklyRating"] == row["weeklyRating"]
+        assert signals["weeklySignal"] == row["weeklySignal"]
 
 
 # ── GET /api/stocks/{ticker}/opinion-summary ─────────────────────────────────

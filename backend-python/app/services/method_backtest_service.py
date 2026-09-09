@@ -39,6 +39,7 @@ from statistics import median
 
 from app.analysis.methods.base import TradingMethod
 from app.analysis.vsa import VsaConfig
+from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
@@ -213,6 +214,11 @@ async def compute_method_backtest(
 
     from_date = today - timedelta(days=_BACKTEST_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+    # Separate gate for the DB reads: this scan fans out over the whole
+    # universe, and ~290 simultaneous queries against a 15-connection pool
+    # would time out rather than queue. See DB_SCAN_CONCURRENCY in
+    # app/db/base.py for how the number ties back to the pool size.
+    db_semaphore = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
     bullish = method.direction != "Bearish"
     acc = _Acc()
 
@@ -225,7 +231,8 @@ async def compute_method_backtest(
             return cached
         rows: list[StooqDailyQuote] = []
         if repo is not None:
-            rows = await repo.get_quotes(ticker, from_date)
+            async with db_semaphore:
+                rows = await repo.get_quotes(ticker, from_date)
         if not rows:
             async with semaphore:
                 try:

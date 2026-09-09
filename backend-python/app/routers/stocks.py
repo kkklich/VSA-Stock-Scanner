@@ -21,14 +21,16 @@ import asyncio
 import logging
 import math
 import re
+from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import ValidationError
 
 from app.analysis.ai_insight import analyze_stock
 from app.analysis.analytics_summary import build_analytics_summary
+from app.analysis.corporate_actions import detect_adjustment
 from app.analysis.methods import all_methods, get_method, method_ids
 from app.analysis.returns import compute_price_returns
 from app.analysis.timeframe import (
@@ -45,8 +47,9 @@ from app.analysis.vsa import (
     compute_rating,
     config_from_settings,
     detect_signals,
+    verdict_from_signals,
 )
-from app.analysis.weekly import resample_weekly
+from app.analysis.weekly import compute_weekly_view, resample_weekly, weekly_agreement
 from app.config import settings
 from app.db.repository import QuoteRepository
 from app.dependencies import (
@@ -85,9 +88,9 @@ from app.models import (
     VsaSettings,
     VsaSignalResponse,
 )
-from app.services.cache import TTLCache
+from app.services.cache import LockRegistry, TTLCache
 from app.services.capex_service import build_capex_screen, sum_ttm, summarize_capex
-from app.services.exceptions import StooqAccessError
+from app.services.exceptions import NoIntradayDataError, StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.heatmap_service import compute_heatmap
 from app.services.method_backtest_service import (
@@ -136,6 +139,27 @@ _INTRADAY_WARMUP_BARS = 30
 # session until tomorrow. Five minutes keeps the chart current through the
 # trading day while a user flipping between bar sizes still gets cache hits.
 _INTRADAY_CACHE_SECONDS = 5 * 60
+
+# "Yahoo has no intraday history for this ticker" is cached too, for the same
+# five minutes. Without it, every request for a company Yahoo cannot serve goes
+# all the way upstream to be told "no" again — and since only successes were
+# ever cached, a user leaving such a chart open re-asked on every poll. The
+# answer is stable (a listing does not acquire intraday history mid-session),
+# but the TTL is kept short anyway so a genuine upstream hiccup misread as
+# "nothing here" corrects itself within minutes rather than hours.
+_INTRADAY_MISS_SECONDS = 5 * 60
+
+
+class _NoIntradayMarker:
+    """Cached in place of a bar list to remember an empty answer.
+
+    A plain empty list will not do: the cache reports a miss as ``None`` and an
+    empty list is a legitimate value elsewhere, so caching ``[]`` would make the
+    endpoint answer 200 with a blank chart instead of repeating the 404.
+    """
+
+
+_NO_INTRADAY = _NoIntradayMarker()
 
 # The chart timeframe that is the app's own native one: everything else is
 # derived from it (weekly) or fetched just for the chart (intraday).
@@ -348,7 +372,23 @@ _BACKFILL_TOLERANCE_DAYS = 14
 # (ticker, from_date) pairs already backfilled from stooq in this process, so
 # stocks whose full history simply starts later (listed after from_date) are
 # not re-fetched on every request.
-_backfill_attempted: set[tuple[str, date]] = set()
+#
+# Bounded, and an OrderedDict rather than a set, because ``from_date`` comes
+# from the caller's own ``fromDate``/``from`` query parameter: every distinct
+# date a visitor (or a crawler) asks for adds an entry that nothing ever
+# removes. 4096 is far more than a real session produces — ~290 companies × a
+# handful of chart ranges each — and the oldest entry is the right one to
+# forget: the cost of forgetting is one extra backfill attempt, nothing worse.
+_BACKFILL_MEMO_MAX = 4096
+_backfill_attempted: OrderedDict[tuple[str, date], None] = OrderedDict()
+
+
+def _note_backfill_attempt(key: tuple[str, date]) -> None:
+    """Remember that ``(ticker, from_date)`` has been backfilled once already."""
+    _backfill_attempted[key] = None
+    _backfill_attempted.move_to_end(key)
+    while len(_backfill_attempted) > _BACKFILL_MEMO_MAX:
+        _backfill_attempted.popitem(last=False)  # oldest first
 
 
 async def _get_quotes(
@@ -398,10 +438,29 @@ async def _get_quotes(
         ) from exc
 
     if repo is not None:
-        _backfill_attempted.add((ticker, from_date))
+        _note_backfill_attempt((ticker, from_date))
 
     # Keep the ingested (Yahoo) bars where the ranges overlap; stooq only
     # supplies the older prefix the DB does not have yet.
+    #
+    # Splicing the two halves is only sound while they are on the same price
+    # scale. A split or a dividend restates everything the provider serves, so
+    # after one the fresh prefix and the stored suffix measure the stock in
+    # different units, and joining them draws a crash that never happened. When
+    # the overlap says that has happened, serve the fetched series alone — it is
+    # internally consistent by construction — and write nothing: the stored bars
+    # are left exactly as they are so tonight's ingest still sees the mismatch
+    # and rebuilds the whole history properly (app/analysis/corporate_actions.py).
+    if stored and detect_adjustment(stored, fetched).adjusted:
+        logger.warning(
+            "%s: stored bars disagree with the data provider (a split or "
+            "dividend adjustment). Serving freshly fetched prices; the nightly "
+            "ingest will rebuild the stored history.",
+            ticker.upper(),
+        )
+        cache.set(cache_key, fetched, cache_ttl)
+        return fetched
+
     if stored:
         new_bars = [q for q in fetched if q.date < stored[0].date]
         quotes = new_bars + stored
@@ -465,7 +524,7 @@ async def get_methods() -> list[TradingMethodInfo]:
 # One computation per (method, horizon, settings) at a time, with the same
 # generation guard the heatmap/volume-surge use so a scan racing the nightly
 # refresh is served but not cached stale.
-_method_backtest_locks: dict[str, asyncio.Lock] = {}
+_method_backtest_locks = LockRegistry()
 
 
 @router.get(
@@ -510,7 +569,7 @@ async def get_method_backtest(
     result: MethodBacktestResponse | None = cache.get(cache_key)
 
     if result is None:
-        lock = _method_backtest_locks.setdefault(cache_key, asyncio.Lock())
+        lock = _method_backtest_locks.get(cache_key)
         async with lock:
             result = cache.get(cache_key)
             if result is None:
@@ -555,6 +614,22 @@ async def get_method_backtest(
 
 
 # ── Endpoint 2: VSA ranking ───────────────────────────────────────────────────
+
+# One in-flight ranking computation per cache key, with the same generation
+# guard the heatmap/volume-surge use. Two bugs live here, and both are worth
+# spelling out because neither shows up as an error anywhere:
+#
+#   * Without the lock, N browser tabs (or one user reloading) arriving while
+#     the cache is cold each started their OWN full 290-ticker scan. The work is
+#     identical, so N-1 of them were pure waste — and each one holds database
+#     connections and Yahoo slots the others are waiting for, so the cold page
+#     got slower the more people wanted it.
+#
+#   * Without the generation guard, a scan that STARTED before the nightly
+#     refresh cleared the caches happily wrote its now-stale result back
+#     afterwards, with a fresh 24-hour TTL. The dashboard then served
+#     pre-refresh numbers for the whole next day, and nothing looked wrong.
+_ranking_locks = LockRegistry()
 
 
 @router.get(
@@ -613,17 +688,33 @@ async def get_ranking(
     full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
 
     if full_ranking is None:
-        logger.info("Ranking cache cold — computing ranking.")
-        full_ranking = await compute_ranking(
-            companies=companies.get_companies(),
-            stooq=stooq,
-            history_cache=history_cache,
-            history_cache_ttl=settings.history_cache_seconds,
-            repo=repo,
-            config=config,
-        )
-        cache.set(cache_key, full_ranking, settings.history_cache_seconds)
-        logger.info("Ranking ready: %d stocks passed pre-filters.", len(full_ranking))
+        async with _ranking_locks.get(cache_key):
+            # A concurrent request may have finished computing while we waited.
+            full_ranking = cache.get(cache_key)
+            if full_ranking is None:
+                generation = cache.generation
+                logger.info("Ranking cache cold — computing ranking.")
+                full_ranking = await compute_ranking(
+                    companies=companies.get_companies(),
+                    stooq=stooq,
+                    history_cache=history_cache,
+                    history_cache_ttl=settings.history_cache_seconds,
+                    repo=repo,
+                    config=config,
+                )
+                # If the nightly ingest cleared the cache while we were
+                # computing, this list was built from pre-refresh data — serve
+                # it to this caller but don't store it, or the dashboard would
+                # show yesterday's ranking as today's for the whole TTL.
+                if not cache.set_if_generation(
+                    cache_key, full_ranking, settings.history_cache_seconds, generation
+                ):
+                    logger.info(
+                        "Ranking cache invalidated during computation — not cached."
+                    )
+                logger.info(
+                    "Ranking ready: %d stocks passed pre-filters.", len(full_ranking)
+                )
 
     # Optional allow-list of tickers (used by the "favorites only" view).
     ticker_set: set[str] | None = None
@@ -680,6 +771,7 @@ async def get_ranking(
     summary="Start a data refresh (Yahoo ingest → ranking → rating snapshots)",
 )
 async def trigger_refresh(
+    request: Request,
     refresh: Annotated[RefreshService | None, Depends(get_refresh_service)],
 ) -> RefreshStatusResponse:
     """Kick off the refresh pipeline in the background and return its status.
@@ -694,7 +786,9 @@ async def trigger_refresh(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Refresh service not initialised yet — try again in a moment.",
         )
-    started = refresh.start()
+    # Pass the action log's id for THIS call down into the job, so the button
+    # press and everything it sets off share one id in the audit trail.
+    started = refresh.start(request_id=getattr(request.state, "request_id", None))
     if started:
         logger.info("Manual refresh triggered via POST /api/stocks/refresh.")
     else:
@@ -721,6 +815,12 @@ async def get_refresh_status(
 
 # ── Endpoint 3: scanner back-test statistics ─────────────────────────────────
 
+# Same in-flight/staleness discipline as the ranking above: the back-test is
+# another full-universe scan, so concurrent cold requests must share one
+# computation, and a result built from pre-refresh data must not be written
+# back with a fresh TTL. See the note above ``_ranking_locks``.
+_scanner_stats_locks = LockRegistry()
+
 
 @router.get(
     "/scanner/stats",
@@ -742,37 +842,52 @@ async def get_scanner_stats(
     if cached is not None:
         return cached
 
-    logger.info("Scanner stats cache cold — computing.")
-    raw = await compute_scanner_stats(
-        companies=companies.get_companies(),
-        stooq=stooq,
-        history_cache=history_cache,
-        history_cache_ttl=settings.history_cache_seconds,
-        repo=repo,
-        config=config,
-    )
-    result = [
-        SignalEffectiveness(
-            signal=r.signal,
-            count=r.count,
-            success_pct=r.success_pct,
-            reward_risk=r.reward_risk,
-            active_count=r.active_count,
+    async with _scanner_stats_locks.get(cache_key):
+        # A concurrent request may have finished computing while we waited.
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        generation = cache.generation
+        logger.info("Scanner stats cache cold — computing.")
+        raw = await compute_scanner_stats(
+            companies=companies.get_companies(),
+            stooq=stooq,
+            history_cache=history_cache,
+            history_cache_ttl=settings.history_cache_seconds,
+            repo=repo,
+            config=config,
         )
-        for r in raw
-    ]
-    cache.set(cache_key, result, settings.history_cache_seconds)
-    logger.info("Scanner stats ready: %d signal types.", len(result))
-    return result
+        result = [
+            SignalEffectiveness(
+                signal=r.signal,
+                count=r.count,
+                success_pct=r.success_pct,
+                reward_risk=r.reward_risk,
+                active_count=r.active_count,
+            )
+            for r in raw
+        ]
+        # Built from pre-refresh data if the nightly ingest cleared the cache
+        # meanwhile — serve it, but don't remember it as current.
+        if not cache.set_if_generation(
+            cache_key, result, settings.history_cache_seconds, generation
+        ):
+            logger.info(
+                "Scanner stats cache invalidated during computation — not cached."
+            )
+        logger.info("Scanner stats ready: %d signal types.", len(result))
+        return result
 
 
 # ── Endpoint: sector heatmap ──────────────────────────────────────────────────
 
-# One in-flight computation per heatmap cache key: a cold heatmap is the most
-# expensive request in the app (full-universe history fetch), so concurrent
-# misses wait for the first computation instead of each starting their own.
-# Bounded by the number of distinct settings hashes seen since startup.
-_heatmap_locks: dict[str, asyncio.Lock] = {}
+# One in-flight computation per heatmap cache key: a cold heatmap is one of the
+# most expensive requests in the app (full-universe history fetch), so
+# concurrent misses wait for the first computation instead of each starting
+# their own. LockRegistry caps how many keys are remembered — the key embeds
+# the caller's settings hash, which is user-supplied and therefore unbounded.
+_heatmap_locks = LockRegistry()
 
 
 @router.get(
@@ -801,7 +916,7 @@ async def get_heatmap(
     if cached is not None:
         return cached
 
-    lock = _heatmap_locks.setdefault(cache_key, asyncio.Lock())
+    lock = _heatmap_locks.get(cache_key)
     async with lock:
         # A concurrent request may have finished computing while we waited.
         cached = cache.get(cache_key)
@@ -833,9 +948,9 @@ async def get_heatmap(
 
 # Same in-flight/staleness discipline as the heatmap: one computation per cache
 # key at a time, and a result computed while the nightly refresh cleared the
-# cache is served but not cached (unlike the ranking, nothing re-warms this
-# cache after a refresh, so a stale write would look fresh for hours).
-_volume_surge_locks: dict[str, asyncio.Lock] = {}
+# cache is served but not cached (nothing re-warms this cache after a refresh,
+# so a stale write would look fresh for hours).
+_volume_surge_locks = LockRegistry()
 
 # Sortable volume-surge columns: camelCase key (as the frontend sends it) →
 # the VolumeSurgeItem attribute name (same whitelist idea as the ranking).
@@ -909,7 +1024,7 @@ async def get_volume_surge(
     full: VolumeSurgeResponse | None = cache.get(cache_key)
 
     if full is None:
-        lock = _volume_surge_locks.setdefault(cache_key, asyncio.Lock())
+        lock = _volume_surge_locks.get(cache_key)
         async with lock:
             # A concurrent request may have finished computing while we waited.
             full = cache.get(cache_key)
@@ -1181,6 +1296,20 @@ async def get_history(
     return response
 
 
+def _no_intraday_detail(spec: TimeframeSpec, ticker: str) -> str:
+    """The message shown when a stock simply has no intraday history.
+
+    Written for the reader, not the developer: the chart is fine, the company
+    is fine, this particular bar size just is not available for it — and the
+    daily chart, which is what the rest of the page is built on, still is.
+    """
+    return (
+        f"No {spec.label} intraday data is available for {ticker.upper()}. "
+        "Yahoo Finance does not publish intraday bars for every GPW listing — "
+        "the daily and weekly charts still work."
+    )
+
+
 async def _timeframe_bars(
     spec: TimeframeSpec,
     ticker: str,
@@ -1215,16 +1344,41 @@ async def _timeframe_bars(
 
     cache_key = f"intraday:{ticker}:{spec.id}:{days}"
     bars = cache.get(cache_key)
+
+    # A remembered "there is nothing here" — answer without touching Yahoo.
+    if bars is _NO_INTRADAY:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=_no_intraday_detail(spec, ticker)
+        )
+
     if bars is None:
         try:
             raw = await stooq.get_intraday_history(
                 ticker, spec.yahoo_interval or spec.id, days
             )
+        except NoIntradayDataError as exc:
+            # The provider answered, and the answer was "this company has no
+            # intraday history". That is permanent, so it must NOT come back as
+            # a 502: the frontend retries those five times over ~15 seconds,
+            # which asks Yahoo the same settled question six times. A 404 says
+            # "the thing you asked for does not exist", which no sane client
+            # retries — and caching the refusal stops the next page view from
+            # re-asking either.
+            logger.info(
+                "No %s intraday data for %s: %s", spec.label, ticker.upper(), exc
+            )
+            cache.set(cache_key, _NO_INTRADAY, _INTRADAY_MISS_SECONDS)
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, detail=_no_intraday_detail(spec, ticker)
+            ) from exc
         except StooqAccessError as exc:
+            # The provider itself could not be reached. Temporary — 502, which
+            # the frontend is right to retry.
             raise HTTPException(
                 status.HTTP_502_BAD_GATEWAY,
                 detail=(
-                    f"No {spec.label} intraday data available for '{ticker.upper()}': {exc}"
+                    f"Could not reach the intraday data provider for "
+                    f"'{ticker.upper()}' ({spec.label}): {exc}"
                 ),
             ) from exc
         # Yahoo has no 4-hour bar, so it is built from the hourly ones.
@@ -1246,7 +1400,13 @@ async def _timeframe_bars(
     summary="OHLCV history and VSA signal overlay for a ticker",
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker, date range or interval"},
-        status.HTTP_502_BAD_GATEWAY: {"description": "stooq.pl unavailable"},
+        status.HTTP_404_NOT_FOUND: {
+            "description": (
+                "This stock has no intraday history at the requested interval "
+                "(permanent — do not retry; the daily/weekly charts still work)"
+            )
+        },
+        status.HTTP_502_BAD_GATEWAY: {"description": "Data provider unavailable"},
     },
 )
 async def get_signals(
@@ -1330,6 +1490,24 @@ async def get_signals(
     else:
         rating = 50
         rating_change = 0
+
+    # ── Multi-timeframe (weekly) confirmation ────────────────────────────────
+    # The same weekly read the ranking rows carry, so the stock page and the
+    # dashboard's "1W" chip agree. It is computed from ``overlay_quotes`` — the
+    # WIDEST daily window this request already holds — for two reasons: the
+    # weekly engine needs ~30 weekly bars of context (a 3-month chart range
+    # would starve it), and ``compute_weekly_view`` caps itself at the last 52
+    # weekly bars, so a wider fetch cannot move the answer. That cap is what
+    # makes this identical to the ranking's read despite the different windows.
+    #
+    # The agreement compares it against THIS page's daily verdict (derived from
+    # the same decayed score as the header rating), not the ranking's, so the
+    # card can never contradict the number printed next to it.
+    weekly = compute_weekly_view(overlay_quotes, config)
+    weekly_agree: str | None = None
+    if weekly.available and weekly.verdict is not None and rating_quotes:
+        daily_verdict, _ = verdict_from_signals(signals, rating_quotes[-1].date)
+        weekly_agree = weekly_agreement(daily_verdict, weekly.verdict)
 
     last_close = float(rating_quotes[-1].close) if rating_quotes else 0.0
     prev_close = (
@@ -1437,6 +1615,9 @@ async def get_signals(
         interval=spec.id,
         intraday=spec.intraday,
         history_start=_bar_day(chart_bars[0]) if chart_bars else None,
+        weekly_rating=weekly.rating,
+        weekly_signal=weekly.verdict,
+        weekly_agreement=weekly_agree,  # type: ignore[arg-type]
     )
 
 

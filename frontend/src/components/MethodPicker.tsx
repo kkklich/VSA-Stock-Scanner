@@ -9,7 +9,11 @@ import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Info, Layers, RotateCcw } from 'lucide-react'
+import { useDropdownPosition } from '../hooks/useDropdownPosition'
 import type { ApiTradingMethod } from '../api/stocksApi'
+
+/** Width the panel gets whenever the screen is wide enough for it. */
+const PANEL_WIDTH = 320
 
 /**
  * Info icon that reveals a method's description on hover or keyboard focus.
@@ -121,12 +125,14 @@ export function MethodPicker({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const { buttonRef, style: panelStyle } = useDropdownPosition(open, PANEL_WIDTH)
   const selectedSet = new Set(selected)
 
   return (
     <div className="relative">
       <button
         type="button"
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={
           'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ' +
@@ -148,66 +154,56 @@ export function MethodPicker({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div
-            ref={panelRef}
-            className="absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-800 bg-slate-900 p-2 shadow-xl"
-          >
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                {t('methods.heading')}
-              </span>
-              <button
-                type="button"
-                onClick={onReset}
-                disabled={!customized}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                title={t('methods.showAll')}
-              >
-                <RotateCcw size={11} /> {t('methods.all')}
-              </button>
-            </div>
+          {panelStyle && (
+            <div
+              ref={panelRef}
+              style={panelStyle}
+              className="z-20 flex flex-col rounded-lg border border-slate-800 bg-slate-900 p-2 shadow-xl"
+            >
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  {t('methods.heading')}
+                </span>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  disabled={!customized}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={t('methods.showAll')}
+                >
+                  <RotateCcw size={11} /> {t('methods.all')}
+                </button>
+              </div>
 
-            <div className="max-h-96 overflow-y-auto">
-              {methods.map((m) => {
-                const checked = selectedSet.has(m.id)
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-start gap-2 rounded-md px-2 py-2 transition-colors hover:bg-slate-800"
-                  >
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => onToggle(m.id)}
-                        className="mt-0.5 h-3.5 w-3.5 rounded border-slate-600 bg-slate-950 text-emerald-500 accent-emerald-500 focus:ring-0"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="font-medium text-slate-200">{m.name}</span>
-                        <span className="mt-0.5 block text-[11px] text-slate-600">
-                          {t('methods.source')}{' '}
-                          {m.sourceUrl ? (
-                            <a
-                              href={m.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-slate-400 underline decoration-slate-700 underline-offset-2 hover:text-slate-200"
-                            >
-                              {m.source}
-                            </a>
-                          ) : (
-                            <span className="text-slate-500">{m.source}</span>
-                          )}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {methods.map((m) => {
+                  const checked = selectedSet.has(m.id)
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-start gap-2 rounded-md px-2 py-2 transition-colors hover:bg-slate-800"
+                    >
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggle(m.id)}
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-600 bg-slate-950 text-emerald-500 accent-emerald-500 focus:ring-0"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium text-slate-200">{m.name}</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-600">
+                            {t('methods.source')} <span className="text-slate-500">{m.source}</span>
+                          </span>
                         </span>
-                      </span>
-                    </label>
-                    <MethodInfoTip text={m.description} panelRef={panelRef} />
-                  </div>
-                )
-              })}
+                      </label>
+                      <MethodInfoTip text={m.description} panelRef={panelRef} />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>

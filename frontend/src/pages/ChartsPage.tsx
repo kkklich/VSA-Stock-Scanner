@@ -24,13 +24,25 @@ import { AnalyticsSummaryCard } from '../components/AnalyticsSummaryCard'
 import { RatingHistoryCard } from '../components/RatingHistoryCard'
 import { VolumeCard } from '../components/VolumeCard'
 import { InvestmentCard } from '../components/InvestmentCard'
-import { Card, CardTitle, InfoTip } from '../components/ui'
+import {
+  Card,
+  CardTitle,
+  DisclaimerNote,
+  InfoTip,
+  RatingMeter,
+  SignalBadge,
+} from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
 import { useMethods } from '../hooks/useMethods'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { useFundamentals } from '../hooks/useFundamentals'
 import { useTickerVolume } from '../hooks/useTickerVolume'
-import type { ApiFundamentals, ChartInterval } from '../api/stocksApi'
+import type {
+  ApiFundamentals,
+  ChartInterval,
+  SignalVerdict,
+  WeeklyAgreement,
+} from '../api/stocksApi'
 import type { Candle, SignalFlag, VsaSignal } from '../types'
 import {
   deltaTone,
@@ -595,15 +607,37 @@ function FundamentalsCard({
   )
 }
 
+/**
+ * Tone for the weekly agreement line: green when the higher timeframe backs the
+ * daily call, rose when it contradicts it, muted when it says nothing either
+ * way. Same emerald/rose language as the dashboard's "1W" chip.
+ */
+const weeklyAgreementTone: Record<WeeklyAgreement, string> = {
+  confirms: 'text-emerald-400',
+  conflicts: 'text-rose-400',
+  neutral: 'text-slate-400',
+}
+
 function RatingCard({
   currentRating,
   ratingChange,
+  weeklyRating,
+  weeklySignal,
+  weeklyAgreement,
 }: {
   currentRating: number
   ratingChange: number
+  /** Weekly (1W) VSA read; all three are null when history is too short. */
+  weeklyRating: number | null
+  weeklySignal: SignalVerdict | null
+  weeklyAgreement: WeeklyAgreement | null
 }) {
   const { t } = useTranslation()
   const tone = ratingTone(currentRating)
+  // The weekly read exists only when the backend could form ~30 weekly bars —
+  // and only on a backend new enough to send it at all, hence the null checks
+  // rather than a single `available` flag.
+  const hasWeekly = weeklyRating !== null && weeklySignal !== null
   return (
     <Card>
       <CardTitle right={<MoreHorizontal size={16} className="text-slate-600" />}>
@@ -611,6 +645,9 @@ function RatingCard({
         <InfoTip text={t('chart.rating.info')} />
       </CardTitle>
       <div className="px-4 pb-4">
+        <div className="text-xs font-medium text-slate-500">
+          {t('chart.rating.daily')}
+        </div>
         <div className="flex items-end gap-2">
           <span className={'text-5xl font-bold tabular-nums ' + tone.text}>
             {currentRating}
@@ -624,6 +661,43 @@ function RatingCard({
               {fmtSigned(ratingChange)}
             </span>
           </div>
+        </div>
+
+        {/* Weekly (multi-timeframe) confirmation of the daily rating above.
+            The ranking has carried this for every stock since 2026-09-04 but
+            only the dashboard's compact "1W" chip ever showed it; here it is
+            the full read — rating, verdict and what it means for the daily
+            call — sitting directly under the number it qualifies. It is a
+            DAILY-derived read and does not follow the chart's bar size. */}
+        <div className="mt-4 border-t border-slate-800 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500">
+              {t('chart.rating.weekly')}{' '}
+              <InfoTip text={t('chart.rating.weeklyInfo')} />
+            </span>
+            {hasWeekly && <SignalBadge verdict={weeklySignal} />}
+          </div>
+          {hasWeekly ? (
+            <>
+              <div className="mt-2">
+                <RatingMeter rating={weeklyRating} />
+              </div>
+              {weeklyAgreement && (
+                <p
+                  className={
+                    'mt-2 text-xs leading-relaxed ' +
+                    weeklyAgreementTone[weeklyAgreement]
+                  }
+                >
+                  {t(`chart.rating.agreement.${weeklyAgreement}`)}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+              {t('chart.rating.weeklyUnavailable')}
+            </p>
+          )}
         </div>
       </div>
     </Card>
@@ -658,6 +732,35 @@ function ErrorState({ message, ticker }: { message: string; ticker: string }) {
   )
 }
 
+/**
+ * Shown when the backend answers 404: Yahoo publishes no intraday candles for
+ * this company. Deliberately NOT styled as an error — nothing went wrong, the
+ * bar size just does not exist here — and it names the way out (1D / 1W).
+ */
+function NoIntradayState({
+  ticker,
+  interval,
+}: {
+  ticker: string
+  interval: ChartInterval
+}) {
+  const { t } = useTranslation()
+  const label = intervalOption(interval).label
+  return (
+    <div className="flex items-center justify-center py-24">
+      <div className="max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 text-center">
+        <p className="font-semibold text-slate-200">
+          {t('chart.noIntradayTitle', {
+            ticker: ticker.toUpperCase(),
+            interval: label,
+          })}
+        </p>
+        <p className="mt-1 text-sm text-slate-400">{t('chart.noIntradayBody')}</p>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function ChartsPage() {
@@ -670,7 +773,11 @@ export function ChartsPage() {
   const [interval, setIntervalKey] = useState<ChartInterval>(DEFAULT_INTERVAL)
   const [range, setRange] = useState<string>(DEFAULT_RANGE[DEFAULT_INTERVAL])
   const fromDate = useMemo(() => rangeFromDate(interval, range), [interval, range])
-  const { data, loading, error } = useStockDetail(ticker, fromDate, interval)
+  const { data, loading, error, noDataForInterval } = useStockDetail(
+    ticker,
+    fromDate,
+    interval,
+  )
 
   // Company fundamentals — fetched once here and shared by the Fundamentals and
   // Investment cards (both read the same payload; one fetch, not two). Volume
@@ -844,7 +951,16 @@ export function ChartsPage() {
   }, [data, catalogue, methodGroups, visibleSignals.length, isMethodShown, palette])
 
   if (loading && !data) return <LoadingState />
-  if (error) return <ErrorState message={error} ticker={ticker} />
+  // "This company has no intraday history" is information, not a failure, so it
+  // never shows the red panel. When the previous (daily) chart is still in
+  // hand — which it always is, since the page opens on 1D and the hook keeps
+  // the old data across an interval switch — the page keeps rendering and only
+  // the chart area is replaced, so the bar-size buttons stay reachable and the
+  // user can click straight back to 1D.
+  if (noDataForInterval && !data)
+    return <NoIntradayState ticker={ticker} interval={interval} />
+  if (error && !noDataForInterval)
+    return <ErrorState message={error} ticker={ticker} />
   if (!data) return null
 
   const tone = ratingTone(data.currentRating)
@@ -872,6 +988,8 @@ export function ChartsPage() {
         </span>
       </div>
 
+      <DisclaimerNote />
+
       {/* Three-column detail grid */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_300px]">
         {/* Left: signal checklist */}
@@ -896,11 +1014,16 @@ export function ChartsPage() {
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
                 {data.ticker} · {intervalOption(interval).label}
-                <span className="text-xs font-normal text-slate-500">
-                  {intervalOption(interval).barsPerSession === 1
-                    ? t('chart.sessions', { count: data.history.length })
-                    : t('chart.bars', { count: data.history.length })}
-                </span>
+                {/* Hidden while the requested bar size has no data: `data` is
+                    then the previous interval's series, and its bar count
+                    would describe a chart that is not on screen. */}
+                {!noDataForInterval && (
+                  <span className="text-xs font-normal text-slate-500">
+                    {intervalOption(interval).barsPerSession === 1
+                      ? t('chart.sessions', { count: data.history.length })
+                      : t('chart.bars', { count: data.history.length })}
+                  </span>
+                )}
                 {loading && (
                   <Loader2 size={14} className="animate-spin text-slate-500" />
                 )}
@@ -965,7 +1088,7 @@ export function ChartsPage() {
                 back they go is capped), and the daily-calibrated method overlays
                 are switched off rather than silently recomputed on the wrong
                 bar size. The rating in the header stays the daily one. */}
-            {data.intraday && (
+            {data.intraday && !noDataForInterval && (
               <p className="mb-2 px-1 text-xs text-slate-500">
                 {t('chart.intradayNote', {
                   from: data.historyStart ?? '—',
@@ -973,16 +1096,28 @@ export function ChartsPage() {
                 })}
               </p>
             )}
-            <ChartMethodLegend items={legendItems} onToggle={toggleChartMethod} />
-            <div className="h-[300px] w-full sm:h-[420px]">
-              <StockChart
-                candles={data.history}
-                signals={vsaChartSignals}
-                overlays={overlays}
-                onSpanSettled={handleSpanSettled}
-                preserveViewRef={preserveViewRef}
-              />
-            </div>
+            {noDataForInterval ? (
+              // Stand in for the chart rather than for the page: the bar-size
+              // buttons above stay on screen, so getting back to 1D is one
+              // click away.
+              <NoIntradayState ticker={ticker} interval={interval} />
+            ) : (
+              <>
+                <ChartMethodLegend
+                  items={legendItems}
+                  onToggle={toggleChartMethod}
+                />
+                <div className="h-[300px] w-full sm:h-[420px]">
+                  <StockChart
+                    candles={data.history}
+                    signals={vsaChartSignals}
+                    overlays={overlays}
+                    onSpanSettled={handleSpanSettled}
+                    preserveViewRef={preserveViewRef}
+                  />
+                </div>
+              </>
+            )}
           </Card>
           <RatingHistoryCard ticker={ticker} />
         </div>
@@ -1001,6 +1136,9 @@ export function ChartsPage() {
           <RatingCard
             currentRating={data.currentRating}
             ratingChange={data.ratingChange}
+            weeklyRating={data.weeklyRating ?? null}
+            weeklySignal={data.weeklySignal ?? null}
+            weeklyAgreement={data.weeklyAgreement ?? null}
           />
           <AiAnalysisCard ticker={ticker} />
           <TrustScoreCard ticker={ticker} />

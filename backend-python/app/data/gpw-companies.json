@@ -255,11 +255,6 @@
     "sector": "Technology"
   },
   {
-    "ticker": "ccc",
-    "name": "CCC S.A.",
-    "sector": "Consumer Cyclical"
-  },
-  {
     "ticker": "cdl",
     "name": "CDRL S.A.",
     "sector": "Consumer Cyclical"
@@ -760,6 +755,11 @@
     "sector": "Utilities"
   },
   {
+    "ticker": "mdv",
+    "name": "Modivo S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
     "ticker": "mex",
     "name": "Mex Polska S.A.",
     "sector": "Consumer Cyclical"
@@ -1190,11 +1190,6 @@
     "sector": "Healthcare"
   },
   {
-    "ticker": "spl",
-    "name": "Santander Bank Polska S.A.",
-    "sector": "Financial Services"
-  },
-  {
     "ticker": "spr",
     "name": "Spyrosoft Spólka Akcyjna",
     "sector": "Technology"
@@ -1373,11 +1368,6 @@
     "ticker": "wlt",
     "name": "Wielton S.A.",
     "sector": "Industrials"
-  },
-  {
-    "ticker": "woj",
-    "name": "Wojas S.A.",
-    "sector": "Consumer Cyclical"
   },
   {
     "ticker": "wpl",

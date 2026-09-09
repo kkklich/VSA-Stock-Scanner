@@ -28,6 +28,24 @@ if [[ "${1:-}" != "--skip-pull" ]] && [[ -d .git ]]; then
   git pull --ff-only
 fi
 
+say "Preparing the action-log folder (./logs)"
+# Where the API writes its record of every call and every background job:
+# ./logs/actions.jsonl on THIS server, bind-mounted into the container.
+# The container runs as uid 10001 (a non-root user created in its Dockerfile),
+# which is not this account, so the folder has to be writable by that uid.
+# chown needs root, so try it and fall back to a permissive mode when this
+# script is not run with sudo. Files inside end up 0644 — readable by you,
+# writable only by the app. If neither works the app just logs to the database
+# and its in-memory buffer instead; it never fails to start over this.
+mkdir -p logs
+if chown 10001:10001 logs 2>/dev/null || sudo -n chown 10001:10001 logs 2>/dev/null; then
+  chmod 0755 logs
+  echo "logs/ is owned by the API container's user."
+else
+  chmod 0777 logs
+  echo "Could not change the owner of logs/ (needs root) — made it writable instead."
+fi
+
 say "Building images (first run downloads a lot — expect several minutes)"
 compose build
 
@@ -57,7 +75,8 @@ cat <<'DONE'
 Deployed. The site is served by the host Nginx on your domain.
 
 Useful commands (run from this folder):
-  docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api    # live backend log
+  tail -f logs/actions.jsonl                                                    # what the app is doing (saved; survives restarts)
+  docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api    # live backend console (lost on restart)
   docker compose -f docker-compose.prod.yml --env-file .env.prod restart api    # restart backend
   docker compose -f docker-compose.prod.yml --env-file .env.prod down           # stop everything (data kept)
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from typing import Protocol, runtime_checkable
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -63,6 +63,29 @@ class QuoteRepository(Protocol):
 
     async def has_today_data(self, ticker: str, as_of: date | None = None) -> bool:
         """Return True if there is at least one bar for ``ticker`` on ``as_of`` (default today)."""
+        ...
+
+    async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
+        """Return ``(oldest, newest)`` stored bar dates, or None when there are none.
+
+        Two questions the ingest asks without wanting the rows themselves: how
+        far back a ticker's stored history reaches (a corporate action restates
+        all of it, so a repair has to re-fetch from the very first bar) and how
+        current it is.
+        """
+        ...
+
+    async def resync_rating_snapshot_closes(self, ticker: str) -> int:
+        """Re-point each stored rating snapshot's ``close`` at the bar it belongs to.
+
+        The rating-history chart plots price alongside rating, so its stored
+        closes are on the same scale as ``daily_quotes`` were when they were
+        written. After a corporate-action repair rewrites those bars, the
+        snapshots would still carry the old scale and draw the same phantom
+        crash the price chart just stopped drawing.
+
+        Returns the number of snapshots updated.
+        """
         ...
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
@@ -229,6 +252,43 @@ class PostgresQuoteRepository:
                 .limit(1)
             )
             return (await session.execute(stmt)).scalar() is not None
+
+    async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
+        async with self._sf() as session:
+            stmt = select(
+                func.min(DailyQuoteRow.date), func.max(DailyQuoteRow.date)
+            ).where(DailyQuoteRow.ticker == ticker)
+            oldest, newest = (await session.execute(stmt)).one()
+        if oldest is None or newest is None:
+            return None
+        return oldest, newest
+
+    async def resync_rating_snapshot_closes(self, ticker: str) -> int:
+        # A correlated UPDATE rather than a read-modify-write: the snapshots and
+        # the bars live in the same database, so the whole re-scale is one
+        # statement instead of pulling years of rows through the app.
+        bar_close = (
+            select(DailyQuoteRow.close)
+            .where(
+                DailyQuoteRow.ticker == RatingSnapshotRow.ticker,
+                DailyQuoteRow.date == RatingSnapshotRow.date,
+            )
+            .scalar_subquery()
+        )
+        async with self._sf() as session, session.begin():
+            result = await session.execute(
+                update(RatingSnapshotRow)
+                .where(
+                    RatingSnapshotRow.ticker == ticker,
+                    # Leave snapshots with no matching bar alone: overwriting
+                    # them with NULL would erase a price the chart can still
+                    # draw, and a missing bar says nothing about the scale.
+                    bar_close.is_not(None),
+                    RatingSnapshotRow.close.is_distinct_from(bar_close),
+                )
+                .values(close=bar_close)
+            )
+        return result.rowcount or 0
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
         now = datetime.now(tz=UTC)
@@ -494,6 +554,26 @@ class InMemoryQuoteRepository:
     async def has_today_data(self, ticker: str, as_of: date | None = None) -> bool:
         effective = as_of or date.today()
         return effective in self._quotes.get(ticker, {})
+
+    async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
+        dates = self._quotes.get(ticker, {}).keys()
+        if not dates:
+            return None
+        return min(dates), max(dates)
+
+    async def resync_rating_snapshot_closes(self, ticker: str) -> int:
+        bars = self._quotes.get(ticker, {})
+        updated = 0
+        for day, point in self._ratings.get(ticker, {}).items():
+            bar = bars.get(day)
+            if bar is None:
+                continue
+            close = float(bar.close)
+            if point.close == close:
+                continue
+            self._ratings[ticker][day] = point.model_copy(update={"close": close})
+            updated += 1
+        return updated
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
         self._fundamentals[ticker] = metrics

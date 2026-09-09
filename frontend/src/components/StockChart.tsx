@@ -292,14 +292,22 @@ export function StockChart({
     }
     chart.timeScale().subscribeVisibleLogicalRangeChange(onLogicalRange)
 
-    const onResize = () =>
+    // Watch the CONTAINER, not the window. Lightweight Charts draws onto a
+    // fixed-size canvas, so it has to be told when its box changes — and the
+    // box changes plenty without the window doing anything: the sidebar drawer
+    // opening below `lg`, a card above the chart growing by a line, the
+    // right-hand column reflowing when the fundamentals land. Each of those
+    // used to leave the canvas at its old width until the user happened to
+    // resize the browser.
+    const applySize = () =>
       chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
-    window.addEventListener('resize', onResize)
+    const observer = new ResizeObserver(applySize)
+    observer.observe(el)
 
     return () => {
       clearTimeout(settleTimer)
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLogicalRange)
-      window.removeEventListener('resize', onResize)
+      observer.disconnect()
       chart.remove()
     }
   }, [candles, signals, overlays, preserveViewRef, palette, BULL, BEAR])
