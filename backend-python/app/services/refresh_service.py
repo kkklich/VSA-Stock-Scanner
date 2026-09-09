@@ -44,7 +44,7 @@ from app.analysis.statistics import median_volume_pln
 from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
 from app.config import settings
 from app.db.repository import QuoteRepository
-from app.jobs.daily_ingest import IngestService
+from app.jobs.daily_ingest import IngestService, IngestStats
 from app.models import (
     GpwCompany,
     RatingPoint,
@@ -74,6 +74,43 @@ _HISTORY_DAYS = 120
 # A stock needs this many bars before its historical ratings mean anything.
 _MIN_BARS = 25
 _MIN_MEDIAN_VOLUME_PLN = 100_000.0
+
+# Share of the tracked universe that has to error before the download step is
+# reported as FAILED. See `ingest_outcome` for why it is not zero.
+_INGEST_FAILURE_SHARE = 0.10
+
+
+def ingest_outcome(stats: IngestStats) -> str:
+    """Did the download step work? — the verdict its log entry carries.
+
+    Not "did anything fail", which is what this used to ask. One flaky Yahoo
+    response out of ~290 is an ordinary night; calling the whole download
+    FAILED for it makes ``GET /api/admin/logs/summary`` — the one screen meant
+    to surface a genuinely broken run — cry wolf most nights, and a warning
+    nobody believes is worse than no warning at all.
+
+    So the step is reported as failed only when it is really broken:
+
+      * **nothing was fetched** — every ticker errored or was skipped, which
+        is what a dead network, a wrong symbol list or an unreachable database
+        looks like; or
+      * **more than one ticker in ten errored** (``_INGEST_FAILURE_SHARE``) —
+        past that the failures stop looking like provider noise and start
+        looking systemic.
+
+    Anything less is ``finished``, and no information is lost: the exact
+    counters (fetched / skipped / failed / barsWritten) ride in the entry's
+    ``detail`` either way, so a run with a handful of casualties is still
+    fully readable — it is just not shouted about.
+    """
+    if stats.companies == 0:
+        # Nothing was asked for, so nothing failing is not a failure.
+        return OUTCOME_FINISHED
+    if stats.fetched == 0:
+        return OUTCOME_FAILED
+    if stats.failed > stats.companies * _INGEST_FAILURE_SHARE:
+        return OUTCOME_FAILED
+    return OUTCOME_FINISHED
 
 
 class RefreshService:
@@ -266,7 +303,7 @@ class RefreshService:
             if stats is not None:
                 self._log_job(
                     "job.ingest",
-                    OUTCOME_FINISHED if stats.failed == 0 else OUTCOME_FAILED,
+                    ingest_outcome(stats),
                     duration_ms=stats.duration_ms,
                     detail=stats.as_detail(),
                 )

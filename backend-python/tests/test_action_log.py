@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.dependencies import action_log
+from app.jobs.daily_ingest import IngestStats
 from app.main import app
 from app.services.action_log import (
     OUTCOME_CLIENT_ERROR,
@@ -29,6 +31,7 @@ from app.services.action_log import (
     outcome_for_status,
     sanitize_query,
 )
+from app.services.refresh_service import ingest_outcome
 
 
 @pytest.fixture(autouse=True)
@@ -247,6 +250,33 @@ class TestRequestLogging:
             client.get("/health")
         assert action_log.recent(action="/health") == []
 
+    def test_cors_preflight_is_not_recorded(self) -> None:
+        """A preflight is the browser asking permission, not an action.
+
+        This middleware is added last in main.py, which makes it the OUTERMOST
+        layer — the OPTIONS call reaches it before CORS answers it, so the skip
+        has to be explicit. Without it every browser call is logged twice.
+        """
+        with TestClient(app) as client:
+            preflight = client.options(
+                "/api/stocks/methods",
+                headers={
+                    "Origin": "http://localhost:5173",
+                    "Access-Control-Request-Method": "GET",
+                },
+            )
+            assert preflight.status_code == 200
+            assert action_log.recent(action="/api/stocks/methods") == []
+
+            # The real call that follows it IS recorded.
+            client.get(
+                "/api/stocks/methods", headers={"Origin": "http://localhost:5173"}
+            )
+
+        entries = action_log.recent(action="/api/stocks/methods")
+        assert len(entries) == 1
+        assert entries[0].method == "GET"
+
     def test_route_template_groups_calls_for_different_tickers(self) -> None:
         with TestClient(app) as client:
             client.get("/api/stocks/kgh/volume")
@@ -356,6 +386,72 @@ class TestJobLogging:
         assert "Yahoo unreachable" in failed.detail["error"]
         # The status endpoint keeps agreeing with the log.
         assert refresh.status().last_error == "Yahoo unreachable"
+
+
+class TestIngestOutcome:
+    """When the download step is reported as FAILED rather than finished.
+
+    The verdict has to survive an ordinary night. GET /api/admin/logs/summary
+    is the screen meant to surface a genuinely broken run, and marking the whole
+    ingest failed because one ticker in 288 hiccuped would light it up most
+    nights — which teaches its only reader to ignore it.
+    """
+
+    @staticmethod
+    def _stats(**kwargs) -> IngestStats:
+        base = {"companies": 288, "fetched": 288, "skipped": 0, "failed": 0}
+        return IngestStats(**{**base, **kwargs})
+
+    def test_a_clean_run_is_finished(self) -> None:
+        assert ingest_outcome(self._stats()) == OUTCOME_FINISHED
+
+    def test_one_flaky_ticker_out_of_288_is_still_finished(self) -> None:
+        stats = self._stats(fetched=287, failed=1)
+        assert ingest_outcome(stats) == OUTCOME_FINISHED
+        # Nothing is hidden — the counters ride in the entry either way.
+        assert stats.as_detail()["failed"] == 1
+
+    def test_a_handful_of_dead_symbols_is_still_finished(self) -> None:
+        """Renamed/withdrawn listings are skipped, not failed, by design."""
+        assert ingest_outcome(self._stats(fetched=283, skipped=5)) == OUTCOME_FINISHED
+
+    def test_a_tenth_of_the_universe_failing_is_a_failure(self) -> None:
+        assert ingest_outcome(self._stats(fetched=238, failed=50)) == OUTCOME_FAILED
+
+    def test_fetching_nothing_at_all_is_a_failure(self) -> None:
+        """Dead network, wrong symbol list, unreachable database."""
+        assert ingest_outcome(self._stats(fetched=0, skipped=288)) == OUTCOME_FAILED
+
+    def test_an_empty_universe_is_not_a_failure(self) -> None:
+        assert (
+            ingest_outcome(IngestStats(companies=0, fetched=0)) == OUTCOME_FINISHED
+        )
+
+    @pytest.mark.asyncio
+    async def test_the_ingest_entry_carries_the_softer_verdict(self) -> None:
+        """End to end: a run with one casualty logs `finished`, with counters."""
+        from app.services.cache import TTLCache
+        from app.services.refresh_service import RefreshService
+
+        class _OneBadTicker:
+            async def run(self, full: bool = False) -> IngestStats:
+                return IngestStats(companies=288, fetched=287, failed=1)
+
+        service = ActionLogService(to_file=False)
+        refresh = RefreshService(
+            companies=[],
+            stooq=None,
+            history_cache=TTLCache(),
+            ranking_cache=TTLCache(),
+            ingest=_OneBadTicker(),  # type: ignore[arg-type]
+            action_log=service,
+        )
+        await refresh.run(trigger="nightly")
+
+        entry = service.recent(action="job.ingest")[0]
+        assert entry.outcome == OUTCOME_FINISHED
+        assert entry.detail["failed"] == 1
+        assert entry.detail["fetched"] == 287
 
 
 # ── Reading it back: GET /api/admin/logs ─────────────────────────────────────
@@ -497,6 +593,43 @@ class TestDatabaseWriter:
         assert service.dropped_count == 8
         assert service.recorded_count == 10
         assert module._QUEUE_MAX > 0  # the real bound is generous
+
+    @pytest.mark.asyncio
+    async def test_recording_from_a_worker_thread_reaches_the_database(self) -> None:
+        """record() is reachable off the event loop and must survive it.
+
+        The error tracker sits on the ROOT logger, so a ``logger.error()`` from
+        a worker thread — the market-data client runs yfinance in threads —
+        lands here while the drain worker is parked in ``await queue.get()``.
+        ``asyncio.Queue.put_nowait`` would complete that waiter's Future
+        directly from the wrong thread; the entry has to be handed to the loop
+        instead. Nothing may be dropped or lost on the way.
+        """
+        service = ActionLogService(to_file=False)
+        repo = _FakeLogRepo()
+        await service.start_db_writer(repo, retention_days=0)
+
+        done = threading.Event()
+
+        def worker() -> None:
+            for i in range(20):
+                service.record(ActionLogEntry(action=f"/api/thread/{i}"))
+            done.set()
+
+        thread = threading.Thread(target=worker, name="off-loop-recorder")
+        thread.start()
+        while not done.is_set():
+            # Yield to the loop so it can run the handed-over callbacks.
+            await asyncio.sleep(0.01)
+        await asyncio.sleep(0.05)
+        await service.stop_db_writer()
+        thread.join(timeout=5)
+
+        written = {e.action for batch in repo.batches for e in batch}
+        assert written == {f"/api/thread/{i}" for i in range(20)}
+        assert service.dropped_count == 0
+        # The in-process buffer took them all too.
+        assert len(service.recent()) == 20
 
     @pytest.mark.asyncio
     async def test_retention_prune_uses_the_configured_window(self) -> None:

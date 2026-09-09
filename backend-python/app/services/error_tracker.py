@@ -396,8 +396,15 @@ class ErrorTracker:
         An approximation on purpose: the tracker keeps counts per group, not a
         timestamped list of every hit, because the question it answers is "is
         this happening now, and how much" — the action log holds the timeline.
+
+        Takes the lock like every other reader: a failure recorded from a
+        worker thread can insert or evict a fingerprint, and iterating the
+        group table while that happens raises "OrderedDict mutated during
+        iteration". Snapshot first, then add up outside the lock.
         """
-        return sum(g.count for g in self._groups.values() if g.last_seen >= since)
+        with self._lock:
+            rows = list(self._groups.values())
+        return sum(g.count for g in rows if g.last_seen >= since)
 
     def clear(self) -> None:
         with self._lock:

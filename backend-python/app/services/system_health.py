@@ -43,10 +43,27 @@ _WARSAW = ZoneInfo("Europe/Warsaw")
 # under this is "not finished yet", not "did not happen".
 _LATE_GRACE = timedelta(minutes=90)
 
-# How old the newest stored session may be before the data counts as stale.
-# The GPW is shut all weekend, so on a Monday morning the freshest possible
-# bar is Friday's — three days. Four allows for a public holiday on top.
-_MAX_SESSION_AGE_DAYS = 4
+# How old the newest stored session may be before the data counts as stale,
+# counted in WEEKDAYS rather than calendar days.
+#
+# Calendar days cannot express this: the GPW is shut all weekend, so a Monday
+# check against Friday's bar is already three days old with nothing wrong. Any
+# tolerance wide enough for that is also wide enough to be wrong — a Friday
+# and the following Monday are both public holidays several times a year on
+# the GPW (1 and 3 May, the Corpus Christi bridge), which leaves Thursday as
+# the newest session and makes it five calendar days old by Tuesday. That is a
+# perfectly healthy database, and the old four-day rule called it stale and
+# turned the whole screen amber.
+#
+# Counting weekdays makes both cases read correctly: the Monday check is one
+# weekday and the double-holiday Tuesday check is three. Four is the tolerance
+# because the GPW's longest genuine break is the Christmas cluster (24, 25 and
+# 26 December all closed), which leaves the 23rd as the newest session and
+# makes it four weekdays old by the 29th. An ingest that has genuinely stopped
+# still crosses the line inside the same week.
+_MAX_SESSION_AGE_WEEKDAYS = 4
+# Monday–Friday; Saturday is 5.
+_WEEKEND_START = 5
 
 # Below this share of tracked companies carrying the newest session, the last
 # ingest clearly only half-worked.
@@ -82,6 +99,29 @@ def _iso(value: datetime | None) -> str | None:
 
 def _hours_between(later: datetime, earlier: datetime) -> float:
     return round((later - earlier).total_seconds() / 3600.0, 2)
+
+
+def weekdays_between(earlier: date, later: date) -> int:
+    """How many Mon–Fri days fall after ``earlier``, up to and including ``later``.
+
+    The unit the freshness check is measured in — a weekend costs nothing, so
+    Friday's bar read on Monday is one weekday old, not three. Public holidays
+    are not known here, which is why the tolerance above allows a few.
+    """
+    if later <= earlier:
+        return 0
+    return _weekdays_through(later) - _weekdays_through(earlier)
+
+
+def _weekdays_through(day: date) -> int:
+    """Weekdays on the calendar from the start of the era through ``day``.
+
+    Only differences between two of these are meaningful. Day ordinal 1 is a
+    Monday, so each whole block of seven ordinals contributes five weekdays and
+    the remainder contributes at most five more.
+    """
+    weeks, remainder = divmod(day.toordinal(), 7)
+    return weeks * 5 + min(remainder, _WEEKEND_START)
 
 
 def last_scheduled_run(now: datetime, hour: int, minute: int) -> datetime:
@@ -260,11 +300,14 @@ def evaluate_data(
         )
 
     age_days = (today - stats.latest_bar_date).days
+    # The verdict is taken on weekdays; `age_days` stays the plain calendar
+    # number the screen shows, which is what a reader counts on a calendar.
+    age_weekdays = weekdays_between(stats.latest_bar_date, today)
     coverage = (
         stats.tickers_current / tickers_tracked if tickers_tracked else None
     )
 
-    if age_days > _MAX_SESSION_AGE_DAYS:
+    if age_weekdays > _MAX_SESSION_AGE_WEEKDAYS:
         status = "stale"
         summary = (
             f"The newest stored session is {stats.latest_bar_date} — "

@@ -56,11 +56,22 @@ yahoo_client = YahooFinanceClient()
 history_cache: TTLCache = TTLCache(max_entries=4096)
 
 # Pre-computed analysis results, keyed by endpoint + settings hash: the full
-# ranking list ("ranking…"), scanner stats ("scanner:stats…") and the heatmap
-# ("heatmap…") all live here so the nightly refresh invalidates them together.
-# Far fewer entries — one per (endpoint, settings hash) — but each is a whole
-# ranked universe, so the bound is deliberately tight.
-ranking_cache: TTLCache = TTLCache(max_entries=256)
+# ranking list ("ranking…"), scanner stats ("scanner:stats…"), the heatmap
+# ("heatmap…"), the volume-surge scan, the capex screen and the per-method
+# back-tests all live here so the nightly refresh invalidates them together.
+#
+# The bound has to be counted in MEMORY, not in entries. One ranking entry is
+# ~290 StockRankingItem objects, each carrying every registered method's result
+# plus the 52-week and weekly fields — call it a few MB. The settings hash in
+# the key comes from the query string, so a client varying it fills this cache
+# with whole ranked universes; at 256 entries that is tens of thousands of rich
+# Pydantic models retained at once, hundreds of MB in the single-worker
+# production container. 32 leaves room for everything the app itself keeps
+# warm (one entry per endpoint for the default settings, a few method
+# back-tests, a couple of volume-surge parameter sets) plus a handful of
+# settings variants. Past that the least-recently-used entry is evicted and
+# whoever wants it pays one recomputation — much the better trade.
+ranking_cache: TTLCache = TTLCache(max_entries=32)
 
 # The action log (audit trail). Created here rather than in the lifespan so
 # that a request arriving while the app is still starting up — or a test that

@@ -166,16 +166,21 @@ def trailing_week_is_complete(daily: Sequence[StooqDailyQuote]) -> bool:
     if not daily:
         return False
 
+    # Friday (or later, defensively — a weekend print would still end the week).
+    # Checked first, and from a plain max() rather than a sorted copy: the
+    # ranking asks this once per tracked company over a ~500-bar window, and in
+    # the common case the answer is decided by this one date alone. Only when
+    # it does not settle the question is the per-week session count built.
+    last_date = max(b.date for b in daily)
+    if last_date.weekday() >= _FRIDAY:
+        return True
+
     ordered = sorted(daily, key=lambda b: b.date)
     sessions_per_week: OrderedDict[tuple[int, int], int] = OrderedDict()
     for bar in ordered:
         iso = bar.date.isocalendar()
         key = (iso.year, iso.week)
         sessions_per_week[key] = sessions_per_week.get(key, 0) + 1
-
-    # Friday (or later, defensively — a weekend print would still end the week).
-    if ordered[-1].date.weekday() >= _FRIDAY:
-        return True
 
     keys = list(sessions_per_week)
     earlier = keys[:-1]

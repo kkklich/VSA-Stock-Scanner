@@ -48,6 +48,7 @@ from app.dependencies import (
     set_quote_repository,
     set_refresh_service,
     set_scheduler,
+    yahoo_client,
 )
 from app.routers import admin, stocks
 from app.services.action_log import (
@@ -57,7 +58,6 @@ from app.services.action_log import (
 )
 from app.services.error_tracker import ErrorTrackingHandler
 from app.services.refresh_service import RefreshService
-from app.services.yahoo_finance_client import YahooFinanceClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ async def lifespan(_app: FastAPI):
                 set_refresh_service(
                     RefreshService(
                         companies=gpw_company_service.get_companies(),
-                        stooq=YahooFinanceClient(),
+                        stooq=yahoo_client,
                         history_cache=history_cache,
                         ranking_cache=ranking_cache,
                         action_log=action_log,
@@ -224,7 +224,9 @@ async def lifespan(_app: FastAPI):
                     )
 
                 companies = gpw_company_service.get_companies()
-                stooq = YahooFinanceClient()
+                # The process-wide market-data client (app/dependencies.py) —
+                # the same object every endpoint reads through.
+                stooq = yahoo_client
 
                 ingest_svc = IngestService(
                     companies=companies,
@@ -281,7 +283,7 @@ async def lifespan(_app: FastAPI):
             set_refresh_service(
                 RefreshService(
                     companies=gpw_company_service.get_companies(),
-                    stooq=YahooFinanceClient(),
+                    stooq=yahoo_client,
                     history_cache=history_cache,
                     ranking_cache=ranking_cache,
                     action_log=action_log,
@@ -337,9 +339,12 @@ app.add_middleware(
     expose_headers=["X-Total-Count", "X-Request-Id"],
 )
 
-# Added AFTER CORSMiddleware, which means it runs INSIDE it: browser preflight
-# OPTIONS calls are answered by CORS and never reach the log, where they would
-# double every recorded action without saying anything about what the app did.
+# Starlette inserts each new middleware at the FRONT of the stack, so the one
+# added last is the OUTERMOST: this wraps CORSMiddleware rather than sitting
+# inside it, and browser preflight OPTIONS calls do reach it. The middleware
+# skips them itself (see ActionLogMiddleware.dispatch) — a preflight is the
+# browser asking permission, and recording it would double every logged action
+# without saying anything about what the app did.
 app.add_middleware(
     ActionLogMiddleware, service=action_log, error_tracker=error_tracker
 )

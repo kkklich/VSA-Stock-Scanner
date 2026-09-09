@@ -465,3 +465,101 @@ class TestIngestCorporateActions:
         asyncio.run(svc.run(full=True))
 
         assert provider.calls[0][1] == today - timedelta(days=400)
+
+    def test_short_rebuild_writes_nothing_rather_than_splicing_two_scales(
+        self,
+    ) -> None:
+        """The rebuild must cover everything stored, or it is not a rebuild.
+
+        ``upsert_quotes`` never deletes, and the database routinely reaches
+        further back than the provider does (the single-ticker read path
+        backfills the older prefix from stooq). A repair that starts halfway
+        through the stored series would leave the older half on the pre-split
+        scale — the same phantom crash, just earlier in the chart.
+        """
+        today = date.today()
+        start = today - timedelta(days=29)
+        repo = InMemoryQuoteRepository()
+        asyncio.run(repo.upsert_quotes("kgh", _series(start, 30, 100.0)))
+
+        # The provider only has the last ten days, all restated.
+        provider = _ScaledProvider(_series(today - timedelta(days=9), 10, 25.0))
+        svc = _make_service(provider, repo)
+
+        stats = asyncio.run(svc.run())
+
+        stored = asyncio.run(repo.get_quotes("kgh", start))
+        assert {float(q.close) for q in stored} == {100.0}
+        assert stats is not None
+        assert stats.adjusted == 0
+        assert stats.failed == 1
+        assert stats.failures == ["kgh"]
+        assert stats.bars_written == 0
+        # It did try: one ordinary fetch, one repair attempt.
+        assert len(provider.calls) == 2
+        assert provider.calls[1][1] == start
+
+
+class TestGapWideningBackOff:
+    """A widening that buys nothing must not be repeated every single night.
+
+    The 400-day clamp caps the size of that download, not how often it runs, so
+    a withdrawn listing would otherwise spend a full-history fetch every night
+    inside the same four-slot gate the healthy tickers are queueing on.
+    """
+
+    def _dead_listing(self) -> tuple[IngestService, _ScaledProvider, date, date]:
+        today = date.today()
+        last_stored = today - timedelta(days=20)
+        repo = InMemoryQuoteRepository()
+        asyncio.run(
+            repo.upsert_quotes(
+                "kgh", _series(last_stored - timedelta(days=9), 10, 100.0)
+            )
+        )
+        # The provider stops where the stored history stops: the listing has
+        # been withdrawn, so no widening will ever reach the current window.
+        provider = _ScaledProvider(
+            _series(last_stored - timedelta(days=9), 10, 100.0)
+        )
+        return _make_service(provider, repo), provider, today, last_stored
+
+    def test_a_fruitless_widening_is_not_repeated_the_next_night(self) -> None:
+        svc, provider, today, last_stored = self._dead_listing()
+
+        asyncio.run(svc.run())
+        asyncio.run(svc.run())
+
+        # First night reached back past the last stored bar…
+        assert provider.calls[0][1] == last_stored - timedelta(days=5)
+        # …the second asked for the ordinary five-day window only.
+        assert provider.calls[1][1] == today - timedelta(days=5)
+
+    def test_the_back_off_expires_and_the_widening_is_tried_again(self) -> None:
+        svc, provider, _today, last_stored = self._dead_listing()
+
+        asyncio.run(svc.run())
+        # Pretend the back-off window has run out.
+        svc._gap_retry_after["kgh"] = 0.0
+
+        asyncio.run(svc.run())
+
+        assert provider.calls[1][1] == last_stored - timedelta(days=5)
+
+    def test_a_widening_that_closes_the_gap_is_not_penalised(self) -> None:
+        """A live listing that was simply missed keeps widening on its merits."""
+        today = date.today()
+        last_stored = today - timedelta(days=20)
+        repo = InMemoryQuoteRepository()
+        asyncio.run(
+            repo.upsert_quotes(
+                "kgh", _series(last_stored - timedelta(days=9), 10, 100.0)
+            )
+        )
+        provider = _ScaledProvider(_series(today - timedelta(days=60), 61, 100.0))
+        svc = _make_service(provider, repo)
+
+        asyncio.run(svc.run())
+
+        assert provider.calls[0][1] == last_stored - timedelta(days=5)
+        assert "kgh" not in svc._gap_retry_after

@@ -321,6 +321,13 @@ def _groups_from_rows(rows: list[ActionLogRow]) -> list[ErrorGroupItem]:
     most recent one. Each row carries an ``occurrences`` count — the log writes
     at most one row per group per minute — so summing those, rather than
     counting rows, is what keeps a throttled burst honest.
+
+    Every timestamp is converted to UTC before it becomes a string. The caller
+    sorts these groups by ``last_seen`` as text, and text ordering only matches
+    time ordering when every value carries the same offset — a driver handing
+    back ``+02:00`` timestamps would otherwise shuffle the list and make
+    ``items[:limit]`` drop the wrong groups. ``_group_item`` normalises the
+    same way, so the two sources stay comparable.
     """
     groups: dict[str, ErrorGroupItem] = {}
     counts: dict[str, int] = {}
@@ -346,8 +353,8 @@ def _groups_from_rows(rows: list[ActionLogRow]) -> list[ErrorGroupItem]:
             where=detail.get("where"),
             source=detail.get("source"),
             count=0,
-            first_seen=started.isoformat(),
-            last_seen=started.isoformat(),
+            first_seen=started.astimezone(UTC).isoformat(),
+            last_seen=started.astimezone(UTC).isoformat(),
             last_seen_local=started.astimezone(_WARSAW).isoformat(),
             traceback=detail.get("traceback"),
             context=detail.get("context"),

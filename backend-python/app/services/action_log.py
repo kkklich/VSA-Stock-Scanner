@@ -265,6 +265,9 @@ class ActionLogService:
         self._repo: Any | None = None
         self._queue: asyncio.Queue[ActionLogEntry] | None = None
         self._worker: asyncio.Task | None = None
+        # The loop the queue and its worker belong to. Needed because record()
+        # is reachable from worker threads — see the note there.
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._retention_days = 0
         # Counters for the admin summary — how healthy the log itself is.
         self.recorded_count = 0
@@ -344,6 +347,9 @@ class ActionLogService:
         self._repo = repo
         self._retention_days = retention_days
         self._queue = asyncio.Queue(maxsize=_QUEUE_MAX)
+        # Remembered so record() can tell "I am on the loop that owns this
+        # queue" from "I am on some other thread" (see record()).
+        self._loop = asyncio.get_running_loop()
         self._worker = asyncio.create_task(self._drain_queue(), name="action_log_writer")
 
     async def stop_db_writer(self) -> None:
@@ -385,11 +391,12 @@ class ActionLogService:
                     logger.exception("Final action-log flush failed.")
         self._repo = None
         self._queue = None
+        self._loop = None
 
     # ── Recording ─────────────────────────────────────────────────────────────
 
     def record(self, entry: ActionLogEntry) -> None:
-        """Record one entry. Never raises, never blocks on the database."""
+        """Record one entry. Never raises, never blocks, safe from any thread."""
         if not self._enabled:
             return
         self.recorded_count += 1
@@ -403,13 +410,46 @@ class ActionLogService:
             except Exception:  # noqa: BLE001 — logging must not break the caller
                 logger.exception("Failed to write an action-log line.")
 
-        if self._queue is not None:
+        queue = self._queue
+        if queue is None:
+            return
+
+        # Not every caller is on the event loop. The error tracker is attached
+        # to the ROOT logger, so any logger.error() from a worker thread — the
+        # market-data client runs yfinance in threads — lands here. An
+        # asyncio.Queue is not thread-safe: put_nowait wakes a waiting getter
+        # by completing a Future directly, and the drain worker is essentially
+        # always parked in `await queue.get()`, so doing that off the loop
+        # corrupts the loop's own state. Hand the work to the loop instead.
+        loop = self._loop
+        if loop is not None and not self._on_owning_loop(loop):
             try:
-                self._queue.put_nowait(entry)
-            except asyncio.QueueFull:
-                # Deliberate: the API stays fast and the file already has the
-                # record. The counter makes the loss visible in the summary.
+                loop.call_soon_threadsafe(self._enqueue, queue, entry)
+            except RuntimeError:
+                # The loop is closing or already closed — the file and the ring
+                # buffer still hold the entry; only the database copy is lost.
                 self.dropped_count += 1
+            return
+
+        self._enqueue(queue, entry)
+
+    @staticmethod
+    def _on_owning_loop(loop: asyncio.AbstractEventLoop) -> bool:
+        """True when the caller is running on ``loop`` itself."""
+        try:
+            return asyncio.get_running_loop() is loop
+        except RuntimeError:
+            # No running loop at all: a plain worker thread.
+            return False
+
+    def _enqueue(self, queue: asyncio.Queue, entry: ActionLogEntry) -> None:
+        """Put one entry on the writer's queue. Only ever runs on the loop."""
+        try:
+            queue.put_nowait(entry)
+        except asyncio.QueueFull:
+            # Deliberate: the API stays fast and the file already has the
+            # record. The counter makes the loss visible in the summary.
+            self.dropped_count += 1
 
     def log_job(
         self,
@@ -538,9 +578,12 @@ class ActionLogService:
 class ActionLogMiddleware(BaseHTTPMiddleware):
     """Records one entry per HTTP request.
 
-    Sits INSIDE the CORS middleware (added after it), so browser preflight
-    OPTIONS calls — which CORS answers itself and which say nothing about what
-    the app did — never reach the log.
+    Preflight ``OPTIONS`` calls are skipped. This middleware is added last in
+    ``main.py`` and Starlette builds its stack front-to-back, so it is the
+    OUTERMOST layer and a preflight reaches it before CORS answers it — the
+    skip has to be here rather than implied by the ordering. A preflight is the
+    browser asking permission; logging it would double every recorded action
+    while saying nothing about what the app actually did.
 
     Every response carries an ``X-Request-Id`` header holding the same id as
     the log line, so a screen the owner is looking at can be tied to its entry.
@@ -562,7 +605,11 @@ class ActionLogMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         service = self._service
-        if not service.enabled or service.excludes(request.url.path):
+        if (
+            not service.enabled
+            or request.method == "OPTIONS"
+            or service.excludes(request.url.path)
+        ):
             return await call_next(request)
 
         request_id = uuid.uuid4().hex[:12]

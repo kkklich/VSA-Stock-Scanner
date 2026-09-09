@@ -49,15 +49,35 @@ _INCREMENTAL_DAYS = 5
 # incremental window — the app was offline for a few days, say. Fetching only
 # the last five days would then leave a hole in the series AND, because nothing
 # overlaps, no bars to compare, so an adjustment made during the outage would go
-# unnoticed. Capped at the bootstrap window so a long-suspended listing cannot
-# turn every night into a full history download.
+# unnoticed. Capped at the bootstrap window so one widened fetch can never cost
+# more than a full history download.
 _GAP_OVERLAP_DAYS = 5
+# How long a ticker whose widened fetch did NOT close its gap is left alone.
+#
+# The cap above limits the size of that download, not how often it happens. A
+# withdrawn or long-suspended listing has stored bars ending before the window
+# permanently, so without this every night asks the provider for a 400-day
+# series — inside the four-slot fetch gate the healthy tickers are queueing on.
+# Same idea as NEGATIVE_CACHE_SECONDS in app/services/cache.py (remember a
+# "nothing to find here" answer instead of re-asking), but measured in days
+# rather than an hour, because what is being throttled runs once a night
+# instead of once a scan. A listing that resumes trading is picked up a week
+# late at worst, and a full (bootstrap) ingest ignores this entirely.
+_GAP_RETRY_DAYS = 7
 # Max concurrent stooq requests (mirrors ranking_service).
 _MAX_CONCURRENT = 4
 # How many failing tickers a run reports by name in its log entry. The rest are
 # only counted — a run where every symbol failed must not write a 290-name list
 # into the audit trail.
 _MAX_REPORTED_FAILURES = 20
+# How many rebuilt (corporate-action) tickers a run names in its log entry.
+# Its own constant rather than a share of the failure cap: this list is the
+# audit record that a stock's stored past prices were rewritten, which is the
+# question the log is asked months later when a rating moved for no visible
+# reason. Splits and dividend adjustments land a handful at a time, so a
+# smaller number holds a whole night's worth — and the two limits must be free
+# to move apart without one silently changing the other.
+_MAX_REPORTED_ADJUSTED = 20
 
 
 @dataclass(slots=True)
@@ -100,7 +120,7 @@ class IngestStats:
             "failed": self.failed,
             "barsWritten": self.bars_written,
             "adjusted": self.adjusted,
-            "adjustedTickers": self.adjusted_tickers[:_MAX_REPORTED_FAILURES],
+            "adjustedTickers": self.adjusted_tickers[:_MAX_REPORTED_ADJUSTED],
             "fundamentalsRun": self.fundamentals_run,
             "failures": self.failures[:_MAX_REPORTED_FAILURES],
         }
@@ -123,6 +143,10 @@ class IngestService:
         self._history_cache = history_cache
         self._ranking_cache = ranking_cache
         self._running = asyncio.Lock()
+        # Tickers whose widened fetch bought nothing, and the monotonic time
+        # after which it is worth trying again (see _GAP_RETRY_DAYS). Kept on
+        # the service rather than in history_cache, which every run clears.
+        self._gap_retry_after: dict[str, float] = {}
 
     async def run(self, full: bool = False) -> IngestStats | None:
         """Fetch and persist data for every tracked ticker.
@@ -193,6 +217,7 @@ class IngestService:
                             stored = await self._repo.get_quotes(ticker, effective_from)
                     except Exception:  # noqa: BLE001
                         logger.debug("Could not re-read stored bars for %s.", ticker)
+            widened = effective_from != from_date
 
             async with semaphore:
                 try:
@@ -201,14 +226,28 @@ class IngestService:
                     )
                 except StooqAccessError as exc:
                     logger.warning("Ingest skipped for %s: %s", ticker, exc)
+                    if widened:
+                        self._remember_open_gap(ticker)
                     stats.skipped += 1
                     stats.failures.append(ticker)
                     return
                 except Exception as exc:  # noqa: BLE001
                     logger.error("Ingest error for %s: %s", ticker, exc)
+                    if widened:
+                        self._remember_open_gap(ticker)
                     stats.failed += 1
                     stats.failures.append(ticker)
                     return
+
+                if widened:
+                    # Did the bigger download actually reach into the normal
+                    # window? If not, this listing has simply stopped trading
+                    # and repeating the fetch every night buys nothing.
+                    newest = max((q.date for q in quotes), default=None)
+                    if newest is None or newest < from_date:
+                        self._remember_open_gap(ticker)
+                    else:
+                        self._gap_retry_after.pop(ticker, None)
 
                 # Still inside the fetch gate: a repair is a second download
                 # and must obey the same concurrency budget.
@@ -278,6 +317,22 @@ class IngestService:
 
     # ── Corporate actions (splits, dividends) ─────────────────────────────────
 
+    def _remember_open_gap(self, ticker: str) -> None:
+        """Note that widening this ticker's fetch did not close its gap."""
+        self._gap_retry_after[ticker] = (
+            time.monotonic() + _GAP_RETRY_DAYS * 24 * 60 * 60
+        )
+
+    def _gap_widening_due(self, ticker: str) -> bool:
+        """False while this ticker is inside its back-off window."""
+        deadline = self._gap_retry_after.get(ticker)
+        if deadline is None:
+            return True
+        if time.monotonic() >= deadline:
+            del self._gap_retry_after[ticker]
+            return True
+        return False
+
     async def _widen_for_gap(
         self,
         ticker: str,
@@ -288,9 +343,13 @@ class IngestService:
         """Reach further back when a ticker's stored history stops before the window.
 
         Returns the date the fetch should start from — ``from_date`` unchanged
-        in the ordinary case (nothing stored at all, or the stored bars already
-        reach into the window).
+        in the ordinary case (nothing stored at all, the stored bars already
+        reach into the window, or a recent widening for this ticker already
+        proved fruitless; see ``_GAP_RETRY_DAYS``).
         """
+        if not self._gap_widening_due(ticker):
+            return from_date
+
         try:
             async with db_semaphore:
                 span = await self._repo.get_quote_date_range(ticker)
@@ -337,9 +396,10 @@ class IngestService:
         overlap disagrees the whole stored history is downloaded again instead.
 
         Returns ``(bars_to_write, repaired)``. ``bars_to_write`` is ``None``
-        when the run must write nothing for this ticker: that happens only if
-        the repair download fails, and leaving the history one day stale is far
-        better than leaving it internally inconsistent.
+        when the run must write nothing for this ticker — the repair download
+        failed, came back empty, or does not reach as far back as the stored
+        history does. Leaving the history one day stale is far better than
+        leaving it internally inconsistent.
         """
         check = detect_adjustment(stored, fetched)
         if not check.adjusted:
@@ -380,6 +440,29 @@ class IngestService:
             logger.error(
                 "Re-download of %s returned nothing; skipping tonight's write.",
                 ticker,
+            )
+            stats.failed += 1
+            stats.failures.append(ticker)
+            return None, False
+
+        # The rebuild has to cover EVERYTHING that is stored, because
+        # upsert_quotes only overwrites the days it was handed and never
+        # deletes. The database routinely reaches further back than the
+        # provider does — the single-ticker read path backfills the older
+        # prefix from stooq (see _get_quotes in app/routers/stocks.py) — so a
+        # short rebuild would leave those older bars on the pre-split scale and
+        # simply move the phantom crash further back in the series, which is
+        # the one thing this whole check exists to prevent. Nothing is written
+        # in that case: a day-stale history beats an inconsistent one, and the
+        # next run retries.
+        if span is not None and repaired_bars[0].date > span[0]:
+            logger.error(
+                "Re-download of %s only reaches back to %s, but bars are stored "
+                "from %s — writing it would splice two price scales together. "
+                "Skipping tonight's write; the next run will retry.",
+                ticker,
+                repaired_bars[0].date,
+                span[0],
             )
             stats.failed += 1
             stats.failures.append(ticker)

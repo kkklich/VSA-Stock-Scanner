@@ -13,14 +13,17 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.db.health_repository import StoredDataStats
+from app.db.models import ActionLogRow
 from app.dependencies import action_log, error_tracker
 from app.main import app
+from app.routers.admin import _groups_from_rows
 from app.services.action_log import (
     KIND_ERROR,
     OUTCOME_FAILED,
@@ -40,6 +43,7 @@ from app.services.system_health import (
     evaluate_ingest,
     last_scheduled_run,
     overall_status,
+    weekdays_between,
     worst,
 )
 
@@ -343,6 +347,79 @@ def _stats(latest: date, current: int = 288, **kwargs) -> StoredDataStats:
     )
 
 
+class TestGroupsRebuiltFromStoredRows:
+    """Reading error groups back out of the action_logs table.
+
+    The endpoint sorts these by ``last_seen`` as TEXT and then truncates to
+    ``limit``, so every timestamp has to be normalised to one offset first.
+    A driver handing back ``+02:00`` values would otherwise put an older group
+    at the top and drop the wrong ones off the end.
+    """
+
+    @staticmethod
+    def _row(fingerprint: str, started: datetime) -> ActionLogRow:
+        return ActionLogRow(
+            started_at=started,
+            request_id="a" * 12,
+            kind=KIND_ERROR,
+            action=f"error.{fingerprint}",
+            outcome=OUTCOME_FAILED,
+            detail={
+                "fingerprint": fingerprint,
+                "type": fingerprint,
+                "message": f"{fingerprint} went wrong",
+                "occurrences": 1,
+            },
+        )
+
+    def test_timestamps_come_back_normalised_to_utc(self) -> None:
+        warsaw = datetime(2026, 9, 9, 12, 0, tzinfo=ZoneInfo("Europe/Warsaw"))
+        items = _groups_from_rows([self._row("Offset", warsaw)])
+
+        assert items[0].last_seen == "2026-09-09T10:00:00+00:00"
+        assert items[0].first_seen == "2026-09-09T10:00:00+00:00"
+        # The local rendering is unchanged — it was already correct.
+        assert items[0].last_seen_local.startswith("2026-09-09T12:00:00")
+
+    def test_mixed_offsets_sort_chronologically(self) -> None:
+        # 12:00 Warsaw is 10:00 UTC — an hour EARLIER than the second row,
+        # although its raw ISO text sorts later.
+        older = datetime(2026, 9, 9, 12, 0, tzinfo=ZoneInfo("Europe/Warsaw"))
+        newer = datetime(2026, 9, 9, 11, 0, tzinfo=UTC)
+        items = _groups_from_rows(
+            [self._row("Offset", older), self._row("Plain", newer)]
+        )
+        items.sort(key=lambda i: i.last_seen, reverse=True)
+
+        assert [i.fingerprint for i in items] == ["Plain", "Offset"]
+
+    def test_a_naive_timestamp_is_read_as_utc(self) -> None:
+        items = _groups_from_rows(
+            [self._row("Naive", datetime(2026, 9, 9, 11, 0))]  # noqa: DTZ001
+        )
+        assert items[0].last_seen == "2026-09-09T11:00:00+00:00"
+
+
+class TestWeekdaysBetween:
+    """The unit the freshness check counts in — a weekend costs nothing."""
+
+    def test_friday_to_monday_is_one_weekday(self) -> None:
+        assert weekdays_between(date(2026, 9, 4), date(2026, 9, 7)) == 1
+
+    def test_consecutive_weekdays(self) -> None:
+        assert weekdays_between(date(2026, 9, 7), date(2026, 9, 8)) == 1
+
+    def test_a_thursday_read_on_the_next_tuesday_is_three(self) -> None:
+        assert weekdays_between(date(2026, 4, 30), date(2026, 5, 5)) == 3
+
+    def test_a_whole_week_is_five(self) -> None:
+        assert weekdays_between(date(2026, 9, 1), date(2026, 9, 8)) == 5
+
+    def test_the_same_day_and_the_future_are_zero(self) -> None:
+        assert weekdays_between(date(2026, 9, 8), date(2026, 9, 8)) == 0
+        assert weekdays_between(date(2026, 9, 8), date(2026, 9, 1)) == 0
+
+
 class TestDataHealth:
     def test_fresh_full_coverage_is_ok(self) -> None:
         health = evaluate_data(
@@ -362,6 +439,34 @@ class TestDataHealth:
             tickers_tracked=288,
             db_enabled=True,
             today=date(2026, 9, 7),
+        )
+        assert health.status == "ok"
+
+    def test_two_holidays_around_a_weekend_do_not_make_data_stale(self) -> None:
+        """Thursday's bar, read on Tuesday. Five calendar days, nothing wrong.
+
+        The GPW closes on a Friday and the following Monday several times a
+        year, which leaves Thursday as the newest session. Counted in calendar
+        days that is five and the old four-day rule turned the whole screen
+        amber; counted in weekdays it is three.
+        """
+        health = evaluate_data(
+            _stats(date(2026, 4, 30)),  # Thursday
+            tickers_tracked=288,
+            db_enabled=True,
+            today=date(2026, 5, 5),  # the Tuesday after
+        )
+        assert health.status == "ok"
+        # The screen still shows the plain calendar number a reader can check.
+        assert health.session_age_days == 5
+
+    def test_the_christmas_cluster_is_still_healthy(self) -> None:
+        """24, 25 and 26 December closed: the 23rd read on the 29th."""
+        health = evaluate_data(
+            _stats(date(2025, 12, 23)),  # Tuesday
+            tickers_tracked=288,
+            db_enabled=True,
+            today=date(2025, 12, 29),  # the following Monday
         )
         assert health.status == "ok"
 
