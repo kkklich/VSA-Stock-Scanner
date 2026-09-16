@@ -44,8 +44,7 @@
     "help": "Pomoc",
     "settings": "Ustawienia",
     "closeMenu": "Zamknij menu",
-    "openMenu": "Otwórz menu",
-    "system": "System"
+    "openMenu": "Otwórz menu"
   },
   "topbar": {
     "lastSync": "Ostatnia synchronizacja:",
@@ -165,6 +164,8 @@
     "columnInfo": "Ten sam silnik VSA uruchomiony na świecach tygodniowych. Puste, gdy spółka ma mniej niż ~30 tygodni historii."
   },
   "chart": {
+    "addFavorite": "Dodaj do ulubionych",
+    "removeFavorite": "Usuń z ulubionych",
     "loading": "Ładowanie danych wykresu…",
     "failedToLoad": "{{ticker}} — nie udało się załadować",
     "noIntradayTitle": "Brak danych {{interval}} dla {{ticker}}",

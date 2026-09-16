@@ -44,8 +44,7 @@
     "help": "Help",
     "settings": "Settings",
     "closeMenu": "Close menu",
-    "openMenu": "Open menu",
-    "system": "System"
+    "openMenu": "Open menu"
   },
   "topbar": {
     "lastSync": "Last sync:",
@@ -165,6 +164,8 @@
     "columnInfo": "The same VSA engine run on weekly candles. Blank when the stock has under ~30 weeks of stored history."
   },
   "chart": {
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites",
     "loading": "Loading chart data…",
     "failedToLoad": "{{ticker}} — failed to load",
     "noIntradayTitle": "No {{interval}} data for {{ticker}}",

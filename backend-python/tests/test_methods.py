@@ -1,8 +1,8 @@
 """Tests for the pluggable trading-method framework (app/analysis/methods).
 
 Covers the registry, every shipped method (VSA, Minervini Trend Template,
-Volume Breakout, VSA Glinicki V1), the combined cross-method score, and that
-the ranking attaches per-method results to every row.
+Volume Breakout, VSA Glinicki V1, VSA 2), the combined cross-method score, and
+that the ranking attaches per-method results to every row.
 """
 
 from __future__ import annotations
@@ -72,6 +72,19 @@ class TestRegistry:
     def test_ids_are_unique(self) -> None:
         ids = method_ids()
         assert len(ids) == len(set(ids))
+
+    def test_vsa2_is_registered_last_and_is_distinct_from_v1(self) -> None:
+        ids = method_ids()
+        # order: vsa (10) < minervini (20) < breakout (30) < glinicki (40) < vsa2 (50)
+        assert ids.index("vsa2") > ids.index("glinicki")
+        v1, v2 = get_method("glinicki"), get_method("vsa2")
+        assert v1 is not None and v2 is not None
+        assert v2.name and v2.description and v2.source and v2.source_url
+        assert v2.direction == "Bullish"  # long-only
+        # Two courses by the same author, two different methods: the sources
+        # must not be copied from one another.
+        assert v2.source != v1.source
+        assert "30 lessons" in v2.source
 
     def test_breakout_is_registered_after_minervini(self) -> None:
         ids = method_ids()
@@ -518,6 +531,336 @@ class TestVsaGlinicki:
         assert get_method("glinicki").signals(frozen) == []
         assert get_method("glinicki").evaluate([]).available is False
         assert get_method("glinicki").signals([]) == []
+
+
+# ── VSA 2 (Scenario 5) ────────────────────────────────────────────────────────
+
+_FLAT_N = 97  # keeps the fixture at exactly the 120 bars the method needs
+
+
+def _vsa2_bars(
+    *,
+    hammer: tuple[float, float, float, float] = (98.6, 98.8, 97.3, 98.7),
+    hammer_volume: int = 85_000,
+    peak_high: float = 106.0,
+    corr_closes: tuple[float, ...] = (104.0, 102.5, 101.0, 100.0, 99.4, 99.0),
+    corr_volumes: tuple[int, ...] = (
+        180_000,
+        170_000,
+        165_000,
+        160_000,
+        155_000,
+        150_000,
+    ),
+    confirm: bool = True,
+    supply_at_peak: bool = False,
+    climax_at_peak: bool = False,
+) -> list[StooqDailyQuote]:
+    """A complete Scenario 5 (long): impulse, quiet pullback to 50%, formation.
+
+    A flat base, a fall to a trough at 89, a ~19% impulse up to ``peak_high``, a
+    correction whose volume expires, a No Supply bar and then a Hammer whose low
+    lands in the 50% retracement band. Every keyword breaks exactly one of the
+    setup's conditions, so a test can show which gate did the rejecting.
+    """
+    bars = [_bar(i, 100.0, 101.0, 99.0, 100.0, 200_000) for i in range(_FLAT_N)]
+
+    # The fall into the impulse's origin: lows 97, 95, 93, 91, 89.
+    for k, c in enumerate((98.0, 96.0, 94.0, 92.0, 90.0)):
+        i = _FLAT_N + k
+        bars.append(_bar(i, c + 1.0, c + 1.0, c - 1.0, c, 220_000))
+
+    # The impulse: ten rising bars, the last printing the peak's high.
+    rise = (92.0, 94.0, 96.0, 98.0, 100.0, 101.5, 103.0, 104.0, 105.0, 105.5)
+    for k, c in enumerate(rise):
+        i = _FLAT_N + 5 + k
+        top = k == len(rise) - 1
+        high = peak_high if top else c + 0.8
+        # A buying climax is a volume EXTREME at the top after which price goes
+        # no higher — lesson 14's K9, drawn as a place rather than a shape.
+        volume = 1_400_000 if (top and climax_at_peak) else 250_000 + k * 10_000
+        bars.append(_bar(i, c - 0.5, high, c - 0.7, c, volume))
+
+    # The correction, on expiring volume.
+    for k, (c, v) in enumerate(zip(corr_closes, corr_volumes, strict=True)):
+        i = _FLAT_N + 15 + k
+        if supply_at_peak and k == 0:
+            # A wide down bar on heavy volume right off the top — real effort
+            # spent driving price down, which says the advance is finished.
+            bars.append(_bar(i, c + 3.0, c + 3.2, c - 0.2, c, 900_000))
+            continue
+        bars.append(_bar(i, c + 0.6, c + 0.8, c - 0.5, c, v))
+
+    # The confirming VSA signal: a narrow red bar on pink volume (No Supply).
+    i = _FLAT_N + 15 + len(corr_closes)
+    if confirm:
+        bars.append(_bar(i, 99.0, 99.1, 98.4, 98.5, 90_000))
+    else:
+        # Same direction, but wide and on heavier volume: no signal of strength.
+        bars.append(_bar(i, 99.0, 99.6, 98.4, 98.5, 200_000))
+
+    o, h, low, c = hammer
+    bars.append(_bar(i + 1, o, h, low, c, hammer_volume))
+    return bars
+
+
+class TestVsa2:
+    def test_complete_setup_fires(self) -> None:
+        result = get_method("vsa2").evaluate(_vsa2_bars())
+        assert result.available is True
+        assert result.fired is True
+        assert result.days_since == 0
+        # The detail names all three reasons: shape, confirming signal, place.
+        assert result.detail is not None
+        assert result.detail.startswith("Hammer + No Supply @ 50%")
+        assert "R/R" in result.detail
+        # Five of the six conditions stand (the sixth, lesson 21's testing
+        # process, needs an earlier high-volume low this fixture has no reason
+        # to carry).
+        assert result.score >= 83
+
+    def test_wfo_is_the_other_route_to_the_place(self) -> None:
+        # A retracement of 55% is between the course's bands, so the geometry
+        # route cannot supply the place. The pullback instead makes a LOWER low
+        # than an earlier local low on LOWER volume — lesson 26's bullish WFO.
+        bars = _vsa2_bars(
+            corr_closes=(104.0, 100.6, 98.2, 99.8, 99.2, 98.8),
+            corr_volumes=(200_000, 195_000, 190_000, 185_000, 180_000, 175_000),
+            hammer=(97.3, 97.45, 96.65, 97.4),
+        )
+        result = get_method("vsa2").evaluate(bars)
+        assert result.fired is True
+        assert result.detail is not None
+        assert "@ WFO" in result.detail
+
+    def test_formation_between_the_geometry_bands_does_not_fire(self) -> None:
+        # The shape is identical; only the place is wrong — a 30% retracement,
+        # short of the shallowest band the course names. The formation is still
+        # DETECTED, so it is the WM gate doing the rejecting.
+        from app.analysis.methods.vsa2 import _find_leg, _formation_at, _in_wm, _Series
+
+        bars = _vsa2_bars(hammer=(100.6, 100.8, 100.4, 100.7))
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        assert _formation_at(s, last) is not None
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _in_wm(s, leg, last, s.lows[last]) is None
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_supply_at_the_peak_kills_the_setup(self) -> None:
+        bars = _vsa2_bars(supply_at_peak=True)
+        from app.analysis.methods.vsa2 import _find_leg, _no_supply_at_peak, _Series
+
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _no_supply_at_peak(s, leg, last) is False
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_buying_climax_at_the_peak_kills_the_setup(self) -> None:
+        # Lesson 14's K9: a volume extreme at the top of the advance, after
+        # which price goes no higher. The pullback off such a top is the one
+        # thing "BRAK PODAZY W SZCZYCIE" exists to refuse — and it arrives on a
+        # big UP bar, so neither the wide-down-bar nor the upthrust test sees it.
+        from app.analysis.methods.vsa2 import _find_leg, _no_supply_at_peak, _Series
+
+        bars = _vsa2_bars(climax_at_peak=True)
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _no_supply_at_peak(s, leg, last) is False
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_halted_stock_is_not_a_corrective_volume_pullback(self) -> None:
+        # Zero-volume bars satisfy "the volume expired" and "quieter than the
+        # impulse" perfectly, so a suspension would otherwise read as the
+        # course's textbook correction. Volume drying up means fewer trades,
+        # not none.
+        from app.analysis.methods.vsa2 import _corrective_volume, _find_leg, _Series
+
+        bars = _vsa2_bars(corr_volumes=(180_000, 170_000, 165_000, 0, 0, 0))
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _corrective_volume(s, leg, last) is False
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_two_bar_reversal_needs_the_slides_low_volume(self) -> None:
+        # Lesson 11 draws the pair over "niski slupek czerwony i obok niego
+        # niski zielony" — both bars quiet, against a noisy decline. Without
+        # that, the detector is a pure price shape that duplicates a Bullish
+        # Engulfing, letting one candle be both the formation AND the VSA
+        # signal that lesson 29 requires to confirm it.
+        from app.analysis.methods.vsa2 import _Series, _two_bar_reversal
+
+        def pair(volume: int) -> bool:
+            bars = [_bar(i, 100.0, 101.0, 99.0, 100.0, 200_000) for i in range(40)]
+            bars.append(_bar(40, 100.0, 100.2, 97.8, 98.0, volume))
+            bars.append(_bar(41, 98.0, 100.1, 97.9, 100.0, volume))
+            return _two_bar_reversal(_Series.build(bars), len(bars) - 1)
+
+        assert pair(120_000) is True  # quiet pair — the slide's picture
+        assert pair(400_000) is False  # twice the average: not this signal
+
+    def test_wfo_reference_low_must_sit_inside_the_correction(self) -> None:
+        # Lesson 26 draws BOTH lows inside one decline: "ruch spadkowy,
+        # pierwszy dolek, odbicie, drugi dolek NIZSZY". A local low from inside
+        # the impulse is not the slide's first low, and using it would let the
+        # whole rally stand in for the small bounce between them.
+        from app.analysis.methods.vsa2 import _bullish_wfo, _find_leg, _Series
+
+        bars = _vsa2_bars(
+            corr_closes=(104.0, 100.6, 98.2, 99.8, 99.2, 98.8),
+            corr_volumes=(200_000, 195_000, 190_000, 185_000, 180_000, 175_000),
+            hammer=(97.3, 97.45, 96.65, 97.4),
+        )
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _bullish_wfo(s, leg, last) is True
+        # Every low the WFO may compare against lies after the peak.
+        assert leg.peak < last
+
+    def test_correction_on_rising_volume_is_not_corrective(self) -> None:
+        # Volume swelling through the pullback is the course's own warning sign,
+        # not a correction to buy into.
+        bars = _vsa2_bars(
+            corr_volumes=(150_000, 165_000, 180_000, 200_000, 240_000, 300_000),
+            hammer_volume=320_000,
+        )
+        from app.analysis.methods.vsa2 import _corrective_volume, _find_leg, _Series
+
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _corrective_volume(s, leg, last) is False
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_formation_without_a_vsa_signal_does_not_fire(self) -> None:
+        # "FORMACJA SWIECOWA POTWIERDZONA SYGNALEM VSA" — the slide's word is
+        # *confirmed*, so a formation on its own is not a setup.
+        from app.analysis.methods.vsa2 import _confirming_signal, _formation_at, _Series
+
+        bars = _vsa2_bars(confirm=False)
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        found = _formation_at(s, last)
+        assert found is not None
+        assert _confirming_signal(s, last, found[1]) is None
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_reward_to_risk_below_three_to_one_is_rejected(self) -> None:
+        # Every reading of the market passes; the trade is simply priced too
+        # close to its target. The course's only arithmetic filter.
+        from app.analysis.methods.vsa2 import (
+            _confirming_signal,
+            _find_leg,
+            _formation_at,
+            _in_wm,
+            _risk_reward,
+            _Series,
+        )
+
+        # Same low (so the place is unchanged) but a close 4 PLN above it: the
+        # stop is far, the peak is near.
+        bars = _vsa2_bars(hammer=(101.3, 101.6, 97.3, 101.5))
+        s = _Series.build(bars)
+        last = len(bars) - 1
+        found = _formation_at(s, last)
+        assert found is not None
+        leg = _find_leg(s, last)
+        assert leg is not None
+        assert _in_wm(s, leg, last, min(s.lows[last - found[1] + 1 : last + 1])) is not None
+        assert _confirming_signal(s, last, found[1]) is not None
+        rr = _risk_reward(s, leg, last, found[0], found[1])
+        assert rr is not None and rr < 3.0
+        assert get_method("vsa2").evaluate(bars).fired is False
+
+    def test_recency_reported_after_the_setup(self) -> None:
+        bars = _vsa2_bars()
+        n = len(bars)
+        bars += [
+            _bar(n + k, c, c + 0.4, c - 0.4, c, 100_000)
+            for k, c in ((k, 99.0 + k * 0.1) for k in range(4))
+        ]
+        result = get_method("vsa2").evaluate(bars)
+        assert result.fired is False
+        assert result.days_since == 4
+        assert result.detail == "Hammer + No Supply 4d ago"
+
+    def test_signals_mark_the_firing(self) -> None:
+        overlay = get_method("vsa2").signals(_vsa2_bars())
+        assert [(s.label, s.type) for s in overlay] == [("Hammer + No Supply", "Bullish")]
+        assert overlay[0].date == _vsa2_bars()[-1].date
+
+    def test_downtrend_never_fires_and_scores_low(self) -> None:
+        # A steady collapse: no impulse to retrace, so there is no pullback to
+        # buy. The score must stay under the analytics summary's bullish-lean
+        # threshold, or a falling knife would read as a long.
+        bars = [
+            _bar(i, c, c + 2, c - 2, c, 300_000 if i % 3 else 700_000)
+            for i, c in ((i, 400.0 - i * 1.6) for i in range(130))
+        ]
+        result = get_method("vsa2").evaluate(bars)
+        assert result.fired is False
+        assert result.days_since == NEVER_FIRED
+        assert result.score < 50
+        assert get_method("vsa2").signals(bars) == []
+
+    def test_new_highs_report_no_pullback_rather_than_a_score(self) -> None:
+        # Price making new highs has no correction to measure a retracement
+        # against, and the reader is told that rather than shown a bare 0.
+        bars = [
+            _bar(i, c, c + 1, c - 1, c, 200_000)
+            for i, c in ((i, 100.0 + i * 0.6) for i in range(130))
+        ]
+        result = get_method("vsa2").evaluate(bars)
+        assert result.available is True
+        assert result.fired is False
+        assert result.detail == "No pullback setup"
+
+    def test_short_history_is_unavailable(self) -> None:
+        result = get_method("vsa2").evaluate(_vsa2_bars()[:80])
+        assert result.available is False
+        assert get_method("vsa2").signals(_vsa2_bars()[:80]) == []
+
+    def test_frozen_and_empty_series_never_raise(self) -> None:
+        # A suspended listing prints zero-spread, zero-volume bars; the rolling
+        # context fails closed instead of making every relative test true.
+        frozen = [_bar(i, 10.0, 10.0, 10.0, 10.0, 0) for i in range(130)]
+        assert get_method("vsa2").evaluate(frozen).fired is False
+        assert get_method("vsa2").signals(frozen) == []
+        assert get_method("vsa2").evaluate([]).available is False
+        assert get_method("vsa2").signals([]) == []
+
+    def test_pink_volume_is_the_courses_own_rule(self) -> None:
+        # The one volume threshold in the whole course: lower than the previous
+        # two bars. It is what makes No Supply computable, so it is pinned.
+        from app.analysis.methods.vsa2 import _Series
+
+        s = _Series.build(_series([100.0, 100.0, 100.0], end=date(2026, 1, 3)))
+        assert s.is_pink(2) is False  # equal volumes are not lower
+        rising = _series([100.0] * 3)
+        s2 = _Series.build(
+            [
+                q.model_copy(update={"volume": v})
+                for q, v in zip(rising, (300_000, 200_000, 100_000), strict=True)
+            ]
+        )
+        assert s2.is_pink(2) is True
+        s3 = _Series.build(
+            [
+                q.model_copy(update={"volume": v})
+                for q, v in zip(rising, (100_000, 200_000, 150_000), strict=True)
+            ]
+        )
+        assert s3.is_pink(2) is False  # lower than bar t-1, but not than t-2
 
 
 # ── VSA method wrapper ────────────────────────────────────────────────────────

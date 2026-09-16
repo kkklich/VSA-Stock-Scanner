@@ -185,9 +185,9 @@ describe('DashboardPage ranking table', () => {
     const user = userEvent.setup()
     renderWithProviders(<DashboardPage />)
 
-    // Default sort is the combined cross-method score, descending.
+    // Default sort is the latest session's price change, descending.
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sortBy: 'combinedScore',
+      sortBy: 'priceChangePct',
       sortDir: 'desc',
     })
 
@@ -207,7 +207,7 @@ describe('DashboardPage ranking table', () => {
     renderWithProviders(<DashboardPage />)
 
     // The trigger names the column currently sorted on.
-    await user.click(screen.getByRole('button', { name: 'Combined' }))
+    await user.click(screen.getByRole('button', { name: 'Change' }))
     await user.click(screen.getByRole('menuitemradio', { name: 'Price' }))
 
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({

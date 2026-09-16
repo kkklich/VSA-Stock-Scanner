@@ -280,7 +280,32 @@ details.** Summary (2026-07-03):
   Outside Bar, Hammer, Inside Bar breakout) and all three of the course's
   disqualifiers (out of phase / outside the zone / unconfirmed by volume) as
   hard gates, so it fires only on a complete setup; needs just 70 bars, so it
-  covers newer listings than Minervini. The
+  covers newer listings than Minervini. A fourth, **VSA 2** (`vsa2.py`, id
+  `vsa2`, shown as "VSA V2"; added 2026-09-10), is the same author's much longer
+  **30-lesson** *Investing Masters* course (plus his 2018 XTB webinar series)
+  mechanised as the one complete trade setup those lessons build towards —
+  lesson 29's "SCENARIUSZ 5 (long)", the only place in either course where the
+  entry conditions are written as text and reward-to-risk gets a number. It buys
+  a pullback only when six conditions hold at once: a **measured place** (a
+  38.2 / 41.4 / 50 / 61.8 retracement of the last impulse up, or a bullish
+  **WFO** — a lower price low on a lower volume low), **no supply at the peak**
+  it fell from, **corrective volume** (drying up, or ended by a shakeout), a
+  bullish **candle formation** (Hammer, Piercing Line, Morning Star, Bullish
+  Engulfing, Inside Bar break) **confirmed by a VSA signal of strength** (Test,
+  No Supply, Selling Climax, Stopping Volume, Shakeout, Bag Holding, Two Bar
+  Reversal — the slide's word is *potwierdzona*, so both are required), and a
+  potential **R/R of at least 3:1** to that peak with the stop under the
+  formation. Two parts of the slide are deliberately NOT implemented rather than
+  guessed: the "end of an ABC correction" route to a place (the course never
+  defines an ABC correction) and the signal *sequence* (the course never says
+  which of its fourteen signals belong to which of its three categories) — see
+  `agent/CODEBASE-OVERVIEW.md` §3.3a. Measured on stored GPW history after the
+  2026-09-14 source-fidelity pass: **0.20 firings per ticker-year** (>10× rarer
+  than V1), 59 of 292 tickers, and the **only shipped method that passes the
+  app's own back-test gate** — +5.27 pp of edge over each stock's own baseline
+  at a 30-session horizon (55.6% hit rate over 63 judged firings, the gate's top
+  `strong` grade); at the gate's default 10 sessions the trade has not yet
+  reached its target and it fails, so judge it over weeks, not days. The
   ranking computes every method's result per stock (baked into
   the cache), exposes them as `methodResults` + a `combinedScore`, and the
   Dashboard now shows a **method selector (multi-select)**, one **column per
@@ -374,7 +399,19 @@ details.** Summary (2026-07-03):
   `YahooFinanceClient.get_intraday_history` + the `interval` parameter on
   `GET /{ticker}/signals`; frontend: `INTERVAL_OPTIONS`/`INTERVAL_RANGES` in
   `ChartsPage` and `toChartTime` in `src/lib/chartTime.ts`.
-- **Tests:** backend `pytest` — **642 passing** (measured 2026-09-09; 4 of them
+- **Tests:** backend `pytest` — **684 passing** (measured 2026-09-14; 4 of them
+  are the 2026-09-14 VSA 2 source-fidelity fixes, in `TestVsa2`: a Buying Climax
+  at the peak killing the setup, a halted stock not counting as “corrective
+  volume”, the Two Bar Reversal needing lesson 11's low-volume pair, and the
+  WFO's reference low sitting inside the correction. 15 of them
+  are the 2026-09-10 VSA 2 method, `TestVsa2` in `tests/test_methods.py`: the
+  complete setup firing, each of the six conditions rejecting on its own
+  (place / no-supply-at-peak / corrective volume / formation-without-signal /
+  R/R below 3:1), the WFO as the second route to a place, the course's pink-volume
+  rule, recency, the overlay, a downtrend scoring under the bullish-lean
+  threshold, "no pullback setup" on a stock at new highs, and the frozen/empty
+  guards — plus a registry case pinning VSA 2 as distinct from V1. The previous
+  count was 665, not the 642 this file recorded on 2026-09-09; 4 of those
   are the 2026-09-09 weekly-on-the-stock-page fields, `TestGetSignals` in
   `tests/test_api.py`: present with enough history, `null` below the
   ~30-weekly-bar floor, unmoved by the chart's `interval`, and equal to the
@@ -494,7 +531,8 @@ details.** Summary (2026-07-03):
   the tooltip and `aria-label`).
 - **Observability — error tracking + ingest health (added 2026-09-09,
   roadmap #19):** the app now says whether it is working. A new **System page**
-  (`/system`, sidebar bottom) leads with *did the data refresh run?* — the last
+  (`/system` — not linked from the sidebar since 2026-09-16; type the address)
+  leads with *did the data refresh run?* — the last
   `job.refresh`/`job.ingest` outcome measured against the scheduled 18:00 run,
   with the counters that prove it did real work — then what the database
   actually holds (newest session, how many of the 288 companies have it), then
@@ -551,7 +589,91 @@ details.** Summary (2026-07-03):
   all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-09-09 (**Weekly rating on the stock-detail page.** The
+*Last updated: 2026-09-16 (**System link removed from the sidebar** at the
+owner's request — the `/system` page still works when its address is typed in,
+and the unused `nav.system` label was dropped from `pl.json`/`en.json`.
+Previously 2026-09-14: **VSA 2 audited and corrected** — see the VSA 2 audit
+entry above. Previously 2026-09-10: **VSA 2 — a new trading method from the 30-lesson
+Glinicki course.** Krzysztof supplied a second, much larger body of VSA
+material: a written compendium of Rafał Glinicki's **30-lesson** XTB *Investing
+Masters* course (13 h 32 min) and of his four 2018 XTB / VSA-Trader webinars
+(8 h 41 min). It is not the five-lesson course behind the existing `glinicki`
+method and it does not teach the same thing: its last nine lessons build **one
+complete trade setup**, lesson 29's "SCENARIUSZ 5 – (long)" — the only slide in
+either course that writes the entry conditions as text and puts a number on
+reward-to-risk. New `app/analysis/methods/vsa2.py` (id `vsa2`, "VSA V2") is that
+setup, with all six of its conditions as hard gates: a **measured place** (a
+38.2 / 41.4 / 50 / 61.8 retracement of the last impulse up — 41.4 is not a
+standard Fibonacci level but is written on the lesson-22 slide and repeated as
+text in lesson 29 — or a bullish **WFO**, a lower price low on a lower *volume*
+low), **no supply at the peak** the pullback fell from, **corrective volume**,
+a bullish **candle formation confirmed by a VSA signal of strength** (the
+slide's word is *potwierdzona*, so both are required, never either), and a
+potential **R/R ≥ 3:1** to that peak with the stop under the formation. The
+course's one exactly-computable volume rule — **pink volume**, `V_t < V_{t-1}
+AND V_t < V_{t-2}` — is honoured verbatim. Two parts of the slide are
+**deliberately not implemented rather than guessed**: the "end of an ABC
+correction" route (the course never defines an ABC correction anywhere in 13
+hours) and the signal *sequence* (it never says which of its fourteen signals
+belong to which of its three categories, and flags that itself as the one
+unassigned part of its taxonomy) — instead lesson 21's testing process, the one
+sequence the material does pin down, is scored rather than gated. Two detectors
+were rewritten after measurement showed them firing once per twenty
+ticker-years — the fix is sourced, not tuned: the course's own notes say "the
+drawing shows three candles, but nothing says three is a requirement". The whole
+feature is three files (a new method, one import, its tests) because the
+pluggable framework does what it promised: the method selector, the per-method
+column, the combined score, the chart overlay layer, the analytics summary
+source and the back-test endpoint all picked it up with **no frontend change at
+all** — verified live on GPW data.
+
+**VSA 2 audit and source-fidelity fixes (2026-09-14).** The method above was
+audited rule-by-rule against the course compendium and separately for code
+correctness. Four rules did not say what the course says, and fixing them
+roughly **doubled the measured edge while halving the firings**: (1) there was
+no **Buying Climax** test at the peak (lesson 14's K9, "ekstremum wolumenu na
+szczycie trendu, po którym cena nie idzie już wyżej") — 19% of firings were
+pullbacks bought out of a climactic top, the single thing *brak podaży w
+szczycie* exists to refuse, and invisible to the old gate because a climax
+arrives on a big **up** bar; (2) the **WFO** compared its low against local lows
+from inside the *impulse* rather than the correction, so the whole rally could
+stand in for the small bounce lesson 26 draws between the two lows — it was true
+on ~45% of legs and was supplying most of the method's places, crowding out the
+geometry route the course actually writes down; (3) the **Two Bar Reversal** had
+no volume condition at all though lesson 11 draws the pair over two low volume
+bars, making it a pure price shape that duplicated a Bullish Engulfing and let
+one candle be both the formation *and* the VSA signal that lesson 29 requires to
+confirm it; (4) **zero-volume bars satisfied "corrective volume"**, so a trading
+halt inside the pullback read as the course's textbook quiet correction and
+pushed the method into leaning bullish on a suspended stock. Also corrected:
+lesson 3's per-formation stop (the Morning Star's goes under the **middle**
+candle, `[Ź]`); formations are tried longest-span-first so a bar completing two
+no longer gets the tighter stop and the inflated R/R that follows;
+`_stopping_volume` judged its down bar against an average containing that bar;
+`_inside_breakout` could measure a break against an inside bar instead of the
+real mother bar; the posture score read the WM off a different low than the
+setup gate, so a stock could fire and still publish "4/6"; and
+`_no_supply_at_peak` now fails closed rather than passing vacuously on an
+unauditable window. Measured after the fixes on 292 tickers / 588 ticker-years:
+**0.20 firings per ticker-year** (>10× rarer than V1), 59 tickers, funnel 27764
+formations → … → **116 firing**. On the app's own gate it is still the **only
+shipped method that passes**, now far more convincingly: **+5.27 pp of edge at
+30 sessions, 55.6% hit rate over 63 judged firings, R/R 2.53 — the gate's top
+`strong` grade** (it was +1.91 pp / 49.3% / *fail* before the fixes, i.e. it did
+not actually pass at the horizon the docs had claimed). Versus V1 +1.25 pp /
+48.1%, VSA rating +1.21 pp / 44.4%, Volume Breakout +0.50 pp / 44.7% and
+Minervini a *negative* −0.34 pp, all failing. Caveats that stay: at the gate's
+default 10 sessions VSA 2 still fails (its target is the prior peak, weeks
+away), the gate's pass condition is a >50% **hit rate** which is awkward for a
+3:1-payoff method (`agent/ROADMAP.md` 23a/25), and 63 judged firings is a thin
+sample. Verified clean by the same audits: **no look-ahead bias** (720 grafted
+alternative futures, zero verdict changes), `evaluate()` and `signals()` agree
+bar-for-bar (~5,800 truncated evaluations), `days_since` is calendar days like
+every sibling, ~20 ms per 1,000-bar ticker. Backend `pytest` 680 → **684 green**
+(4 new), Ruff clean, frontend untouched (verified live: the method's chip,
+chart-overlay layer and analytics-summary row all still render).
+Previously (2026-09-09): **Weekly rating on the
+stock-detail page.** The
 multi-timeframe weekly read shipped on 2026-09-04 for every ranking row, but
 the only place it was ever shown was the Dashboard's small "1W ✓/✗" chip — the
 stock page, the one screen about a single company, did not show it at all. The

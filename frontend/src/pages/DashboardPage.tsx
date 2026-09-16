@@ -63,8 +63,8 @@ export function DashboardPage() {
     return () => clearTimeout(timer)
   }, [query])
 
-  // The combined cross-method score is the headline ranking by default.
-  const [sortBy, setSortBy] = useState<RankingSortKey>('combinedScore')
+  // Opens on the latest session's movers: price change, biggest gain first.
+  const [sortBy, setSortBy] = useState<RankingSortKey>('priceChangePct')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   // "Favorites only": narrows the ranking to the starred tickers. The stars

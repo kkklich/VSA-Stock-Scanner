@@ -18,6 +18,7 @@ import {
   type ChartMethodLegendItem,
 } from '../components/ChartMethodLegend'
 import { CompanyPicker } from '../components/CompanyPicker'
+import { FavoriteButton } from '../components/FavoriteButton'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
 import { TrustScoreCard } from '../components/TrustScoreCard'
 import { AnalyticsSummaryCard } from '../components/AnalyticsSummaryCard'
@@ -972,6 +973,7 @@ export function ChartsPage() {
           scrolling through the cards below. */}
       <div className="sticky top-0 z-30 -mx-4 -mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-800 bg-slate-950/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mt-6 sm:px-6">
         <CompanyPicker ticker={data.ticker} name={data.name} />
+        <FavoriteButton key={data.ticker} ticker={data.ticker} />
         <span className="text-xl font-semibold text-slate-200">
           {fmtPrice(data.lastPrice)} {t('common.pln')}
         </span>

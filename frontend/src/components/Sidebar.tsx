@@ -10,7 +10,6 @@ import {
   Filter,
   LayoutDashboard,
   LayoutGrid,
-  HeartPulse,
   LineChart,
   Settings,
   Star,
@@ -148,7 +147,8 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Bottom utility nav */}
+        {/* Bottom utility nav. The admin System page (/system) is deliberately
+            not linked — it is reached by typing its address. */}
         <div className="space-y-1 border-t border-slate-800 px-3 py-3">
           <Link
             to="/help"
@@ -157,14 +157,6 @@ export function Sidebar({
           >
             <BookOpen size={18} />
             {t('nav.help')}
-          </Link>
-          <Link
-            to="/system"
-            onClick={onClose}
-            className={linkClass(pathname.startsWith('/system'))}
-          >
-            <HeartPulse size={18} />
-            {t('nav.system')}
           </Link>
           <Link
             to="/settings"
