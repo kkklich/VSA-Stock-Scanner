@@ -46,6 +46,18 @@ class Settings(BaseSettings):
     ingest_hour: int = 18
     ingest_minute: int = 0
 
+    # The US market's nightly run, in America/New_York time (only scheduled
+    # when "us" is among STOCKPILOT_MARKETS). The closing cross prints at
+    # 16:00; 17:15 leaves the provider time to publish the final bars.
+    us_ingest_hour: int = 17
+    us_ingest_minute: int = 15
+
+    # Which stock markets this deployment serves, comma-separated: any of
+    # gpw, us, de, fr, nl, uk — or "all". The GPW is always on. Markets can be
+    # switched on one at a time (see app/markets.py and
+    # agent/MULTI-MARKET-PLAN.md); an unknown id is ignored with a warning.
+    markets: str = "gpw"
+
     # ── Action log (audit trail) ──────────────────────────────────────────────
     # Every API call and every background job is recorded: what was done, when,
     # how long it took and how it ended. See app/services/action_log.py.

@@ -42,6 +42,40 @@ function columnsFor(stored = {}) {
   return toRenderColumns(visibleColumns(stored), i18n.t.bind(i18n))
 }
 
+describe('foreign stocks', () => {
+  it('show the symbol, a market chip and their own currency', () => {
+    renderWithProviders(
+      <RankingTable
+        columns={columnsFor()}
+        rows={[
+          makeRow({
+            ticker: 'AAPL.US',
+            name: 'Apple Inc.',
+            market: 'us',
+            currency: 'USD',
+            lastPrice: 332.86,
+          }),
+          makeRow(),
+        ]}
+        onOpen={() => {}}
+        sortBy="currentRating"
+        sortDir="desc"
+        onSort={() => {}}
+        minWidth={900}
+      />,
+    )
+    expect(screen.getByText('AAPL')).toBeInTheDocument()
+    expect(screen.queryByText('AAPL.US')).not.toBeInTheDocument()
+    expect(screen.getByText('US')).toBeInTheDocument()
+    expect(screen.getByText('332.86 USD')).toBeInTheDocument()
+    // The GPW row looks as it always did: no chip, złoty.
+    expect(screen.getByText('123.45 PLN')).toBeInTheDocument()
+    // Links keep the full ticker, which is what the stock page needs.
+    const link = screen.getAllByRole('link').find((a) => a.textContent?.includes('AAPL'))
+    expect(link).toHaveAttribute('href', '/stock/aapl.us')
+  })
+})
+
 describe('RankingTable', () => {
   it('renders one header per column and one cell per row', () => {
     const columns = columnsFor()

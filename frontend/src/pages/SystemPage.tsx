@@ -228,6 +228,48 @@ function IngestCard({ health }: { health: ApiSystemHealth }) {
         <Fact label={t('system.ingest.bars')} value={fmtInt(ingest.barsWritten)} />
       </div>
 
+      {(ingest.runs?.length ?? 0) > 1 && (
+        <table className="mt-4 w-full text-left text-xs">
+          <thead className="text-slate-500">
+            <tr>
+              <th className="py-1 pr-3 font-medium">{t('system.ingest.run')}</th>
+              <th className="py-1 pr-3 font-medium">{t('system.ingest.status.label')}</th>
+              <th className="hidden py-1 pr-3 font-medium sm:table-cell">
+                {t('system.ingest.lastRun')}
+              </th>
+              <th className="py-1 font-medium">{t('system.ingest.nextRun')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ingest.runs?.map((run) => (
+              <tr key={run.runId ?? run.schedule} className="border-t border-slate-800">
+                <td className="py-1.5 pr-3 text-slate-300">
+                  <span className="font-medium">
+                    {t(`system.ingest.runName.${run.runId}`, {
+                      defaultValue: run.runId ?? DASH,
+                    })}
+                  </span>
+                  <span className="block text-[11px] text-slate-500">
+                    {(run.markets ?? []).map((m) => m.toUpperCase()).join(', ')}
+                  </span>
+                </td>
+                <td className={`py-1.5 pr-3 ${TONE[toneOf(run.status)].text}`}>
+                  {t(`system.ingest.status.${run.status}`)}
+                </td>
+                <td className="hidden py-1.5 pr-3 text-slate-300 sm:table-cell">
+                  {fmtMoment(run.lastRunAt)}
+                </td>
+                <td className="py-1.5 text-slate-300">
+                  {run.schedulerActive
+                    ? fmtMoment(run.nextRunAt) || run.schedule
+                    : t('system.ingest.noScheduler')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
       {ingest.lastError && ingest.status !== 'failed' && (
         <p className="mt-4 rounded-lg bg-slate-800/50 p-3 font-mono text-xs text-rose-400">
           {ingest.lastError}
@@ -313,6 +355,39 @@ function DataCard({ health }: { health: ApiSystemHealth }) {
           tone={data.tickersBehind ? 'text-amber-400' : ''}
         />
       </div>
+
+      {(data.markets?.length ?? 0) > 1 && (
+        <table className="mt-4 w-full text-left text-xs">
+          <thead className="text-slate-500">
+            <tr>
+              <th className="py-1 pr-3 font-medium">{t('system.data.market')}</th>
+              <th className="py-1 pr-3 font-medium">{t('system.ingest.status.label')}</th>
+              <th className="py-1 pr-3 font-medium">{t('system.data.latestSession')}</th>
+              <th className="py-1 font-medium">{t('system.data.coverage')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.markets?.map((m) => (
+              <tr key={m.market} className="border-t border-slate-800">
+                <td className="py-1.5 pr-3 font-medium text-slate-300">
+                  {t(`markets.short.${m.market}`, { defaultValue: m.market.toUpperCase() })}
+                </td>
+                <td className={`py-1.5 pr-3 ${TONE[toneOf(m.status)].text}`}>
+                  {t(`system.data.status.${m.status}`)}
+                </td>
+                <td className="py-1.5 pr-3 text-slate-300">{m.latestBarDate ?? DASH}</td>
+                <td className="py-1.5 text-slate-300">
+                  {m.coveragePct == null
+                    ? DASH
+                    : `${m.coveragePct}% (${fmtInt(m.tickersCurrent)}/${fmtInt(
+                        m.tickersTracked,
+                      )})`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </Card>
   )
 }

@@ -20,6 +20,8 @@ import {
   Star,
 } from 'lucide-react'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
+import { useMarketScope } from '../hooks/useMarkets'
+import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import {
   fetchRanking,
   type RankingSortKey,
@@ -46,7 +48,7 @@ function LoadingSkeleton() {
       <div className="text-center">
         <p className="font-medium text-slate-300">Computing VSA rankings…</p>
         <p className="mt-1 text-sm text-slate-500">
-          Fetching GPW data from Yahoo Finance — the first load can take a few
+          Fetching market data from Yahoo Finance — the first load can take a few
           minutes. Subsequent loads are instant.
         </p>
       </div>
@@ -121,6 +123,13 @@ export function WatchlistPage() {
 
   const filtersActive = minRating > 0 || signalFilter !== 'all'
 
+  // The list follows the top bar's market; the favorites view spans every
+  // served market ("all" is just the GPW on a GPW-only site), since a
+  // watchlist is one list whatever the stocks trade on.
+  const { market: scopedMarket } = useMarketScope({ allowAll: true })
+  const market = favoritesOnly ? ALL_MARKETS : scopedMarket
+  const marketParam = market && market !== GPW_MARKET ? market : undefined
+
   // Everything below is computed by the backend — this hook just requests the
   // right page with the right sort/filter/search.
   const rankingParams = useMemo<RankingParams>(
@@ -133,8 +142,10 @@ export function WatchlistPage() {
       minRating: minRating || undefined,
       signal: signalFilter,
       tickers: favoritesOnly ? favTickers : undefined,
+      market: marketParam,
     }),
     [
+      marketParam,
       currentPage,
       sortBy,
       sortDir,
@@ -146,7 +157,9 @@ export function WatchlistPage() {
     ],
   )
 
-  const { data, total, loading, error, refetch } = useRanking(rankingParams)
+  const { data, total, loading, error, refetch } = useRanking(rankingParams, {
+    enabled: market !== null,
+  })
 
   // Overlay the client-only "starred" flag onto the current page of results.
   const rows = useMemo<StockRankingItem[]>(
@@ -161,7 +174,7 @@ export function WatchlistPage() {
   // Reset to the first page whenever the query shape changes.
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearch, favoritesOnly, minRating, signalFilter, sortBy, sortDir])
+  }, [debouncedSearch, favoritesOnly, minRating, signalFilter, sortBy, sortDir, marketParam])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -204,6 +217,7 @@ export function WatchlistPage() {
         signal: signalFilter,
         tickers: favoritesOnly ? favTickers : undefined,
         settings: settingsQueryValue(),
+        market: marketParam,
       }
       const first = await fetchRanking({ ...baseQuery, page: 1 })
       const items = [...first.items]
@@ -217,7 +231,9 @@ export function WatchlistPage() {
       const header = [
         'Symbol',
         'Name',
-        'Last Price (PLN)',
+        'Market',
+        'Currency',
+        'Last Price',
         'Change %',
         'VSA Rating',
         'Last Signal',
@@ -232,6 +248,8 @@ export function WatchlistPage() {
         [
           s.ticker,
           esc(s.name),
+          s.market ?? GPW_MARKET,
+          s.currency ?? 'PLN',
           s.lastPrice,
           s.priceChangePct,
           s.currentRating,

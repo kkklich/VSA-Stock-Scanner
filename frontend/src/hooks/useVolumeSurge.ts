@@ -35,6 +35,7 @@ export interface UseVolumeSurgeResult {
 
 export function useVolumeSurge(
   query: Omit<VolumeSurgeQuery, 'settings'>,
+  { enabled = true }: { enabled?: boolean } = {},
 ): UseVolumeSurgeResult {
   const [items, setItems] = useState<ApiVolumeSurgeItem[]>([])
   const [meta, setMeta] = useState<ApiVolumeSurgeResponse | null>(null)
@@ -43,10 +44,11 @@ export function useVolumeSurge(
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  const { recentDays, baselineDays, minRatio, page, pageSize, sortBy, sortDir } =
+  const { recentDays, baselineDays, minRatio, page, pageSize, sortBy, sortDir, market } =
     query
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     const firstPage = page === 1
     // Page 1 is a fresh load (show the main spinner); later pages append.
@@ -63,6 +65,7 @@ export function useVolumeSurge(
       sortBy,
       sortDir,
       settings: settingsQueryValue(),
+      market,
     })
       .then((resp) => {
         if (cancelled) return
@@ -91,7 +94,7 @@ export function useVolumeSurge(
     return () => {
       cancelled = true
     }
-  }, [recentDays, baselineDays, minRatio, page, pageSize, sortBy, sortDir, tick])
+  }, [recentDays, baselineDays, minRatio, page, pageSize, sortBy, sortDir, market, tick, enabled])
 
   const hasMore = meta !== null && items.length < meta.totalCount
 

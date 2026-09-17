@@ -55,7 +55,7 @@
   "pageTitles": {
     "dashboard": "Pulpit",
     "watchlist": "Obserwowane",
-    "scanner": "Skaner VSA — GPW",
+    "scanner": "Skaner VSA",
     "heatmap": "Mapa cieplna sektorów",
     "volumeSurge": "Skok wolumenu",
     "investment": "Wydatki inwestycyjne",
@@ -70,14 +70,14 @@
   "dashboard": {
     "heading": "Najlepsze spółki dziś",
     "headingInfo": "Spółki uszeregowane według wybranych przez Ciebie metod handlowych. Każda metoda ocenia spółkę w skali 0–100 i wskazuje, czy jej układ wystąpił niedawno; kolumna Łącznie to średnia z wybranych metod. Metody wybierzesz przyciskiem Metody.",
-    "subtitle": "Ranking wielometodowy na GPW po ostatnim zamknięciu.",
+    "subtitle": "Ranking wielometodowy — {{market}} — po ostatnim zamknięciu.",
     "searchPlaceholder": "Szukaj spółek…",
     "filter": "Filtr",
     "minRating": "Minimalny rating VSA",
     "signal": "Sygnał",
     "all": "Wszystkie",
     "clearFilters": "Wyczyść filtry",
-    "loading": "Ładowanie rankingu GPW…",
+    "loading": "Ładowanie rankingu…",
     "backendError": "Błąd serwera:",
     "loadingMore": "Ładowanie kolejnych spółek…",
     "showing": "Wyświetlono {{shown}} z {{total}} spółek",
@@ -169,7 +169,7 @@
     "loading": "Ładowanie danych wykresu…",
     "failedToLoad": "{{ticker}} — nie udało się załadować",
     "noIntradayTitle": "Brak danych {{interval}} dla {{ticker}}",
-    "noIntradayBody": "Yahoo Finance nie publikuje świec śróddziennych dla każdej spółki z GPW. Wybierz powyżej 1D lub 1W — wykresy dzienny i tygodniowy oraz wszystko inne na tej stronie działają bez zmian.",
+    "noIntradayBody": "Yahoo Finance nie publikuje świec śróddziennych dla każdej spółki. Wybierz powyżej 1D lub 1W — wykresy dzienny i tygodniowy oraz wszystko inne na tej stronie działają bez zmian.",
     "sessions_one": "{{count}} sesja",
     "sessions_few": "{{count}} sesje",
     "sessions_many": "{{count}} sesji",
@@ -307,12 +307,13 @@
     "running": "Pobieranie i przeliczanie…",
     "failed": "Odświeżanie nie powiodło się",
     "updated": "Zaktualizowano {{time}}",
-    "title": "Pobierz świeże dane z Yahoo Finance i przelicz wszystkie ratingi VSA. Dane aktualizują się automatycznie raz dziennie po zamknięciu GPW (18:00).",
+    "today": "dziś",
+    "title": "Pobierz świeże dane z Yahoo Finance i przelicz wszystkie ratingi VSA. Dane aktualizują się automatycznie raz dziennie po zamknięciu każdej giełdy (18:00 czasu warszawskiego dla GPW i Europy, 17:15 czasu nowojorskiego dla USA).",
     "titleFailed": "Odświeżanie nie powiodło się: {{error}}"
   },
   "legal": {
     "pageTitle": "Informacje prawne",
-    "intro": "StockPilot jest bezpłatnym, automatycznym narzędziem analizy technicznej spółek notowanych na Giełdzie Papierów Wartościowych w Warszawie. Poniżej opisujemy, czym są — i czym nie są — publikowane tu oceny, kto odpowiada za serwis oraz jakie dane są przetwarzane.",
+    "intro": "StockPilot jest bezpłatnym, automatycznym narzędziem analizy technicznej spółek notowanych na Giełdzie Papierów Wartościowych w Warszawie oraz na wybranych giełdach zagranicznych (NASDAQ, NYSE, Xetra, Euronext Paryż, Euronext Amsterdam, Londyńska Giełda Papierów Wartościowych). Poniżej opisujemy, czym są — i czym nie są — publikowane tu oceny, kto odpowiada za serwis oraz jakie dane są przetwarzane.",
     "updated": "Ostatnia aktualizacja: 8 września 2026",
     "inlineNote": "Automatyczna analiza techniczna danych historycznych — nie jest to porada inwestycyjna.",
     "inlineLink": "Informacje prawne",
@@ -334,7 +335,7 @@
       "title": "Zastrzeżenia prawne",
       "what": {
         "heading": "Czym jest ten serwis",
-        "body": "StockPilot analizuje historyczne dane cenowe i wolumenowe spółek notowanych na GPW metodą Volume Spread Analysis (VSA) oraz kilkoma innymi mechanicznymi metodami analizy technicznej. Wynikiem jest ocena liczbowa w skali 0–100 oraz opis układu wykrytego na wykresie. Korzystanie z serwisu jest bezpłatne."
+        "body": "StockPilot analizuje historyczne dane cenowe i wolumenowe spółek notowanych na GPW oraz na wybranych giełdach zagranicznych (NASDAQ, NYSE, Xetra, Euronext Paryż, Euronext Amsterdam, Londyńska Giełda Papierów Wartościowych) metodą Volume Spread Analysis (VSA) oraz kilkoma innymi mechanicznymi metodami analizy technicznej. Wynikiem jest ocena liczbowa w skali 0–100 oraz opis układu wykrytego na wykresie. Korzystanie z serwisu jest bezpłatne."
       },
       "method": {
         "heading": "Metodyka",
@@ -362,7 +363,7 @@
       },
       "dating": {
         "heading": "Datowanie ocen",
-        "body": "Każda ocena opatrzona jest datą sesji giełdowej, na którą została wyliczona. Dane odświeżane są automatycznie raz dziennie po zamknięciu sesji na GPW. Ocena wyliczona wcześniej może nie odpowiadać bieżącej sytuacji rynkowej."
+        "body": "Każda ocena opatrzona jest datą sesji giełdowej, na którą została wyliczona. Dane odświeżane są automatycznie raz dziennie po zamknięciu sesji na każdej z giełd. Ocena wyliczona wcześniej może nie odpowiadać bieżącej sytuacji rynkowej."
       }
     },
     "terms": {
@@ -373,7 +374,7 @@
       },
       "service": {
         "heading": "§2. Rodzaj i zakres usługi",
-        "body": "Usługa polega na nieodpłatnym udostępnianiu drogą elektroniczną wyników automatycznej analizy technicznej spółek notowanych na GPW: rankingu, wykresów, sygnałów i wskaźników. Serwis nie wymaga rejestracji ani zakładania konta. Umowa o świadczenie usługi zawierana jest na czas oznaczony i rozwiązuje się z chwilą opuszczenia serwisu."
+        "body": "Usługa polega na nieodpłatnym udostępnianiu drogą elektroniczną wyników automatycznej analizy technicznej spółek notowanych na GPW oraz na wybranych giełdach zagranicznych: rankingu, wykresów, sygnałów i wskaźników. Serwis nie wymaga rejestracji ani zakładania konta. Umowa o świadczenie usługi zawierana jest na czas oznaczony i rozwiązuje się z chwilą opuszczenia serwisu."
       },
       "requirements": {
         "heading": "§3. Wymagania techniczne",
@@ -454,7 +455,8 @@
         "running": "W trakcie",
         "stale": "Nie wykonało się",
         "failed": "Błąd",
-        "never": "Nigdy"
+        "never": "Nigdy",
+        "label": "Stan"
       },
       "summaryOk": "Ostatnie odświeżenie zakończyło się {{hours}} godz. temu i pobrało {{fetched}} spółek.",
       "summaryRunning": "Odświeżanie właśnie trwa.",
@@ -470,7 +472,12 @@
       "fetched": "Pobrane",
       "skipped": "Pominięte",
       "failed": "Nieudane",
-      "bars": "Zapisane notowania"
+      "bars": "Zapisane notowania",
+      "run": "Nocna aktualizacja",
+      "runName": {
+        "europe": "Europa + GPW",
+        "us": "USA"
+      }
     },
     "data": {
       "title": "Zapisane dane",
@@ -493,7 +500,8 @@
       "bars": "Zapisane notowania",
       "snapshots": "Najnowszy rating",
       "behind": "Zaległe",
-      "summaryUpdating": "Trwa odświeżanie — na razie {{current}} z {{tracked}} spółek ma dane na {{date}}."
+      "summaryUpdating": "Trwa odświeżanie — na razie {{current}} z {{tracked}} spółek ma dane na {{date}}.",
+      "market": "Rynek"
     },
     "errors": {
       "title": "Błędy",
@@ -538,5 +546,28 @@
       "save": "Zapisz",
       "saved": "Zapisano"
     }
+  },
+  "markets": {
+    "label": "Rynek",
+    "all": "Wszystkie rynki",
+    "short": {
+      "gpw": "GPW (Polska)",
+      "us": "USA",
+      "de": "Niemcy",
+      "fr": "Francja",
+      "nl": "Holandia",
+      "uk": "Wielka Brytania"
+    },
+    "name": {
+      "gpw": "Giełda Papierów Wartościowych w Warszawie (GPW)",
+      "us": "rynek amerykański (NASDAQ, NYSE)",
+      "de": "Xetra (Niemcy)",
+      "fr": "Euronext Paryż (Francja)",
+      "nl": "Euronext Amsterdam (Holandia)",
+      "uk": "Londyńska Giełda Papierów Wartościowych (Wielka Brytania)",
+      "all": "wszystkich rynkach"
+    },
+    "oneAtATime": "Ta strona pokazuje jeden rynek naraz.",
+    "ownCurrency": "Ceny w walucie danej spółki."
   }
 }

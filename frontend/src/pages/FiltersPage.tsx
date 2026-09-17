@@ -13,6 +13,9 @@ import { RankingCardList, RankingTable } from '../components/RankingTable'
 import { SortMenu } from '../components/SortMenu'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
+import { useMarketScope } from '../hooks/useMarkets'
+import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
+import { currencyLabel } from '../lib/format'
 import {
   sortOptionsFrom,
   useRankingColumns,
@@ -119,10 +122,20 @@ export function FiltersPage() {
     return () => clearTimeout(timer)
   }, [filters])
 
+  // The screen follows the top bar's market ("all" allowed).
+  const { market, markets } = useMarketScope({ allowAll: true })
+  const marketParam = market && market !== GPW_MARKET ? market : undefined
+  // Price bounds are compared with each stock's own price, so the label says
+  // which currency that is — or that it varies.
+  const priceUnit =
+    market === ALL_MARKETS
+      ? "in each stock's currency"
+      : currencyLabel(markets?.find((m) => m.id === market)?.currency ?? 'PLN')
+
   // Back to page 1 whenever the effective query changes.
   useEffect(() => {
     setPage(1)
-  }, [applied, sortBy, sortDir])
+  }, [applied, sortBy, sortDir, marketParam])
 
   const set = <K extends keyof ScreenFilters>(key: K, value: ScreenFilters[K]) => {
     setFilters((f) => ({ ...f, [key]: value }))
@@ -154,11 +167,14 @@ export function FiltersPage() {
       minVolume: applied.minVolume ?? undefined,
       ...range52wParams(applied.range52w),
       weeklyConfirms: applied.weeklyConfirms || undefined,
+      market: marketParam,
     }),
-    [page, sortBy, sortDir, applied],
+    [page, sortBy, sortDir, applied, marketParam],
   )
 
-  const { data, total, loading, error, refetch } = useRanking(rankingParams)
+  const { data, total, loading, error, refetch } = useRanking(rankingParams, {
+    enabled: market !== null,
+  })
   const rows = data ?? []
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const anyActive = filtersActive(filters)
@@ -212,7 +228,7 @@ export function FiltersPage() {
       {/* Header */}
       <div>
         <h2 className="text-lg font-semibold text-slate-100">
-          Filters — screen the GPW your way
+          Filters — screen the market your way
         </h2>
         <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-400">
           Combine sector, VSA rating, signal, price and liquidity criteria to
@@ -462,7 +478,7 @@ export function FiltersPage() {
             />
           </Field>
 
-          <Field label="Price from (PLN)">
+          <Field label={`Price from (${priceUnit})`}>
             <input
               type="number"
               min={0}
@@ -474,7 +490,7 @@ export function FiltersPage() {
             />
           </Field>
 
-          <Field label="Price to (PLN)">
+          <Field label={`Price to (${priceUnit})`}>
             <input
               type="number"
               min={0}
@@ -503,7 +519,7 @@ export function FiltersPage() {
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-24 text-slate-400">
           <Loader2 className="animate-spin" size={18} />
-          Screening the GPW…
+          Screening stocks…
         </div>
       ) : error ? (
         <div className="py-24 text-center text-sm text-rose-400">

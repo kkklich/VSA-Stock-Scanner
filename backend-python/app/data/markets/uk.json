@@ -1,0 +1,1712 @@
+{
+  "market": "uk",
+  "name": "London Stock Exchange",
+  "generatedAt": "2026-09-16",
+  "sources": {
+    "ftse100": "https://en.wikipedia.org/wiki/FTSE_100_Index"
+  },
+  "verification": "Each company returned at least 5 traded daily bars in the 21 days before it was verified and a company name from Yahoo Finance, with prices quoted in a currency the app converts (PLN, USD, EUR, GBP, GBp).",
+  "companies": [
+    {
+      "ticker": "aaf.l",
+      "symbol": "AAF.L",
+      "name": "Airtel Africa Plc",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 12565797888,
+      "employees": 4541,
+      "website": "https://airtel.africa",
+      "description": "Airtel Africa Plc, together with its subsidiaries, provides telecommunications and mobile money services in Nigeria, East Africa, and Francophone Africa. It offers pre and post-paid wireless voice, international roaming, and fixed line telephony services; data services, including 4G and 5G, home broadband, fibre, and data centers; and mobile money services, such as digital wallet payments systems, microloans, merchant, savings, insurance, international, and international money transfers. The company also provides messaging, value added, and tower sharing services, as well as infrastructure sharing, mobile commerce, and support services. The company was incorporated in 2018 and is based in London, the United Kingdom. Airtel Africa Plc is a subsidiary of Airtel Africa Mauritius Limited.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "aal.l",
+      "symbol": "AAL.L",
+      "name": "Anglo American plc",
+      "sector": "Basic Materials",
+      "industry": "Other Industrial Metals & Mining",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 41927323648,
+      "employees": 26400,
+      "website": "https://www.angloamerican.com",
+      "description": "Anglo American plc, a mining company, produces copper, iron ore, and crop nutrients in the United Kingdom and internationally. The company operates through the Premium Iron Ore and the Copper segments. It also explores for nickel, diamonds, steelmaking coal, and manganese ore. The company was founded in 1917 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "abdn.l",
+      "symbol": "ABDN.L",
+      "name": "Aberdeen Group Plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4283936512,
+      "employees": 4435,
+      "website": "https://www.abrdn.com",
+      "description": "Aberdeen Group Plc provides asset management services in the United Kingdom, Europe, North America, and Asia. It makes traditional, private equity/ buyout, venture capital, secondary (direct), secondary (indirect), real estate investments & blend investments in early venture, middle market, growth capital & buyout investments. The company offers investment solutions and funds; long-term savings and investment products to individual and corporate customers; and life insurance and savings products. It provides its products through institutional, wholesale, and retail distribution channels. It invests in healthcare, information technology, telecommunication services, media & real estate investments. The firm invests globally. It prefers to have majority stakes in its portfolio companies. Aberdeen Group Plc was founded in 1825 and is based in Edinburgh, United Kingdom with additional offices across Europe, Middle East, Asia Pacific, North America and South America.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "abf.l",
+      "symbol": "ABF.L",
+      "name": "Associated British Foods plc",
+      "sector": "Consumer Defensive",
+      "industry": "Packaged Foods",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 12855112704,
+      "employees": 138000,
+      "website": "https://www.abf.co.uk",
+      "description": "Associated British Foods plc engages in the food, ingredients, and retail businesses worldwide. It operates through five segments: Retail, Grocery, Ingredients, Sugar, and Agriculture. The Retail segment is involved in buying and merchandising clothing and accessories through the Primark and Penneys retail chains, which offer women's, men's, and kidswear, as well as beauty, homeware, and accessories. The Grocery segment manufactures grocery products, including hot beverages, sugar, vegetable oils, balsamic vinegars, bread and baked goods, cereals, ethnic food and meat products to retail, wholesale, and foodservice businesses. The Ingredients segment manufactures yeast and bakery ingredients, specialty ingredients focused on enzymes, procession extracts, health and nutrition, and pharmaceutical delivery systems. The Sugar segment is involved in growing and processing sugar beet and sugar cane. The Agriculture segment manufactures specialty feed ingredients, premix, and compound animal feed; and other products and services for the agriculture sector. The company was incorporated in 1934 and is headquartered in London, the United Kingdom. Associated British Foods plc operates as a subsidiary of Wittington Investments Limited.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "adm.l",
+      "symbol": "ADM.L",
+      "name": "Admiral Group plc",
+      "sector": "Financial Services",
+      "industry": "Insurance - Property & Casualty",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 11543596032,
+      "employees": 14805,
+      "website": "https://admiralgroup.co.uk",
+      "description": "Admiral Group plc, a financial services company, provides insurance and personal lending products in the United Kingdom, France, Italy, and Spain. It operates through four segments: UK Insurance, European Insurance, Admiral Money, and Other. The company offers underwriting services that include motor, household, pet, travel, and other insurance, as well as car and home insurance; and distributes and underwrites unsecured personal loans, car finance products, and secured homeowner loans. It provides its insurance products and services under the Admiral, Admiral Business, Admiral Money, Admiral Pioneer, Balumba, Bell, Connect by Admiral, ConTe.it Assicurazioni, ConTe.it Prestiti, Diamond, Gladiator, L'olivier  assurance, More Than, Qualitas Auto, and Veygo brand names. The company was formerly known as Admiral Group Limited and changed its name to Admiral Group plc in September 2004. Admiral Group plc was founded in 1993 and is headquartered in Cardiff, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "alw.l",
+      "symbol": "ALW.L",
+      "name": "Alliance Witan Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4947332608,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "anto.l",
+      "symbol": "ANTO.L",
+      "name": "Antofagasta plc",
+      "sector": "Basic Materials",
+      "industry": "Copper",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 35431690240,
+      "employees": 8457,
+      "website": "https://www.antofagasta.co.uk",
+      "description": "Antofagasta plc operates as a mining company. It operates through Los Pelambres, Centinela, Antucoya, Zaldívar, Exploration and Evaluation, and Transport Division segments. The company produces copper cathodes and copper concentrates; molybdenum concentrates; and gold and silver by-products. It also provides rail and road cargo services to mining customers in northern Chile. In addition, the company has exploration projects in various countries. It has operations in the United Kingdom, Switzerland, Spain, Germany, rest of Europe, Chile, rest of Latin America, the United States, Japan, China, Singapore, South Korea, Hong Kong, and rest of Asia. The company was incorporated in 1888 and is headquartered in London, the United Kingdom. Antofagasta plc is a subsidiary of Metalinvest Anstalt.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "auto.l",
+      "symbol": "AUTO.L",
+      "name": "Autotrader Group plc",
+      "sector": "Communication Services",
+      "industry": "Internet Content & Information",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3869348096,
+      "employees": 1239,
+      "website": "https://plc.autotrader.co.uk",
+      "description": "Autotrader Group plc operates an automotive platform in the United Kingdom. The company operates through Autotrader and Autorama segments. It provides vehicle advertisement on its websites for private sellers, as well as insurance and loan finance products to consumers; and display advertising on its websites for manufacturers and their advertising agencies. The company also sells new vehicles and accessories; and facilitates the lease of new vehicles. It offers its products to retailers, home traders, and logistics customers. The company was formerly known as Auto Trader Group plc and changed its name to Autotrader Group plc in January 2026. The company was founded in 1977 and is headquartered in Manchester, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "av.l",
+      "symbol": "AV.L",
+      "name": "Aviva plc",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 21374017536,
+      "employees": 39359,
+      "website": "https://www.aviva.com",
+      "description": "Aviva plc provides various insurance, retirement, and wealth products in the United Kingdom, Ireland, Canada, India, and China. It operates through General Insurance; Insurance, Wealth & Retirement; Aviva Investors; and International Investments segments. The company offers gadget, home, motor, pet, and health insurance, as well as commercial, specialty insurance and protection. It also provides life insurance, long-term health and accident insurance, savings, pension, and annuity products, as well as pension fund and lifetime mortgage products; insurance cover to individuals, small and medium-sized businesses for risks associated with motor vehicles and medical expenses, as well as property and liability, such as employers' and professional indemnity liabilities; and personal and commercial lines insurance products for risks associated motor, property, and liability. In addition, the company offers investment management services for institutional pension fund mandates; and manages various retail investment products, including fixed income, equities, multi-asset, real estate and infrastructure for third-party financial institutions, pension funds, public sector organizations, investment professionals, and private investors. It markets its products through a network of insurance brokers, affinity partners, and banks, as well as MyAviva platform price comparison websites. The company was formerly known as CGNU plc and changed its name to Aviva plc in July 2002. Aviva plc was founded in 1696 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "azn.l",
+      "symbol": "AZN.L",
+      "name": "AstraZeneca PLC",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - General",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 188216721408,
+      "employees": 96100,
+      "website": "https://www.astrazeneca.com",
+      "description": "AstraZeneca PLC, a biopharmaceutical company, focuses on the discovery, development, manufacture, and commercialization of prescription medicines. The company offers Imjudo, Datroway, Iressa, Tagrisso, Imfinzi, Lynparza, Calquence, Enhertu, Orpathys, Truqap, Zoladex, Faslodex, Crestor, Andexxa, Onglyza, Symlin, XIGDUO XR, Atacand, Atacand HCT, Atacand Plus, Farxiga/Forxiga, Plendil, Modip, Splendil, Munobal, Flodil, Tenormin, Tenormine, Prenormine, Atenol, Zestril, Brilinta/Brilique, Komboglyze, Qtern, Wainua, Byetta, Lokelma, Seloken ZOK, Toprol-XL, Betaloc ZOK, XIGDUO, Accolate, Accoleit, Vanticon, Bricanyl Respules, Eklira Genuair/Tudorza/Bretaris, Pulmicort Turbuhaler, Symbicort Turbuhaler, Airsupra, Bricanyl Turbuhaler, Fasenra, Rhinocort, Tezspire, Bevespi Aerosphere, Daliresp/Daxas, Oxis Turbuhaler, Saphnelo, Breztri Aerosphere, Duaklir Genuair, Pulmicort Respules, and Symbicort pMDI. It also provides Beyfortus, Kavigale, Evusheld, Fluenz/FluMist, Synagis, Kanuma, Ultomiris, Koselugo, Voydeya, Soliris, Strensiq, Nexium, and other medicines. The company offers its products for ocology, cardiovascular, renal and metabolism, respiratory & immunology, vaccines and immune, and therapies rare diseases. It serves primary and specialty care physicians through distributors and local representative offices in the United Kingdom, the Americas, rest of Europe, Asia, Africa, and Australasia. It has a strategic agreement with Tempus and Pathos to develop the largest multimodal foundation model in oncology; CSPC Pharmaceutical Group Limited to advance the discovery and development of novel oral candidates, with the potential to treat diseases across multiple indications; and Nucs AI Inc. to develop AI-driven Response Prediction for Therapeutic Radioconjugates. The company was formerly known as Zeneca Group PLC and changed its name to AstraZeneca PLC in April 1999. AstraZeneca PLC was incorporated in 1992 and is headquartered in Cambridge, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ba.l",
+      "symbol": "BA.L",
+      "name": "BAE Systems plc",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 59403952128,
+      "employees": 112400,
+      "website": "https://www.baesystems.com",
+      "description": "BAE Systems plc provides defense, aerospace, and security solutions in the United States, the United Kingdom, the Middle East, Australia, Kingdom of Saudi Arabia, Europe, and internationally. The company operates through five segments: Electronic Systems, Platforms & Services, Air, Maritime, and Cyber & Intelligence. The Electronic Systems segment offers electronic warfare systems, navigation systems, electro-optical sensors, military and commercial avionics, and precision guided solutions and communications systems, as well as space electronics, spacecraft, and ground and tactical systems. The Platforms & Services segment manufactures and sells combat vehicles, weapons, and munitions; and offers naval ship repair services, as well as operates and manages two government-owned and contractor-operated ammunition plants. The Air segment develops future combat air systems and falconworks alongside edgewing, and eurofighter and MBDA. The Maritime segment provides maritime and land services, including submarine, ship build, and support programs. The Cyber & Intelligence segment offers cyber security services for national security, central government, and government enterprises. The company was formerly known as British Aerospace plc and changed its name to BAE Systems plc in May 2000. BAE Systems plc was incorporated in 1979 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bab.l",
+      "symbol": "BAB.L",
+      "name": "Babcock International Group PLC",
+      "sector": "Industrials",
+      "industry": "Engineering & Construction",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5016518144,
+      "employees": 30481,
+      "website": "https://www.babcockinternational.com",
+      "description": "Babcock International Group PLC, together with its subsidiaries, engages in the design, development, manufacture, and integration of specialist systems for aerospace, defense, and security in the United Kingdom, rest of Europe, Africa, North America, Australasia, and internationally. The company operates through four segments: Marine, Nuclear, Land, and Aviation. The company offers type 31 frigates, arrowhead 140, arrowhead 120, ARMOR force, project lurcher, jackal contract, ground deployed advanced mortar system, general logistics vehicle, Babcock's LGE, and armored land cruiser 300. It also provides weapons handling systems, autonomous and uncrewed aerial systems, and engineering and systems integration. In addition, the company is involved in the design, integration, and through-life support of various connected combat, support, and surveillance vehicles; integration of long-range fires, and command, control, communications, computers, intelligence, surveillance, targeting, acquisition and reconnaissance systems; provision of system engineering and general vehicle architecture services; and specialist vehicle conversions. Further, it provides equipment support, frontline support, and training services. Babcock International Group PLC was founded in 1891 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "barc.l",
+      "symbol": "BARC.L",
+      "name": "Barclays PLC",
+      "sector": "Financial Services",
+      "industry": "Banks - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 63673171968,
+      "employees": 93000,
+      "website": "https://home.barclays",
+      "description": "Barclays PLC provides various financial services in the United Kingdom, Europe, the Americas, Africa, the Middle East, and Asia. The company operates through Barclays UK; Barclays UK Corporate Bank; Barclays Private Bank and Wealth Management; Barclays Investment Bank; and Barclays US Consumer Bank segments. It offers financial services, such as current accounts, savings accounts, mortgages and unsecured lending, such as credit cards and loans retail banking, wholesale banking, investment banking, wealth management, and investment management services, as well as lending products. In addition, the company engages in securities dealing activities and issuing of credit cards. The company was formerly known as Barclays Bank public limited company and changed its name to Barclays PLC in January 1985. Barclays PLC was founded in 1690 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bats.l",
+      "symbol": "BATS.L",
+      "name": "British American Tobacco p.l.c.",
+      "sector": "Consumer Defensive",
+      "industry": "Tobacco",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 90225803264,
+      "employees": 47797,
+      "website": "https://www.bat.com",
+      "description": "British American Tobacco p.l.c. provides tobacco and nicotine products to consumers in the United States, Europe, Latin America, Canada, the Asia-Pacific, the Middle East, Central Asia, Caucasus, and Africa. The company offers vapour products; heated products, which consists of a battery-powered device and a plant-based substance consumable that is heated; modern oral products, such as nicotine pouches; combustibles, including cigarette sticks and other tobacco stick products; traditional oral products, such as snus and moist snuff; and fine cut/roll-your-own tobacco products. It sells its products under the Vuse, glo, Velo, Grizzly, Kodiak, Dunhill, Kent, Lucky Strike, Pall Mall, Rothmans, Newport, Natural American Spirit, and Camel Snus brands, as well as Vogue, Viceroy, Kool, Peter Stuyvesant, Craven A, and State Express 555 brands. The company distributes its products to retail outlets. British American Tobacco p.l.c. was founded in 1902 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bbox.l",
+      "symbol": "BBOX.L",
+      "name": "Tritax Big Box Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4327454208,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bez.l",
+      "symbol": "BEZ.L",
+      "name": "Beazley plc",
+      "sector": "Financial Services",
+      "industry": "Insurance - Specialty",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7766420480,
+      "employees": 2555,
+      "website": "https://www.beazley.com",
+      "description": "Beazley plc, through its subsidiaries, provides risk insurance and reinsurance solutions in the United States, the United Kingdom, and rest of Europe. The company operates through Cyber Risks, Digital, MAP Risks, Property Risks, and Specialty Risks segments. The Cyber Risks segment underwrites cyber and technology risks. The Digital segment underwrites various marine, contingency, and SME liability risks through digital channels, such as e-trading platforms and broker portals. The MAP Risks segment underwrites marine, portfolio underwriting and political, and contingency business. The Property Risks segment underwrites first-party property risks and reinsurance business. The Specialty Risks segment underwrites liability classes, including employment practices risks, and directors and officers, as well as healthcare, lawyers, and international financial institutions. It also underwrites life, health, and personal accident; and jewelry, fine art, and specie products risk insurance. Beazley plc was founded in 1986 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bgeo.l",
+      "symbol": "BGEO.L",
+      "name": "Lion Finance Group PLC",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5897644032,
+      "employees": 13343,
+      "website": "https://lionfinancegroup.uk",
+      "description": "Lion Finance Group PLC, through its subsidiaries, provides banking and financial services with focus on the Georgian and Armenian markets. The company operates through Georgian Financial Services, Armenian Financial Services, and Other Businesses segments. The Georgian Financial Services segment provides retail banking, SME, and corporate and investment banking, and corporate center services; and brokerage and asset management services. The Armenian Financial Services offers retail banking, and investment banking services. The Other Businesses segment provides retail and corporate banking services for retail and SME clients in Belarus; and e-commerce, ticketing, and inventory management SaaS services. It also offers information sharing and market research services, charitable activities, leasing, digital, transportation, trade, registrar, card processing, electronic payment services, communication services, business servicing, and consulting services. The company was formerly known as Bank of Georgia Group PLC and changed its name to Lion Finance Group PLC in February 2024. Lion Finance Group PLC was incorporated in 2017 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "blnd.l",
+      "symbol": "BLND.L",
+      "name": "British Land Company PLC",
+      "sector": "Real Estate",
+      "industry": "REIT - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4126392576,
+      "employees": 611,
+      "website": "https://www.britishland.com",
+      "description": "British Land Company PLC is a UK commercial property company focused on real estate sectors with the strongest operational fundamentals: London campuses and retail parks. We own or manage a portfolio valued at 15.8bn pounds (British Land share: 10.1bn pounds) as at 31 March 2026. Their purpose is to create and manage Places People Prefer  outstanding places that deliver positive outcomes for all stakeholders on a long term, sustainable basis. They do this by leveraging their best-in-class platform and proven expertise in development, repositioning and active asset management. British Land Company PLC was incorporated in 1856 in United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bnzl.l",
+      "symbol": "BNZL.L",
+      "name": "Bunzl plc",
+      "sector": "Consumer Defensive",
+      "industry": "Food Distribution",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 8308940288,
+      "employees": 26777,
+      "website": "https://www.bunzl.com",
+      "description": "Bunzl plc operates as a distribution and services company in the North America, Continental Europe, the United Kingdom, Ireland, and internationally. It provides personal protection and safety equipment, including gloves, boots, hard hats, ear and eye protection, other workwear, as well as cleaning and hygiene supplies and asset protection products; and healthcare consumables, such as gloves, masks, swabs, gowns, bandages, healthcare devices, and other healthcare related equipment. The company also offers cleaning and hygiene materials comprising chemicals and hygiene paper; goods-not-for-resale, including food packaging, films, labels, and other store supplies; non-food consumables, such as food packaging, disposable tableware, guest amenities, catering equipment, and agricultural supplies; and other products. It serves its products to industrial, construction, e-commerce, hospitals, care homes and other facilities serving the healthcare, public sector customers, grocery stores, supermarkets, convenience stores, hotels, restaurants, contract caterers, food processors, commercial growers, leisure, retail customers, and office supply companies. Bunzl plc was founded in 1854 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bp.l",
+      "symbol": "BP.L",
+      "name": "BP p.l.c.",
+      "sector": "Energy",
+      "industry": "Oil & Gas Integrated",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 87584350208,
+      "employees": 93700,
+      "website": "https://www.bp.com",
+      "description": "BP p.l.c., an integrated energy company, engages in the oil and gas business worldwide. The company operates through Gas & Low Carbon Energy, Oil Production & Operations, and Customers & Products segments. It engages in the production of natural gas, marketing, and trading activities, as well as solar, wind, and hydrogen businesses. The company also offers aviation fuel products and services, such as jet fuel; aviation gasoline; UL91 aviation fuel; and sustainable aviation fuel. In addition, it engages in the convenience and retail fuel; EV charging; Castrol lubricants and fluids; B2B; midstream; crude oil production; refining and oil trading; and bioenergy businesses. The company was founded in 1908 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "brby.l",
+      "symbol": "BRBY.L",
+      "name": "Burberry Group plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Luxury Goods",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3614345216,
+      "employees": 7299,
+      "website": "https://www.burberryplc.com",
+      "description": "Burberry Group plc, together with its subsidiaries, engages in manufacturing, retail, and wholesale of luxury goods under the Burberry brand in the Asia Pacific, China, Europe, the Middle East, India, Africa, and the Americas. The company operates in two segments, Retail/Wholesale and Licensing. It offers accessories, womenswear, menswear, childrenswear, and others, as well as eyewear and beauty, and bags. The company also licenses third parties to manufacture and distribute products using the Burberry trademarks. It sells its products through operated stores, concessions, outlets, digital commerce, Burberry franchisees, department stores, multi-brand specialty accounts, and through the Burberry.com website. Burberry Group plc was founded in 1856 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "bt-a.l",
+      "symbol": "BT-A.L",
+      "name": "BT Group plc",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 20278753280,
+      "employees": 77200,
+      "website": "https://www.bt.com",
+      "description": "BT Group plc provides communications products and services in the United Kingdom, Europe, the Middle East, Africa, the Americas, and the Asia Pacific. The company operates through Consumer, Business, International, and Openreach segments. It builds, owns, and operates fixed and mobile networks; and designs, builds, markets, sells, and supports network access, connectivity, and related products. The company also offers mobile, broadband, and landline, as well as entertainment services to individuals and households; connectivity, networking, cybersecurity, collaboration tools, cloud connectivity, and cloud services to private and public sector businesses; and managed solutions for larger businesses and public sector customers. In addition, it provides fixed and IP voice; unified communications; mobile; fixed and networking; managed services; and security, and cloud and IoT solutions. Further, the company develops, manages, and leases network infrastructure, including mobile cell and switch sites; and offers handsets, network equipment, consumer electronics, gaming and insurance. It provides its products and services under the BT, EE, Plusnet, and Openreach brands. The company was formerly known as Newgate Telecommunications Limited and changed its name to BT Group plc in September 2001. BT Group plc was founded in 1846 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "btrw.l",
+      "symbol": "BTRW.L",
+      "name": "Barratt Redrow plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Residential Construction",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4262577408,
+      "employees": 7928,
+      "website": "https://www.barrattredrow.co.uk",
+      "description": "Barratt Redrow plc engages in the housebuilding business in the United Kingdom. The company is also involved in the commercial development business, which includes offices, retail, leisure, industrial, and distribution properties under the Wilson Bowden Developments brand; and land development activities. In addition, it manufactures timber frames under the Oregon Timber Frame brand; and furniture under the BD Living brand. The company offers its homes under the Barratt Homes, David Wilson Homes, Redrow, and Barratt London brands. The company was formerly known as Barratt Developments plc and changed its name Barratt Redrow plc in October 2024. Barratt Redrow plc was founded in 1953 and is headquartered in Coalville, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ccc.l",
+      "symbol": "CCC.L",
+      "name": "Computacenter plc",
+      "sector": "Technology",
+      "industry": "Information Technology Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5546534400,
+      "employees": 21000,
+      "website": "https://www.computacenter.com",
+      "description": "Computacenter plc provides technology and services to corporate and public sector organizations in the United Kingdom, Germany, Western Europe, North America, and internationally. It offers procurement, specialist, software, logistical, technical, and circular technology sourcing services; IT strategy and advisory, integration, deployment, and support services; and managed services. The company also provides workplace solutions, including IT support, field and onsite support services, Productivity and Teamwork technology sourcing, modern endpoint, device lifecycle management, IT asset management, print solutions, and technology sourcing; cloud and applications solution, such as custom application, business automation, application platforms, data and AI platforms, and cloud services; infrastructure services, data center and edge platforms, relocation and migration, and operational resilience services; and software-defined (SD) wide area network service, proactive and reactive services, network automation, managed secure networking and implementation, SD campus networking, multi cloud connectivity, and data center networking and multi cloud network deployment. In addition, it offers security solutions, including service centers, integration centers, professional services hubs, and field and maintenance services. The company was founded in 1981 and is headquartered in Hatfield, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ccep.l",
+      "symbol": "CCEP.L",
+      "name": "Coca-Cola Europacific Partners PLC",
+      "sector": "Consumer Defensive",
+      "industry": "Beverages - Non-Alcoholic",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 33917110272,
+      "employees": 37003,
+      "website": "https://www.cocacolaep.com",
+      "description": "Coca-Cola Europacific Partners PLC, together with its subsidiaries, produces, distributes, and sells a range of non-alcoholic ready-to-drink beverages. It offers flavours, mixers, energy drinks, soft drinks, water, enhanced water, isotonic drinks, tea and coffee, juices, and other drinks. The company provides its products under the Coca-Cola Original Taste, Coca-Cola Zero Sugar, Diet Coke, Sprite, Sprite Zero Sugar, Fanta, Fanta Zero Sugar, Monster Energy, A&W, Absolut Vodka & SPRITE, Ades, Appletiser, aquaBona, Aquarius, BACARDÍ Mixed with Coca Cola RTD, Barista Bros, Bonaqua, BURN, Deep Spring, Dr Pepper, Dr Pepper Zero Sugar, Feral Brewing Co, Fuze Tea, Giancarlo Coffee, GLACEAU smartwater, Grinders, HALO, Jack Daniel's & Coca-Cola ready-to-drink, Kristal, L&P, MER, Minute Maid, Mother, Mount Franklin, Nordic Mist, Nutriboost, Oasis, Pulpy, pump, pumped, Reign, Rekorderlig Cider, Relentless, Royal, Royal Bliss, Schweppes, Schweppes Mix, SOCO, URGE, Vilas del Turbón, Voyage, Wilkins Pure, and Zephyr Coffee Co brands. It is also involved in the bottling and other operations. The company was formerly known as Coca-Cola European Partners plc and changed its name to Coca-Cola Europacific Partners PLC in May 2021. The company was founded in 1904 and is based in Uxbridge, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "cch.l",
+      "symbol": "CCH.L",
+      "name": "Coca-Cola HBC AG",
+      "sector": "Consumer Defensive",
+      "industry": "Beverages - Non-Alcoholic",
+      "country": "Switzerland",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 16707054592,
+      "employees": 33500,
+      "website": "https://www.coca-colahellenic.com",
+      "description": "Coca-Cola HBC AG engages in the production, sale, and distribution of non-alcoholic ready-to-drink beverages under franchise in Switzerland, West Coast of Ireland, Central and Eastern Europe, Nigeria, and internationally. It offers sparkling soft drinks, adult sparkling, hydration drinks, juices, ready-to-drink tea and coffee, sports and energy drinks, plant-based drinks, hard seltzers, premium spirit, dairy, and snacks; and distributes third-party products. The company markets and sells its products under several brands, including Coca-Cola, Fanta, Sprite, Adez, Averna, Amita, Aquarius, Aperol, Avra, Deep RiverRock, Fruice, Kinley, Schweppes, and various other brands. It serves various consumer channels, such as supermarkets, convenience stores, vending machines, hotels, cafés, and restaurants, as well as e-commerce channels. Coca-Cola HBC AG was incorporated in 1969 and is headquartered in Steinhausen, Switzerland.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "cna.l",
+      "symbol": "CNA.L",
+      "name": "Centrica plc",
+      "sector": "Utilities",
+      "industry": "Utilities - Independent Power Producers",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7040039424,
+      "employees": 21529,
+      "website": "https://www.centrica.com",
+      "description": "Centrica plc operates as an integrated energy company in the United Kingdom, Ireland, Scandinavia, North America, and internationally. The company operates through British Gas Services & Solutions, British Gas Energy, Centrica Business Solutions, Bord Gáis Energy, Energy Marketing & Trading, and Upstream segments. It supplies gas and electricity to residential, commercial, industrial customers, and small businesses, as well as offers energy-related services; and generates power from nuclear assets. The company also provides installation, repair, and maintenance services for domestic central heating, plumbing and drains, electrical appliances; and heating, ventilation, and air conditioning systems, as well as offers breakdown services. In addition, it is involved in the procurement, trading, and optimization of energy; procurement and sale of LNG; and supply of energy efficiency solutions and technologies. Further, the company produces and processes gas and oil; develops new fields to maintain reserves; constructs, owns, and exploits infrastructure; and engages in the social enterprise investment fund activities. Additionally, it provides vehicle leasing, commercial, and insurance services, as well as energy management products and services; constructs battery storage; builds solar farm and connects to grid; and operates a gas storage and franchise network. The company was formerly known as Yieldtop plc and changed its name to Centrica plc in December 1996. Centrica plc was founded in 1812 and is based in Windsor, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "cpg.l",
+      "symbol": "CPG.L",
+      "name": "Compass Group PLC",
+      "sector": "Consumer Cyclical",
+      "industry": "Restaurants",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "USD",
+      "marketCap": 52556681216,
+      "employees": 590000,
+      "website": "https://www.compass-group.com",
+      "description": "Compass Group PLC provides food and support services in North America and internationally. The company offers support services, such as cleaning in hospitals; reception services at corporate headquarters; managing remote camps; grounds and facilities services at schools and universities; insurance brokerage services; and others. It serves business and industry; healthcare and senior living; education; sports and leisure; and defense, offshore, and remote sectors. The company was founded in 1941 and is based in Chertsey, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "crda.l",
+      "symbol": "CRDA.L",
+      "name": "Croda International Plc",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": null,
+      "employees": 5954,
+      "website": "https://www.croda.com",
+      "description": "Croda International Plc engages in the consumer care, life science, and industrial specialty businesses in Europe, the Middle East, Africa, North America, Asia, and Latin America. The company offers consumer care products across beauty care, beauty actives, and home care products, as well as fragrances and flavours. It also provides biologics drug delivery, crop protection, and seed coating systems and enhancement technologies to improve germination. In addition, the company offers industrial specialties, including phase change materials; surfactants, such as emulsifiers, dispersants, wetting agents, detergents, and polymerics; and formulated textile and spin finishes. Croda International Plc was incorporated in 1925 and is headquartered in Goole, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ctec.l",
+      "symbol": "CTEC.L",
+      "name": "Convatec Group PLC",
+      "sector": "Healthcare",
+      "industry": "Medical Instruments & Supplies",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4168753152,
+      "employees": 10000,
+      "website": "https://www.convatecgroup.com",
+      "description": "Convatec Group PLC engages in the development, manufacturing, and sale of medical products, services and technologies for the management of chronic conditions in Europe, North America, and internationally. The company offers advanced wound care products for the management of acute and chronic wounds resulting from various conditions, such as diabetes, and acute conditions resulting from traumatic injury and burns. It also provides ostomy care solutions, including devices, accessories, and services for people with a stoma resulting from colorectal cancer, bladder cancer, inflammatory bowel disease, and trauma. In addition, the company offers continence care products and services for people with urinary continence issues related to spinal cord injuries, neurological disease, prostate enlargement or other causes. Further, it provides infusion care solutions comprising disposable infusion sets for diabetes insulin pumps, or for use in continuous infusion treatments for conditions such as Parkinson's disease. The company sells its products to pharmacies, hospitals, and other acute and post-acute healthcare service providers directly or through distributors and wholesalers. It serves a range of customers, including healthcare providers, patients, and manufacturers. Convatec Group PLC was founded in 1978 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "dcc.l",
+      "symbol": "DCC.L",
+      "name": "DCC Energy plc",
+      "sector": "Energy",
+      "industry": "Oil & Gas Refining & Marketing",
+      "country": "Ireland",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5407347712,
+      "employees": 11700,
+      "website": "https://www.dccenergy.com",
+      "description": "DCC Energy plc engages in the sales, marketing, and distribution of carbon energy solutions in the Republic of Ireland, the United Kingdom, France, the United States, and internationally. The company operates in two segments, DCC Energy and DCC Technology. It sells transport and commercial fuels, heating oils and related products, liquid gas, refrigerants, electricity, natural gas; sells and distributes biofuels and biogas to commercial, industrial, and domestic customers; designs, sells, installs, and maintains on-site solar and energy systems for power customers, as well as provides energy efficiency solutions; owns or operates service stations (gas stations) for vehicles and trucks; and provides fleet payment, digital parking, and telematic services. The company also offers Pro Tech, which bring professional technologies together to enhance audio and visual experiences; Info Tech to make faster connections happen; and Life Tech that provides technology to improve lifestyle quality. The company was formerly known as DCC plc and changed its name to DCC Energy plc. in July 2026. The company was incorporated in 1976 and is headquartered in Dublin, Ireland.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "dge.l",
+      "symbol": "DGE.L",
+      "name": "Diageo plc",
+      "sector": "Consumer Defensive",
+      "industry": "Beverages - Wineries & Distilleries",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 36089077760,
+      "employees": 27972,
+      "website": "https://www.diageo.com",
+      "description": "Diageo plc, together with its subsidiaries, engages in the production, marketing, and distribution of alcoholic beverages in North America, Europe, the Asia Pacific, Latin America and Caribbean, and Africa. It offers beer, scotch, gin, vodka, rum, liqueur, raki, wine, cachaça, tequila, brandy, and Chinese white spirit beverages, as well as Irish, Canadian, Chinese US, and Indian whisky. The company also provides ready-to-drink and non-alcoholic beverages. Its principal brands include Johnnie Walker, Don Julio, Guinness, Crown Royal, Smirnoff, Baileys, Captain Morgan, Buchanan's, Casamigos, Shui Jing Fang, and McDowell's. The company was formerly known as Guinness plc and changed its name to Diageo plc in February 1998. The company was incorporated in 1886 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "dplm.l",
+      "symbol": "DPLM.L",
+      "name": "Diploma PLC",
+      "sector": "Industrials",
+      "industry": "Industrial Distribution",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 9614600192,
+      "employees": 3400,
+      "website": "https://www.diplomaplc.com",
+      "description": "Diploma PLC, together with its subsidiaries, supplies specialized technical products and services in the United Kingdom, Europe, North America, and internationally. It operates through three business sectors: Controls, Seals, and Life Sciences. The Controls sector offers wire and cabling, interconnect, specialty fasteners, specialty adhesive and industrial automation solutions for various applications. The Seals sector supplies sealing and fluid power products, gaskets, hoses and fittings, pumps and valves, and solutions for aftermarket repairs, original equipment manufacturing, and maintenance, repair and overhaul projects. The Life Sciences sector supplies and services equipment; provides consumables and instrumentation for surgery, diagnosis of disease, and critical care support; and supplies diagnostic and scientific technologies, surgical instruments, medical devices, endoscopes, patient monitoring equipment, specialist hospital supplies, and clinical nutrition. It serves public and private hospitals, clinics and diagnostics laboratories. Diploma PLC was incorporated in 1999 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "edv.l",
+      "symbol": "EDV.L",
+      "name": "Endeavour Mining plc",
+      "sector": "Basic Materials",
+      "industry": "Gold",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 10870260736,
+      "employees": 5381,
+      "website": "https://www.endeavourmining.com",
+      "description": "Endeavour Mining plc, together with its subsidiaries, operates as a gold mining company in West Africa. The company also explores gold, copper, and silver. The company's projects include Houndé, Mana, Ity, Lafigué, Sabodala-Massawa, Kalana, and Assafou mines. It primarily holds a portfolio of projects in Burkina Faso, Côte d'Ivoire, Senegal, and Mali. Endeavour Mining plc is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ent.l",
+      "symbol": "ENT.L",
+      "name": "Entain Plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Gambling",
+      "country": "Isle of Man",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3198455296,
+      "employees": 18735,
+      "website": "https://entaingroup.com",
+      "description": "Entain Plc operates as a sports-betting and gaming company in the United Kingdom, Ireland, Italy, rest of Europe, Australia, New Zealand, and internationally. It provides online and multi-channel betting under the Ladbrokes name; street and online betting under the Coral name; online sports betting, casino, and gaming under the Eurobet name; scores, sports information, editorial and social content, and sports focused free-to play games under the 365Scores name; sports betting and gaming operator under the SuperSport and BetCity names; online betting under the bwin name; and sports betting, poker, and casino games under the Crystalbet name. The company also offers online casino and sports betting under the Optibet name; online bingo under the Gala Bingo; online bingo under the Foxy Bingo name; sportsbetting and gaming under the Sports Interaction and Vistabet names; games under the Nutz and Laimz names; game under the boost casino name; online gaming under the Borgata Bingo name; bingo and casino under the Foxy Games name; online bingo, sportsbook, casino, and poker under the betboo; and management software solutions for racing and sportsbooks under the Stadium name. In addition, it offers sports betting and iGaming under the BetMGM and Sportingbet names; sports betting under the Ladbrokes Australia, TAB, betcha, and STS names; Gioco Digitale, an online poker platform; Ladbrokes Belgium, a sports betting platform; online casino under the Ninja Casino and PartyCasino names; casino and live casino under the Gala Casino name; online poker under the PartyPoker name; sports under the Neds and Klondaika names; and iGaming platform under the Finnplay name. The company was incorporated in 2004 and is based in Douglas, Isle of Man.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "expn.l",
+      "symbol": "EXPN.L",
+      "name": "Experian plc",
+      "sector": "Industrials",
+      "industry": "Consulting Services",
+      "country": "Ireland",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 24571359232,
+      "employees": 25200,
+      "website": "https://www.experianplc.com",
+      "description": "Experian plc, together with its subsidiaries, operates as a data and technology company in North America, Latin America, the United Kingdom, Ireland, Europe, the Middle East, Africa, and the Asia Pacific. It operates through two segments: Business-to-Business and Consumer Services. The company provides data, software, and AI-enabled analytics integrate directly into client workflows to support decisioning, risk management, fraud prevention and customer engagement at scale; credit information, affordability insights, identity protection and personalized offers. It serves its customers in financial service, health, automotive, and marketing services. The company was formerly known as Experian Group Limited and changed its name to Experian plc in July 2008. Experian plc was founded in 1826 and is headquartered in Dublin, Ireland.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "fcit.l",
+      "symbol": "FCIT.L",
+      "name": "F&C Investment Trust Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 6340997120,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "fres.l",
+      "symbol": "FRES.L",
+      "name": "Fresnillo plc",
+      "sector": "Basic Materials",
+      "industry": "Other Precious Metals & Mining",
+      "country": "Mexico",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": null,
+      "employees": 7348,
+      "website": "https://www.fresnilloplc.com",
+      "description": "Fresnillo plc mines, develops, and produces non-ferrous minerals in Mexico. It operates through seven segments: Fresnillo, Saucito, Ciénega, Herradura, Noche Buena, San Julián, and Juanicipio. The company primarily explores for silver, gold, lead, and zinc concentrates. Its projects include the Fresnillo silver mine located in the state of Zacatecas; Saucito mine situated in the state of Zacatecas; Ciénega mine located in the state of Durango; Herradura mine located in the state of Sonora; Noche Buena mine located in the state of Sonora; San Julián mine situated on the border of Chihuahua/Durango states; and Juanicipio mine located in the state of Zacatecas. The company also leases mining equipment; produces lead, silver and zinc concentrates and silver precipitates; produces gold/silver doré bars; mines projects; and provides exploration and administrative services. Fresnillo plc was founded in 1887 and is headquartered in Mexico City, Mexico. Fresnillo plc is a subsidiary of Industrias Peñoles, S.A.B. de C.V.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "gaw.l",
+      "symbol": "GAW.L",
+      "name": "Games Workshop Group PLC",
+      "sector": "Consumer Cyclical",
+      "industry": "Leisure",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5855607296,
+      "employees": 3321,
+      "website": "https://investor.games-workshop.com",
+      "description": "Games Workshop Group PLC, together with its subsidiaries, engages in the design, manufacture, distribution, and sale of fantasy miniature figures and games in the United Kingdom, Continental Europe, North America, Australia, New Zealand, Asia, and internationally. The company operates in two segments, Core and Licensing. It offers games under the Warhammer 40,000; Warhammer: The Horus Heresy; Warhammer: The Old World; Warhammer: Age of Sigmar; and Necromunda and Blood Bowl brand names, as well as has a licensed property for the Lord of the Rings. The company also publishes short stories, audio dramas, full length novels, and audio books under the Black Library name. In addition, it engages in the magazine newsstand business; and grants licences to third parties for the development of video games, PC games, media, and other products. The company sells its products through its own retail stores, third party independent retailers, and online stores. The company was incorporated in 1991 and is headquartered in Nottingham, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "glen.l",
+      "symbol": "GLEN.L",
+      "name": "Glencore plc",
+      "sector": "Basic Materials",
+      "industry": "Other Industrial Metals & Mining",
+      "country": "Switzerland",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 66990153728,
+      "employees": 140000,
+      "website": "https://www.glencore.com",
+      "description": "Glencore plc engages in the production, refinement, processing, storage, transport, and marketing of metals and minerals, and energy products in the Americas, Europe, Asia, Africa, and Oceania. The company operates in two segments, Marketing Activities and Industrial Activities. It engages in the production and marketing of copper, cobalt, lead, nickel, zinc, chrome ore, ferrochrome, vanadium, aluminum, alumina, and iron ore; and coal, crude oil, refined products, and natural gas, as well as oil exploration and production and refining and distribution. The company is also involved in marketing and distributing physical commodities sourced from third party producers to industrial consumers, including the battery, electronic, construction, automotive, steel, energy, and oil industries. In addition, the company provides financing, logistics, and other services to producers and consumers of commodities. Glencore plc was founded in 1974 and is headquartered in Baar, Switzerland.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "gsk.l",
+      "symbol": "GSK.L",
+      "name": "GSK plc",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - General",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 74724679680,
+      "employees": 66841,
+      "website": "https://www.gsk.com",
+      "description": "GSK plc, together with its subsidiaries, engages in the research, development, and manufacture of vaccines, specialty medicines, and general medicines to prevent and treat disease in the United Kingdom, the United States, and internationally. It operates through Commercial Operations and Total R&D segments. The company offers specialty medicines that include oncology, respiratory/immunology, inflammation, and inhaled medicines for HIV, respiratory eosinophildriven diseases, lupus and lupus nephritis, ovarian cancer, and endometrial cancer. It also provides vaccines for Shingles, Meningitis, RSV, Seasonal Influenza, Hepatitis, Diphtheria, Tetanus, Acellular Pertussis, Rotavirus, Pertussis, Polio, Haemophilus, Invasive Diseases, Pneumonia, Acute Otitis Media, Measles, Mumps, Rubella and Chickenpox, and Human Papilloma Virus. Additionally, the company offers general medicines for asthma, COPD, bacterial infection, benign prostatic hyperplasia, allergic rhinitis, and inflammatory skin conditions. It also focuses on the discovery, development, and commercialization of oral small molecule therapies for patients with unmet needs in oncology and inflammatory diseases. It has a collaboration agreement with CureVac to develop mRNA vaccines for infectious diseases; and strategic research collaboration with Engitix Ltd. to identify and validate novel therapeutic targets driving liver fibrosis regression. The company has a strategic alliance with AN2 Therapeutics, Inc. for the development of new therapies for TB. GSK plc was formerly known as GlaxoSmithKline plc and changed its name to GSK plc in May 2022. The company was founded in 1715 and is headquartered in London, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "hlma.l",
+      "symbol": "HLMA.L",
+      "name": "Halma plc",
+      "sector": "Industrials",
+      "industry": "Conglomerates",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": null,
+      "employees": 9000,
+      "website": "https://www.halma.com",
+      "description": "Halma plc, together with its subsidiaries, provides technology solutions in the safety, health, and environmental markets in the United States, Mainland Europe, the United Kingdom, the Asia Pacific, Africa, the Middle East, and internationally. The company operates in three segments: Safety, Environmental & Analysis, and Healthcare. Its Safety segment provides products that protect people, assets, and infrastructure used in public and commercial spaces and in industrial and logistics operations. This segment serves fire safety, public safety, worker safety, and infrastructure and asset safety markets. The Environmental & Analysis segment offers technologies that monitor the environment used in optical solutions, water analysis and treatment system, and environmental monitoring technologies. Its Healthcare segment provides technologies and digital solutions for healthcare enablement, discovery, prevention, and diagnostics, and therapeutic solutions. The company also designs and manufactures differentiated orthobiologic products. Halma plc was incorporated in 1894 and is headquartered in Amersham, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "hln.l",
+      "symbol": "HLN.L",
+      "name": "Haleon plc",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - Specialty & Generic",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 29886253056,
+      "employees": 24535,
+      "website": "https://www.haleon.com",
+      "description": "Haleon plc, together with its subsidiaries, engages in the research, development, manufacture, and sale of various consumer healthcare products in North America, Europe, the Middle East, Africa, Latin America, and the Asia Pacific. The company offers oral health products, such as toothpastes, mouth washes, and denture care products under the Sensodyne, Polident, Parodontax, and Biotene brands; and vitamins, minerals, and supplements under Centrum, Emergen-C, Caltrate brands. It also provides various over-the-counter products comprising nasal drops, and cold, flu, and allergy relief products under Theraflu, and Flonase brands for respiratory issues; and pain relief products under Voltaren, Panadol, and Advil brands; and antacids and antihistamine products under TUMS, ENO, and Fenistil brands for digestive health and other issues. Haleon plc has a collaboration agreement with Microsoft to scale digital, data and AI capabilities across the business and accelerate delivery of its global win as one strategy. Haleon plc was formerly known as DRVW 2022 plc and changed its name to Haleon plc in February 2022. The company was founded in 1715 and is headquartered in Weybridge, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "hsba.l",
+      "symbol": "HSBA.L",
+      "name": "HSBC Holdings plc",
+      "sector": "Financial Services",
+      "industry": "Banks - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 258130264064,
+      "employees": 206161,
+      "website": "https://www.hsbc.com",
+      "description": "HSBC Holdings plc engages in the provision of banking and financial products and services worldwide. It operates through four segments: Hong Kong, UK, Corporate and Institutional Banking, and International Wealth and Premier Banking. The Hong Kong segment is involved in the retail banking and wealth and commercial banking of HSBC Hong Kong and Hang Seng Bank. The UK segment engages in UK retail banking and wealth, as well as first direct and M&S Bank, UK Commercial Banking, and HSBC Innovation Bank. The Corporate and Institutional Banking segment is involved in transaction banking and capital markets. The International Wealth and Premier Banking segment is involved in the business comprising premier banking outside of Hong Kong and the UK, its private bank, asset management, and insurance businesses. The company was founded in 1865 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "hsx.l",
+      "symbol": "HSX.L",
+      "name": "Hiscox Ltd",
+      "sector": "Financial Services",
+      "industry": "Insurance - Property & Casualty",
+      "country": "Bermuda",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 6006111744,
+      "employees": 3000,
+      "website": "https://www.hiscoxgroup.com",
+      "description": "Hiscox Ltd, through its subsidiaries, provides insurance and reinsurance services in the United Kingdom, Europe, the United States, and internationally. It operates through Hiscox Retail, Hiscox London Market, and Hiscox Re segments. The company offers commercial insurance, such as emerging professions, media and tech, and small business insurance; and personal lines, including high-value homes and fine art, as well as artwork, antiques, classic cars, jewelry, collectables, and other assets through brokers, partners, and direct-to-consumers. It also provides property insurance; marine, specialty, cyber, and energy insurance; casualty insurance; terrorism, kidnap, and ransom insurance; and other specialty insurance products. In addition, the company offers property and casualty reinsurance services, as well as investment services. Hiscox Ltd was founded in 1901 and is headquartered in Pembroke, Bermuda.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "hwdn.l",
+      "symbol": "HWDN.L",
+      "name": "Howden Joinery Group Plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Furnishings, Fixtures & Appliances",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4139109632,
+      "employees": 12000,
+      "website": "https://www.howdenjoinerygroupplc.com",
+      "description": "Howden Joinery Group Plc supplies various kitchen, joinery, and hardware products in the United Kingdom, France, Belgium, and the Republic of Ireland. The company's product portfolio includes cabinet, worktops, sinks and taps, flooring, appliances, and handles; internal and external doors, such as fire doors, flooring, stair parts, and general joinery items; and cooking, cleaning, and cooling appliances. The company was formerly known as Galiform Plc and changed its name to Howden Joinery Group Plc in September 2010. Howden Joinery Group Plc was incorporated in 1987 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "iag.l",
+      "symbol": "IAG.L",
+      "name": "International Consolidated Airlines Group S.A.",
+      "sector": "Industrials",
+      "industry": "Airlines",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 18255349760,
+      "employees": 76581,
+      "website": "https://www.iairgroup.com",
+      "description": "International Consolidated Airlines Group S.A., together with its subsidiaries, engages in the provision of passenger and cargo transportation services in the North Atlantic, Latin America, the Caribbean, Europe, Africa, the Middle East, South Asia, the Asia Pacific, and internationally. It operates through British Airways, Iberia, Vueling, Aer Lingus, and IAG Loyalty segments. The company manufactures, repairs, maintains, overhauls, retrofits, repurposes, upgrades aircraft, and aircraft parts and equipment. In addition, it provides airline operations, insurance, aircraft leasing, aircraft maintenance, tour operation, air freight operations, call center, ground handling, trustee, retail, IT, finance, flight procurement, storage, aircraft technical assistance, human resources support, and airport infrastructure development services; and manages airline loyalty reward currency. The company was incorporated in 2009 and is headquartered in Harmondsworth, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "icg.l",
+      "symbol": "ICG.L",
+      "name": "ICG plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5408233984,
+      "employees": 676,
+      "website": "https://www.icgam.com",
+      "description": "ICG plc is a private equity firm specializing in direct and fund of fund investments. Within direct it specializes in private debt, venture debt, credit and equity investments. It invests in middle market, mature, growth capital, reinvestment, industry consolidations, bridge financing, restructuring of a shareholder base, acquisitions, public to private transactions with or without private equity backing, leveraged and acquisition finance, leveraged credit, partnership equity, management buyouts and management buyins, secondary (direct) and secondary (indirect) investments, traditional, development capital, public quoted company finance, off-balance-sheet finance, refinancing and recapitalizations, and pre-IPO financing. The firm does not invest in property companies, early-stage funds or start-ups. Within fund of fund, it specializes in secondary investments. It also invests in the debt, fixed income and alternate asset markets. The firm's alternative capital solutions invest in mid-market companies, in Europe, the United States and Asia Pacific. It invests in corporate businesses through private debt, senior, junior and sub-ordinate debt, mezzanine, structured loans and equity in Europe, Asia Pacific and North America. The firm prefers to invest in all sectors with a focus on insurance, energy, materials, environmental and facilities services, human resources and employment services, leisure products, consumer staples, healthcare, infrastructure services, media and entertainment, utilities, equity real estate investment trusts, education and childcare. The firm seeks to invest in life sciences in Western Europe and the United States. The firm invests in a diversified portfolio of senior secured loans to established companies in Australia and New Zealand. The firm focuses on European senior direct lending, investing in a diversified portfolio of mid-market and upper mid-market corporate borrowers in Western and Northern Europe. The firm is focused on limited partnership liquidity solutions in North America and Europe. It prefers to invest in commercial real estate assets and commercial property in the United Kingdom. It seeks to invest in companies whose principal place of business is Africa/Middle East, DACH region, European Union, Pan-European, Spain, Nordic, United States, Anguilla, Antigua and Barbuda, Aruba, Bahamas, Barbados, Bermuda, British Virgin Islands, Cayman Islands, Cuba, Dominica, Dominican Republic, Grenada, Guadeloupe, Haiti, Jamaica, Martinique, Montserrat, Netherlands Antilles, Saint Kitts & Nevis, Saint Lucia, Saint Vincent and the Grenadines, Trinidad and Tobago, Turks & Caicos Islands, Belize, Costa Rica, El Salvador, Guatemala, Honduras, Mexico, Nicaragua, Panama, Canada, United Kingdom, France, Italy, Liechtenstein, Monaco, Netherlands, Bulgaria, Romania, North America, South-East Asia and the Asia Pacific, Hong Kong, South Korea, Singapore, Taiwan, China, Japan, Australia, Luxembourg, Belgium and New Zealand. It prefers to invest between $100 and $200 million. The firm prefers to invest in companies with an enterprise value of at least $34.13 million. The firm provides mezzanine financing to firms with an enterprise value between $40.62 million and EUR 1000 million ($1353.94 million). In corporate strategies, it prefers to invest in firms with enterprise value of EUR 100 million ($107.36 million) and EUR 2000 million ($2147.23 million). The firm invests between $50 million and $1000 million in North American Private Debt in companies with EBITDA between $25 million and $250 million. The firm seeks to acquire minority and majority stakes. It generally structures its financing in the form of subordinated loans with equity warrants, as preference shares, preferred equity, mezzanine debt, convertible loans, leveraged loans, senior, junior, and mezzanine loans, and CDOs. The firm provides loans for a maturity period between seven years and ten years with repayments to be made in one payment at final maturity. Its mezzanine investments are usually structured to provide a cash yield between three percent and four percent over the relevant interbank rate, plus an additional return to reflect the risk involved. Alternative Credit strategies are structured in portfolio format, such as CLOs, RMBS, CMBS and correlation tranches. It focuses on structured credit and credit portfolios sourced from banks' balance sheets. The firm's direct lending strategies invest in senior secured and subordinated debt investments in companies across Europe either as the lead arranger or the sole lender. In strategic secondaries, it focuses on restructuring, mainly in North America, the United States and Europe with a focus on leading restructuring and recapitalization transactions for mature private equity funds. In fixed income solutions, the firm invests in leveraged loans and high yield bonds; corporate loans and bonds - segregated loan strategies as well as multi-asset credit funds; multi-asset credit strategies - European loans and European high yield bonds; CLOs in Europe and in the United States; Asset Backed Securities and securitized debt in Europe and in the United States. It is also a manager of third-party mezzanine, CDO, and Institutional Client Funds. It seeks to make balance sheet investments and seeks board attendance rights from its portfolio companies. ICG plc was founded in 1989 and is based in London, United Kingdom, with additional offices across Europe, North America, the Middle East and Asia Pacific.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "igg.l",
+      "symbol": "IGG.L",
+      "name": "IG Group Holdings plc",
+      "sector": "Financial Services",
+      "industry": "Capital Markets",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4337988608,
+      "employees": 2311,
+      "website": "https://www.iggroup.com",
+      "description": "IG Group Holdings plc, a fintech company, engages in the online trading and investments business in the United Kingdom, Ireland, the Asia-Pacific, the Middle East, the United States, Europe, and institutional and emerging markets. The company offers retail over the counter derivatives, including contracts for difference, OTC FX and options; and exchange-traded derivatives options and futures under the tastytrade. It also provides stock trading and investment services, such as smart portfolios and ISA and SIPPs, as well as equities, exchange traded funds, and fixed income products, which include fractional shares, mutual funds, UK treasury bills, UK tax wrappers, securities lending, and proxy voting services; and cash crypto trading. In addition, the company offers content and education solutions, such as daily live programming, news and original content, and webinars and tutorials, as well as content, education, and support tools, including signals, analytics, charting applications, and proprietary insights through the Trade Live with IG and tastylive channels. Further, it engages in foreign exchange, and market risk management; spread betting; data distribution; software development and support services; turbo warrants issuing; financing; market maker; network and content provision; and brokerage activities. The company serves investors, customers, communities, colleagues, regulators, and suppliers. IG Group Holdings plc was founded in 1974 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ihg.l",
+      "symbol": "IHG.L",
+      "name": "InterContinental Hotels Group PLC",
+      "sector": "Consumer Cyclical",
+      "industry": "Lodging",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "USD",
+      "marketCap": 22490781696,
+      "employees": 13049,
+      "website": "https://www.ihgplc.com",
+      "description": "InterContinental Hotels Group PLC owns, manages, franchises, and leases hotels in the United Kingdom, the United States, and internationally. It operates hotels under the Six Senses, Regent, InterContinental Hotels & Resorts, Vignette Collection, Kimpton Hotel, Hotel Indigo, voco, Ruby, HUALUXE, Crowne Plaza, Iberostar Beachfront Resorts, EVEN Hotels, Holiday Inn Express, Holiday Inn, Garner, avid hotels, Atwell Suites, Staybridge Suites, IHG, Holiday Inn Club Vacations, and Candlewood Suites brand names. The company also provides IHG Rewards loyalty program. InterContinental Hotels Group PLC was formerly known as Six Continents PLC and changed its name to InterContinental Hotels Group PLC in June 2003. The company was founded in 1777 and is headquartered in Windsor, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "iii.l",
+      "symbol": "III.L",
+      "name": "3i Group Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 27206287360,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "imb.l",
+      "symbol": "IMB.L",
+      "name": "Imperial Brands PLC",
+      "sector": "Consumer Defensive",
+      "industry": "Tobacco",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 18793918464,
+      "employees": 25100,
+      "website": "https://www.imperialbrandsplc.com",
+      "description": "Imperial Brands PLC, together with its subsidiaries, manufactures, imports, markets, and sells tobacco and tobacco-related products in Europe, the Americas, Africa, the Asia, Australasia, and internationally. It offers a range of cigarettes, tobacco accessories, vapour, heated tobacco, and oral nicotine. The company sells its products under various brands, including JPS, Davidoff, Gauloises, West, Winston, Kool, Lambert & Butler, P&S, Fortuna, Nobel, News, Backwoods, Champion, Golden Virginia, FINE, Rizla, Blu, Pulze, Skruf, and Zone. In addition, it engages in the distribution of tobacco and NGP products for tobacco and NGP product manufacturers; and various non-tobacco and NGP products and services. Further, the company is involved in the management of a golf course; distribution of pharmaceuticals, POS software, and published materials and other products; printing and publishing activities; and provision of long haul transportation, industrial parcel and express delivery, pharmaceutical products logistics, advertising, payment, freight forwarding, and support management services, as well as owns the trademarks; and retails its products. Additionally, it engages in edition and distribution of books and non-periodical publication. Furthermore, the company is involved in research and development of e-vapour products. The company was formerly known as Imperial Tobacco Group PLC and changed its name to Imperial Brands PLC in February 2016. Imperial Brands PLC was founded in 1636 and is based in Bristol, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "imi.l",
+      "symbol": "IMI.L",
+      "name": "IMI plc",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7179093504,
+      "employees": 10000,
+      "website": "https://www.imiplc.com",
+      "description": "IMI plc designs and manufactures fluid and motion control solutions in the United Kingdom, Germany, rest of Europe, the United States, rest of the Americas, China, rest of the Asia Pacific, the Middle East, and Africa. It operates through Automation and Life Technology segments. The company provides engineer advanced fluid control automation solutions; creates fluid and motion control solutions; pneumatic and electric motion systems for creating smart, safe, and sustainable factories, production lines, and operations; valves, actuators, and digitally connected products. It also develops solutions that reduce emissions from commercial vehicles; and develops new products to support zero emission technologies. In addition, the company offers heating and cooling systems; syringe pumps; and detection technologies. It serves process automation, industrial automation, climate control, life science and fluid control, and transportation sectors. The company was formerly known as Imperial Metal Industries Limited and changed its name to IMI plc in December 1978. IMI plc was founded in 1862 and is headquartered in Birmingham, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "inf.l",
+      "symbol": "INF.L",
+      "name": "Informa plc",
+      "sector": "Communication Services",
+      "industry": "Publishing",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 11076315136,
+      "employees": 14052,
+      "website": "https://www.informa.com",
+      "description": "Informa plc operates as an international events, digital services, and academic research company in the United Kingdom, Continental Europe, North America, China, and internationally. It operates through five segments: Informa Markets, Informa Connect, Informa Festivals, Taylor & Francis, and Infroma TechTarget. The Informa Markets segment enable buyers, sellers, and decision makers to meet, discover, and showcase new products in various specialist markets, as well as delivers live events, including annual business-to-business exhibitions, specialist content, and services that help buyers and suppliers connect digitally comprising lead and demand generation solutions. Its Informa Connect segment delivers digital content; and creates content-led live and on demand events and experiences for professionals in finance, life sciences, foodservice, and other specialist markets through in-person, live, and online platforms that enables businesses and professionals to meet, network, discuss, and learn. Informa Festivals segment engages in experience-led B2B events. The Informa TechTarget segment provides B2B data and market access services. Its Taylor & Francis segment curates and publishes applied academic research, learning, and championing communities of academics, researchers, experts, and knowledge makers in science, technology and medicine, and humanities and social sciences fields in pay-to-publish and pay-to-read, open research, and advanced learning formats. The company was formerly known as T&F Informa plc and changed its name to Informa plc in August 2005. Informa plc was founded in 1998 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "invp.l",
+      "symbol": "INVP.L",
+      "name": "Investec Group",
+      "sector": "Financial Services",
+      "industry": "Capital Markets",
+      "country": "South Africa",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4138315520,
+      "employees": 7777,
+      "website": "https://www.investec.com",
+      "description": "Investec Group provides various financial products and services in South Africa, the United Kingdom, and internationally. It operates through four segments: Wealth & Investment, Private Banking, Corporate and Investment Banking and Other, and Group Investments. The Wealth & Investment segment offers wealth management and investment services to high-net-worth individuals, families, charities, and trusts. The Private Banking segment provides lending solutions, transactional banking, savings, bespoke foreign exchange, property finance, leverage finance, travel, insurance, legacy services, investments, trading, and offshore banking. The Corporate and Investment Banking segment delivers lending, advisory, and risk management services to corporate clients, private companies, private equity, listed companies, state-owned enterprises, public sector bodies, institutions, and intermediaries, including central treasury, and liability management. The Group Investments segment manages assets separated from core banking activities, including franchise businesses and standalone asset values. The company offers insurance solutions comprising severe illness, disability, life, mortgage and income protection, and business overloads. It also offers business banking solutions, such as trade and debtor, asset and leverage, structured property, technology asset, supply chain, and medical practice financing services, as well as financing for corporate and private equity firms. In addition, the company provides the company provides advisory; treasury and risk management for foreign exchange, commodities, interest rates, liquidity management, and equity structuring; fixed-income instruments; execution and custody solutions for institutions, hedge funds, corporates, and intermediaries; securities lending; and clearing services. Investec Group was founded in 1974 and is based in Sandton, South Africa.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "itrk.l",
+      "symbol": "ITRK.L",
+      "name": "Intertek Group plc",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": null,
+      "employees": 45425,
+      "website": "https://www.intertek.com",
+      "description": "Intertek Group plc provides quality assurance solutions to various industries in the United Kingdom, the United States, China, Australia, and internationally. It operates through five segments: Consumer Products, Corporate Assurance, Health and Safety, Industry and Infrastructure, and World of Energy. The company offers quality assurance, testing, inspection, and certification services, including laboratory safety, quality and performance testing, accredited third-party management systems auditing and certification, technical inspection, second-party supplier auditing and supply chain solutions, sustainability data verification, process performance analysis and training, food safety testing, hygiene and safety audits, advisory and consulting, and validation services, as well as hardware, software, and cyber security solutions. It also provides asset performance management, analytical testing, non-destructive and materials testing, engineering, cargo and inventory inspection, analytical assessment, calibration, supply-chain traceability, and related research and technical services, as well as support services in product development, regulatory authorization, chemical testing, and production. The company serves a range of industries, including textiles, footwear, toys, hardlines, home appliances, consumer electronics, information and communication technology, automotive, aerospace, lighting, building products, industrial and renewable energy products, oil and gas, petrochemical, minerals, exploration, ore and mining, building and construction, solar energy, energy storage, green hydrogen, petroleum and biofuels, agricultural supply chain, food, transportation, chemicals and pharma, and healthcare, as well as governments, regulatory bodies, and exporters and importers to support trade compliance. The company was founded in 1885 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "jd.l",
+      "symbol": "JD.L",
+      "name": "JD Sports Fashion Plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Apparel Retail",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3612547840,
+      "employees": 96084,
+      "website": "https://www.jdplc.com",
+      "description": "JD Sports Fashion Plc engages in the retail of branded sports fashion and outdoor clothing, footwear, accessories, and equipment for women and men in the United Kingdom, Europe, North America, and the Asia Pacific. It operates through JD, Complementary Athleisure, and Sporting Goods and Outdoors segments. The company also engages in the business of fitness and leisure clubs; and sells gift cards. It offers products under the JD, Finish Line, JD Gyms, Size?, Footpatrol, Livestock, Hibbett, DTLR, Shoe Palace, Sizeer, Courir, Sprinter, Sport Zone, Go Outdoors, Blacks, Tiso, Ultimate Outdoors, Fishing Republic, Millets, and Naylors brand names. The company sells its products through retail stores and websites. JD Sports Fashion Plc was founded in 1981 and is headquartered in Bury, the United Kingdom. The company operates as a subsidiary of Pentland Group Limited.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "kgf.l",
+      "symbol": "KGF.L",
+      "name": "Kingfisher plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Home Improvement Retail",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4869138944,
+      "employees": 69720,
+      "website": "https://www.kingfisher.com",
+      "description": "Kingfisher plc, together with its subsidiaries, supplies home improvement products and services in the United Kingdom, Ireland, France, Poland, and internationally. The company operates retail stores under the B&Q, Castorama, Brico Dépôt, Screwfix, TradePoint, and Koçtas brand names. It sells its products to consumers and trade professionals through stores and e-commerce channels. Kingfisher plc was incorporated in 1982 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "land.l",
+      "symbol": "LAND.L",
+      "name": "Land Securities Group Plc",
+      "sector": "Real Estate",
+      "industry": "REIT - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4739190784,
+      "employees": 700,
+      "website": "https://www.landsec.com",
+      "description": "Land Securities Group Plc identify and shape places that create opportunities, enhance quality of life, and bring joy to the people connected to them. This is how they created the leading portfolio of urban places in UK and one of the largest real estate companies in Europe. Their 10 billion pounds portfolio is built around premium workplaces, is the country pre-eminent retail platform, and a residential pipeline that will redefine urban life. They honed this ability over 80 years. Spotting the opportunities, building the partnerships, and continually adapting to shape the places that meet the needs of a changing world. Places where life happens. Where businesses grow. And where cities are defined. Land Securities Group Plc was incorporated in 1995 in United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "lgen.l",
+      "symbol": "LGEN.L",
+      "name": "Legal & General Group Plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 16258127872,
+      "employees": 10500,
+      "website": "https://group.legalandgeneral.com",
+      "description": "Legal & General Group Plc provides various insurance products and services in the United Kingdom, the United States, and internationally. It operates through Institutional Retirement, Asset Management, Insurance, and Retail Retirement segments. The Institutional Retirement segment offers annuity contracts with guaranteed income for a specified time; longevity insurance products; and writes assured payment policies (APP). The Asset Management segment provides unit linked institutional pensions, segregated investment management mandates, and collective investment schemes; index fund management; pooled and segregated active fixed income funds; active equity management; solutions for cash management requirements for institutional investors; solutions and liability driven investment; multi-asset funds; private markets strategies for physical real estate, private corporate debts, infrastructure debts, and real estate loans; and direct investment services. The Retail Retirement segment offers protection products, such as health, disability, critical illness, and accident; annuities; lifetime mortgages; lifetime care plans; retirement interest only mortgages; and workplace and retail savings scheme that provides corporate pension scheme solutions. Legal & General Group Plc was founded in 1836 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "lloy.l",
+      "symbol": "LLOY.L",
+      "name": "Lloyds Banking Group plc",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 64270327808,
+      "employees": 60061,
+      "website": "https://www.lloydsbankinggroup.com",
+      "description": "Lloyds Banking Group plc, together with its subsidiaries, provides a range of banking and financial products and services for retail and commercial customers in the United Kingdom. It operates in three segments: Retail; Commercial Banking; and Insurance, Pensions and Investments. The Retail segment offers a range of financial service products, including current accounts, savings, mortgages, credit cards, unsecured loans, motor finance, and leasing solutions to personal customers. Its Commercial Banking segment provides lending, transactional banking, working capital management, debt financing, and risk management services to small and medium businesses, corporates, and institutions. The Insurance, Pensions and Investments segment offers insurance, investment, and pension management products and services. It also provides life assurance; and digital banking services. The company offers its products and services under the Lloyds Bank, Halifax, Bank of Scotland, Scottish Widows, MBNA, Schroders Personal Wealth, Black Horse, Lex Autolease, Birmingham Midshires, LDC, AMC, Embark Group, Lloyds Living, Cavendish Online, Tusker, and HGP brands. The company was formerly known as Lloyds TSB Group plc and changed its name to Lloyds Banking Group plc in January 2009. Lloyds Banking Group plc was founded in 1695 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "lmp.l",
+      "symbol": "LMP.L",
+      "name": "LondonMetric Property Plc",
+      "sector": "Real Estate",
+      "industry": "REIT - Industrial",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 4384696320,
+      "employees": 54,
+      "website": "https://www.londonmetric.com",
+      "description": "LondonMetric Property Plc is the UK's leading triple net lease REIT with a 8 billion pounds portfolio. It is aligned to structurally supported sectors of logistics, healthcare, convenience, entertainment and leisure. It owns and manages desirable real estate that meets occupiers' demands, delivers reliable, repetitive and growing income-led returns and outperforms over the long term. LondonMetric Property Plc was established on October 01, 2007 and incorporated in 2007 in United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "lseg.l",
+      "symbol": "LSEG.L",
+      "name": "London Stock Exchange Group plc",
+      "sector": "Financial Services",
+      "industry": "Financial Data & Stock Exchanges",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 39334645760,
+      "employees": 28516,
+      "website": "https://www.lseg.com",
+      "description": "London Stock Exchange Group plc provides financial markets infrastructure and data products in the United Kingdom, the United States, Europe, Asia, and internationally. The company operates through four segments: Data & Analytics, FTSE Russell, Risk Intelligence, and Markets. It offers data, analytics, and AI tools through an open and interoperable architecture; real-time data and news, text, reference, and legal entity information; and cross-asset models and analytics solutions, such as Yield Book fixed income, Lipper fund performance, private credit analytics, and StarMine sentiment analysis. The company also provides index and benchmark solutions; risk intelligence solutions to meet Know Your Customer and Know Your Third Party obligations, perform due diligence, and mitigate identity and payment fraud risks; World-Check Verify, a cloud-native screening API; and World-Check On Demand for continuously updated sanctions, politically exposed persons, adverse media, and enforcement data. In addition, it offers access to various liquidity pools in multiple asset classes comprising equities, fixed income, exchange-traded funds and products, and foreign exchange; capital formation and execution venues consisting of London Stock Exchange, AIM, Turquoise, FXall, FX Matching, and Tradeweb; and clearing and capital optimization solutions for interest rate swap, foreign exchange, and credit default swap OTC derivatives. Further, the company provides securities clearing, capital optimization, and regulatory reporting solutions; software licenses; network connections; hosting services; clearing, settlement, and other post trade services; and events and media services. London Stock Exchange Group plc was founded in 1698 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "mks.l",
+      "symbol": "MKS.L",
+      "name": "Marks and Spencer Group plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Department Stores",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7677882368,
+      "employees": 51405,
+      "website": "https://corporate.marksandspencer.com",
+      "description": "Marks and Spencer Group plc operates various retail stores. It operates through Fashion, Home & Beauty; Food; International; and Ocado segments. The company offers womenswear, menswear, lingerie, kids wear, beauty, and home products through UK and ROI, retail stores, and online. It also provides meat, fish, protein deli and dairy; produce and floral; meals, frozen, and food on the move; core basket; beers, wines, and spirits; and impulse and events, and hospitality services. In addition, it operates international franchises; and provides banking services. The company also exports its products. The company was founded in 1884 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "mng.l",
+      "symbol": "MNG.L",
+      "name": "M&G plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 8114658304,
+      "employees": 6455,
+      "website": "https://group.mandg.com",
+      "description": "M&G plc, through its subsidiaries, provides investment and savings products to institutional clients and individual policyholders in the United Kingdom and internationally. The company operates through Asset Management and Life segments. The Asset Management segment offers managed investment products, such as equities, fixed income, and multi-asset, as well as real estate investment products and services to wholesale clients and institutional investors. The Life segment provides corporate pension solutions, individual life and pensions, and international solutions and advice; and Prudential guaranteed income plan. This segment also offers level annuities, which provide a fixed annuity payment; fixed increase annuities, which incorporate a periodic automatic fixed increase in annuity payments; inflation-linked annuities, which incorporate a periodic increase based on a defined inflation index; and with-profits annuities, written in the with-profits fund, combining income features of annuity contracts with the investment-smoothing features of with-profits products. The company was formerly known as M&G Prudential PLC and changed its name to M&G plc in September 2019. M&G plc was founded in 1848 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "mro.l",
+      "symbol": "MRO.L",
+      "name": "Melrose Industries PLC",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5972545536,
+      "employees": 12459,
+      "website": "https://www.melroseplc.net",
+      "description": "Melrose Industries PLC, together with its subsidiaries, designs and delivers aerospace components and systems for civil and defence markets in the United Kingdom, rest of Europe, North America, and internationally. The company operates through Engines and Airframes segments. The Engines segment offers structural engineered components; parts repair; commercial and aftermarket contracts; engine mount structures; fan cases and turbine cases; and shafts and rotating components to engines original equipment manufacturers. The Airframes segment provides civil and defence air frames, including lightweight composite and metallic structures; electrical distribution systems and components; wing structures; empennage; fuselage; electrical wiring interconnection systems (EWIS); landing gear and ice protection systems; and aircraft transparencies to airframe original equipment manufacturers. The company was formerly known as New Melrose Industries PLC and changed its name to Melrose Industries PLC in November 2015. Melrose Industries PLC was founded in 2003 and is headquartered in London, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "mtln.l",
+      "symbol": "MTLN.L",
+      "name": "Metlen Energy & Metals PLC",
+      "sector": "Utilities",
+      "industry": "Utilities - Diversified",
+      "country": "Greece",
+      "exchange": "LSE",
+      "currency": "EUR",
+      "marketCap": 6510449664,
+      "employees": 6617,
+      "website": "https://www.metlen.com",
+      "description": "Metlen Energy & Metals PLC operates as an industrial and energy company focusing on the metals and energy sectors worldwide. The company engages in the development, construction, and operation of thermal power plants; and design and construction of electricity infrastructure projects. It also develops RES and energy storage projects; manages power generation and energy plants; and retails electricity and natural gas supply. In addition, the company engages in the procurement and management of natural gas and other energy products for large B2B corporate clients; and develops large-scale energy projects for electricity production and energy transition. Further, it extracts, processes, and refines alumina, aluminium, bauxite, and various metals and minerals. Additionally, the company undertakes various infrastructure construction projects, such as roadworks, buildings, and railway and port projects, as well as solid and liquid waste management projects; and designs, constructs, operates, finances, and maintains infrastructure, building, environmental, hydraulic, and technology and energy projects. Metlen Energy & Metals PLC was founded in 1908 and is headquartered in Athens, Greece.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ng.l",
+      "symbol": "NG.L",
+      "name": "National Grid plc",
+      "sector": "Utilities",
+      "industry": "Utilities - Regulated Electric",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 57004302336,
+      "employees": 33026,
+      "website": "https://www.nationalgrid.com",
+      "description": "National Grid plc engages in the transmission and distribution of electricity and gas. It operates through UK Electricity Transmission, UK Electricity Distribution, New England, New York, National Grid Ventures, and Other segments. The UK Electricity Transmission segment provides electricity transmission networks in England and Wales. The UK Electricity Distribution segment offers electricity distribution services in east and west Midlands, Southwest of England, and South Wales. The New England segment provides electricity and gas supply and distribution, and high-voltage electricity transmission services in New England. The New York segment offers electricity and gas distribution, and electricity transmission services in New York. The National Grid Ventures segment provides transmission services through electricity interconnectors and LNG importation at the Isle of Grain. The Other segment engages in the leasing and sale of commercial property, as well as insurance activities in the United Kingdom. The company was founded in 1990 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "nwg.l",
+      "symbol": "NWG.L",
+      "name": "NatWest Group plc",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 55732305920,
+      "employees": 59000,
+      "website": "https://www.natwestgroup.com",
+      "description": "NatWest Group plc, together with its subsidiaries, provides banking and financial products and services in the United Kingdom and internationally. It operates through the Retail Banking, Private Banking, and Commercial & Institutional segments. The Retail Banking segment offers a range of banking products and related financial services, such as current accounts, mortgages, personal unsecured lending, and personal deposits, as well as mobile and online banking services. Its Private Banking segment provides banking, lending, and wealth management products for high-net-worth individuals and their business interests. The Commercial & Institutional segment consists of customer businesses under business banking, commercial mid-market, and corporates and institutions; and offers banking operations services in the Channel Islands, Isle of Man, Gibraltar, and Luxembourg, as well as products and solutions for businesses comprising start-ups, corporates, and large institutions. The company was formerly known as The Royal Bank of Scotland Group plc and changed its name to NatWest Group plc in July 2020. NatWest Group plc was founded in 1727 and is headquartered in Edinburgh, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "nxt.l",
+      "symbol": "NXT.L",
+      "name": "NEXT plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Apparel Retail",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 16620537856,
+      "employees": 31589,
+      "website": "https://www.nextplc.co.uk",
+      "description": "NEXT plc engages in the retail of clothing, homeware, and beauty products in the United Kingdom, rest of Europe, the Middle East, Asia, and internationally. It operates through \nRetail Stores, Online (UK), Online (International), NEXT Finance, Total Platform, and Other Business Activities segments. The company offers NEXT branded products; and women's, men's, children's fashion clothing, and accessories; and third-party branded products. It also provides consumer credit; services to third-party brands, including websites, marketing, warehousing, distribution networks, and contact centers; and property management, which holds and leases properties. The company operates through retail stores, online retail platforms, and franchise stores. The company was formerly known as J Hepworth & Son and changed its name to NEXT plc in 1986. NEXT plc was founded in 1864 and is headquartered in Enderby, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "pct.l",
+      "symbol": "PCT.L",
+      "name": "Polar Capital Technology Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7109685248,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "pru.l",
+      "symbol": "PRU.L",
+      "name": "Prudential plc",
+      "sector": "Financial Services",
+      "industry": "Insurance - Life",
+      "country": "Hong Kong",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 24257423360,
+      "employees": 15338,
+      "website": "https://www.prudentialplc.com",
+      "description": "Prudential plc, through its subsidiaries, provides life and health insurance, and asset management solutions to individuals in Asia and Africa. It offers savings and investments products; and wealth, health, and protection products. The company was founded in 1848 and is headquartered in Central, Hong Kong.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "psh.l",
+      "symbol": "PSH.L",
+      "name": "Pershing Square Holdings, Ltd.",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United States",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 6513933824,
+      "employees": null,
+      "website": "https://www.pershingsquareholdings.com",
+      "description": "Pershing Square Holdings, Ltd. is a closed-ended balanced fund launched and managed by Pershing Square Capital Management, L.P. It invests in public equity and fixed income markets across the globe. The fund seeks to invest in stocks of companies operating across diversified sectors. It primarily invests in value stocks of companies. For its fixed income portion, the fund primarily invests in convertible securities and debt securities. It also invests through derivatives. The fund employs long/short strategy to create its portfolio. It benchmarks the performance of its portfolio against the S&P 500 Index and HFRX Global Hedge Fund Index. Pershing Square Holdings, Ltd. was formed on February 2, 2012 and is domiciled in Guernsey.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "psn.l",
+      "symbol": "PSN.L",
+      "name": "Persimmon Plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Residential Construction",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3731506432,
+      "employees": 4605,
+      "website": "https://www.persimmonhomes.com",
+      "description": "Persimmon Plc, together with its subsidiaries, operates as a house builder in the United Kingdom. The company offers family housing under the Persimmon Homes brand name; housing under the Charles Church brand name; and social housing under the Westbury Partnerships brand name. It also provides broadband services under the FibreNest brand; and timber frame, insulated wall panels, and roof cassettes under the Space4 brand. In addition, the company offers concrete bricks under the Brickworks brand; and concrete roof tile under the Tileworks brand. Persimmon Plc was founded in 1972 and is headquartered in York, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "pson.l",
+      "symbol": "PSON.L",
+      "name": "Pearson plc",
+      "sector": "Communication Services",
+      "industry": "Publishing",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7139819008,
+      "employees": 13665,
+      "website": "https://plc.pearson.com",
+      "description": "Pearson plc provides educational courseware, assessments, and services in the United Kingdom, the United States, Canada, the Asia Pacific, other European countries, and internationally. It operates through five segments: Assessment & Qualifications, Virtual Learning, English Language Learning, Enterprise Learning & Skills, and Higher Education. The Assessment & Qualifications segment offers pearson professional assessments, US student assessment, clinical assessment, UK GCSE, and A levels and international academic qualifications and associated courseware, including the English-speaking Canadian and Australian K-12 businesses, and PDR. The Virtual Learning segment provides virtual schools and online program management. The English Language Learning segment offers Pearson test of English, institutional courseware, and English online solutions. The Enterprise Learning & Skills segment provides vocational qualifications, GED, TalentLens, Faethm, Credly, Pearson College, and Enterprise content and training. The Higher Education segment engages in the US, Canadian, and international higher education courseware businesses. Pearson plc was founded in 1844 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "rel.l",
+      "symbol": "REL.L",
+      "name": "RELX PLC",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 44229922816,
+      "employees": 37000,
+      "website": "https://www.relx.com",
+      "description": "RELX PLC, together with its subsidiaries, provides information-based analytics and decision tools for professional and business customers in North America, Europe, and internationally. It operates through four segments: Risk; Scientific, Technical & Medical; Legal; and Exhibitions. The Risk segment offers information-based analytics and decision tools that combine public and industry specific content with technology and algorithms to assist clients in evaluating and predicting risk, as well as a portfolio of commercial healthcare products. Its Scientific, Technical & Medical segment provides scientific and medical information and data sets for science and healthcare. The Legal segment provides legal, regulatory, and business information and analytics. Its Exhibitions segment combines digital tools and data to help customers connect in-person and online, discover new markets, source products, generate leads, and transact. The company was formerly known as Reed Elsevier PLC and changed its name to RELX PLC in July 2015. RELX PLC was incorporated in 1903 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "rio.l",
+      "symbol": "RIO.L",
+      "name": "Rio Tinto Group",
+      "sector": "Basic Materials",
+      "industry": "Other Industrial Metals & Mining",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 117130403840,
+      "employees": 56890,
+      "website": "https://www.riotinto.com",
+      "description": "Rio Tinto Group engages in exploring, mining, and processing mineral resources worldwide. The company operates through Iron Ore; Aluminium and lithium; and Copper segments. The Iron Ore segment engages in the iron ore mining, and salt and gypsum production in Western Australia. The Aluminum and lithium segment is involved in bauxite mining; alumina refining; and aluminium smelting, and recycling, as well as mining and processing of lithium. The Copper segment engages in mining and refining of copper, gold, silver, molybdenum, and other by-products and exploration activities. It also owns and operates open pit and underground mines; and refineries, smelters, processing plants and power, and shipping facilities. The company was founded in 1873 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "rkt.l",
+      "symbol": "RKT.L",
+      "name": "Reckitt Benckiser Group plc",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 32068747264,
+      "employees": 36200,
+      "website": "https://www.reckitt.com",
+      "description": "Reckitt Benckiser Group plc manufactures and sells health, hygiene, and nutrition products in the United Kingdom and internationally. The company offers germ protection under Dettol name; intimate wellness under Durex and KY brand names; over the counter under the Biofreeze, Gaviscon, Mucinex, Nurofen, Delsym, Cepacol, and Strepsils names. It also provides personal care products under Clearasil and Veet brand names; vitamins, minerals, and supplements under MegaRed, Airborne, Digestive-Advantage, Movefree, and neuriva names; stain removal under Vanish brand name; and disinfectant products under the Finish, Harpic, and Lysol brands. In addition, the company offers nutritious complementary foods and milk formulas for infant and young children under the Enfamil and Nutramigen brands. Reckitt Benckiser Group plc was founded in 1819 and is headquartered in Slough, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "rr.l",
+      "symbol": "RR.L",
+      "name": "Rolls-Royce Holdings plc",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 118724427776,
+      "employees": 43162,
+      "website": "https://www.rolls-royce.com",
+      "description": "Rolls-Royce Holdings plc designs and manages mission-critical power systems in the United Kingdom and internationally. The company operates through three segments: Civil Aerospace, Defence, and Power Systems. The Civil Aerospace segment develops, manufactures, markets, and sells aero engines for large commercial aircraft, regional jet, and business aviation markets, as well as provides aftermarket services. The Defence segment is involved in the development, manufacture, marketing, and sale of military aero engines, naval engines, and submarine nuclear power plants, as well as offers aftermarket services. The Power Systems segment engages in the development, manufacture, marketing, and sale of integrated solutions for onsite power and propulsion under the mtu brand name. Rolls-Royce Holdings plc was founded in 1884 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "rto.l",
+      "symbol": "RTO.L",
+      "name": "Rentokil Initial plc",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 8253266944,
+      "employees": 63388,
+      "website": "https://www.rentokil-initial.com",
+      "description": "Rentokil Initial plc, together with its subsidiaries, provides route-based services in North America, Europe, the United Kingdom, Asia, the Middle East, North Africa, Turkey, and Pacific. The company offers a range of pest control services for rodents, and flying and crawling insects, as well as other forms of wildlife management. It provides hygiene services, including the provision and maintenance of products, such as soap and hand sanitizer dispensers, hand dryers, air care and purification, cubicle and surface sanitizers, feminine hygiene units, toilet paper dispensers, and floor protection mats. In addition, the company engages in the supply and laundering of garments for commercial organizations. Further, the company provides a range of specialist cleaning services, such as graffiti removal, deep cleaning of kitchens and washrooms, trauma cleaning, and flood or fire damage cleaning, as well as specialist deep cleaning services. Rentokil Initial plc was founded in 1903 and is headquartered in Crawley, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sbry.l",
+      "symbol": "SBRY.L",
+      "name": "J Sainsbury plc",
+      "sector": "Consumer Defensive",
+      "industry": "Grocery Stores",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7305013248,
+      "employees": 139087,
+      "website": "https://www.about.sainsburys.co.uk",
+      "description": "J Sainsbury plc, together with its subsidiaries, engages in the food, general merchandise and clothing retailing, and financial services activities in the United Kingdom. The company operates through Retail and Financial Services segments. It sells food, household, general merchandise, clothing, and fuel through convenience stores and supermarkets, as well as online channels. The company also provides banking and insurance services. It offers its products under the Sainsbury's, Argos, Habitat, Tu, Smart Charge, Nectar, Nectar360, and Sainsbury's Bank brand names. The company was founded in 1869 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sdlf.l",
+      "symbol": "SDLF.L",
+      "name": "Standard Life plc",
+      "sector": "Financial Services",
+      "industry": "Insurance - Life",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 9450389504,
+      "employees": 5519,
+      "website": "https://www.standardlifeplc.com",
+      "description": "Standard Life plc operates in the long-term savings and retirement business in Europe. It operates through Retirement Solutions, Pensions & Savings, With-Profits, and Europe & Other segments. The company offers defined contribution workplace pensions, retail savings for retirement, international bonds, and legacy savings and pension products; defined benefit pension income, income drawdown and lifetime annuities, fixed-term annuities, and smoothed managed funds. It also offers new and in-force individual annuity and pension risk transfer contracts written within shareholder funds; U.K. individual annuity; workplace pensions and self-invested personal pensions; new and in-force insurance and investment unit-linked products; and protection products. The company offers its products under the Standard Life, SunLife, Phoenix Life, Phoenix Wealth, Phoenix Corporate Investment Services, and ReAssure brands. Standard Life plc was formerly known as Phoenix Group Holdings plc and changed its name to Standard Life plc in February 2026. The company was founded in 1782 and is based in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sdr.l",
+      "symbol": "SDR.L",
+      "name": "Schroders plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 9161011200,
+      "employees": 5717,
+      "website": "https://www.schroders.com",
+      "description": "Schroders plc is a publicly owned investment manager. The firm also provides advisory and consultancy services. It provides its services to financial institutions, high net worth clients, large corporate, local authority, charitable entities, individuals, pension plans, government funds, insurance companies, and endowments. The firm launches and manages equity mutual funds and manages fixed income mutual funds for its clients. It also manages hedge for its clients. The firm invests in the public equity, fixed income, and alternative investment markets across the globe. The firm's alternative investments include real estate markets, emerging market debt, commodities and agriculture funds, funds of hedge funds and private equity funds of funds. It conducts an in-house research to make its investments. The company was formerly known as New Schroders plc and changed its name to Schroders plc in April 2000. Schroders plc was founded on 1804 and is headquartered in London, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sge.l",
+      "symbol": "SGE.L",
+      "name": "The Sage Group plc",
+      "sector": "Technology",
+      "industry": "Software - Application",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 9078627328,
+      "employees": 11094,
+      "website": "https://www.sage.com",
+      "description": "The Sage Group plc, together with its subsidiaries, offers technology solutions and services for small and medium businesses in North America, Europe, the United Kingdom, Ireland, Africa and Asia-Pacific. It offers Sage Intacct, cloud accounting and financial management software for mid-sized and growing businesses; Sage People, an integrated HR and Payroll solution; Sage 200, a scalable management solution; Sage X3, a flexible, intuitive, and tailored business solution; Sage Accounting, a cloud software for managing invoicing, cash flow, tax, and more, from anywhere. Ideal for small businesses; Sage Payroll for start-ups and small businesses manage their payroll; and Sage HR for small and mid-sized businesses for record management, leave management, staff scheduling, and expenses services. The company also provides Sage 50 accounts, that manages accounting, inventory, and payments, as well as Sage 50 payroll. The Sage Group plc was formerly known as Ployfinal Public Limited Company and changed its name to The Sage Group plc in September 1988. The company was founded in 1981 and is based in Newcastle upon Tyne, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sgro.l",
+      "symbol": "SGRO.L",
+      "name": "SEGRO Plc",
+      "sector": "Real Estate",
+      "industry": "REIT - Industrial",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 12745243648,
+      "employees": 463,
+      "website": "https://www.segro.com",
+      "description": "SEGRO Plc is a UK Real Estate Investment Trust (REIT), listed on the London Stock Exchange and Euronext Paris, and is a leading owner, manager and developer of modern warehouses, industrial property and data centres. It owns or manages 10.9 million square meters of space (117 million square feet) valued at 21.7 billion pounds serving customers from a wide range of industry sectors. Its properties are in and around major cities and at key transportation hubs in the UK and in seven other European countries. For over 100 years SEGRO has been creating space that enables extraordinary things to happen. From modern big box warehouses, used primarily for regional, national and international distribution hubs, to urban warehousing located close to major population centres and business districts, it provides high-quality assets that allow its customers to thrive. SEGRO Plc was incorporated in 1920 in United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "shel.l",
+      "symbol": "SHEL.L",
+      "name": "Shell plc",
+      "sector": "Energy",
+      "industry": "Oil & Gas Integrated",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 204447383552,
+      "employees": 84000,
+      "website": "https://www.shell.com",
+      "description": "Shell plc operates as an energy and petrochemical company in Europe, Asia, Oceania, Africa, the United States, and other parts of the Americas. It operates through the following segments: Integrated Gas, Upstream, Marketing, Chemicals and Products, and Renewables and Energy Solutions. The company explores for and extracts natural gas to produce liquefied natural gas or convert it into gas-to-liquids (GTL) fuels and other products; explores for and extracts crude oil, natural gas, and natural gas liquids; and operates marketing and transportation of oil, gas, and liquids, supported by the infrastructure required to deliver them to market or to process them within Shell's chemical manufacturing plants and refineries. It is also involved in marketing, which includes mobility, lubricants, and sectors focused on decarbonization; operates a retail network, including electric vehicle charging, convenience retail, and the wholesale commercial fuels business for transport and industry; sells products for road transport and machinery in manufacturing, mining, power generation, agriculture, and construction; and provides low-carbon energy solutions, such as biofuels, to a broad range of commercial customers, including those in the aviation, marine, and agriculture sectors. In addition, the company offers chemicals and products, including chemicals manufacturing plants with their own marketing network, and refineries that turn crude oil and other feedstocks into a range of oil products, which are moved and marketed around the world for domestic, industrial, and transport use; and operates a pipeline business, trading, and optimization of crude oil, oil products, and petrochemicals. The company was formerly known as Royal Dutch Shell plc and changed its name to Shell plc in January 2022. Shell plc was founded in 1897 and is headquartered in London, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "smin.l",
+      "symbol": "SMIN.L",
+      "name": "Smiths Group plc",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 7261761024,
+      "employees": 16000,
+      "website": "https://www.smiths.com",
+      "description": "Smiths Group plc operates as an industrial technology company in Americas, Europe, the Asia Pacific, and internationally. The company operates through four segments: John Crane, Smiths Detection, Flex-Tek, and Smiths Interconnect. The John Crane business offers mechanical seals, seal support systems, power transmission couplings, and specialized filtration systems. The Flex-Tek business offers engineered components, flexible hosing, and rigid tubing that heat and move fluids and gases. The Smiths Detection business provides sensors and systems that detect and identify explosives, narcotics, weapons, chemical agents, biohazards, and contraband. The Smiths Interconnect business provides specialized electronic and radio frequency board-level and waveguide devices, connectors, cables, test sockets, and sub-systems used in secure connectivity applications. It serves general industrial, safety and security, energy, and aerospace markets. The company was formerly known as Smiths Industries and changed its name to Smiths Group plc in 2000. Smiths Group plc was founded in 1851 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "smt.l",
+      "symbol": "SMT.L",
+      "name": "Scottish Mortgage Ord",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 15645825024,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sn.l",
+      "symbol": "SN.L",
+      "name": "Smith & Nephew plc",
+      "sector": "Healthcare",
+      "industry": "Medical Devices",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 8721858560,
+      "employees": 17000,
+      "website": "https://www.smith-nephew.com",
+      "description": "Smith & Nephew plc, together with its subsidiaries, develops, manufactures, markets, and sells medical devices and services in the United Kingdom, the United States, and internationally. The company operates in three segments: Orthopaedics, Sports Medicine & ENT, and Advanced Wound Management. It offers knee implant products for knee replacement procedures; hip implants for revision procedures; trauma and extremities products that include internal and external devices used in the stabilization of severe fractures and deformity correction procedures; and other reconstruction products. The company also provides sports medicine joint repair products comprise instruments, technologies, and implants to perform minimally invasive surgery, as well as treating soft tissue injuries and degenerative conditions of the shoulder, knee, hip, and small joints. In addition, it provides arthroscopic enabling technologies comprising fluid management equipment for surgical access, cameras, digital image capture, scopes, light sources, and monitors to assist with visualization inside the joints, radio frequency, electromechanical and mechanical tissue resection devices, and hand instruments for removing damaged tissue; and ear, nose, and throat solutions. Further, the company offers advanced wound care products for the treatment and prevention of acute and chronic wounds, leg, diabetic and pressure ulcers, burns, and post-operative wounds; advanced wound bioactives, such as biologics and other bioactive technologies for debridement and dermal repair/regeneration, and regenerative medicine products, including skin, bone graft, and articular cartilage substitutes; and advanced wound devices, such as traditional and single-use negative pressure wound therapy, and hydrosurgery systems. It serves the healthcare providers. Smith & Nephew plc was founded in 1856 and is headquartered in Watford, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "spx.l",
+      "symbol": "SPX.L",
+      "name": "Spirax Group plc",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5058707456,
+      "employees": 10000,
+      "website": "https://www.spiraxgroup.com",
+      "description": "Spirax Group plc provides thermal energy and fluid technology solutions in Europe, the Middle East, Africa, the Asia Pacific, and the Americas. It operates through three segments: Steam Thermal Solutions, Electric Thermal Solutions, and Watson-Marlow Fluid Technology Solutions. The company offers industrial and commercial steam systems, including condensate management, controls, and thermal energy management products and solutions for heating, curing, cooking, drying, cleaning, sterilizing, space heating, humidifying, vacuum packing, and producing hot water; electrical process heating and temperature management solutions, such as industrial heaters and systems, heat tracing, and various component technologies; and designs and manufactures peristaltic and niche pumps and associated fluid path technologies, including tubing, specialised filling systems and products for single use applications. The company serves food and beverage, pharmaceutical and biotechnology, oil and gas, chemical, power generation, healthcare, buildings, water and wastewater, semiconductor, transport, original equipment manufacturers machinery, and mining and precious metal processing industries. The company was formerly known as Spirax-Sarco Engineering plc and changed its name to Spirax Group PLC in June 2024. Spirax Group PLC was founded in 1888 and is headquartered in Cheltenham, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "sse.l",
+      "symbol": "SSE.L",
+      "name": "SSE plc",
+      "sector": "Utilities",
+      "industry": "Utilities - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 28963235840,
+      "employees": 15197,
+      "website": "https://www.sse.com",
+      "description": "SSE plc engages in the generation, transmission, distribution, and supply of electricity. The company distributes electricity to approximately 4 million homes and businesses in southern central England and the north of Scotland; and owns, develops, and operates the high voltage electricity transmission system in the north of Scotland and other areas. Its diversified portfolio includes onshore and offshore wind farms, hydro-electric power, and batteries, flexible thermal generation, and electricity transmission and distribution networks. In addition, the company provides energy products and services; and invests in, develops, builds, and operates electricity infrastructure and businesses. The company was formerly known as Scottish and Southern Energy plc and changed its name to SSE plc in September 2011. SSE plc was incorporated in 1989 and is based in Perth, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "stan.l",
+      "symbol": "STAN.L",
+      "name": "Standard Chartered PLC",
+      "sector": "Financial Services",
+      "industry": "Banks - Diversified",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 49805639680,
+      "employees": 81673,
+      "website": "https://www.sc.com",
+      "description": "Standard Chartered PLC, together with its subsidiaries, provides various banking products and services in Asia, Africa, the Middle East, Europe, and the Americas. The company operates in three segments: Corporate & Investment Banking, Wealth & Retail Banking, and Ventures. It offers retail products, such as deposits, mortgages, credit cards, and personal loans; wealth management products and services that include investments, portfolio management, bancassurance, and wealth advice; and transaction banking services, such as cash management, working capital, trade financing, securities and prime services, and payments and liquidity products. The company also provides mergers and acquisitions, leveraged and acquisition finance, infrastructure and development finance, fund finance, and transportation and sustainable finance solutions. In addition, it offers international banking, private banking, priority banking, wealth solutions, financing for SMEs, and Islamic banking products. Further, the company provides financial markets products and services that comprise financing and investment ideas; risk management and investment solutions; foreign exchange, rates, credit, and structured products; capital raising solutions; and sales and structuring, as well as digital banking solutions. It serves financial institutions, governments, banks, investors, corporations, small to medium-sized businesses, and individuals. Standard Chartered PLC was founded in 1853 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "stj.l",
+      "symbol": "STJ.L",
+      "name": "St. James's Place plc",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 5387148800,
+      "employees": 2859,
+      "website": "https://www.sjp.co.uk",
+      "description": "St. James's Place plc is a publicly owned investment manager. The firm launches and manages equity, fixed income, and balanced mutual funds for its clients. It invests in public equity and fixed income market across the globe. The firm was formerly known as St. James's Place Capital plc. St. James's Place plc was founded in 1991 and is based in Cirencester, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "svt.l",
+      "symbol": "SVT.L",
+      "name": "Severn Trent PLC",
+      "sector": "Utilities",
+      "industry": "Utilities - Regulated Water",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 9085418496,
+      "employees": 11544,
+      "website": "https://www.severntrent.com",
+      "description": "Severn Trent PLC provides water and wastewater services in the United Kingdom. It operates in two segments, Regulated Water and Wastewater, and Infrastructure Services. It offers water and wastewater services. The company also generates renewable energy through solar, wind, hydro, and crop digestion, as well as through anaerobic digestion of sewage sludge and food waste. In addition, it engages in property development and the management of the sale of surplus land. The company was founded in 1974 and is headquartered in Coventry, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "tsco.l",
+      "symbol": "TSCO.L",
+      "name": "Tesco PLC",
+      "sector": "Consumer Defensive",
+      "industry": "Grocery Stores",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 29661188096,
+      "employees": 340000,
+      "website": "https://www.tescoplc.com",
+      "description": "Tesco PLC, together with its subsidiaries, operates as a grocery retailer in the United Kingdom, Republic of Ireland, the Czech Republic, Slovakia, and Hungary. The company offers grocery products through its stores, as well as online. It is also involved in the food and drink wholesaling activities. In addition, the company provides mobile virtual network operating services, as well as insurance products, such as for home, travel, pet, and car insurance products. Further, the company operates a network of convenience stores; and offers AI-enabled science, software, and trusted advice; and consultancy services. Tesco PLC was founded in 1919 and is based in Welwyn Garden City, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "ulvr.l",
+      "symbol": "ULVR.L",
+      "name": "Unilever PLC",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 99911475200,
+      "employees": 93731,
+      "website": "https://www.unilever.com",
+      "description": "Unilever PLC operates as a fast-moving consumer goods company in the Asia Pacific, Africa, the Americas, and Europe. It operates through four segments: Beauty & Wellbeing, Personal Care, Home Care, and Foods. The Beauty & Wellbeing segment offers hair care, such as shampoo, conditioner, and styling; face, hand, and body moisturizer skin care products; and Prestige Beauty and Wellbeing products. The Personal Care segment provides soap and shower skin cleansing products; and deodorant and oral care, including toothpaste, toothbrush, and mouthwash products. The Home Care segment offers washing powders and liquids, and rinse conditioner fabric care products; and a range of home and hygiene cleaning products. The Foods segment provides cooking aids and mini meals comprising soups, bouillons, and seasonings, as well as mayonnaise and ketchup condiments; and Unilever food solutions. The company provides its products under the AXE, Clear, Cif, Closeup, Comfort, Dermalogica, Domestos, Dove, Dove Men+Care, Hellmann's, Horlicks, Knorr, LUX, Lifebuoy, Liquid I.V., Nexxus, Nutrafol, OMO, Pond's, Paula's Choice, Pepsodent, Radiant, Rexona, Sunlight, Sunsilk, Surf, TRESemmé, and Vaseline brand names. Unilever PLC was founded in 1860 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "uu.l",
+      "symbol": "UU.L",
+      "name": "United Utilities Group PLC",
+      "sector": "Utilities",
+      "industry": "Utilities - Regulated Water",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 10117807104,
+      "employees": 7360,
+      "website": "https://www.unitedutilities.com",
+      "description": "United Utilities Group PLC provides water and wastewater services in the United Kingdom. It is also involved in the energy generation, corporate trustee, financing, and property management activities. The company operates approximately 122,000 kilometers of water and wastewater pipes. United Utilities Group PLC was incorporated in 2008 and is based in Warrington, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "vod.l",
+      "symbol": "VOD.L",
+      "name": "Vodafone Group Public Limited Company",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 30366976000,
+      "employees": 91128,
+      "website": "https://www.vodafone.com",
+      "description": "Vodafone Group Public Limited Company provides telecommunication services in Germany, the United Kingdom, rest of Europe, Turkey, and South Africa. It offers mobile and fixed services; connectivity business solutions, such as digital services, the Internet of Things (IoT) and financial services; and IoT platforms. The company also provides cloud, multi-cloud, and edge computing solutions; M-PESA, an African mobile money platform to make payments and offer financial services; and international voice and roaming services. In addition, it offers unified communications, mobile connectivity, IoT connectivity, cloud and edge, E2E solutions, and security services; leases fibre and other fixed connectivity services; and engages in infrastructure assets, shared operations, growth platforms, retail, and service operations. The company serves private and public sector customers in health, banking and finance, transport and logistics, retail, utilities, and agriculture industries. Vodafone Group Public Limited Company was incorporated in 1984 and is based in Newbury, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "weir.l",
+      "symbol": "WEIR.L",
+      "name": "Weir PLC",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 6848565760,
+      "employees": 12069,
+      "website": "https://www.global.weir",
+      "description": "Weir PLC, together with its subsidiaries, produces and sells highly engineered original equipment worldwide. The company operates in two segments, Minerals and ESCO. The Minerals segment offers engineering, manufacturing, and service processing technology for the use in abrasive and high-wear mining applications; and differentiated technology for the use in infrastructure and general industrial markets. This segment provides cloud-based artificial intelligence solutions to the mining industry. The ESCO segment provides ground engaging tools for mining machines. In addition, the company offers aftermarket products, wear parts, equipment attachments, and processing equipment. Further, it provides field services comprising commissioning and ongoing support services; rebuild and repair services; digital services; and process optimization services. The company offers its products and services under the Cavex, Enduron, ESCO, GEHO, Linatex, Motion Metrics, Next, Warman, Accumin, All-Cast, Arterra, Aspir, Bucyrus Blades, Carbide Plus, Delta Industrial, GeoVor, HYDRAU-FLO, Infinity, Isogate, Kwik-Lok, Lewis, Linacure, Linagard, Linard, Loadmaster, MaxTemp, Multiflo, Nemisys, Nexsys, Posilok, Production Master, ProFill, Sandmaster, Super V, SV2, TopLock, Trio, UltraEdge, Ultrlok, Uni-Lok, Vertasys, Vulco, and Whisler Plus brands. The company was formerly known as The Weir Group PLC and changed its name to Weir PLC in August 2026. The Weir Group PLC was founded in 1871 and is headquartered in Glasgow, United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    },
+    {
+      "ticker": "wtb.l",
+      "symbol": "WTB.L",
+      "name": "Whitbread plc",
+      "sector": "Consumer Cyclical",
+      "industry": "Lodging",
+      "country": "United Kingdom",
+      "exchange": "LSE",
+      "currency": "GBp",
+      "marketCap": 3912783360,
+      "employees": 31502,
+      "website": "https://www.whitbread.co.uk",
+      "description": "Whitbread plc operates hotels and restaurants in the United Kingdom, Germany, Ireland, and internationally. The company operates hotels under the Premier Inn, ZIP by Premier Inn, and hub by Premier Inn brands. It also operates restaurants under the Brewers Fayre, Beefeater, Cookhouse and Pub, Bar+Block Steakhouse, Thyme, Whitebread Inns, and Table Table brands. Whitbread plc was founded in 1742 and is headquartered in Dunstable, the United Kingdom.",
+      "indices": [
+        "ftse100"
+      ]
+    }
+  ],
+  "rejected": []
+}

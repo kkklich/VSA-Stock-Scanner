@@ -12,11 +12,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { Card, CompanyLink, InfoTip, SortHeader, TickerMark } from '../components/ui'
+import {
+  Card,
+  CompanyLink,
+  InfoTip,
+  MarketBadge,
+  SortHeader,
+  TickerMark,
+} from '../components/ui'
+import { MarketTabs } from '../components/MarketTabs'
+import { useSingleMarket } from '../hooks/useMarkets'
+import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { useCapex } from '../hooks/useCapex'
 import { useCompanies } from '../hooks/useCompanies'
 import type { ApiCapexItem, CapexSortKey, SortDir } from '../api/stocksApi'
-import { deltaTone, fmtCompactPln, fmtPct } from '../lib/format'
+import { deltaTone, fmtCompactPln, fmtPct, majorCurrency } from '../lib/format'
 
 const PAGE_SIZE = 25
 
@@ -51,10 +61,16 @@ export function CapexPage() {
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('')
   const [sector, setSector] = useState('all')
-  // Amounts in different currencies don't compare (a forint figure would top
-  // a zloty list on unit size alone), so the screen starts with the zloty
-  // reporters — the comparable set for a GPW screen.
-  const [currency, setCurrency] = useState('PLN')
+  // One market at a time — amounts in different currencies don't compare.
+  const { market, markets, needsPicker, pick } = useSingleMarket()
+  const marketCurrency = majorCurrency(
+    markets?.find((m) => m.id === market)?.currency ?? 'PLN',
+  )
+  // …and within a market, the screen starts with the companies reporting in
+  // its own currency (a forint figure would top a zloty list on unit size
+  // alone). 'market' leaves the currency to the backend, which applies the
+  // market's own; 'all' lifts the filter.
+  const [currency, setCurrency] = useState<'market' | 'all'>('market')
   const [withData, setWithData] = useState(true)
   const [sortBy, setSortBy] = useState<CapexSortKey>('capex')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -79,13 +95,19 @@ export function CapexPage() {
   const { items, meta, loading, loadingMore, error, hasMore, refetch } = useCapex({
     q: search.trim() || undefined,
     sector,
-    currency,
+    currency: currency === 'all' ? 'all' : undefined,
+    market: market && market !== GPW_MARKET ? market : undefined,
     withData,
     page,
     pageSize: PAGE_SIZE,
     sortBy,
     sortDir,
-  })
+  }, { enabled: market !== null })
+
+  // A different market is a different list — start again from its first page.
+  useEffect(() => {
+    setPage(1)
+  }, [market])
 
   const totalCount = meta?.totalCount ?? 0
 
@@ -149,6 +171,9 @@ export function CapexPage() {
 
       {/* Filters */}
       <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+        {needsPicker && markets && (
+          <MarketTabs markets={markets} value={market ?? GPW_MARKET} onChange={pick} />
+        )}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -178,15 +203,17 @@ export function CapexPage() {
           <select
             value={currency}
             onChange={(e) => {
-              setCurrency(e.target.value)
+              setCurrency(e.target.value === 'all' ? 'all' : 'market')
               setPage(1)
             }}
             className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-slate-500 focus:outline-none"
           >
-            <option value="PLN">Złoty (PLN)</option>
+            <option value="market">
+              {marketCurrency === 'PLN' ? 'Złoty (PLN)' : marketCurrency}
+            </option>
             <option value="all">Any currency</option>
           </select>
-          <InfoTip text="A few GPW-listed companies are foreign issuers reporting in EUR, USD, HUF or CZK. Their amounts are not comparable with złoty ones — 580 billion forint is far less money than 30 billion złoty — so the screen shows złoty reporters by default. The two percentage columns stay comparable across all currencies." />
+          <InfoTip text="Some companies report in a currency other than their market's own — GPW-listed foreign issuers in EUR, USD, HUF or CZK, London-listed HSBC in US dollars. Their amounts are not comparable — 580 billion forint is far less money than 30 billion złoty — so the screen shows the market's own currency by default. The two percentage columns stay comparable across all currencies." />
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-400">
           <input
@@ -390,9 +417,12 @@ function CapexRow({ item, onOpen }: { item: ApiCapexItem; onOpen: () => void }) 
           title={item.name}
           className="flex items-center gap-2.5"
         >
-          <TickerMark ticker={item.ticker} />
+          <TickerMark ticker={displayTicker(item.ticker)} />
           <div className="min-w-0">
-            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-slate-100">
+              {displayTicker(item.ticker)}
+              <MarketBadge market={item.market} />
+            </div>
             <div className="max-w-[180px] truncate text-xs text-slate-500">
               {item.name}
             </div>
@@ -469,9 +499,12 @@ function CapexCard({ item, onOpen }: { item: ApiCapexItem; onOpen: () => void })
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <TickerMark ticker={item.ticker} />
+          <TickerMark ticker={displayTicker(item.ticker)} />
           <div className="min-w-0">
-            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-slate-100">
+              {displayTicker(item.ticker)}
+              <MarketBadge market={item.market} />
+            </div>
             <div className="truncate text-xs text-slate-500">{item.name}</div>
           </div>
         </div>

@@ -365,6 +365,7 @@ def _build_observations(
     history: dict[str, tuple[int, int]],
     assessed: Sequence[tuple[VsaSignal, AiSignalAssessment]],
     rating: int,
+    currency: str = "PLN",
 ) -> list[str]:
     obs: list[str] = []
 
@@ -382,8 +383,8 @@ def _build_observations(
     if len(closes) >= _CONTEXT_SMA:
         recent = closes[-_CONTEXT_SMA:]
         obs.append(
-            f"Nearest support ≈ {min(recent):.2f} PLN, resistance ≈ "
-            f"{max(recent):.2f} PLN (20-session low/high)."
+            f"Nearest support ≈ {min(recent):.2f} {currency}, resistance ≈ "
+            f"{max(recent):.2f} {currency} (20-session low/high)."
         )
 
     # The signal type with the best track record on this stock, if any has
@@ -423,12 +424,14 @@ def analyze_stock(
     quotes: Sequence[StooqDailyQuote],
     signals: Sequence[VsaSignal],
     rating: int,
+    currency: str = "PLN",
 ) -> AiAnalysisResponse:
     """Produce the full insight analysis for one stock.
 
     ``quotes`` must be in date order and non-empty; ``signals`` are the
     rule-engine detections for the same window (any VsaConfig). ``rating`` is
-    the rule engine's 0–100 rating, included for comparison.
+    the rule engine's 0–100 rating, included for comparison. ``currency`` is
+    what the stock's prices are quoted in, for the price levels in the text.
     """
     if not quotes:
         raise ValueError("analyze_stock requires at least one quote.")
@@ -479,6 +482,7 @@ def analyze_stock(
         history=history,
         assessed=assessed,
         rating=rating,
+        currency=currency,
     )
 
     return AiAnalysisResponse(

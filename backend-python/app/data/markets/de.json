@@ -1,0 +1,692 @@
+{
+  "market": "de",
+  "name": "Xetra (Deutsche Börse)",
+  "generatedAt": "2026-09-16",
+  "sources": {
+    "dax": "https://en.wikipedia.org/wiki/DAX"
+  },
+  "verification": "Each company returned at least 5 traded daily bars in the 21 days before the generation date, a company name and a sector from Yahoo Finance, and prices quoted in EUR.",
+  "companies": [
+    {
+      "ticker": "ads.de",
+      "symbol": "ADS.DE",
+      "name": "adidas AG",
+      "sector": "Consumer Cyclical",
+      "industry": "Footwear & Accessories",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 25322844160,
+      "employees": 64394,
+      "website": "https://www.adidas-group.com",
+      "description": "adidas AG, together with its subsidiaries, designs, develops, produces, and markets a range of athletic and sports lifestyle products in Europe, Greater China, Japan, South Korea, Latin America, North America, and internationally. The company offers footwear and apparel, as well as accessories and gear, including bags, balls, sunglasses, and fitness equipment under the adidas brand; golf footwear and apparel under the adidas Golf brand; and outdoor footwear under the Five Ten brand. It sells its products through its own retail stores, mono-branded franchise stores, shop-in-shops, joint ventures with retail partners, and co-branded stores, as well as through its wholesale and e-commerce platforms. The company was formerly known as adidas-Salomon AG and changed its name to adidas AG in June 2006. adidas AG was founded in 1920 and is headquartered in Herzogenaurach, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "air.de",
+      "symbol": "AIR.DE",
+      "name": "Airbus SE",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "Netherlands",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 155589246976,
+      "employees": 168754,
+      "website": "https://www.airbus.com",
+      "description": "Airbus SE, together with its subsidiaries, engages in the design, manufacture, and delivery of aeronautics and aerospace products, services, and solutions worldwide. It operates through three segments: Airbus, Airbus Helicopters, and Airbus Defence and Space. The Airbus segment develops, manufactures, markets, and sells commercial jet passenger aircraft, freighter aircraft, regional turboprop aircraft, and aircraft components, as well as provides aircraft conversion and related services. The Airbus Helicopters segment develops, manufactures, markets, and sells civil and military helicopters; and provides uncrewed aerial systems and their related services. The Airbus Defence and Space segment designs, develops, delivers, and supports crewed and uncrewed military air systems and related services. This segment also offers civil and defence space systems for telecommunications, earth observations, navigation, and science and orbital systems; and services around data processing from platforms, secure communication, and cyber security. The company was formerly known as Airbus Group SE and changed its name to Airbus SE in April 2017. The company was incorporated in 1998 and is headquartered in Leiden, the Netherlands.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "alv.de",
+      "symbol": "ALV.DE",
+      "name": "Allianz SE",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": 138378,
+      "website": "https://www.allianz.com",
+      "description": "Allianz SE, together with its subsidiaries, provides property-casualty insurance, life/health insurance, and asset management products and services worldwide. The company's Property-Casualty segment offers various insurance products, including motor liability, accident, fire and property, general liability, credit, and travel, and assistance services to private and corporate customers. Its Life/Health segment provides a range of life and health insurance products on an individual and a group basis, such as annuities, endowment and term insurance, and unit-linked and investment-oriented products, as well as private and supplemental health, and long-term care insurance products. The company's Asset Management segment offers institutional and retail asset management products and services to third-party investors comprising equity and fixed income funds, cash, and multi-assets; and alternative investment products that include real estate, infrastructure debt/equity, real assets, liquid alternatives, and solutions business. In addition, it provides banking services for retail clients; and digital investment services. Allianz SE was founded in 1890 and is headquartered in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "bas.de",
+      "symbol": "BAS.DE",
+      "name": "BASF SE",
+      "sector": "Basic Materials",
+      "industry": "Chemicals",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 44879859712,
+      "employees": 94910,
+      "website": "https://www.basf.com",
+      "description": "BASF SE operates as a chemical company worldwide. It operates through six segments: Chemicals, Materials, Industrial Solutions, Surface Technologies, Nutrition & Care, and Agricultural Solutions. The Chemicals segment provides petrochemicals and intermediates. The Materials segment offers advanced materials and their precursors for applications and systems comprising isocyanates, polyamides, and inorganic basic products, as well as specialties for the plastics and plastics processing industries. The Industrial Solutions segment develops and markets ingredients and additives for industrial applications, such as polymer dispersions, resins, additives, chemical and refining catalysts, electronic materials, and antioxidants for automotive, petrochemical and petroleum processing, plastics and electronics, construction, electronics, paper coatings, and energy and resources industries. The Surface Technologies segment provides catalysts, battery materials, automotive OEM and refinish coatings, surface treatment, and precious and base metal services for the automotive and chemical industries. The Nutrition & Care segment offers ingredients for consumer applications in the areas of nutrition, home, and personal care applications; and serves the food and feed producers, pharmaceutical, cosmetics, detergents, and cleaner industries, as well as the consumer goods sector. The Agricultural Solutions segment provides seeds and traits, and seed treatment products; fungicides, herbicides, insecticides, and biological crop protection products; and digital solutions. The company engages in engineering and other; rental and leasing; and renewable energy trading, commodity trading activities. BASF SE was founded in 1865 and is headquartered in Ludwigshafen am Rhein, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "bayn.de",
+      "symbol": "BAYN.DE",
+      "name": "Bayer Aktiengesellschaft",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - General",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 48119132160,
+      "employees": 87830,
+      "website": "https://www.bayer.com",
+      "description": "Bayer Aktiengesellschaft operates as a life science company in Europe, the Middle East, Africa, Germany, Switzerland, North America, the United States, the Asia Pacific, China, Latin America, and Brazil. It operates through Pharmaceuticals, Consumer Health, and Crop Science segments. The Pharmaceuticals segment provides prescription products primarily for cardiology and women's health care; specialty therapeutics in the areas of oncology, hematology, and ophthalmology; and diagnostic imaging equipment and contrast agents, as well as cell and gene therapy. The Consumer Health segment offers nonprescription over-the-counter medicines for self-medication and self-care; nutritional supplements; allergy, cough, and cold; dermatology; pain and cardiovascular risk prevention; and digestive health products. The Crop Science segment offers chemical and biological crop protection products, improved plant traits, seeds, digital solutions, and pest and weed management products, as well as customer services for agriculture. It also engages in the breeding, propagation, and production/processing of seeds, including seed dressing. The company distributes its products through wholesalers, pharmacies and pharmacy chains, supermarkets, online and other retailers, and hospitals, as well as directly to farmers. Bayer Aktiengesellschaft has a strategic alliance with The University of Colorado Anschutz, along with UCHealth and Children's Hospital Colorado to advance drug development and clinical trials. Bayer Aktiengesellschaft has a strategic alliance Henry Ford Health. Bayer Aktiengesellschaft was founded in 1863 and is based in Leverkusen, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "bei.de",
+      "symbol": "BEI.DE",
+      "name": "Beiersdorf Aktiengesellschaft",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 16285662208,
+      "employees": 22326,
+      "website": "https://www.beiersdorf.com",
+      "description": "Beiersdorf Aktiengesellschaft, together with its subsidiaries, manufactures and distributes consumer goods in Europe, the United States, Africa, Asia, and Australia. The company operates through two segments: Consumer Business and Tesa Business. The Consumer Business Segment offers skin and body care products. The Tesa Business segment provides adhesive tapes and self-adhesive solutions for industries, craft businesses, and consumers. This segment also offers its system solutions to the automotive, consumer electronics, printing and packaging, and electrical systems sectors. It operates an online store. The company offers its products under the NIVEA, Eucerin, Hansaplast, La Prairie, Chantecaille, Coppertone, Labello / NIVEA Lip / Liposan, ATRIX, 8x4, HIDROFUGAL, tesa, SKIN STORIES, GAMMON, Aquaphor, Elastoplast, and CURITAS brand names, as well as regionally focused brands. Beiersdorf Aktiengesellschaft was founded in 1882 and is headquartered in Hamburg, Germany. Beiersdorf Aktiengesellschaft is a subsidiary of maxingvest ag. Beiersdorf Aktiengesellschaft operates as a subsidiary of Maxingvest GmbH & Co. KGaA.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "bmw.de",
+      "symbol": "BMW.DE",
+      "name": "Bayerische Motoren Werke Aktiengesellschaft",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 37195481088,
+      "employees": 146064,
+      "website": "https://www.bmwgroup.com",
+      "description": "Bayerische Motoren Werke Aktiengesellschaft develops, manufactures, and sells automobiles and motorcycles, spare parts, and accessories worldwide. It operates through Automotive, Motorcycles, and Financial Services segments. The company offers automobiles under the BMW, MINI, and Rolls-Royce brands. It also develops, manufactures, and sells scooters, and motorcycles for private use and special-purpose vehicles for operational use under the BMW Motorrad brand. In addition, the company provides car rentals; credit financing; leasing that include insurance and service products; financing for dealership and customer deposits; vehicle fleet financing services for corporate car fleets under the Alphabet brand; and financial services for the automotive sector. It sells its products through retail outlet, agent, and independent dealerships. Bayerische Motoren Werke Aktiengesellschaft was founded in 1916 and is headquartered in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "bnr.de",
+      "symbol": "BNR.DE",
+      "name": "Brenntag SE",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 8899914752,
+      "employees": 16942,
+      "website": "https://www.brenntag.com",
+      "description": "Brenntag SE distributes chemicals and ingredients in Germany, the United States, the United Kingdom, China, Canada, Italy, Poland, France, and internationally. The company operates in two segments, Brenntag Essentials and Brenntag Specialties. It provides just-in-time delivery, product mixing, blending, repackaging, inventory management, and drum return handling, as well as application, marketing and supply chain solutions, technical and formulation support, comprehensive regulatory know-how, and digital solutions, such as digital sales channels and product platforms. The company serves customers in various industries, including nutrition, pharma, beauty and care, and water treatment; and industrial markets, as well as coatings, adhesives, sealants and elastomers, and constructions, polymers, and rubber industries. The company was founded in 1874 and is headquartered in Essen, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "cbk.de",
+      "symbol": "CBK.DE",
+      "name": "Commerzbank AG",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 44801114112,
+      "employees": 40110,
+      "website": "https://www.commerzbank.de",
+      "description": "Commerzbank AG provides banking and capital market products and services to private and small business customers, corporate, financial service providers, and institutional clients in Germany, rest of Europe, the Americas, and Asia. It operates through two segments, Private and Small-Business Customers, and Corporate Clients. The company offers current, money market, checking, business accounts; insurance products; credit and debit cards; pension scheme; card payment terminal; and various loans. It also offers installment loans; renovation loans, debt structuring, car loan, overdraft facility; real estate financing; term deposits; and online banking services, as well as trades securities, such as shares, funds, ETFs, certificates, options and futures, and bonds. In addition, the company provides wealth management services. Commerzbank AG was founded in 1870 and is headquartered in Frankfurt am Main, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "con.de",
+      "symbol": "CON.DE",
+      "name": "Continental Aktiengesellschaft",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Parts",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": 53969,
+      "website": "https://www.continental.com",
+      "description": "Continental Aktiengesellschaft manufactures tire and develops and produces solutions for automotive manufacturers, industrial, and end customers worldwide. It provides tires for cars, trucks, buses, two-wheel, and specialist vehicles, as well as digital tire monitoring and management systems; and engages in the retail of tires. The company also develops solutions for industrial applications made from rubber, metal, and textiles; hoses, conveyor belts, air springs, and drive belts; and surface materials for energy, mining, agriculture, construction, as well as interior and exterior design, and automotive sectors. The company was formerly known as Continental-Caoutchouc- und Gutta-Percha Compagnie. Continental Aktiengesellschaft was founded in 1871 and is headquartered in Hanover, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "db1.de",
+      "symbol": "DB1.DE",
+      "name": "Deutsche Börse AG",
+      "sector": "Financial Services",
+      "industry": "Financial Data & Stock Exchanges",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 49975742464,
+      "employees": 17120,
+      "website": "https://deutsche-boerse.com/dbg-de/",
+      "description": "Deutsche Börse AG operates as an international exchange organization in Germany, rest of Europe, the United States, and the Asia-Pacific. The company operates through four segments: Investment Management Solutions, Trading & Clearing, Fund Services, and Securities Services. The Investment Management Solutions segment offers financial data, analytics, and software-as-a-service solutions including research, data collection, data analysis, and the provision of indices, analytics and investment management software to institutional investors, banks, and corporate clients. The Trading & Clearing segment engages in the development and operation of markets and trading systems for securities, derivatives, commodities, currencies, digital assets, and other asset classes. This segment handles settlement of transactions through clearing houses. Its Fund Services segment provides infrastructure and services for fund processing, including order routing, settlement, custody, data and distribution support for investment funds. The Securities Services segment offers various services for securities issuance, settlement, custody as well as collateral, securities lending, and liquidity management. The company was founded in 1585 and is headquartered in Eschborn, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "dbk.de",
+      "symbol": "DBK.DE",
+      "name": "Deutsche Bank Aktiengesellschaft",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 63190773760,
+      "employees": 89742,
+      "website": "https://www.db.com",
+      "description": "Deutsche Bank Aktiengesellschaft, a stock corporation, provides corporate and investment banking, private clients, and asset management products and services in Germany, the United Kingdom, the rest of Europe, the Americas, the Asia-Pacific, the Middle East, and Africa. It operates through Corporate Bank, Investment Bank, Private Bank, and Asset Management segments. The Corporate Bank segment offers cash management services, such as integrated payments and FX solutions; trade finance and lending offerings, including documentary and guarantee business, and structured trade finance and lending; and depository receipts, corporate trust, document custody, and securities services. The Investment Bank segment provides financing solutions in industries and asset classes; institutional sales, trading, and structuring in foreign exchange, rates, emerging markets, and credit trading; liquidity, market making services, and specialized risk management solutions for fixed income and currencies products; and advisory and financial products and services. This segment is also involved in the mergers and acquisitions business; and capital markets businesses in debt and equity. The Private Bank segment offers a range of payment and account services, and credit and deposit products, as well as investment advice, and postal and parcel services; and planning, managing and investing wealth, financing personal and business interests, and servicing institutional and corporate needs. The Asset Management segment provides access to investment capabilities in active and passive asset classes comprising Xtrackers range and alternatives; and access to private equity, private credit, real estate, and infrastructure. Deutsche Bank Aktiengesellschaft was incorporated in 1870 and is headquartered in Frankfurt am Main, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "dhl.de",
+      "symbol": "DHL.DE",
+      "name": "DHL AG",
+      "sector": "Industrials",
+      "industry": "Integrated Freight & Logistics",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 61893599232,
+      "employees": 576627,
+      "website": "https://group.dhl.com",
+      "description": "DHL AG provides logistics and mail communication services. The company operates through five segments: Express, Global Forwarding, Supply Chain, eCommerce, and Post & Parcel Germany. Its Express segment offers time-definite courier and express delivery services for business and private customers, including Time Definite International cross-border transport with standardized transit times, Medical Express temperature-controlled shipment solutions, General Cargo air freight, door-to-door courier services, and customs clearance, operating a global air freight network with dedicated aircraft and service points across Europe, the Middle East and Africa, the Americas, and Asia Pacific. The Global Forwarding segment provides international air, ocean, and overland freight forwarding services through its Global Forwarding and Freight business units. The Supply Chain segment delivers contract logistics services and supply chain solutions built on modular components, including warehousing, transport, e-fulfillment, and value-added services, serving the retail, consumer, auto-mobility, technology, life sciences and healthcare, and engineering and manufacturing sectors. The eCommerce segment provides international and domestic parcel delivery services in selected countries across Europe, Asia, and the United States, along with non-TDI cross-border parcel services. The Post & Parcel Germany segment transports, sorts, and delivers documents and goods within Germany and provides export services through its Post Germany, Parcel Germany, and International business units, offering physical and hybrid letter delivery, registered mail, insured items, redirection and storage services, dialogue marketing, national and international parcel and goods shipments, Packstation automated parcel lockers, Poststation combined parcel and postal services, and electronic communications services. DHL AG was formerly known as Deutsche Post AG and changed its name to DHL AG in September, 2026. DHL AG was incorporated in 1995 and is based in Bonn, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "dte.de",
+      "symbol": "DTE.DE",
+      "name": "Deutsche Telekom AG",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 137930489856,
+      "employees": 191796,
+      "website": "https://www.telekom.com",
+      "description": "Deutsche Telekom AG, together with its subsidiaries, provides integrated telecommunication services worldwide. It operates through Germany, United States, Europe, Systems Solutions, and Group Development segments. The company offers fixed-network services, including voice and data communication services based on fixed-network and broadband technology; and sells terminal equipment and other hardware products, as well as services to resellers. It also provides mobile voice and data services to consumers and business customers; sells mobile devices and other hardware products; and sells mobile services to resellers and to companies that buys and markets network services to third parties, such as mobile virtual network operators. In addition, the company offers internet services; internet-based TV products and services; and information and communication technology systems for multinational corporations and public sector institutions with an infrastructure of data centers and network services. Further, it provides wireless communications services; and cloud services, digital solutions, and security and advisory solutions. The company has mobile and broadband customers, as well as fixed-network lines. Deutsche Telekom AG was founded in 1995 and is headquartered in Bonn, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "dtg.de",
+      "symbol": "DTG.DE",
+      "name": "Daimler Truck Holding AG",
+      "sector": "Industrials",
+      "industry": "Farm & Heavy Construction Machinery",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 33114884096,
+      "employees": 98869,
+      "website": "https://www.daimlertruck.com",
+      "description": "Daimler Truck Holding AG manufactures and sells light, medium- and heavy-duty trucks and buses in Europe, North America, Asia, Latin America, and internationally. The company operates through five segments: Trucks North America, Mercedes-Benz Trucks, Trucks Asia, Daimler Buses, and Financial Services. It offers light, medium, and heavy-duty trucks; city and intercity buses, coaches, and bus chassis; industrial engines; and special vehicles used in various sector, as well as new and used commercial vehicles. The company also provides various financial services, such as rental, leasing, and financing for vehicles; and charging infrastructure, insurance brokerage, payment, and integrated services for zero emission vehicles. In addition, it offers connectivity solutions under the Detroit Connect, Truckonnect, TruckLive, OMNIplus ON, Mercedes-Benz Uptime, and Fleetboard brand names; and aftersales services, as well as sells spare parts. It provides trucks and buses under the Mercedes-Benz, Freightliner, Western Star, FUSO, BharatBenz, RIZON, Setra, and Thomas Built Buses brands. The company was founded in 1896 and is headquartered in Leinfelden-Echterdingen, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "enr.de",
+      "symbol": "ENR.DE",
+      "name": "Siemens Energy AG",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 116668350464,
+      "employees": 106000,
+      "website": "https://www.siemens-energy.com",
+      "description": "Siemens Energy AG operates as an energy technology company worldwide. It operates through Gas Services, Grid Technologies, Transformation of Industry, and Siemens Gamesa segments. The company provides gas and steam turbines, generators, and heat pumps, as well as performance enhancement, maintenance, digitalization, and consulting services for central and distributed power generation; and high voltage direct current transmission systems, offshore wind farm grid connections, transformers, flexible alternating current transmission systems, high voltage substations, air and gas-insulated switchgears, circuit breakers, capacitor, digital grid solutions and components, components and cyber security, and transformers and storage solutions. It also offers electrolyzers, industrial steam turbines, industrial generators, turbo and reciprocating compressors, drive systems and solutions, batteries and fuel cells, and other systems and solutions, as well as service and digital offerings; onshore and onshore wind turbines; design, engineering, manufacturing, and installation solutions for onshore markets; offshore wind turbine equipment design, manufacturing, and installation solutions; and management, operation and maintenance services for wind farms. The company serves utilities, independent power producers, project developers, municipal energy producers, engineering, procurement, and construction companies, oil and gas, transmission and distribution system operators, and industrial and infrastructure customers. Siemens Energy AG was founded in 1866 and is based in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "eoan.de",
+      "symbol": "EOAN.DE",
+      "name": "E.ON SE",
+      "sector": "Utilities",
+      "industry": "Utilities - Diversified",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 46160023552,
+      "employees": 78322,
+      "website": "https://www.eon.com",
+      "description": "E.ON SE operates as an energy company in Germany, the United Kingdom, Sweden, the Netherlands, rest of Europe, and internationally. The company operates through Energy Networks, Energy Infrastructure Solutions, and Energy Retail segments. The Energy Networks segment operates power and gas distribution networks; and offers maintenance, repair, and related services for its power and gas networks. Its Energy Infrastructure Solutions provides integrated and sustainable energy solutions for cities, municipalities, and industrial and commercial customers comprising district heating and cooling; heat, steam, and electricity services; embedded solutions; products and services that enhance energy efficiency. This segment also installs smart energy meters, block-type thermal power stations, photovoltaic systems, air-conditioning systems, and heat pumps. Its Energy Retail segment supplies power and gas; installs customer connections and connects renewable energy generating stations to the grid; and offers a range of green power and green gas, and sustainable solutions that enhance energy efficiency for residential, small and medium-sized enterprises, commercial and industrial, and sales partners. It also provides digital solutions; biogas and biomethane products; and compressed natural gas refueling services, as well as solar and battery storage systems, heating systems, and charging infrastructure for electric vehicle. E.ON SE was founded in 1923 and is headquartered in Essen, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "fme.de",
+      "symbol": "FME.DE",
+      "name": "Fresenius Medical Care AG",
+      "sector": "Healthcare",
+      "industry": "Medical Care Facilities",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 10652369920,
+      "employees": 107226,
+      "website": "https://www.freseniusmedicalcare.com",
+      "description": "Fresenius Medical Care AG provides dialysis and related services for individuals with renal diseases in Germany, the United States, and internationally. The company offers dialysis treatment and related laboratory and diagnostic services through a network of outpatient dialysis clinics; materials, training, and patient support services comprising clinical monitoring, follow-up assistance, and arranging for delivery of the supplies to the patient's residence; and dialysis services under contract to hospitals in the United States for the hospitalized end-stage renal disease (ESRD) patients and for patients suffering from acute kidney failure. The company operates through Care Delivery and Care Enablement segments. It also develops, manufactures, and distributes various health care products, including hemodialysis machines, peritoneal dialysis cyclers, peritoneal dialysis solutions, hemodialysis concentrates, solutions and granulates, bloodlines, renal pharmaceuticals, systems for water treatment, and acute cardiopulmonary and apheresis products. In addition, the company develops, acquires, and in-licenses renal pharmaceuticals; offers renal medications and supplies to patients at homes or to dialysis clinics; and provides vascular specialty, ambulatory surgery center, physician nephrology practice management, pharmacy and other services. The company sells its products to dialysis clinics, hospitals, and specialized treatment clinics, as well as through local sales forces, independent distributors, dealers, and sales agents. The company was incorporated in 1996 and is headquartered in Bad Homburg, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "fre.de",
+      "symbol": "FRE.DE",
+      "name": "Fresenius SE & Co. KGaA",
+      "sector": "Healthcare",
+      "industry": "Medical Care Facilities",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": 178486,
+      "website": "https://www.fresenius.com",
+      "description": "Fresenius SE & Co. KGaA, a health care company, provides products and services for chronically ill patients in North America, Europe, the Asia-Pacific, Latin America, and Africa. It operates through Fresenius Kabi and Fresenius Helios segments. The Fresenius Kabi segment offers products for therapy and care of critically and chronically ill patients, including biopharmaceuticals, clinical nutrition, MedTech products, intravenously administered generic drugs, and IV fluids. It also provides biosimilar drugs; enteral and parenteral nutrition products; and medical technologies that include disposables, infusions pumps, apheresis machines, cell therapy devices, and other products. The Fresenius Helios segment operates hospitals, medical care centers, occupational health centers, prevention centers, and outpatient health centers, as well as provision of medical diagnostics. The company has a strategic collaboration with SAP SE and Avelios Medical GmbH for the development of a cloud-native, modular hospital information system that enables digitalization of clinical and administrative processes with AI integration. The company was formerly known as Fresenius SE and changed its name to Fresenius SE & Co. KGaA in January 2011. Fresenius SE & Co. KGaA was founded in 1912 and is based in Bad Homburg vor der Höhe, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "g1a.de",
+      "symbol": "G1A.DE",
+      "name": "GEA Group Aktiengesellschaft",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": 19804,
+      "website": "https://www.gea.com",
+      "description": "GEA Group Aktiengesellschaft produces and supplies systems and components to the food, beverage, and pharmaceutical industries worldwide. The company operates through Separation & Flow Technologies; Liquid & Power Technologies; Food & Health Technologies; Farm Technologies; and Heating & Refrigeration Technologies segments. It manufactures process-related components and machinery, notably separators, decanters, homogenizers, valves, and pumps; and process solutions, including brewing systems, liquid processing and filling, concentration, fermentation, crystallization, purification, drying, powder handling, and packaging, as well as systems for carbon capture and emission control for dairy, new-food, beverage, food, chemical, and other industries. The company also prepares, marinates, and processes meat, poultry, seafood, vegan products, and snack and pasta, as well as slicing, packaging lines, freeze drying, granulators, and tablet presses for pharmaceutical industry. In addition, it offers customer solutions for milk production and livestock farming comprising automatic milking and feeding system, conventional milking solutions, manure handling, and digital herd management tools; and energy solutions in the field of industrial refrigeration and heating for various industries, including food, beverage, dairy, oil and gas, supporting automation, digital, and service platform. The company was formerly known as mg technologies ag and changed its name to GEA Group Aktiengesellschaft in 2005. GEA Group Aktiengesellschaft was founded in 1881 and is headquartered in Düsseldorf, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "g24.de",
+      "symbol": "G24.DE",
+      "name": "Scout24 SE",
+      "sector": "Communication Services",
+      "industry": "Internet Content & Information",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 5202125312,
+      "employees": 1315,
+      "website": "https://www.scout24.com",
+      "description": "Scout24 SE operates ImmoScout24, a digital marketplace for the residential and commercial real estate sectors in Germany and internationally. The company operates through Professional and Private segments. It offers Pay-per-ad, for listing real estate without membership; Realtor Lead Engine (RLE) for selling real estate; Mortgage Lead Engine; CRM software solutions for real estate agents; and ESG energy performance certificates. In addition, the company provides software solutions for real estate valuations, such as viewings and expert opinions; an automated valuation model, a product for the automated valuation of real estate through application programming interfaces; provision of transaction-related documents for real estate professionals; and training courses, digital training, and education software. Further, it offers SearchPlus and SearchPlus for buying, which offers market analysis and a digital document folder; LivingPlus for digital services and legal protection; and LettingPlus, a cloud-based software solution to supports private landlords in rental and property management. It offers its products under the ImmoScout24, FLOWFACT, Vermietet.de, immoverkauf24, Propstack, BaufiTeam, SPRENGNETTER, Wohnungsboerse, bulwiengesa, EXPLOREAL, neubau kompass, and ENERGIE AUSWEIS 48 brand names. The company serves residential and business real estate agents, appraisers, financing intermediaries and banks, consumers, homeowners, and commercial service providers. The company was formerly known as Scout24 AG and changed its name to Scout24 SE in October 2021. Scout24 SE was founded in 1998 and is headquartered in Berlin, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "hei.de",
+      "symbol": "HEI.DE",
+      "name": "Heidelberg Materials AG",
+      "sector": "Basic Materials",
+      "industry": "Building Materials",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 26335125504,
+      "employees": 50603,
+      "website": "https://www.heidelbergmaterials.de",
+      "description": "Heidelberg Materials AG, together with its subsidiaries, produces and distributes cement, aggregates, ready-mixed concrete, and asphalt worldwide. The company provides cement products; natural stone aggregates, including sand and gravel; crushed aggregates comprising stone chippings and crushed stones; and ready-mixed concrete for use in the construction of tunnels or bridges, office buildings, or schools, as well as to produce precast concrete parts, such as stairs, ceiling elements, or structural components. It also offers asphalt; and trades in cement, clinker, secondary cementitious materials, solid, alternative fuels, other building materials, and additives. The company was formerly known as HeidelbergCement AG and changed its name to Heidelberg Materials AG in May 2023. Heidelberg Materials AG was founded in 1873 and is headquartered in Heidelberg, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "hen3.de",
+      "symbol": "HEN3.DE",
+      "name": "Henkel AG & Co. KGaA",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 29877997568,
+      "employees": 47800,
+      "website": "https://www.henkel.com",
+      "description": "Henkel AG & Co. KGaA, together with its subsidiaries, engages in the adhesive technologies and consumer brands businesses in Europe, India, the Middle East, Africa, North America, Latin America, the Asia Pacific. It offers adhesives, sealants, and functional coatings for various business areas, including packaging and consumer goods; mobility and electronics; and craftsmen, construction, and professional industries. The company also provides hair styling, hair colorants, and hair care products; and body care products, as well as distributes its products through brick-and-mortar stores, hair salons, and digital channels. In addition, it offers laundry and home care products, such as heavy-duty and specialty detergents, fabric softeners and laundry additives, and other fabric cleaning and fabric care products; dishwashing products; and hard surface and toilet cleaners. Further, the company provides household cleaners products. The company was founded in 1876 and is headquartered in Düsseldorf, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "hnr1.de",
+      "symbol": "HNR1.DE",
+      "name": "Hannover Rück SE",
+      "sector": "Financial Services",
+      "industry": "Insurance - Reinsurance",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 30848747520,
+      "employees": 4090,
+      "website": "https://www.hannover-re.com",
+      "description": "Hannover Rück SE, together with its subsidiaries, provides reinsurance products and services in Germany, the United Kingdom, France, Europe, the United States, Asia, Australia, Africa, and internationally. It operates through Property & Casualty Reinsurance; and Life & Health Reinsurance segments. The company provides property and casualty reinsurance solutions for agricultural, livestock, and bloodstock; aviation and space; natural catastrophe; credit, surety, and political risks; cyber; digital; marine and upstream energy; natural catastrophes; advanced and facultative business, insurance-linked securities and structured reinsurance; and parametric solutions. It also offers risk solutions in the areas of critical illness, disability, health, longevity, long term care, and mortality. In addition, the company offers group life, retirement, lifestyle, credit life, and Takaful reinsurance products. Further, the company provides various financial solutions, including new-business financing; monetization of embedded value; reserve and solvency relief; and reinsurance and solvency II businesses. The company was formerly known as Hannover Rückversicherung AG and changed its name to Hannover Rück SE in March 2013. Hannover Rück SE was founded in 1966 and is based in Hanover, Germany. Hannover Rück SE operates as a subsidiary of Talanx AG.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "ifx.de",
+      "symbol": "IFX.DE",
+      "name": "Infineon Technologies AG",
+      "sector": "Technology",
+      "industry": "Semiconductors",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 71472480256,
+      "employees": 56992,
+      "website": "https://www.infineon.com",
+      "description": "Infineon Technologies AG develops, manufactures, and markets semiconductors and semiconductor-based solutions in Germany, Europe, the Middle East, Africa, Mainland China, Hong Kong, Taiwan, the Asia-Pacific, Japan, the United States, and the Americas. The Automotive segment offers automotive and industrial microcontrollers; analog and memory ICs; ethernet; power diodes and modules; power switches; sensors; transceivers; and voltage regulators for assistance and safety systems, comfort electronics, infotainment, powertrain, and security applications. Its Green Industrial Power segment provides discrete and bare die IGBTs; IGBT modules; and SiC discretes and modules for air conditioning technology, energy generation and storage, energy transmission, home appliances, industrial drives, industrial power supplies and vehicles, and traction applications. The Power & Sensor Systems segment offers 3D ToF sensors; chips for gas and pressure sensors, and MEMS microphones; control ICs; customized chips; discrete low-, mid-, and high-voltage power MOSFETs; ESD protection diodes; GaN power switches; GPS low-noise amplifiers; low- and high-voltage driver ICs; radar sensor ICs; RF antenna switches and power transistors; SiC diode and MOSFETs; and USB controllers for audio amplifiers, automotive electronics, BLDC motors, cellular communications infrastructure, charging stations for electric vehicles, human machine interaction, IoT, LED and conventional lighting systems, microinverters, mobile devices, power management, and harsh environment applications. Its Connected Secure Systems segment provides connectivity solutions, embedded security controllers, microcontrollers, and security controllers for authentication, automotive, consumer electronics, government identification document, IoT, mobile communication, payment system, ticketing, access control, and trusted computing applications. The company was founded in 1952 and is headquartered in Neubiberg, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "mbg.de",
+      "symbol": "MBG.DE",
+      "name": "Mercedes-Benz Group AG",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 43429285888,
+      "employees": 152528,
+      "website": "https://group.mercedes-benz.com",
+      "description": "Mercedes-Benz Group AG operates as an automotive company in Europe, Germany, North America, the United States, Asia, China, and internationally. It operates through Mercedes-Benz Cars, Mercedes-Benz Vans, and Mercedes-Benz Financial Services segments. The company develops, manufactures, and sells cars and vans under the Mercedes-Benz, Mercedes-AMG, Mercedes-Maybach, G-Class brands, as well as related spare parts and accessories. It also provides financing, leasing, vehicle subscription and rental, fleet management, insurance, and digital services related to charging electric vehicles. The company was formerly known as Daimler AG and changed its name to Mercedes-Benz Group AG in February 2022. Mercedes-Benz Group AG was founded in 1886 and is headquartered in Stuttgart, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "mrk.de",
+      "symbol": "MRK.DE",
+      "name": "Merck KGaA",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - Specialty & Generic",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 57260244992,
+      "employees": 62136,
+      "website": "https://www.emdgroup.com",
+      "description": "Merck KGaA operates as a science and technology company in Europe, North America, Latin America, Middle East and Africa, and the Asia Pacific. The Life Science segment offers products, solutions, and services to academic, research and diagnostic labs, biotech, and pharmaceutical companies, as well as the industrial sector; reagents, consumables, devices, instruments, software, and services for research, production, and testing to lab water instruments, microbiology and biomonitoring products, test assays, analytical reagents, and flow cytometry kits and instruments. This segment also provides traditional and novel therapies, such as ration devices, chromatography resins, single-use systems, process chemicals, and excipients for bioprocessing; contract development, manufacturing and testing services, which supports customers from preclinical phases to commercialization. The Healthcare segment discovers, develops, manufactures, and markets prescription drugs and biopharmaceuticals to the therapeutic areas of oncology, rare diseases, neurology and immunology, fertility, cardiovascular, and metabolic and endocrinological disorders. The Electronics segment offers advanced dielectric and metallic materials; photoresist, anti-reflective coating, and material lithography products; clean and selective etch chemistries; materials for chemical-mechanical planarization; high-purity gases for semiconductor manufacturing; and develops and installs delivery equipment for handling of specialty chemicals and gases for semiconductor manufacturing; develops modulating, creating, engineering, and guiding light; and material solutions in liquid crystals, OLED materials, and photoresists. It has in-licensing agreement with Abbisko Therapeutics Co. Ltd., China on drug candidates for the treatment of tenosynovial giant cell tumor; and strategic partnership with Versant Ventures to advance treatments for rare genetic cardiomyopathies. The company was founded in 1668 and is headquartered in Darmstadt, Germany. Merck KGaA operates as a subsidiary of E. Merck KG.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "mtx.de",
+      "symbol": "MTX.DE",
+      "name": "MTU Aero Engines AG",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 18251364352,
+      "employees": 14085,
+      "website": "https://www.mtu.de",
+      "description": "MTU Aero Engines AG, together with its subsidiaries, engages in the development, manufacture, sale, and maintenance of commercial and military aircraft engines, and aero-derivative industrial gas turbines in Germany, other European countries, North America, Asia, and internationally. It operates through two segments: Original Equipment Manufacturing Business; and Maintenance, Repair, and Overhaul Business. The company offers commercial aircraft engines for wide body aircraft, narrow body, regional jets, helicopters, business jets, and turboprops; military aircraft engines for fighter jets, helicopters, and transporters; and industrial gas turbines. It also maintains, repairs, and overhauls commercial and military engines; and manufactures and markets various spare parts. The company was formerly known as MTU Aero Engines Holding AG and changed its name to MTU Aero Engines AG in May 2013. MTU Aero Engines AG was founded in 1913 and is headquartered in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "muv2.de",
+      "symbol": "MUV2.DE",
+      "name": "Münchener Rückversicherungs-Gesellschaft Aktiengesellschaft in München",
+      "sector": "Financial Services",
+      "industry": "Insurance - Reinsurance",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 64366682112,
+      "employees": 44595,
+      "website": "https://www.munichre.com",
+      "description": "Münchener Rückversicherungs-Gesellschaft Aktiengesellschaft in München engages in the insurance and reinsurance businesses worldwide. The company operates through six segments: Life and Health Reinsurance, Property-Casualty Reinsurance, Global Specialty Insurance, ERGO Life and Health Germany, ERGO Property-Casualty Germany, and ERGO International. The company offers life and health reinsurance solutions, such as digital underwriting and advanced analytics solutions, health insurance management system, financial market risks, financing, portfolio risk management, digitalized investment-linked solution, data analytics, underwriting and claims, medical research, capital management, and health market, as well as MIRA digital suite that includes MIRA PoS, MIRApply insured and physician, claims risk assessment, and CLARA plus. It also provides property and casualty reinsurance solutions, including agricultural reinsurance; business advisory, personal lines, portfolio management, insurance consulting, commercial motor consulting; infrastructure risk; property insurance, location risk, insurance linked securities, and NatCatSERVICE for natural catastrophe loss database; prospective structured and retroactive reinsurance; risk transfer; cyber; and data analytics, REALYTIX ZERO, and cert2go. In addition, the company offers solutions for industry clients, such as corporate risk, new tech, green tech, parametric, and aviation and space solutions, as well as risk services. Further, it provides specialty property casualty insurance, such as professional liability, marine, cyber, aviation, and space for commercial and private customers. Additionally, the company offers life, property-casualty, health, legal protection, and travel insurance products under the ERGO brand; and insurance solutions for agriculture, captive, epidemic, cyber, and renewable energy sectors. The company was founded in 1880 and is based in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "pah3.de",
+      "symbol": "PAH3.DE",
+      "name": "Porsche Automobil Holding SE",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 8798562304,
+      "employees": 48,
+      "website": "https://www.porsche-se.com",
+      "description": "Porsche Automobil Holding SE, through its subsidiaries, operates as an automobile manufacturer worldwide. It operates in two segments, Core Investments and Portfolio Investments. The company is involved in investments in the areas of mobility and industrial technology. It offers its products under the Volkswagen, Audi, SEAT, KODA, Cupra Bentley, Lamborghini, Ducati, and Porsche brand names. The company was formerly known as Dr. Ing. h.c. F. Porsche Aktiengesellschaft and changed its name to Porsche Automobil Holding SE in November 2007. Porsche Automobil Holding SE was incorporated in 2007 and is headquartered in Stuttgart, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "qia.de",
+      "symbol": "QIA.DE",
+      "name": "Qiagen N.V.",
+      "sector": "Healthcare",
+      "industry": "Diagnostics & Research",
+      "country": "Netherlands",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 7680581632,
+      "employees": 5500,
+      "website": "https://www.qiagen.com",
+      "description": "Qiagen N.V. provides sample to insight solutions that transform biological samples into molecular insights worldwide. The company offers sample technology consumables, such as nucleic acid stabilization and purification kits for sample materials, manual and automated processing for genotyping, gene expression, and viral and bacterial analysis, as well as silica membranes and magnetic bead technologies; secondary sample technology consumables, including kits and components for purification of nucleic acids; and instruments for nucleic acid purification, quality control, and accessories. It also provides Immune response consumables, such as interferon-gamma release assay for TB testing, and assays for post-transplant testing and viral load monitoring; oncology and sexual and reproductive health consumables, inclsuing assays for prenatal testing and detection of sexually transmitted diseases and HPV; assays for analysis of genomic variants; and sample to insight instruments, including one-step molecular analysis of hard-to-diagnose syndromes, and integrated PCR testing. The company offers research PCR consumables, such as quantitative PCR, reverse transcription, and combinations kits for analysis of gene expression, genotyping and gene regulation, and running on QIAGEN instruments and technologies; human ID/forensics assay consumables comprising short tandem repeat assays for human ID, and assays for food contamination; PCR instruments, including digital PCR and qPCR solutions; and developed and configured enzymes and PCR solutions. It offers NGS gene panels, library prep kits and components, and whole genome amplification; DNA methylation analysis; QIAGEN consumables and instruments; bioinformatics solutions; and sequence-based assays forensic genetic genealog services. it provides software-as-a-service. It serves molecular diagnostics and life sciences sectors. The company was founded in 1984 and is headquartered in Venlo, the Netherlands.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "rhm.de",
+      "symbol": "RHM.DE",
+      "name": "Rheinmetall AG",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 47274749952,
+      "employees": 29636,
+      "website": "https://www.rheinmetall.com",
+      "description": "Rheinmetall AG provides mobility and security technologies in Germany, Rest of Europe, North, Middle, and South America, Asia and the Near East, and internationally. The company operates through the Vehicle Systems, Weapon and Ammunition, and Electronic Solutions segments. Its Vehicle Systems segment offers combat, logistics, support, and special vehicles, including armored tracked vehicles, CBRN protection systems, artillery, turret systems, and wheeled logistics and tactical vehicles. The Weapon and Ammunition segment provides firepower and protection solutions, such as weapons and ammunition, protection systems, propellants, and international projects and services. Its Electronic Solutions segment offers a chain of systems network, such as sensors, networking platforms, automated connected effectors for soldiers, cyberspace protection solutions, and training and simulation solutions. The company's products include air defense, soldier, and fire control systems; radar technology; and command, control and reconnaissance systems, as well as simulations for the army, air force, navy, and civil applications. It also engages in the aftermarket activities. The company was formerly known as Rheinmetall Berlin AG and changed its name to Rheinmetall AG in 1996. Rheinmetall AG was founded in 1889 and is headquartered in Düsseldorf, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "rwe.de",
+      "symbol": "RWE.DE",
+      "name": "RWE Aktiengesellschaft",
+      "sector": "Utilities",
+      "industry": "Utilities - Diversified",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 46736707584,
+      "employees": 19702,
+      "website": "https://www.rwe.com",
+      "description": "RWE Aktiengesellschaft generates and supplies electricity from renewable and conventional sources in Germany, the United Kingdom, rest of Europe, North America, and internationally. It operates through five segments: Offshore Wind; Onshore Wind/Solar; Flexible Generation; Supply & Trading; and Phaseout Technologies. The company generates wind, hydro, solar, gas, lignite, and biomass electricity. It also trades in electricity, gas, and energy commodities; operates gas storage facilities; and engages in battery storage activities, as well as lignite mining and refining. The company serves commercial, industrial, and municipal customers. RWE Aktiengesellschaft was founded in 1898 and is headquartered in Essen, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "sap.de",
+      "symbol": "SAP.DE",
+      "name": "SAP SE",
+      "sector": "Technology",
+      "industry": "Software - Application",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 215328342016,
+      "employees": 112019,
+      "website": "https://www.sap.com",
+      "description": "SAP SE, together with its subsidiaries, provides enterprise application and business solutions worldwide. It offers SAP Business AI; SAP S/4HANA that provides software capabilities for finance, risk and project management, procurement, manufacturing, supply chain and asset management, and research and development; SAP SuccessFactors solutions for human resources, including HR, time, payroll, talent and employee experience management, and analytics and planning; and spend management solutions that covers direct and indirect spend, travel and expense, and external workforce management. The company also provides SAP customer experience solutions; SAP Business Technology platform that enables customers and partners to build, integrate, and automate applications; and SAP Business Network, a business-to-business collaboration platform that helps digitalize key business processes across the supply chain and enables communication between trading partners. In addition, it offers SAP Signavio to help customers to discover, analyze, and understand business process operations; industry solutions that provide customers and partners with industry-specific solutions; and SAP LeanIX to visualize enterprise architecture, assess interdependencies and the potential impact of IT modernization, and manage the transition toward the target landscape. Further, the company provides WalkMe to execute workflows; SAP Enable Now, which offers e-learning content embedded in SAP workflows; Taulia solutions for working capital management; and sustainability solutions and services. Additionally, it provides services and support solutions. The company has a strategic collaboration with Fresenius SE & Co. KGaA and Avelios Medical GmbH for the development of a cloud-native, hospital information system that enables digitalization of clinical and administrative processes with AI integration. SAP SE was founded in 1972 and is headquartered in Walldorf, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "shl.de",
+      "symbol": "SHL.DE",
+      "name": "Siemens Healthineers AG",
+      "sector": "Healthcare",
+      "industry": "Medical Devices",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 42932473856,
+      "employees": 74300,
+      "website": "https://www.siemens-healthineers.com",
+      "description": "Siemens Healthineers AG, through its subsidiaries, develops, manufactures, and sells a range of diagnostic and therapeutic products and services to healthcare providers in Germany, the United States, rest of Europe, CIS, Africa, the Middle East, the Americas, the Asia Pacific, Japan, and China. It operates in four segments: Imaging, Diagnostics, Varian, and Advanced Therapies. The Imaging segment offers magnetic resonance imaging, computed tomography, X-ray, molecular imaging, and ultrasound systems; and software solutions to support the reading and structured reporting of diagnostic images from different modalities. Its Diagnostics segment provides in-vitro diagnostic products and services to healthcare providers in the fields of general and specialty laboratory, and point-of-care diagnostics; and workflow solutions for laboratories and informatics products. The Varian segment offers microwave, cryoablation, and embolization technologies, as well as clinical professional services for cancer care that support oncology departments in hospitals and clinics; and customized support for cancer care operations. Its Advanced Therapies segment provides products that are designed to support image-guided minimally invasive clinical procedures in various areas, such as cardiology, neurology, and oncology; angiography systems and mobile C-arms; and AI-powered clinical applications. It also offers essential technical customer service, such as maintenance and repair; spare parts; medical equipment performance management; training; clinical education and e-learning; planning and design; financing; asset management; and managed departmental services for laboratories and healthcare facilities, as well as healthcare consulting, products, and services. It has strategic partnership with IFS to increase product lifecycle with industrial AI. The company was founded in 1896 and is headquartered in Forchheim, Germany. Siemens Healthineers AG is a subsidiary of Siemens Aktiengesellschaft.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "sie.de",
+      "symbol": "SIE.DE",
+      "name": "Siemens Aktiengesellschaft",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 203258822656,
+      "employees": 317000,
+      "website": "https://www.siemens.com",
+      "description": "Siemens Aktiengesellschaft, a technology company, focuses in the areas of automation and digitalization across the world. It operates through Digital Industries, Smart Infrastructure, Mobility, Siemens Healthineers, and Siemens Financial Services (SFS) segments. The Digital Industries segment provides automation systems and software for factories, numerical control systems, servo motors, drives and inverters, and integrated automation systems for machine tools and production machines; process control systems, machine-to-machine communication products, sensors and radio frequency identification systems; production and product lifecycle management software, and simulation and testing of mechatronic system. The Smart Infrastructure segment offers products, systems, solutions, services, and software to support sustainable transition from fossil and renewable energy sources; sustainable buildings and communities; and buildings, electrification, and electrical products. The Mobility segment provides rail passenger and freight transportation, such as metro systems, trams and light rail, and commuter trains, as well as trains and passenger coaches; locomotives and solutions for automated transportation and leasing; products and solutions for rail automation and electrification; maintenance and digital services; and digital and cloud-based solutions, and related services. The Siemens Healthineers segment develops, manufactures, and sells various diagnostic and therapeutic products and services; and provides clinical consulting and training services. Its financial services segment offers debt and equity investments; leasing, lending, and working capital; structured, equipment, and project financing; and financial advisory services. It has a strategic collaboration with IFS to improve product lifecycle with industrial AI. The company was founded in 1847 and is headquartered in Munich, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "sy1.de",
+      "symbol": "SY1.DE",
+      "name": "Symrise AG",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 12546498560,
+      "employees": 12936,
+      "website": "https://www.symrise.com",
+      "description": "Symrise AG operates as a supplier of fragrances, flavorings, cosmetic base materials and active ingredients, and functional ingredients and solutions in Europe, Africa, the Middle East, North America, the Asia Pacific, and Latin America. It operates in two segments, Taste, Nutrition & Health; and Scent & Care. The Taste, Nutrition & Health segment provides functional ingredients and product solutions used in the production of food and beverages; savory flavors; sweets, chocolate, chewing gum, baked goods, cereals, ice cream, milk, yogurt and milk alternatives; natural and sustainable ingredients for food and beverage manufacturers, baby food, and dietary supplements; product solutions and services for pet food manufacturers; sustainable ingredients and services for fish feed manufacturers to develop solutions for fish and shrimp farms; and probiotics for food supplements and functional foods. The Scent & Care segment develops, produces, and sells fragrance ingredients and compositions, aroma molecules, cosmetic ingredients, and mint flavors, as well as specific application processes for such substances. This segment's products are used by manufacturers of perfumes, personal care and cosmetic products, cleaning products, detergents, air fresheners, and oral care products. The company was founded in 1874 and is headquartered in Holzminden, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "vna.de",
+      "symbol": "VNA.DE",
+      "name": "Vonovia SE",
+      "sector": "Real Estate",
+      "industry": "Real Estate Services",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 15174272000,
+      "employees": 13120,
+      "website": "https://www.vonovia.com",
+      "description": "Vonovia SE operates as an integrated residential real estate company in Europe. The company operates through Rental, Value-Add, Recurring Sales, and Development segments. It offers property management services; property-related services; and value-added services, including maintenance and modernization of properties, craftsmen and residential environment organization, multimedia, energy supply, metering, condominium administration, and insurance services. The company is also involved in the sale of individual condominiums and single-family houses; and project development activities to build new homes. In addition, it engages in construction of owner-occupied and rented apartments; sale of projects to investors; and construction of new properties on existing land held in the portfolio. The company was formerly known as Deutsche Annington Immobilien SE and changed its name to Vonovia SE in August 2015. Vonovia SE was founded in 1998 and incorporated in October 10th, 2017 is headquartered in Bochum, Germany.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "vow3.de",
+      "symbol": "VOW3.DE",
+      "name": "Volkswagen AG",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 39542169600,
+      "employees": 594022,
+      "website": "https://www.volkswagen-group.com",
+      "description": "Volkswagen AG manufactures automobiles and commercial vehicles in Europe, Germany, North America, South America, the Asia-Pacific, and internationally. It operates through three segments: Passenger Cars and Light Commercial Vehicles; Commercial Vehicles; and Financial Services. The Passenger Cars and Light Commercial Vehicles segment develops vehicles, engines and motors, vehicle software, and vehicle batteries; produces and sells passenger cars and light commercial vehicles, and the parts. This segment also offers compact cars, luxury vehicles, and motorcycles, as well as mobility solutions. The Commercial Vehicles segment engages in the development of vehicles, engines, and motors; production and sale of trucks and buses, parts, and related services. The Financial Services segment engages in the dealership and customer financing, leasing, direct banking, and insurance activities; and provision of fleet management, and mobility services. In addition, the company is involved in the large-bore diesel engines, turbomachinery, and propulsion components businesses. It sells its products under the Volkswagen Passenger Cars, koda, SEAT/CUPRA, Volkswagen Commercial Vehicles, Audi, Lamborghini, Bentley, Ducati, Porsche, Scania, MAN, Volkswagen Truck & Bus, TRATON, and Bugatti Rimac, and international commercial vehicles brands to individual, corporate, and fleet customers. The company was founded in 1937 and is headquartered in Wolfsburg, Germany. Volkswagen AG operates as a subsidiary of Porsche Automobil Holding SE.",
+      "indices": [
+        "dax"
+      ]
+    },
+    {
+      "ticker": "zal.de",
+      "symbol": "ZAL.DE",
+      "name": "Zalando SE",
+      "sector": "Consumer Cyclical",
+      "industry": "Internet Retail",
+      "country": "Germany",
+      "exchange": "Xetra",
+      "currency": "EUR",
+      "marketCap": 5245902336,
+      "employees": 17417,
+      "website": "https://corporate.zalando.com",
+      "description": "Zalando SE operates an online platform for fashion and lifestyle products in Germany and internationally. The company operates through Business-to-Business and Business-to-Consumer segments. It engages in the development, sourcing, marketing, retail, and commission sale of various type of goods, including shoes, apparel, accessories, and beauty products with free delivery and returns, as well as various payment options. The company sells its products through Lounge by Zalando and its outlets. Zalando SE was founded in 2008 and is headquartered in Berlin, Germany.",
+      "indices": [
+        "dax"
+      ]
+    }
+  ],
+  "rejected": []
+}

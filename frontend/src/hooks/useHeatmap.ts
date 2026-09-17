@@ -14,18 +14,21 @@ export interface UseHeatmapResult {
   refetch: () => void
 }
 
-export function useHeatmap(): UseHeatmapResult {
+/** Tiles of one market; `market` null holds the request (still resolving). */
+export function useHeatmap(market: string | null = 'gpw'): UseHeatmapResult {
   const [data, setData] = useState<ApiHeatmapResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
+    if (market === null) return
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    fetchHeatmap(settingsQueryValue())
+    // The GPW is the backend default; leaving it out keeps the request as it was.
+    fetchHeatmap(settingsQueryValue(), market === 'gpw' ? undefined : market)
       .then((resp) => {
         if (!cancelled) {
           setData(resp)
@@ -42,7 +45,7 @@ export function useHeatmap(): UseHeatmapResult {
     return () => {
       cancelled = true
     }
-  }, [tick])
+  }, [tick, market])
 
   return { data, loading, error, refetch: () => setTick((t) => t + 1) }
 }

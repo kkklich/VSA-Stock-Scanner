@@ -1,0 +1,683 @@
+{
+  "market": "fr",
+  "name": "Euronext Paris",
+  "generatedAt": "2026-09-16",
+  "sources": {
+    "cac40": "https://en.wikipedia.org/wiki/CAC_40"
+  },
+  "verification": "Each company returned at least 5 traded daily bars in the 21 days before it was verified and a company name from Yahoo Finance, with prices quoted in a currency the app converts (PLN, USD, EUR, GBP, GBp).",
+  "companies": [
+    {
+      "ticker": "ac.pa",
+      "symbol": "AC.PA",
+      "name": "Accor SA",
+      "sector": "Consumer Cyclical",
+      "industry": "Lodging",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 10460667904,
+      "employees": 17337,
+      "website": "https://group.accor.com/en",
+      "description": "Accor SA operates a chain of hotels worldwide. The company operates through Premium, Midscale and Economy; and Luxury & Lifestyle segments. Its Premium, Midscale and Economy segment includes the Ibis, Novotel, Mercure, Swissôtel, Mövenpick, and Pullman brands operating in Europe and North Africa, the Middle East, Africa, the Asia-Pacific, the Americas, and China. The company Luxury & Lifestyle segment includes the Raffles and Fairmont, Sofitel, MGallery and Emblems, and Ennismore brands. It also owns, leases, manages, and franchises hotels. In addition, the company provides discount card programs; catering and event management; digital, hotel booking, and concierge services; and other services in events, fine dining, and entertainment, as well as operation of performance venues and coworking spaces. Further, it offers hotel management, personnel, procurement, treasury and management, IT, advertising, and other advice services. Accor SA was incorporated in 1960 and is headquartered in Issy-les-Moulineaux, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "aca.pa",
+      "symbol": "ACA.PA",
+      "name": "Crédit Agricole S.A.",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 55857135616,
+      "employees": 79848,
+      "website": "https://www.credit-agricole.com",
+      "description": "Crédit Agricole S.A. provides retail and corporate banking, insurance, and investment banking products and services in France, Italy, rest of the European Union, rest of Europe, North America, Central and South America, Africa, the Middle East, the Asia Pacific, and Japan. It operates in five segments: Asset Gathering, Large Customers, Specialized Financial Services, French Retail Banking  LCL, and International Retail Banking. The company offers savings/retirement, death and disability/creditor/group, and property and casualty insurance products; asset management; investment solutions; banking products and services, savings, wealth management, payment, cash flow management, and online banking services; personal finance and mobility; and specialized financial services. It also provides investment banking, structured finance, international trade finance, commercial banking, capital market, and syndication services; leasing, factoring, and energy and territorial financing; and asset servicing solutions for investment products, as well as various asset classes, such as execution, clearing, forex, security lending, custody, depositary banking, fund administration, middle-office outsourcing, fund distribution, and issuer services. In addition, the company offers property services, including transactions, rental, rental management, condominium trustee, and renovation under the Square Habitat brand; property development and management; and low-carbon electricity production. The company serves individuals, SMEs, small businesses, corporates, farmers, financial institutions, local authorities, asset managers, insurance companies, institutional investors, pension and unlisted funds, banks, and brokers. Crédit Agricole S.A. was founded in 1894 and is headquartered in Montrouge, France. Crédit Agricole S.A. operates as a subsidiary of SAS Rue La Boetie.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ai.pa",
+      "symbol": "AI.PA",
+      "name": "L'Air Liquide S.A.",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 106203242496,
+      "employees": 65000,
+      "website": "https://www.airliquide.com",
+      "description": "L'Air Liquide S.A. provides gases, technologies, and services for the industrial and health sectors in Europe, the Americas, the Asia Pacific, the Middle East, and Africa. It operates in Gas & Services, and Engineering & Construction segments. The Gas & Services segment comprises large industries business, which offers gas and energy solutions including oxygen, nitrogen, argon, hydrogen, and carbon monoxide, as well as operates cogeneration plants to supply steam and electricity to metals, chemicals, refining, and energy industries; and industrial merchant business line provides industrial gases, equipment, hardgoods, and associated services to materials and energy, materials and chemicals, food and pharmaceuticals, technology and research, and fabrication and construction sectors. This segment also includes healthcare business, which provides medical gases, home healthcare services, medical equipment, and specialty ingredient; healthcare professionals, and hospitals; and electronic business supply carrier gases, electronic specialty and advanced materials, equipment and installation, service, and analysis to semiconductor, flat panel, and photovoltaic markets. The Engineering & Construction segment designs, develops, and builds industrial gas production plants to third parties; and designs and manufacture plants in the traditional, renewable, and alternative energy sectors. This segment also focuses on markets which require a global approach, drawing on science, technologies, development models, and usages related to digital transformation. L'Air Liquide S.A. was incorporated in 1902 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "air.pa",
+      "symbol": "AIR.PA",
+      "name": "Airbus SE",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "Netherlands",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 155351793664,
+      "employees": 168754,
+      "website": "https://www.airbus.com",
+      "description": "Airbus SE, together with its subsidiaries, engages in the design, manufacture, and delivery of aeronautics and aerospace products, services, and solutions worldwide. It operates through three segments: Airbus, Airbus Helicopters, and Airbus Defence and Space. The Airbus segment develops, manufactures, markets, and sells commercial jet passenger aircraft, freighter aircraft, regional turboprop aircraft, and aircraft components, as well as provides aircraft conversion and related services. The Airbus Helicopters segment develops, manufactures, markets, and sells civil and military helicopters; and provides uncrewed aerial systems and their related services. The Airbus Defence and Space segment designs, develops, delivers, and supports crewed and uncrewed military air systems and related services. This segment also offers civil and defence space systems for telecommunications, earth observations, navigation, and science and orbital systems; and services around data processing from platforms, secure communication, and cyber security. The company was formerly known as Airbus Group SE and changed its name to Airbus SE in April 2017. The company was incorporated in 1998 and is headquartered in Leiden, the Netherlands.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "bn.pa",
+      "symbol": "BN.PA",
+      "name": "Danone S.A.",
+      "sector": "Consumer Defensive",
+      "industry": "Packaged Foods",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 39238234112,
+      "employees": 88670,
+      "website": "https://www.danone.com",
+      "description": "Danone S.A. operates in the food and beverage industry in Europe, Ukraine, North America, China, North Asia, the Oceania, Latin America, rest of Asia, Africa, Turkey, the Middle East, and the Commonwealth of Independent States. The company operates through Essential Dairy & Plant-Based, Specialized Nutrition, and Waters segments. It produces and distributes yogurts, dairy products, coffee creations and drinks, beverages, plant-based products, ice creams, frozen desserts, and cheese products. The company also provides specialized nutrition, including formulas and complementary feeding for babies and young children; and special medical purposes food for children and adults. In addition, it offers tube feeding products and oral nutritional supplements. Further, the company provides mineral waters from natural sources, waters infused with natural fruit extracts, fruit juices, and vitamins. The company offers its products under the Actimel, Activia, Alpro, Aptamil, Danette, Danio, Danonino, evian, Nutricia, Nutrilon, Volvic, Danone, Oikos, YoPRO, International Delight, SToK, Silk, So Delicious, Cow & Gate, Bebelac, SGM, Dumex, HiQ, Nursie, Phosphatine, Mizone, Blédina, Nutrison, Fortimel, Neocate, Nutridrink, AQUA, Bonafont, Salus, Hayat, Sirma, Font Vella, Lanjarón, and Zywiec Zdroj brands.It distributes its products through retail chains and traditional market outlets; convenience stores; hotels, restaurants, and coffee outlets; hospitals, clinics, and pharmacies; and e-commerce channels. The company was formerly known as Groupe Danone and changed its name to Danone S.A. in April 2009. Danone S.A. was incorporated in 1899 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "bnp.pa",
+      "symbol": "BNP.PA",
+      "name": "BNP Paribas SA",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 112142721024,
+      "employees": 180000,
+      "website": "https://group.bnpparibas",
+      "description": "BNP Paribas SA provides various banking and financial products and services in Europe, the Middle East, Africa, the Americas, and the Asia Pacific. It operates through three divisions: Corporate & Institutional Banking; Commercial, Personal Banking & Services; and Investment & Protection Services. The Corporate & Institutional Banking division offers capital market, securities, financing, risk management, securities clearing, custody, consulting, transaction banking, cash management, investment banking, and financial advisory services for corporate and institutional clients. Its Commercial, Personal Banking & Services division provides financing and equipment leasing services, lending, investment, financial and non-financial services, mobility, and digital banking services, as well as current accounts, savings products, bancassurance, insurance products and services, and consumer loans. The Investment & Protection Services division provides protection, savings, investment, and real estate services to support individuals, professionals, corporate clients, and institutions, as well as asset management, insurance, protection, pensions, and private banking services. The company was formerly known as Banque Nationale de Paris and changed its name to BNP Paribas SA in May 2000. BNP Paribas SA was founded in 1822 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "bvi.pa",
+      "symbol": "BVI.PA",
+      "name": "Bureau Veritas SA",
+      "sector": "Industrials",
+      "industry": "Consulting Services",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 12408732672,
+      "employees": 78849,
+      "website": "https://group.bureauveritas.com",
+      "description": "Bureau Veritas SA provides laboratory testing, inspection, and certification services. It operates through six segments: Marine & Offshore; Agri-Food & Commodities; Industry; Buildings & Infrastructure; Certification; and Consumer Products services. The company engages in inspecting, analyzing, auditing, and certifying the products, assets, and management systems of its clients in relation to regulatory or self-imposed standards, as well as issues compliance reports. It also provides technical services, including asset integrity management for marine and offshore; post accident expertise, risk assessment for the offshore industry, marine accident investigations, pre- and post salvage advice, and refloating of vessels; inspection, audit, certification, and testing services for oil and petrochemicals, metals and minerals, and agri commodities; technical control, code compliance, independent technical assistance, quality assurance/quality control, construction management, and project management assistance; laboratory and on-site testing services for manufacturing and process industries; inspection services for products, services, assets, and installations, as well as various services designed to control quality, verify quantity, and meet regulatory requirements; and certification services for management systems, products, and people. The company serves construction and civil engineering, real estate, transportation, oil and gas, marine and offshore, nuclear, defense, automotive, aerospace, IT, electronics, power and utilities, consumer products, and retail industries, as well as financial services and public sectors. It operates in approximately 140 countries through a network of offices and laboratories. Bureau Veritas SA was founded in 1828 and is headquartered in Neuilly-sur-Seine, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ca.pa",
+      "symbol": "CA.PA",
+      "name": "Carrefour SA",
+      "sector": "Consumer Defensive",
+      "industry": "Grocery Stores",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 11894978560,
+      "employees": 298604,
+      "website": "https://www.carrefour.com",
+      "description": "Carrefour SA operates as a food retailer in France, Spain, Belgium, Poland, Romania, Brazil, Argentina, the Middle East, Africa, Asia, and internationally. The company operates hypermarkets, supermarkets, convenience stores, club stores, and cash and carry stores; soft discount stores; and e-commerce sites. It is also involved in the provision of financial services; banking and insurance services; property development; travel ticketing and leisure; agency; shopping mall rental; and franchise activities. Carrefour SA was founded in 1959 and is headquartered in Massy, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "cap.pa",
+      "symbol": "CAP.PA",
+      "name": "Capgemini SE",
+      "sector": "Technology",
+      "industry": "Information Technology Services",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 17538134016,
+      "employees": 417610,
+      "website": "https://www.capgemini.com",
+      "description": "Capgemini SE, together with its subsidiaries, provides consulting, digital transformation, technology, and engineering services primarily in North America, France, the United Kingdom, Ireland, the rest of Europe, the Asia-Pacific, and Latin America. It offers strategy and transformation services in strategy, technology, engineering, data science, and creative design fields to support companies and organizations in creating new models and new products within the digital economy. The company provides applications and technology services to help clients to develop, modernize, extend, and secure IT and digital environment, as well as designs and develops technological solutions in data strategy and architecture, data engineering, information governance, data science and analytics, artificial intelligence, and data-driven innovation fields. In addition, it offers cloud infrastructure services for its clients to build an optimal, agile, and secure foundation for business transformations; and business process outsourcing and transactional services, as well as installation and maintenance services for its clients' IT infrastructures in data centers or in the cloud. The company serves various industries, including aerospace and defense, automotive, banking and capital markets, consumer products, energy and utilities, healthcare, high-tech, hospitality and travel, insurance, life sciences, manufacturing, media and entertainment, public sector, retail, and telecoms. The company has a strategic alliance with OpenAI for the development and deployment of enterprise AI solutions. The company was formerly known as Cap Gemini S.A. and changed its name to Capgemini SE in June 2017. It has a strategic partnership with Duality Technologies to help organizations operationalize secure AI and analytics across sensitive, regulated, and distributed data environments. The company was incorporated in 1967 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "cs.pa",
+      "symbol": "CS.PA",
+      "name": "AXA SA",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 92438765568,
+      "employees": 107756,
+      "website": "https://www.axa.com",
+      "description": "AXA SA, through its subsidiaries, provides insurance, asset management, and banking services worldwide. The company operates through France, Europe, AXA XL, Asia, Africa & EME-LATAM, and Transversal & Other segments. It offers life and savings insurance and property and casualty insurance products. The company also provides protection and retirement products for individual and professional customers; reinsurance coverages; property, primary and excess casualty, excess and surplus lines, environmental liability, professional liability, construction, marine, energy, aviation and satellite, fine art and specie, livestock and aquaculture, accident and health, and crisis management. In addition, it offers reinsurance solutions with casualty, property risk, property catastrophe, specialty, and other reinsurance; proportional and non-proportional, and facultative reinsurance; risk management solutions and consulting services; integrated ecosystem between healthcare solutions and the insurance coverage, which includes onsite services in clinics, remote teleconsultation and digital services, and home services; travel insurance and assistance services, as well as AXA Multilink platform, a B2B2C platform; Sophia, the customer facing GenAI chatbot; and EMMA, a digital assistant. Further, the company offers motor, household, property and general liability, banking, savings, health, term life, whole life, universal life, endowment, deferred and immediate annuities, and other investment-based products for retail/individual and commercial/group customers. AXA SA was founded in 1852 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "dg.pa",
+      "symbol": "DG.PA",
+      "name": "Vinci SA",
+      "sector": "Industrials",
+      "industry": "Engineering & Construction",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 61926055936,
+      "employees": 292101,
+      "website": "https://www.vinci.com",
+      "description": "Vinci SA, together with its subsidiaries, engages in concessions, energy, and construction businesses in France and internationally. It operates through Concessions, Energy Solutions, and Construction segments. The company's Concessions segment operates motorways, autoroutes, airports, highways, railways, and stadiums. Its Energy segment provides services to the manufacturing sector, infrastructure, building solutions and facilities management, and information and communication technology; and industrial and energy-related services, which includes development of renewable energy assets, as well as engineering, procurement, construction projects in the energy sector, and development of renewable energy production facilities of solar, and wind farms. The company's Construction segment engages in designing and undertaking projects, which includes general contractor; geotechnical, and structural engineering and related digital activities, as well as provision of services in nuclear engineering; undertaking building, civil engineering, roadworks, rail works, and water works; development of properties, including residential and commercial properties; and management of residences and property services. Vinci SA was founded in 1899 and is headquartered in Nanterre, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "dsy.pa",
+      "symbol": "DSY.PA",
+      "name": "Dassault Systèmes SE",
+      "sector": "Technology",
+      "industry": "Software - Application",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 27463729152,
+      "employees": 25000,
+      "website": "https://www.3ds.com",
+      "description": "Dassault Systèmes SE provides software solutions and services worldwide. The company offers 3D modeling applications, such as SOLIDWORKS, CATIA, GEOVIA, and BIOVIA; social and collaborative applications, including 3DEXCITE, CENTRIC PLM, and ENOVIA; and simulation applications comprising SIMULIA, DELMIA, 3DVIA. It also provides information intelligence applications consisting of NETVIBES and MEDIDATA; and OUTSCALE, an infrastructure for business experiences, as well as 3DEXPERIENCE platform, a business and innovation platform that provides organizations with a holistic and real-time vision of their business activity and ecosystem. The company distributes its products through direct and indirect sales channels, as well as commercial partners. It primarily serves companies in the aerospace and defense; architecture, engineering and construction; business services; cities and public services; consumer packaged goods  retail; high-tech; home and lifestyle; industrial equipment; infrastructure, energy, and materials; life sciences and healthcare; marine and offshore; and transportation & mobility industries. The company was incorporated in 1981 and is headquartered in Vélizy-Villacoublay, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "eden.pa",
+      "symbol": "EDEN.PA",
+      "name": "Edenred SE",
+      "sector": "Financial Services",
+      "industry": "Credit Services",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 6689501696,
+      "employees": 12102,
+      "website": "https://www.edenred.com",
+      "description": "Edenred SE operates as a digital platform for services and payments for companies, employees, and merchants worldwide. It offers employee benefit solutions, including Ticket Restaurant, a solution that allows employees to take time out for lunch at a partner merchant; Ticket Alimentación, which allows users to pay for groceries in stores and supermarkets; Edenred Regalo, a gift voucher; Ticket CESU, a human services solution; Edenred City, a solution that enables the purchase of staples, such as food and fuel; Welfare Edenred, which employees can use to pay for various services, including access to sports facilities and solutions for their children's educational needs; Edenred Eco, a solution that encourages the purchase of environmentally friendly products in Belgium; and Kadéos Culture in France and Ticket Cultura in Brazil for cultural goods and services, as well as mobility solutions through Edenred Mobility. The company also offers mobility solutions comprising Ticket Car for employees to pay for fuel and other business travel expenses; Empresarial, which enables companies to control spending to reimburse expense claims; Cintelink, a smart cloud platform for service stations and commercial fleets; UTA Edenred, a fuel card; Ticket Fleet Pro for truck fleet management; Edenred Finance that provides refund services to European transportation companies; The Right Fuel Card, a fuel card manager; and Spirii, a platform for recharging electric vehicles. In addition, it provides complementary solutions comprising corporate payment, incentive and rewards, salary card solutions; and benefits and engagement programs. Edenred SE was founded in 1962 and is headquartered in Issy-les-Moulineaux, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "el.pa",
+      "symbol": "EL.PA",
+      "name": "EssilorLuxottica Société anonyme",
+      "sector": "Healthcare",
+      "industry": "Medical Instruments & Supplies",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 66561523712,
+      "employees": 213909,
+      "website": "https://www.essilorluxottica.com",
+      "description": "EssilorLuxottica Société anonyme designs, manufactures, and distributes ophthalmic lenses, frames, sunglasses, and instruments and equipment in North America, the Middle East, Africa, Europe, Latin America, and the Asia-Pacific. It offers lens, eyewear, contact lenses, reading glasses under Essilor, Varilux, Crizal, Eyezen, Stellest, Xperio, Transitions, Ray-Ban, Oakley, Barberini, KODAK Lens, Nikon, Shamir Optical, eyexpert, iWear, Humanware, Optifog, Persol, Oliver Peoples, Vogue Eyewear, Arnette, Alain Mikli, Costa, Bliz, Native Eyewear and Bolon, and Foster Grant brands. The company also provides vision assessment, eye pathology diagnosis and treatment, finishing equipment, fitting parameter measurement, small tools, and consumables. In addition, it offers SPECTRALIS, a multimodal imaging platform for diagnosis and treatment; RetinAI; Espansione Group; Cellview Imaging; ANTERION, a multidisciplinary all-in-one anterior segment imaging solution for measurements; apparel, footwear and accessories; and high-tech equipment for optical surfacing, polishing, measuring, coating, and finishing, as well as consumables, tools, and services under the Satisloh brand. Further, the company designs, develops, markets, and maintains diagnostics, refraction, lens edging and mounting instruments for opticians and prescription laboratories, and measurement; and optometry instruments for eyecare professionals, schools, occupational medicine centers, military, and other institutions. It sells its products to independent opticians, distributors, third-party e-commerce platforms, and large retail chains in the eyecare and eyewear industry; and consumers through the network of brick and mortar retail networks and its online channels. The company was formerly known as Essilor International Société Anonyme and changed its name to EssilorLuxottica Société anonyme in October 2018. EssilorLuxottica Société anonyme was founded in 1849 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "en.pa",
+      "symbol": "EN.PA",
+      "name": "Bouygues SA",
+      "sector": "Industrials",
+      "industry": "Engineering & Construction",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 17178089472,
+      "employees": 196184,
+      "website": "https://www.bouygues.com",
+      "description": "Bouygues SA, together with its subsidiaries, operates in the construction, energies and services, telecom, and media sectors in France and internationally. It operates through Colas, Bouygues Construction, Bouygues Immobilier, Equans, Bouygues Telecom, TF1, and Other segments. The company engages in the construction and maintenance of roads; production, distribution, sale, and recycling of aggregates, emulsions, asphalt mixes, ready-mix concrete, and bitumen; design, construction, upgrade, and maintenance of rail networks; design, construction, refurbishment, and renovation of buildings, as well as property development and consulting; public works, which include civil engineering, bridges, nuclear power station, tunnels and underground structures, prestressing, and stay cable systems; and concession activities. It is also involved in property development of housing, offices, and hotels; urban operations; design, building, management, and decarbonization of electrical installations; mechanical and robotics; HVAC; cooling and fire protection; facility management solutions, including technical services for installations; and digital technology and ICT services. In addition, the company engages in the roll out, maintenance, and management of mobile and fixed networks; B2C and B2B services; production, editing, and broadcasting of televisual content; music production and live events; and creation and distribution of programmes for TV channels and digital platforms. Further, it operates unencrypted television channels comprising TF1, TMC, TFX, TF1 Séries Films, and LCI; theme television channels consisting of Ushuaia TV, Histoire TV, TV Breizh, and Série Club; TF1+, a free streaming platform for family entertainment and news; TFOU MAX, an on-demand platform; and TF1 PUB, an advertising sales unit. The company exports its products. Bouygues SA was founded in 1952 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "engi.pa",
+      "symbol": "ENGI.PA",
+      "name": "Engie SA",
+      "sector": "Utilities",
+      "industry": "Utilities - Diversified",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 61152432128,
+      "employees": 84786,
+      "website": "https://www.engie.com",
+      "description": "Engie SA engages in renewables and decentralized and low-carbon energy networks in France, Europe, North America, Asia, the Middle East, Oceania, South America, Africa, and internationally. The Renewables & Flex Power segment comprises renewable energy generation activities, including financing, construction, operation, and maintenance of renewable energy, such as hydroelectric, onshore wind, photovoltaic solar, biomass, offshore wind, geothermal, and battery storage. It also offers flexible thermal generation and electricity, pumping, and battery storage facilities; solutions for decarbonizing industry with low-carbon hydrogen; and operation of desalination plants. The Networks segment comprises the gas and power infrastructure activities, including the management and development of gas and electricity transportation networks and natural gas distribution networks in and outside of Europe, natural gas underground storage, and regasification infrastructure. The Local Energy Infrastructures provides the construction and management of decentralized energy networks, including heating and cooling networks, distributed power generation plants, distributed solar power parks, low-carbon mobility, low-carbon cities and public lighting, energy efficiency, technical maintenance, and sustainable development consulting. The Supply & Energy Management segment optimizes the Group's energy assets, manages market and portfolio risks, and supplies natural gas, green and low-carbon gas, and electricity to residential, business, industrial customers, develops green energy contracts, and digital consumption management. The Other segment manages nuclear power production and holds drawing rights, focusing on operational management, safety, and decommissioning. It offers renewable electricity, green gas, energy management. The company was formerly known as GDF SUEZ S.A. and changed its name to Engie SA in April 2015. Engie SA was founded in 1880 and is based in La Garenne-Colombes, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "erf.pa",
+      "symbol": "ERF.PA",
+      "name": "Eurofins Scientific SE",
+      "sector": "Healthcare",
+      "industry": "Diagnostics & Research",
+      "country": "Luxembourg",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 12860600320,
+      "employees": 65000,
+      "website": "https://www.eurofins.com",
+      "description": "Eurofins Scientific SE, together with its subsidiaries, provides various analytical testing and laboratory services worldwide. It provides services, such as agroscience, including biological assessment, consumer and human, environmental safety, product chemistry, regulatory consultancy, and seed services; agro testing; assurance, including sustainability, audit, certification, quality inspection, QA-QC programme, and food and dietary supplement labelling services; biopharma, and clinical diagnostics. The company also offers consumer product testing, which include sustainability, testing, certifications and approvals, expert services and regulatory, inspections, audits, consumer research and sensory evaluation, and training courses; cosmetics and personal care; and electrical and electronics laboratories services. In addition, it provides environment testing, including maritime, water, air, soil, building material, pollution, waste, fuel/oil, microplastics, and radioactivity testing; and food and feed testing that include allergen, audit and certification, authenticity, carbohydrates, consulting, dioxins and POPs, food irradiation, GMO, heavy metal, melamine, microbiology, molecular biology, mycotoxin, nutritional analyses, organic contaminants, pesticide, veterinary drug, vitamin, and residual DNA testing. Further, the company provides forensic, genomic, maritime, materials and engineering, REACH, and sensory and consumer services, as well as in vitro diagnostics and PSS insourcing solutions. The company was founded in 1987 and is headquartered in Luxembourg, Luxembourg.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "gle.pa",
+      "symbol": "GLE.PA",
+      "name": "Société Générale Société anonyme",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 53819355136,
+      "employees": 101763,
+      "website": "https://www.societegenerale.com",
+      "description": "Société Générale Société anonyme provides banking and financial services to individuals, corporates, and institutional clients in Europe and internationally. It operates through French Retail, Private Banking and Insurance; International Retail, Mobility and Leasing Services; and Global Banking and Investor Solutions. The company offers retail banking services, such as consumer credit, vehicle leasing and fleet management, online banking, wealth management, and equipment and vendor finance services; and insurance products, including home, vehicle, family, health, and mortgage insurance. It also provides corporate and investment banking, securities, clearing services, execution, prime brokerage, and custody services; and consumer finance, advisory and financing, and asset management and private banking services. Société Générale Société anonyme was incorporated in 1864 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ho.pa",
+      "symbol": "HO.PA",
+      "name": "Thales S.A.",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 49557553152,
+      "employees": 79263,
+      "website": "https://www.thalesgroup.com",
+      "description": "Thales S.A. provides various solutions in the defence and security, aerospace and space, and digital identity and security markets worldwide. The company offers advance air defence systems, combat systems, defence onboard electronics c4isr solutions, command and control solutions, mission and surveillance systems, airborne optronics, and airspace protection solutions; collaborative combat, intelligence, connectivity and cloud, country and force protection, military vehicle, collaborative artillery, and augmented soldier solutions; robotics and drones; above-water combat, unmanned maritime, and underwater warfare systems; naval support and services; and joint systems. It also provides mission-critical and radio communications; cyber defence and electronic warfare solutions; protection systems; unmanned aerial vehicle systems; digital transformation services; and Geonav IoT for real-time indoor/outdoor precise navigations. In addition, it offers digital identity and security solutions comprising banking and payment, data protection, digital identity, identity and access management, biometric, mobile, software monetization, secure IoT solutions, and IoT connecting and security solutions. Further, it provides air traffic management solutions; flight decks and avionics equipment and functions; in-flight entertainment, connectivity, and services; drone and navigation solutions; support and services for civil aviation; connectivity solutions; antennas; and solutions for internal and external aircraft lighting. It offers lasers; microwave and imaging sub-systems; microelectronic solutions; mobile satellite, environmental testing and evaluation laboratory, and training and simulation services; cryogenic technology and coolers; silicon security solutions; and designs, operates, and delivers satellite-based technologies. The company was formerly known as Thomson-CSF and changed its name to Thales S.A. in 2000. Thales S.A. was founded in 1893 and is based in Meudon, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ker.pa",
+      "symbol": "KER.PA",
+      "name": "Kering SA",
+      "sector": "Consumer Cyclical",
+      "industry": "Luxury Goods",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 29183168512,
+      "employees": 41147,
+      "website": "https://www.kering.com",
+      "description": "Kering SA manages the development of a collection of renowned houses in fashion, leather goods, and jewelry in the Asia Pacific, Western Europe, North America, Japan, and internationally. The company provides ready-to-wear products, accessories, and beauty products for men and women. It also offers leather goods and shoes; watches and jewelry; eyewear products; and fragrances and cosmetics. The company provides its products under the Gucci, Saint Laurent, Bottega Veneta, Balenciaga, Alexander McQueen, Brioni, Boucheron, Pomellato, DoDo, Qeelin, and Ginori 1735, as well as Kering Eyewear and Kering Beauté brands. Kering SA was formerly known as PPR SA. and changed its name to Kering SA in May 2013. The company was founded in 1963 and is based in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "lr.pa",
+      "symbol": "LR.PA",
+      "name": "Legrand SA",
+      "sector": "Industrials",
+      "industry": "Electrical Equipment & Parts",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 35463970816,
+      "employees": 40931,
+      "website": "https://www.legrand.com",
+      "description": "Legrand SA, together with its subsidiaries, manufactures, distributes, and sells electrical and digital building infrastructures in Europe, North and Central America, and internationally. The company offers energy distribution, protection, and management solutions, such as electric vehicle charging, residential and small commercial panels, switchboards and power cabinets, and UPS devices; and wiring devices, connected home and building control solutions, and guestroom solutions, as well as flush-mounted, junction, DCL, and floor boxes. It also provides security, communication, and network solutions, including access security, digital home networks, emergency lighting, fire alarms, IT networks, intercom and door entry, and nurse call systems; conduits and cable management solutions comprising trunking, mini-trunking, skirting trunking, ducts, tubes, floor boxes, columns and feeders, and workstation solutions; industrial products, which comprises industrial enclosures and connections, transformers and power supply, marking accessories and cable ties, motor control and protection, fuse protection, and industrial plugs and sockets, as well as control, button, and signaling products; and installation accessories, including wiring accessories, extension cords, multi-outlet units, cable ties and fasteners, and connection boxes and terminals; and lighting products and accessories, as well as bulkhead lights and wall lights. In addition, the company offers single-phase UPS, three-phase UPS, communication accessories, software, and battery cabinets for three-phase UPS, as well as data center solutions. Further, it provides digital products and connected care services for health and social care sectors. The company also exports its products to approximately 180 countries. Legrand SA was founded in 1865 and is headquartered in Limoges, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "mc.pa",
+      "symbol": "MC.PA",
+      "name": "LVMH Moët Hennessy - Louis Vuitton, Société Européenne",
+      "sector": "Consumer Cyclical",
+      "industry": "Luxury Goods",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 202584064000,
+      "employees": 196647,
+      "website": "https://www.lvmh.com",
+      "description": "LVMH Moët Hennessy - Louis Vuitton, Société Européenne, together with its subsidiaries, operates as a luxury goods company worldwide. It offers wine and spirit products under the Ao Yun, Ardbeg, Armand de Brignac, Belvedere, Bodega Numanthia, Chandon, Cheval des Andes, Château Cheval Blanc, Château Galoupet, Château d'Yquem, Château d'Esclans, Cloudy Bay, Colgin Cellars, Dom Pérignon, Domaine des Lambrays, Eminente, Glenmorangie, Hennessy, Joseph Phelps, Krug, Mercier, Minuty, Moët & Chandon, Newton Vineyard, Ruinart, SirDavis, Terrazas de los Andes, Veuve Clicquot, Volcan de mi Tierra, and Woodinville brands; fashion and leather products under Barton Perreira,Berluti, Celine, Christian Dior, Fendi, Givenchy, Kenzo, Loewe, Loro Piana, Louis Vuitton, Marc Jacobs, Moynat, Patou, Pucci, Rimowa, and Vuarnet brands; and perfumes and cosmetics products under the Acqua di Parma, Benefit Cosmetics, Fenty Beauty by Rihanna, Fresh, Givenchy Parfums, Guerlain, Kenzo Parfums, Loewe Perfumes, Maison Francis Kurkdjian, Make Up For Ever, OLEHENRIKSEN, Officine Universelle Buly, and Parfums Christian Dior brands. The company also provides watches and jewelry under the Bvlgari, Chaumet, DANIEL ROTH, Fred, Gérald Genta, Hublot, L'Epée 1839, Repossi, TAG Heuer, Tiffany & Co., and Zenith brands; and selective retailing under the 24S, DFS, La Grande Épicerie de Paris, Le Bon Marché Rive Gauche, Samaritaine, and Sephora brands. In addition, it offers french business and cultural publications under the Les Echos group brand; custom-designed yachts under the Feadship brand; hotels under the Cheval Blanc and Belmond brands; and other activities under the Connaissance des Arts, Cova, Investir, Jardin d'Acclimatation, Le Parisien, Paris Match, and Radio Classique brands. LVMH Moët Hennessy - Louis Vuitton, Société Européenne was founded in 1365 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ml.pa",
+      "symbol": "ML.PA",
+      "name": "Compagnie Générale des Établissements Michelin Société en commandite par actions",
+      "sector": null,
+      "industry": null,
+      "country": null,
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": null,
+      "website": null,
+      "description": null,
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "or.pa",
+      "symbol": "OR.PA",
+      "name": "L'Oréal S.A.",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 203418959872,
+      "employees": 95000,
+      "website": "https://www.loreal.com",
+      "description": "L'Oréal S.A., through its subsidiaries, manufactures and sells cosmetic products for women and men in Europe, North America, North Asia, South Asia Pacific, the Middle East, North Africa, Sub-Saharan Africa, and Latin America. It operates through four divisions: Professional Products, Consumer Products, Luxe, and Dermatological Beauty. The company offers skincare, make-up, hair colourant, haircare, perfume, and hygiene products. It provides its products under the L'Oréal Paris, Garnier, Maybelline New York, NYX Professional Makeup, Stylenanda, Essie, Dark & Lovely, Mixa, Niely, L'Oréal Professionnel, Kérastase, Redken, Matrix, Pureology, Lancôme, Yves Saint Laurent Beauté, Armani Beauty, Kiehl's, Helena Rubinstein, Aesop, Biotherm, Valentino, Prada, Shu Uemura, IT Cosmetics, Mugler, Ralph Lauren, Urban Decay, Azzaro, Maison Margiela, Viktor&Rolf, Takami, La RochePosay, CeraVe, Vichy, SkinCeuticals, Skinbetter Science, and other brand names. The company sells its products through distribution channels, such as hair salons, local stores, e-commerce, travel retail, mass market retail, department store perfumeries, pharmacies, drug stores, medi-spas, and free-standing stores. L'Oréal S.A. was founded in 1909 and is headquartered in Clichy, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ora.pa",
+      "symbol": "ORA.PA",
+      "name": "Orange S.A.",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 42192166912,
+      "employees": 121242,
+      "website": "https://www.orange.com",
+      "description": "Orange S.A. operates as a telecommunications operator in France and internationally. The company offers mobile services, such as voice, SMS, and data; and fixed broadband and narrowband services, as well as B2B fixed solutions and network services, including voice and data services. It also sells handsets, broadband equipment, connected devices, and accessories. In addition, it provides IT and integration services comprising unified communication and collaboration services, such as LAN and telephony, consultancy, integration, and project management; hosting and infrastructure services, including cloud computing; customer relations management and other applications services; security services; and video conferencing, as well as sells related equipment. Further, the company offers national and international roaming services; online advertising services; and mobile virtual network operator, network sharing, and mobile financial services, as well as sells equipment to external distributors, brokers, and operators. It markets its products and services under the Orange brand name. The company has a strategic collaboration with Nokia and NVIDIA for the development and evaluation of AI-RAN technologies The company was formerly known as France Telecom and changed its name to Orange S.A. in July 2013. Orange S.A. was incorporated in 1991 and is headquartered in Issy-les-Moulineaux, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "pub.pa",
+      "symbol": "PUB.PA",
+      "name": "Publicis Groupe S.A.",
+      "sector": "Communication Services",
+      "industry": "Advertising Agencies",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": null,
+      "employees": 115782,
+      "website": "https://www.publicisgroupe.com",
+      "description": "Publicis Groupe S.A., together with its subsidiaries, provides marketing, communications, and digital business transformation services in North America, Europe, the Asia Pacific, Latin America, Africa, and the Middle East, and internationally. The company offers power of one, publicis communications; publicis sapient; publicis media; publicis health; and other services. Publicis Groupe S.A. was founded in 1926 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "ri.pa",
+      "symbol": "RI.PA",
+      "name": "Pernod Ricard SA",
+      "sector": "Consumer Defensive",
+      "industry": "Beverages - Wineries & Distilleries",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 15244793856,
+      "employees": null,
+      "website": "https://www.pernod-ricard.com",
+      "description": "Pernod Ricard SA produces and sells wines and spirits worldwide. The company offers whiskey, vodka, gin, rum, liqueur and bitters, champagne, tequila and mezcal, and aperitif under the brands 100 Pipers, Aberlour, Absolut, Absolut Elyx, Altos, ARARAT, Augier, Avion, Ballantine's, Becherovka, Beefeater, Blenders Pride, Brancott Estate, Campo Viejo, Ceder's, Chivas, Clan Campbell, Del Maguey, George Wyndham, Green Spot, Havana Club, Imperial, Imperial Blue, Italicus, J.P. Wiser's, Jacob's Creek, Jameson, Jefferson's, Kahlúa, Kenwood, KI NO BI, Lillet, Long John, L'Orbe, Lot No. 40, Malfy, Malibu, Kahlua, Martell, Method & Madness, Midleton Very Rare, Minttu, Monkey 47, Mumm, Olmeca, Ostoya, Passport Scotch, Pastis 51, Pernod, Perrier-Jouët, Plymouth Gin, Powers, Rabbit Hole, Ramazzotti, Redbreast, Ricard, Royal Salute, Royal Stag, Scapa, Seagram's Gin, Secret Speyside, Smooth Ambler, Something Special, Suze, The Glenlivet, TX, and Wyborowa. It also provides non-alcoholic beverages under the brands Beefeater 0%, Ceder's, Suze Tonic 0%, Cinzano Spritz 0%, Pacific, Campo Viejo Sparkling 0%, and Jacob's Creek Unvined. Pernod Ricard SA was founded in 1805 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "rms.pa",
+      "symbol": "RMS.PA",
+      "name": "Hermès International Société en commandite par actions",
+      "sector": "Consumer Cyclical",
+      "industry": "Luxury Goods",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 144857759744,
+      "employees": 27107,
+      "website": "https://finance.hermes.com",
+      "description": "Hermès International Société en commandite par actions engages in the production, wholesale, and retail of various goods. The company offers leather goods and saddlery, such as bags for men and women, travel articles, small leather goods and accessories, saddles, bridles, and various equestrian products and clothing; ready-to-wear garments for men and women; and accessories, including jewelry, belts, hats, gloves, internet of things products, and shoes. It also provides silk and textiles for men and women; art of living and tableware products; beauty and perfume products; and watches. In addition, the company is involved in weaving, engraving, printing, dyeing, finishing, and producing textiles; purchasing, tanning, dyeing, finishing, and selling tanneries and precious leathers; and creating and producing of metal parts. It sells its products through a network of stores in France, rest of Europe, Japan, the Asia Pacific, the Americas, and the Middle East, as well as sells watches, perfumes, and tableware through a network of specialized stores. The company was founded in 1837 and is headquartered in Paris, France. Hermès International Société en commandite par actions is a subsidiary of H51 SAS.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "rno.pa",
+      "symbol": "RNO.PA",
+      "name": "Renault SA",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 8180586496,
+      "employees": 100000,
+      "website": "https://www.renaultgroup.com",
+      "description": "Renault SA engages in the design, manufacture, sale, repair, maintenance, and leasing of motor vehicles in Europe, Eurasia, Africa, the Middle East, the Asia Pacific, and the Americas. The company operates through Automotive, Sales Financing, and Mobility Services segments. The Automotive segment produces, sells, and distributes passenger cars and light commercial vehicles. The Sale Financing segment is involved in the sales financing, rental, maintenance, and service contracts under the Mobilize Financial Services trade name. The Mobility Services segment provides mobility and energy solutions for electric vehicle users under the Mobilize Beyond Automotive brand. It offers used vehicles and spare parts; and engages in the business-to-business powertrain activities, and research and advanced engineering activities. The company also engages in the design and production of parts and equipment used for manufacturing and operation of vehicles. It serves commercial, light commercial and passenger vehicles, tractors, farm machinery and construction equipment under the Renault, Dacia, and Alpine brands. The company was founded in 1898 and is based in Boulogne-Billancourt, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "saf.pa",
+      "symbol": "SAF.PA",
+      "name": "Safran SA",
+      "sector": "Industrials",
+      "industry": "Aerospace & Defense",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 135211065344,
+      "employees": 103710,
+      "website": "https://www.safran-group.com",
+      "description": "Safran SA, together with its subsidiaries, engages in the aerospace and defense businesses in France, rest of Europe, the Americas, the Asia-Pacific, Africa, and the Middle East. The company operates through three segments: Aerospace Propulsion; Aircraft Equipment, Defense and Aerosystems; and Aircraft Interiors. The Aerospace Propulsion segment designs, develops, produces, and markets propulsion and mechanical power transmission systems for commercial aircraft, military transport, training and combat aircraft, civil and military helicopters, and drones; and offers maintenance, repair, and overhaul (MRO) services, as well as sells spare parts. The Aircraft Equipment, Defense and Aerosystems segment provides landing gears and brakes; nacelles and reversers; avionics, such as flight controls and onboard information systems; security systems, including evacuation slides and oxygen masks; onboard computers and fuel systems; electrical power management systems and related engineering services; optronic equipment and sights, navigation equipment and sensors, infantry, and drones; MRO services; and sells spare parts. The Aircraft Interiors segment designs, develops, manufactures, and markets aircraft seats for passengers and crew; cabin equipment, overhead bins, class dividers, passenger service units, cabin interior solutions, chilling systems, galleys, electrical inserts, and trolleys; and cabin equipment and passenger comfort-focused solutions such as water distribution, lavatories, air systems, and in-flight entertainment and connectivity (IFEC) solutions. The company's products and services are used in commercial civil and military aircrafts, and helicopters. Safran SA was founded in 1896 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "san.pa",
+      "symbol": "SAN.PA",
+      "name": "Sanofi",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers - General",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 89076408320,
+      "employees": 74846,
+      "website": "https://www.sanofi.com",
+      "description": "Sanofi engages in the research, development, manufacture, and marketing of therapeutic solutions. It provides immunology and inflammation, rare diseases neurology, oncology, and other vaccines. It also offers poliomyelitis, pertussis, and haemophilus influenzae type b (Hib) pediatric vaccines; respiratory syncytial virus protection and hexavalent combination vaccines that includes hepatitis A, typhoid, yellow fever, and rabies vaccines. It has a collaboration and license agreement with Exscientia to develop up to 15 novel small-molecule for oncology and immunology; ABL Bio, Inc. to develop ABL301 for treatment of alpha-synucleinopathies; and Innate Pharma SA for cell engager program targeting B7-H3. Further, it has a collaboration agreements with Atomwise to use ATOMNET platform and Insilico Medicine to use Pharma.AI, a medicine's AI platform; Kymera Therapeutics, Inc. to develop and commercialize protein degrader therapies targeting IRAK4 in patients with immune-inflammatory diseases; Nurix Therapeutics, Inc. to develop protein degradation therapies; Denali Therapeutics Inc. to treat systemic inflammatory diseases, such as ulcerative colitis; and Adagene Inc. for development of antibody-based therapies. Additionally, it has a collaboration with Scribe Therapeutics Inc. to develop genome editing technologies; Teva Pharmaceuticals to co-develop and co-commercialize TEV'574, for treatment of ulcerative colitis and Crohn's disease; and co-promotion service agreement with Provention Bio, Inc. for the commercialization of teplizumab. The company was formerly known as Sanofi-Aventis and changed its name to Sanofi in May 2011. Sanofi was incorporated in 1994 and is headquartered in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "sgo.pa",
+      "symbol": "SGO.PA",
+      "name": "Compagnie de Saint-Gobain S.A.",
+      "sector": "Industrials",
+      "industry": "Building Products & Equipment",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 34068877312,
+      "employees": 155544,
+      "website": "https://www.saint-gobain.com",
+      "description": "Compagnie de Saint-Gobain S.A., together with its subsidiaries, designs, manufactures, and distributes materials and solutions for the construction and industrial markets worldwide. It operates in five segments: High Performance Solutions; Northern Europe; Southern Europe  Middle East (ME) Americas; and Asia-Pacific. The company offers plaster-based products and systems for the construction and renovation markets under the Placo, Rigips, and Gyproc brands; insulation solutions for a range of applications, such as heating and air conditioning systems, insulation of pipes in industrial installations, engine and interior compartments of vehicles, household appliances, and photovoltaic panels under the Isover, CertainTeed, and Izocam brands; and mortars and construction chemicals under the Weber, Chryso, and GCP brands. It also provides ceilings under the Ecophon, CertainTeed, Eurocoustic, Gyptone, and Vinh Tuong brands; glazing solutions for buildings and mobility, including flat glass under the Saint-Gobain Glass, GlassSolutions, Vetrotech, and SageGlass brands; ductile cast iron pipe systems, covers, and gratings under the PAM brand; glass fiber materials and technical textiles; and abrasives, adhesives, sealants, adhesive tapes, foams, and films. In addition, the company offers ceramics and polymers; and exterior products comprising asphalt and composite shingles, solar roofing solutions, roll roofing systems, accessories, polymer shakes and shingles, and insulation cladding solutions under the CertainTeed brands. Further, it distributes heavy building materials; plumbing, heating, ventilation, and sanitaryware products; construction products; office partitions; timber and byproducts; home improvement products and services; bathrooms and kitchens; steel; and site equipment, PPEs, and tools. Compagnie de Saint-Gobain S.A. was founded in 1665 and is headquartered in Courbevoie, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "stlap.pa",
+      "symbol": "STLAP.PA",
+      "name": "Stellantis N.V.",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Manufacturers",
+      "country": "Netherlands",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 16327582720,
+      "employees": 258668,
+      "website": "https://www.stellantis.com",
+      "description": "Stellantis N.V. engages in the designing, engineering, manufacturing, distribution, and sale of automobiles and light commercial vehicles, engines, transmission systems, and mobility services worldwide. It provides luxury and premium vehicles; sport utility vehicles; and parts and accessories. The company also provides contract services; retail and dealer financing services; and vehicle leasing and rental services, as well as engages in after-market parts and service businesses and data businesses. It offers its products under the Abarth, Alfa Romeo, Chrysler, Citroën, DS Automobiles, Dodge, Fiat, Jeep, Maserati, Ram Trucks, Opel, Lancia, Vauxhall, Peugeot, Free2move, Share Now, Leasys, and Comau brand names through distributors and dealers. The company has a strategic collaboration with Microsoft Corporation for the development of AI initiatives across sales, customer care, and operations. The company operates in North America, France, Brazil, Italy, Germany, the United Kingdom, Turkiye, Spain, Argentina, Belgium, Austria, the Netherlands, Portugal, Poland, Algeria, Morocco, Japan, China, and internationally. Stellantis N.V. was founded in 1899 and is based in Hoofddorp, the Netherlands.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "stmpa.pa",
+      "symbol": "STMPA.PA",
+      "name": "STMicroelectronics N.V.",
+      "sector": "Technology",
+      "industry": "Semiconductors",
+      "country": "Netherlands",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 38000599040,
+      "employees": 49000,
+      "website": "https://www.st.com/content/st_com/en.html",
+      "description": "STMicroelectronics N.V., together with its subsidiaries, designs, develops, manufactures, and sells semiconductor products in Europe, the Middle East, Africa, the Americas, and the Asia Pacific. The company operates through Analog products, MEMS and Sensors Group (AM&S); Power and Discrete products (P&D); Embedded Processing (EMP); and RF Products (D&RF) segments. It offers industrial application-specific integrated circuits (ASICs) and application-specific standard products (ASSPs); power management solutions; custom analog ICs, wireless charging solutions; galvanic isolated gate and LED drivers; converters, transistors, intelligent power switches, clocks and timers, comparators, and current-sense amplifiers; micro-electro-mechanical systems (MEMS) sensors, including accelerometers, gyroscopes, magnetic sensors, pressure, temperature, presence detection, biosensors, machine learning, and edge AI processing smart sensors, as well as thermal and piezoelectric actuators; and optical sensing solutions. The company also provides silicon MOSFETs, SiC MOSFETs, IGBTs, thyristors, rectifiers, and power modules and bipolar transistors; microcontrollers, and automotive microcontrollers and secured; radio frequency (RF) communications and ASICs; car infotainment products; ultra-wide band and radar systems; and Connected Security Products; and automotive driver assistance systems. It serves automotive, industrial, personal electronics and communications equipment, and computers and peripherals markets. STMicroelectronics N.V. was incorporated in 1987 and is headquartered in Schiphol, the Netherlands.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "su.pa",
+      "symbol": "SU.PA",
+      "name": "Schneider Electric S.E.",
+      "sector": "Industrials",
+      "industry": "Specialty Industrial Machinery",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 157401497600,
+      "employees": 156399,
+      "website": "https://www.se.com",
+      "description": "Schneider Electric S.E. engages in the energy management and industrial automation businesses worldwide. The company offers inverters, mounting frames, solar panels, other solar equipment, wind farm microgrid, and others; building management systems; power metering systems for buildings; smart monitoring and regulation of electricity or heat in buildings, such as thermostats and controls for lighting systems; cooling systems; insulating products; UPS; transmission and distribution wiring devices for wiring electrical circuits; low voltage electrical products, equipment, and systems; medium voltage switchgears and control gears; demand response and load shifting equipment, systems, and services; communication, software and control equipment, products, systems, and services for energy; and variable speed drives. It also provides modernization and maintenance services for rail transport infrastructure, zero-emissions road transport, infrastructure required for operating urban transport, low-carbon port and airport infrastructure, and electrification and ports' operations; energy management equipment and projects; service plans related to building management and power metering systems in buildings; software and data-driven solutions for building design, planning, and construction; technical consultations, such as energy audits, simulations, and trainings; energy management services; energy performance contracts; leakage control technologies for water supply systems; real-time network modeling and optimization; leakage calculation, control, and reporting; electrical and electronic equipment; remote monitoring and predictive maintenance systems; lifecycle performance management software; product repairing, refurbishing, or remanufacturing services; spare parts; and software as a service. Schneider Electric S.E. was founded in 1836 and is headquartered in Rueil-Malmaison, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "tep.pa",
+      "symbol": "TEP.PA",
+      "name": "Teleperformance SE",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 4191940096,
+      "employees": 446716,
+      "website": "https://www.tp.com",
+      "description": "Teleperformance SE, together with its subsidiaries, operates as a digital business services company in France and internationally. The company operates in Core Services and Specialized Services segments. The company offers customer relationship, technical assistance, and customer acquisition services; business processes management, and back office and digital platform services; online interpretation, visa application management, health management, recruitment process outsourcing advisory and assistance, and accounts receivable credit management services. It also provides digital CX, trust and safety, artificial intelligence, real-time speech understanding, StoryfAI application, TP microservices, and video CX; back-office processing, integrated sales, finance and accounting, smartshoring, work-at-home, multilingual services, ad sales, and rebadging solutions; advanced analytics, business process optimization, business transformation consulting, and technology services; and claims management, collection services, interpretation and translation, recruitment process outsourcing, visa and consular services, and healthcare support. The company serves automotive, energy and utilities, media, government, technology, travel, hospitality, cargo, banking and financial services, healthcare, insurance, retail and e-commerce, telecom, and video games industries. The company was incorporated in 1910 and is based in Paris, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "tte.pa",
+      "symbol": "TTE.PA",
+      "name": "TotalEnergies SE",
+      "sector": "Energy",
+      "industry": "Oil & Gas Integrated",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 176853647360,
+      "employees": 94847,
+      "website": "https://totalenergies.com",
+      "description": "TotalEnergies SE, an integrated energy company, produces and markets oil and biofuels, natural gas, biogas and low-carbon hydrogen, renewables, and electricity in France, the United States, Europe, Africa, and internationally. It operates through Exploration & Production, Integrated LNG, Integrated Power, Refining & Chemicals, and Marketing & Services segments. The Exploration & Production segment engages in the activities of exploration and production of oil and natural gas, as well as carbon storage. The Integrated LNG segment is involved in the upstream and midstream LNG activities, as well as biogas and synthetic methane activities, as well as gas trading. The Integrated Power segment engages in the generation, storage, electricity trading, and B2B-B2C distribution of gas and electricity. The Refining & Chemicals segment is involved in the industrial hub activities comprising the activities of refining, petrochemicals and specialty chemicals. This segment also includes the activities of oil supply, trading and marine shipping, as well as hydrogen activities. The Marketing & Services segment engages in the marketing activities in the field of petroleum products, as well as corresponding supply and logistics activities. The company was formerly known as TOTAL SE and changed its name to TotalEnergies SE in June 2021. TotalEnergies SE was incorporated in 1924 and is headquartered in Courbevoie, France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "urw.pa",
+      "symbol": "URW.PA",
+      "name": "Unibail-Rodamco-Westfield SE",
+      "sector": "Real Estate",
+      "industry": "REIT - Retail",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 13611072512,
+      "employees": 1933,
+      "website": "https://www.urw.com",
+      "description": "Unibail-Rodamco-Westfield SE (URW) operates vibrant retail-anchored destinations in many of the world's best cities and urban areas. This powerful network attracts over 900 million customer visits annually, supports the growth of major retailers, and makes a significant social and economic contribution to local communities. This network includes 65 owned shopping centres in the US and Europe that represent around 88% of the Group's 49.5 Bn euros asset portfolio  with 41 centres operating under the iconic Westfield brand. URW also has partners who operate Westfield-branded destinations in fast-growing new markets. Through its (A Platform for Growth) business plan, URW is generating organic growth, leveraging the power of the Westfield brand, and unlocking capital light growth opportunities to generate compelling shareholder returns. This is supported by the Group's Better Places' sustainability roadmap, which has established URW as a leader in the real estate industry and one of the 100 most sustainable companies in the world. Unibail-Rodamco-Westfield SE was incorporated in July 23rd, 1968 in France.",
+      "indices": [
+        "cac40"
+      ]
+    },
+    {
+      "ticker": "vie.pa",
+      "symbol": "VIE.PA",
+      "name": "Veolia Environnement SA",
+      "sector": "Industrials",
+      "industry": "Waste Management",
+      "country": "France",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "marketCap": 23323553792,
+      "employees": 203100,
+      "website": "https://www.veolia.com/fr",
+      "description": "Veolia Environnement SA designs and provides water, waste, and energy management solutions. It operates through France and Hazardous Waste Europe; Europe; Americas, Asia Pacific, Africa Middle-East; Water Technologies; and Other segments. The company is involved in resource management; production, treatment, distribution, and delivery of drinking and industrial process water; customer relationship management; collection, treatment, and recycling of wastewater; provision of organic matter, salts, metals, complex molecules, and energy; design and construction of water treatment and network infrastructure; and sale of water treatment equipment, technologies, and facilities. It also provides waste collection, product and waste material recovery, and waste-to-energy processing, including sale of recycled products; material recovery of organic waste; dismantling and remediation; hazardous waste processing and treatment; urban cleaning; and industrial maintenance and cleaning services. In addition, the company engages in the operation and maintenance of heating and cooling networks; optimization of industrial utilities, such as steam generation, cooling, electricity, and compressed air; installation and maintenance of production equipment; development of energy services to reduce energy consumption and CO2 emissions of buildings; integrated services for building management; production of electricity from renewable and alternative energy sources, including geothermy, biomass, co-generation, and wastewater plants, etc.; and provision of Hubgrade, a management platform for building and infrastructure energy efficiency monitoring, as well as thermal and multi-technical services. It serves industrial and service sector companies, public authorities, and individuals. The company was formerly known as Vivendi Environnement and changed its name to Veolia Environnement SA in January 2003. Veolia Environnement SA was founded in 1853 and is headquartered in Aubervilliers, France.",
+      "indices": [
+        "cac40"
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "symbol": "MT.PA",
+      "indices": [
+        "cac40"
+      ],
+      "reason": "only 0 traded sessions in 21 days"
+    }
+  ]
+}

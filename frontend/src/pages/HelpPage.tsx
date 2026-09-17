@@ -66,9 +66,22 @@ export function HelpPage() {
           <div className="space-y-3 text-sm text-slate-300">
             <p>
               The <span className="font-semibold text-slate-200">Dashboard</span>{' '}
-              is your main view, showing GPW stocks ranked by VSA Rating
+              is your main view, showing stocks ranked by VSA Rating
               (0–100). This score measures the quality of volume-spread patterns
               that indicate professional trading activity.
+            </p>
+            <p>
+              The <span className="font-semibold text-slate-200">Market</span>{' '}
+              selector in the top bar (shown when the site covers more than the
+              Warsaw Stock Exchange) picks which exchange every list shows — the
+              GPW, the US (S&amp;P 500 and NASDAQ-100 companies), Germany (DAX),
+              France (CAC 40), the Netherlands (AEX) or the UK (FTSE 100) — or
+              all of them at once. Prices are always in each company's own
+              currency; London prices are in pence (GBX). The heatmap and the
+              investment screen show one market at a time, because they compare
+              money amounts. In Europe the volume is the main exchange's own
+              (Xetra, Euronext, LSE), not every trading venue's — VSA compares a
+              stock with its own past, so the reading stays consistent.
             </p>
 
             <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-3">
@@ -412,7 +425,9 @@ export function HelpPage() {
               <p className="text-slate-400">
                 StockPilot only ranks stocks with a 20-session median turnover
                 &gt; 100,000 PLN and market cap &gt; 100M PLN. This filters out
-                low-liquidity stocks where VSA is unreliable.
+                low-liquidity stocks where VSA is unreliable. For foreign stocks
+                the same floors apply, converted from the stock's own currency
+                at approximate exchange rates.
               </p>
             </div>
 

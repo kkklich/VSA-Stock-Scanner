@@ -61,10 +61,12 @@ def relative_volume(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> Deci
     return Decimal(str(bars[-1].volume / avg))
 
 
-def median_volume_pln(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> float:
-    """Median of (volume × close) over the trailing ``lookback`` sessions, in PLN.
+def median_turnover(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> float:
+    """Median of (volume × close) over the trailing ``lookback`` sessions.
 
-    Used to enforce the liquidity pre-filter: > 100,000 PLN median daily turnover.
+    In the stock's own quote units — złoty for the GPW, pence for London.
+    Feeds the liquidity pre-filter (> 100,000 PLN median daily turnover), which
+    converts the figure with ``app.markets.below_liquidity_floor``.
     Returns 0.0 when there is not enough history.
     """
     sample = [float(b.volume) * float(b.close) for b in bars[-lookback:]]
@@ -75,3 +77,8 @@ def median_volume_pln(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> fl
     if n % 2 == 0:
         return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2
     return sorted_vals[n // 2]
+
+
+# The name the helper had while every tracked stock traded in złoty; kept so
+# existing imports keep working.
+median_volume_pln = median_turnover

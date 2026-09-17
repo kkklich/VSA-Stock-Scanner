@@ -12,16 +12,54 @@ import type { Candle, SignalVerdict, VsaSignal } from '../types'
 // module (ChartsPage imports SignalVerdict alongside ChartInterval).
 export type { SignalVerdict }
 
-// ── GET /api/stocks (tracked GPW companies) ───────────────────────────────────
+// ── GET /api/stocks/markets (the markets this deployment serves) ─────────────
+
+export interface ApiMarketIndex {
+  id: string
+  name: string
+}
+
+export interface ApiMarket {
+  /** "gpw", "us", "de", "fr", "nl", "uk". */
+  id: string
+  name: string
+  shortName: string
+  country: string
+  region: 'poland' | 'europe' | 'usa'
+  exchange: string
+  /** The currency most prices are quoted in ("GBp" = pence). */
+  currency: string
+  /** The currency whole amounts are stated in ("GBP" for a pence market). */
+  majorCurrency: string
+  timezone: string
+  /** What the app appends to a symbol on this market ("" for the GPW). */
+  tickerSuffix: string
+  /** Which nightly run refreshes it: "europe" or "us". */
+  refreshRun: string
+  companyCount: number
+  indices: ApiMarketIndex[]
+}
+
+export async function fetchMarkets(): Promise<ApiMarket[]> {
+  return apiFetch<ApiMarket[]>('/api/stocks/markets')
+}
+
+// ── GET /api/stocks (tracked companies) ───────────────────────────────────────
 
 export interface ApiCompany {
+  /** "kgh" on the GPW; suffixed elsewhere ("aapl.us"). */
   ticker: string
   name: string
   sector: string | null
+  /** Market id; absent from older backends (then: the GPW). */
+  market?: string
+  exchange?: string | null
+  currency?: string | null
 }
 
-export async function fetchCompanies(): Promise<ApiCompany[]> {
-  return apiFetch<ApiCompany[]>('/api/stocks')
+/** Companies of one market, or of every served market (the default). */
+export async function fetchCompanies(market: string = 'all'): Promise<ApiCompany[]> {
+  return apiFetch<ApiCompany[]>(`/api/stocks?market=${encodeURIComponent(market)}`)
 }
 
 // ── GET /api/stocks/ranking ───────────────────────────────────────────────────
@@ -44,6 +82,10 @@ export interface ApiMethodResult {
 export interface ApiRankingItem {
   ticker: string
   name: string
+  /** The market the stock trades on ("gpw", "us", …); absent = the GPW. */
+  market?: string
+  /** The currency its prices are in, as Yahoo writes it ("PLN", "GBp"…); absent = PLN. */
+  currency?: string
   lastPrice: number
   priceChangePct: number
   currentRating: number
@@ -129,7 +171,7 @@ export interface RankingQuery {
   sector?: string
   /** Only stocks whose last signal fired at most this many sessions ago. */
   maxDaysSinceSignal?: number
-  /** Price range in PLN (either bound optional). */
+  /** Price range in each stock's own currency (either bound optional). */
   minPrice?: number
   maxPrice?: number
   /** Minimum 20-session median volume, shares. */
@@ -153,6 +195,8 @@ export interface RankingQuery {
   methods?: string[]
   /** URL-encoded VSA settings JSON from the Scanner page. */
   settings?: string
+  /** Market id, or 'all' for every served market (default: the GPW). */
+  market?: string
 }
 
 /** One page of the ranking feed plus the total count of matching rows. */
@@ -184,6 +228,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     tickers,
     methods,
     settings,
+    market,
   } = query
 
   const params = new URLSearchParams({
@@ -219,6 +264,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (tickers) params.set('tickers', tickers.join(','))
   if (methods && methods.length) params.set('methods', methods.join(','))
   if (settings) params.set('settings', settings)
+  if (market) params.set('market', market)
 
   const { data, headers } = await apiFetchWithHeaders<ApiRankingItem[]>(
     `/api/stocks/ranking?${params}`,
@@ -233,7 +279,10 @@ export interface ApiHeatmapItem {
   ticker: string
   name: string
   sector: string | null
-  /** Market capitalisation in PLN (tile size); null when not known. */
+  market: string
+  /** The currency `lastPrice` is in. */
+  currency: string
+  /** Market capitalisation (tile size) in the major unit of `currency`; null when not known. */
   marketCap: number | null
   lastPrice: number
   /** VSA rating 0–100 (tile color in the default view). */
@@ -254,9 +303,14 @@ export interface ApiHeatmapResponse {
   items: ApiHeatmapItem[]
 }
 
-export async function fetchHeatmap(settings?: string): Promise<ApiHeatmapResponse> {
+/** One market at a time — tiles are sized by market cap. */
+export async function fetchHeatmap(
+  settings?: string,
+  market?: string,
+): Promise<ApiHeatmapResponse> {
   const params = new URLSearchParams()
   if (settings) params.set('settings', settings)
+  if (market) params.set('market', market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiHeatmapResponse>(`/api/stocks/heatmap${qs}`)
 }
@@ -267,6 +321,9 @@ export interface ApiVolumeSurgeItem {
   ticker: string
   name: string
   sector: string | null
+  market: string
+  /** The currency `lastPrice` is in. */
+  currency: string
   lastPrice: number
   /** Average daily volume over the recent window (shares). */
   recentAvgVolume: number
@@ -329,6 +386,8 @@ export interface VolumeSurgeQuery {
   sortDir?: SortDir
   /** URL-encoded VSA settings JSON from the Scanner page. */
   settings?: string
+  /** Market id, or 'all' for every served market (default: the GPW). */
+  market?: string
 }
 
 export async function fetchVolumeSurge(
@@ -343,6 +402,7 @@ export async function fetchVolumeSurge(
   if (query.sortBy) params.set('sortBy', query.sortBy)
   if (query.sortDir) params.set('sortDir', query.sortDir)
   if (query.settings) params.set('settings', query.settings)
+  if (query.market) params.set('market', query.market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiVolumeSurgeResponse>(`/api/stocks/volume-surge${qs}`)
 }
@@ -380,6 +440,7 @@ export interface ApiCapexItem extends ApiCapexSummary {
   ticker: string
   name: string
   sector: string | null
+  market: string
 }
 
 export interface ApiCapexResponse {
@@ -413,10 +474,13 @@ export interface CapexQuery {
   /** Exact sector name, or 'all'/undefined for no filter. */
   sector?: string
   /**
-   * Reporting currency, default 'PLN' — amounts in different currencies are
-   * not comparable. 'all' lifts the filter.
+   * Reporting currency; absent = the market's own (PLN for the GPW, USD for
+   * the US…) — amounts in different currencies are not comparable. 'all'
+   * lifts the filter.
    */
   currency?: string
+  /** One market per request (default: the GPW). */
+  market?: string
   /** False keeps companies with no reported capex (blank rows). */
   withData?: boolean
   page?: number
@@ -436,6 +500,7 @@ export async function fetchCapex(query: CapexQuery = {}): Promise<ApiCapexRespon
   if (query.pageSize) params.set('pageSize', String(query.pageSize))
   if (query.sortBy) params.set('sortBy', query.sortBy)
   if (query.sortDir) params.set('sortDir', query.sortDir)
+  if (query.market) params.set('market', query.market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiCapexResponse>(`/api/stocks/capex${qs}`)
 }
@@ -477,6 +542,8 @@ export interface ApiRatingPoint {
 export interface ApiRatingHistory {
   ticker: string
   name: string | null
+  /** The currency the points' closing prices are in. */
+  currency?: string
   points: ApiRatingPoint[]
   /** "db" = stored snapshots; "computed" = derived on the fly (no history yet). */
   source: 'db' | 'computed'
@@ -514,9 +581,11 @@ export interface ApiSignalEffectiveness {
 
 export async function fetchScannerStats(
   settings?: string,
+  market?: string,
 ): Promise<ApiSignalEffectiveness[]> {
   const params = new URLSearchParams()
   if (settings) params.set('settings', settings)
+  if (market) params.set('market', market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiSignalEffectiveness[]>(`/api/stocks/scanner/stats${qs}`)
 }
@@ -543,6 +612,12 @@ export interface ApiStockSignals {
   ticker: string
   name: string | null
   sector: string | null
+  /** Where the stock trades; absent from older backends (then: the GPW). */
+  market?: string
+  /** The currency the price and every candle are in. */
+  currency?: string
+  /** The listing venue ("GPW", "NASDAQ", "Xetra"…). */
+  exchange?: string | null
   lastPrice: number
   priceChangePct: number
   currentRating: number
@@ -763,6 +838,8 @@ export interface ApiFinancialMetrics {
   totalRevenue: number | null
   netIncome: number | null
   sharesOutstanding: number | null
+  /** The currency revenue, net income and EPS are reported in. */
+  financialCurrency?: string | null
   /** Profitability ratios as fractions (0.184 = 18.4%). */
   returnOnEquity: number | null
   returnOnAssets: number | null
@@ -800,6 +877,10 @@ export interface ApiFundamentals {
   employees: number | null
   website: string | null
   country: string | null
+  market?: string
+  /** The currency the shares trade in (the market cap is in its major unit). */
+  currency?: string
+  exchange?: string | null
   metrics: ApiFinancialMetrics | null
   quarterlyReports: ApiQuarterlyReport[]
   /** Trailing price returns from the stored bars; null if unavailable. */

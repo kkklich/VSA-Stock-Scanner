@@ -1,4 +1,4 @@
-// Sector heatmap page — a Finviz-style treemap of the ranked GPW universe.
+// Sector heatmap page — a Finviz-style treemap of one market's ranked stocks.
 // Stocks are grouped into sector blocks; tile SIZE is the market cap and tile
 // COLOR is either the VSA rating (default view) or the price change over the
 // selected horizon (1D / 1M / 1Y / MAX of stored history). Clicking a tile
@@ -7,11 +7,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { InfoTip } from '../components/ui'
+import { InfoTip, MarketBadge } from '../components/ui'
+import { MarketTabs } from '../components/MarketTabs'
 import { useHeatmap } from '../hooks/useHeatmap'
+import { useSingleMarket } from '../hooks/useMarkets'
 import { usePersistentState } from '../hooks/usePersistentState'
 import type { ApiHeatmapItem } from '../api/stocksApi'
-import { fmtCompactPln, fmtPct } from '../lib/format'
+import { fmtCompactPln, fmtMoney, fmtPct, majorCurrency } from '../lib/format'
+import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { useChartPalette, type ChartPalette } from '../lib/chartTheme'
 
 /* ── Color modes ────────────────────────────────────────────────────────── */
@@ -247,10 +250,12 @@ function HeatmapTooltip({
       ? Math.max(4, tip.y - 16 - height)
       : tip.y + 16
   const rows: [string, string][] = [
-    ['Price', `${tip.item.lastPrice.toFixed(2)} PLN`],
+    ['Price', fmtMoney(tip.item.lastPrice, tip.item.currency)],
     [
       'Market cap',
-      tip.item.marketCap === null ? '—' : fmtCompactPln(tip.item.marketCap),
+      tip.item.marketCap === null
+        ? '—'
+        : `${fmtCompactPln(tip.item.marketCap)} ${majorCurrency(tip.item.currency)}`,
     ],
     ['VSA rating', String(tip.item.currentRating)],
     ['Signal', tip.item.lastSignal],
@@ -264,9 +269,10 @@ function HeatmapTooltip({
       className="pointer-events-none absolute z-30 rounded-lg border border-slate-700 bg-slate-800/95 px-3 py-2 text-xs shadow-xl"
       style={{ left, top, width }}
     >
-      <div className="mb-1 font-semibold text-slate-100">
-        {tip.item.ticker}
-        <span className="ml-1.5 font-normal text-slate-400">{tip.item.name}</span>
+      <div className="mb-1 flex items-center gap-1.5 font-semibold text-slate-100">
+        {displayTicker(tip.item.ticker)}
+        <MarketBadge market={tip.item.market} />
+        <span className="truncate font-normal text-slate-400">{tip.item.name}</span>
       </div>
       <div className="mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">
         {tip.item.sector ?? 'Other'}
@@ -286,7 +292,10 @@ function HeatmapTooltip({
 /* ── Page ───────────────────────────────────────────────────────────────── */
 
 export function SectorHeatmapPage() {
-  const { data, loading, error, refetch } = useHeatmap()
+  // One market per map: tiles are sized by market cap, and caps in different
+  // currencies cannot share one treemap.
+  const { market, markets, needsPicker, pick } = useSingleMarket()
+  const { data, loading, error, refetch } = useHeatmap(market)
   const palette = useChartPalette()
   const [mode, setMode] = usePersistentState<ColorMode>(
     'stockpilot:heatmap:colorMode',
@@ -372,7 +381,7 @@ export function SectorHeatmapPage() {
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
             Sector heatmap
-            <InfoTip text="Every ranked GPW stock as one tile, grouped by sector. Tile size = market cap. Tile color = VSA rating, or the price change over the selected period. Click a tile to open the stock's chart." />
+            <InfoTip text="Every ranked stock of the selected market as one tile, grouped by sector. Tile size = market cap. Tile color = VSA rating, or the price change over the selected period. Click a tile to open the stock's chart." />
           </h2>
           <p className="text-sm text-slate-500">
             Size = market cap · {activeHint.toLowerCase()}
@@ -380,6 +389,13 @@ export function SectorHeatmapPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {needsPicker && markets && (
+            <MarketTabs
+              markets={markets}
+              value={market ?? GPW_MARKET}
+              onChange={pick}
+            />
+          )}
           <Legend mode={mode} palette={palette} />
           <div
             role="group"
@@ -493,7 +509,7 @@ export function SectorHeatmapPage() {
                     })
                   }
                   onBlur={() => setTip(null)}
-                  aria-label={`${item.ticker} — ${item.name}`}
+                  aria-label={`${displayTicker(item.ticker)} — ${item.name}`}
                   className="absolute overflow-hidden border border-slate-950 leading-tight transition-[filter] hover:brightness-125 focus:z-10 focus:outline focus:outline-1 focus:outline-slate-200"
                   style={{
                     left: rect.x,
@@ -509,7 +525,7 @@ export function SectorHeatmapPage() {
                       style={{ fontSize }}
                     >
                       <span className="max-w-full truncate font-bold text-white/95">
-                        {item.ticker}
+                        {displayTicker(item.ticker)}
                       </span>
                       {showValue && (
                         <span

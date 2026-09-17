@@ -55,7 +55,7 @@
   "pageTitles": {
     "dashboard": "Dashboard",
     "watchlist": "Watchlist",
-    "scanner": "VSA Scanner — GPW",
+    "scanner": "VSA Scanner",
     "heatmap": "Sector Heatmap",
     "volumeSurge": "Volume Surge",
     "investment": "Investment Spending",
@@ -70,14 +70,14 @@
   "dashboard": {
     "heading": "Best stocks today",
     "headingInfo": "Companies ranked across the trading methods you select. Each method scores every stock 0–100 and flags whether its setup fired recently; the Combined column is the average across your chosen methods. Pick methods with the Methods button.",
-    "subtitle": "Multi-method ranking across the GPW after the latest close.",
+    "subtitle": "Multi-method ranking — {{market}} — after the latest close.",
     "searchPlaceholder": "Search stocks…",
     "filter": "Filter",
     "minRating": "Minimum VSA rating",
     "signal": "Signal",
     "all": "All",
     "clearFilters": "Clear filters",
-    "loading": "Loading GPW rankings…",
+    "loading": "Loading rankings…",
     "backendError": "Backend error:",
     "loadingMore": "Loading more stocks…",
     "showing": "Showing {{shown}} of {{total}} stocks",
@@ -169,7 +169,7 @@
     "loading": "Loading chart data…",
     "failedToLoad": "{{ticker}} — failed to load",
     "noIntradayTitle": "No {{interval}} data for {{ticker}}",
-    "noIntradayBody": "Yahoo Finance does not publish intraday candles for every GPW listing. Pick 1D or 1W above — the daily and weekly charts, and everything else on this page, are unaffected.",
+    "noIntradayBody": "Yahoo Finance does not publish intraday candles for every listing. Pick 1D or 1W above — the daily and weekly charts, and everything else on this page, are unaffected.",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessions",
     "bars_one": "{{count}} bar",
@@ -299,12 +299,13 @@
     "running": "Downloading & recalculating…",
     "failed": "Refresh failed",
     "updated": "Updated {{time}}",
-    "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after the GPW close (18:00).",
+    "today": "today",
+    "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after each exchange's close (18:00 Warsaw time for the GPW and Europe, 17:15 New York time for the US).",
     "titleFailed": "Refresh failed: {{error}}"
   },
   "legal": {
     "pageTitle": "Legal information",
-    "intro": "StockPilot is a free, automated technical-analysis tool for companies listed on the Warsaw Stock Exchange (GPW). What follows describes what the ratings published here are — and are not — who is responsible for the site, and what data it processes.",
+    "intro": "StockPilot is a free, automated technical-analysis tool for companies listed on the Warsaw Stock Exchange (GPW) and on selected foreign exchanges (NASDAQ, NYSE, Xetra, Euronext Paris, Euronext Amsterdam, London Stock Exchange). What follows describes what the ratings published here are — and are not — who is responsible for the site, and what data it processes.",
     "updated": "Last updated: 8 September 2026",
     "inlineNote": "Automated technical analysis of historical data — this is not investment advice.",
     "inlineLink": "Legal information",
@@ -326,7 +327,7 @@
       "title": "Legal disclaimer",
       "what": {
         "heading": "What this site is",
-        "body": "StockPilot analyses the historical price and volume data of GPW-listed companies using Volume Spread Analysis (VSA) and several other mechanical technical-analysis methods. The output is a numeric rating on a 0–100 scale plus a description of the pattern detected on the chart. The site is free to use."
+        "body": "StockPilot analyses the historical price and volume data of the listed companies it covers using Volume Spread Analysis (VSA) and several other mechanical technical-analysis methods. The output is a numeric rating on a 0–100 scale plus a description of the pattern detected on the chart. The site is free to use."
       },
       "method": {
         "heading": "Methodology",
@@ -354,7 +355,7 @@
       },
       "dating": {
         "heading": "Dating of the ratings",
-        "body": "Every rating carries the date of the trading session it was computed for. Data refreshes automatically once a day after the GPW close. A rating computed earlier may no longer match the current state of the market."
+        "body": "Every rating carries the date of the trading session it was computed for. Data refreshes automatically once a day after the close of each exchange. A rating computed earlier may no longer match the current state of the market."
       }
     },
     "terms": {
@@ -365,7 +366,7 @@
       },
       "service": {
         "heading": "2. The service",
-        "body": "The service consists of making the results of automated technical analysis of GPW-listed companies — the ranking, charts, signals and indicators — available electronically, free of charge. No registration or account is required. The agreement is concluded for a definite period and ends when you leave the site."
+        "body": "The service consists of making the results of automated technical analysis of the listed companies it covers — the ranking, charts, signals and indicators — available electronically, free of charge. No registration or account is required. The agreement is concluded for a definite period and ends when you leave the site."
       },
       "requirements": {
         "heading": "3. Technical requirements",
@@ -446,7 +447,8 @@
         "running": "Running",
         "stale": "Did not run",
         "failed": "Failed",
-        "never": "Never ran"
+        "never": "Never ran",
+        "label": "Status"
       },
       "summaryOk": "The last refresh finished {{hours}} h ago and fetched {{fetched}} companies.",
       "summaryRunning": "A refresh is running right now.",
@@ -462,7 +464,12 @@
       "fetched": "Fetched",
       "skipped": "Skipped",
       "failed": "Failed",
-      "bars": "Bars written"
+      "bars": "Bars written",
+      "run": "Nightly run",
+      "runName": {
+        "europe": "Europe + GPW",
+        "us": "USA"
+      }
     },
     "data": {
       "title": "Stored data",
@@ -485,7 +492,8 @@
       "bars": "Bars stored",
       "snapshots": "Newest rating",
       "behind": "Behind",
-      "summaryUpdating": "A refresh is in progress — {{current}} of {{tracked}} companies updated to {{date}} so far."
+      "summaryUpdating": "A refresh is in progress — {{current}} of {{tracked}} companies updated to {{date}} so far.",
+      "market": "Market"
     },
     "errors": {
       "title": "Errors",
@@ -530,5 +538,28 @@
       "save": "Save",
       "saved": "Saved"
     }
+  },
+  "markets": {
+    "label": "Market",
+    "all": "All markets",
+    "short": {
+      "gpw": "GPW (Poland)",
+      "us": "USA",
+      "de": "Germany",
+      "fr": "France",
+      "nl": "Netherlands",
+      "uk": "United Kingdom"
+    },
+    "name": {
+      "gpw": "Warsaw Stock Exchange (GPW)",
+      "us": "US market (NASDAQ, NYSE)",
+      "de": "Xetra (Germany)",
+      "fr": "Euronext Paris (France)",
+      "nl": "Euronext Amsterdam (Netherlands)",
+      "uk": "London Stock Exchange (United Kingdom)",
+      "all": "all markets"
+    },
+    "oneAtATime": "This page shows one market at a time.",
+    "ownCurrency": "Prices are in each company's own currency."
   }
 }

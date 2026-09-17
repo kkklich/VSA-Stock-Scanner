@@ -11,17 +11,23 @@ export interface UseScannerStatsResult {
   error: string | null
 }
 
-export function useScannerStats(settings?: string): UseScannerStatsResult {
+/** `market` null holds the request (the market is still being resolved). */
+export function useScannerStats(
+  settings?: string,
+  market: string | null = 'gpw',
+): UseScannerStatsResult {
   const [data, setData] = useState<ApiSignalEffectiveness[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (market === null) return
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    fetchScannerStats(settings)
+    // The GPW is the backend default; leaving it out keeps the request as it was.
+    fetchScannerStats(settings, market === 'gpw' ? undefined : market)
       .then((items) => {
         if (!cancelled) {
           setData(items)
@@ -38,7 +44,7 @@ export function useScannerStats(settings?: string): UseScannerStatsResult {
     return () => {
       cancelled = true
     }
-  }, [settings])
+  }, [settings, market])
 
   return { data, loading, error }
 }

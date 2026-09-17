@@ -9,8 +9,9 @@ looked exactly like a run that worked.
 Three readings make up the answer:
 
 * **Ingest** — the last ``job.refresh`` / ``job.ingest`` entries from the
-  action log, measured against the scheduled 18:00 Warsaw run. "Stale" means
-  the run came due and nothing happened; "failed" means it ran and blew up.
+  action log, measured against each scheduled nightly run (18:00 Warsaw for
+  the GPW and Europe, 17:15 New York for the US). "Stale" means the run came
+  due and nothing happened; "failed" means it ran and blew up.
 * **Data** — what is actually in the database: the newest stored session, how
   many tracked companies have it, how far the history reaches. A refresh can
   report success and still leave the data a week old if the provider served
@@ -23,13 +24,14 @@ fetched, so it can be tested without a database, an HTTP client or a clock.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.db.health_repository import StoredDataStats
-from app.models import DataHealth, ErrorHealth, IngestHealth
+from app.db.health_repository import MarketStoredStats, StoredDataStats
+from app.models import DataHealth, ErrorHealth, IngestHealth, MarketDataHealth
 from app.services.action_log import (
     OUTCOME_FAILED,
     OUTCOME_FINISHED,
@@ -124,14 +126,16 @@ def _weekdays_through(day: date) -> int:
     return weeks * 5 + min(remainder, _WEEKEND_START)
 
 
-def last_scheduled_run(now: datetime, hour: int, minute: int) -> datetime:
-    """The most recent moment the nightly job was due, at or before ``now``.
+def last_scheduled_run(
+    now: datetime, hour: int, minute: int, timezone: str = "Europe/Warsaw"
+) -> datetime:
+    """The most recent moment a nightly job was due, at or before ``now``.
 
-    Computed in Europe/Warsaw (the schedule's own zone) so it stays correct
-    across daylight-saving changes rather than drifting by an hour twice a
-    year.
+    Computed in the schedule's own zone (Europe/Warsaw, or America/New_York for
+    the US run) so it stays correct across daylight-saving changes rather than
+    drifting by an hour twice a year.
     """
-    local = now.astimezone(_WARSAW)
+    local = now.astimezone(ZoneInfo(timezone))
     due = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if due > local:
         due -= timedelta(days=1)
@@ -148,6 +152,9 @@ def evaluate_ingest(
     hour: int,
     minute: int,
     last_error: str | None = None,
+    timezone: str = "Europe/Warsaw",
+    run_id: str | None = None,
+    markets: Sequence[str] = (),
 ) -> IngestHealth:
     """Did the refresh run, and did it work?
 
@@ -167,7 +174,8 @@ def evaluate_ingest(
         (j for j in ingests if j.outcome in (OUTCOME_FINISHED, OUTCOME_FAILED)), None
     )
 
-    expected = last_scheduled_run(now, hour, minute)
+    expected = last_scheduled_run(now, hour, minute, timezone)
+    schedule = f"{hour:02d}:{minute:02d} {timezone}"
     ran_since_expected = (
         last_success.started_at >= expected if last_success is not None else False
     )
@@ -182,8 +190,7 @@ def evaluate_ingest(
         status = "never"
         summary = (
             "No data refresh has been recorded yet. "
-            "The nightly job runs at "
-            f"{hour:02d}:{minute:02d} Europe/Warsaw."
+            f"The nightly job runs at {schedule}."
             if scheduler_active
             else "No data refresh has been recorded, and no nightly schedule is "
             "running (the app has no database configured)."
@@ -248,7 +255,43 @@ def evaluate_ingest(
         next_run_at=_iso(next_run_at),
         next_run_local=_local(next_run_at),
         scheduler_active=scheduler_active,
-        schedule=f"{hour:02d}:{minute:02d} Europe/Warsaw",
+        schedule=schedule,
+        run_id=run_id,
+        markets=list(markets),
+    )
+
+
+def job_covers(job: JobRecord, market_ids: Sequence[str], *, legacy: bool) -> bool:
+    """Did this recorded refresh/ingest include any of ``market_ids``?
+
+    Entries written before runs were split by market carry no ``markets``;
+    those were GPW-only runs, so they count for the run that covers the GPW
+    (``legacy``) and for no other.
+    """
+    covered = (job.detail or {}).get("markets")
+    if covered is None:
+        return legacy
+    return any(m in covered for m in market_ids)
+
+
+_INGEST_SEVERITY = {"ok": 0, "running": 1, "never": 2, "stale": 3, "failed": 4}
+
+
+def combine_ingest(runs: Sequence[IngestHealth]) -> IngestHealth:
+    """One reading for several nightly runs: the worst, carrying all of them."""
+    if len(runs) == 1:
+        return runs[0]
+    worst_run = max(runs, key=lambda r: _INGEST_SEVERITY.get(r.status, 2))
+    summary = " ".join(
+        f"{(r.run_id or 'run').upper()}: {r.summary}" for r in runs
+    )
+    return worst_run.model_copy(
+        update={
+            "summary": summary,
+            "markets": [m for r in runs for m in r.markets],
+            "schedule": "; ".join(r.schedule for r in runs),
+            "runs": list(runs),
+        }
     )
 
 
@@ -300,6 +343,18 @@ def evaluate_data(
         )
 
     age_days = (today - stats.latest_bar_date).days
+    market_rows = [
+        _market_data(m, today=today, refresh_running=refresh_running)
+        for m in stats.markets
+    ]
+    if len(market_rows) > 1:
+        return _multi_market_data(
+            stats,
+            market_rows,
+            tickers_tracked=tickers_tracked,
+            age_days=age_days,
+        )
+
     # The verdict is taken on weekdays; `age_days` stays the plain calendar
     # number the screen shows, which is what a reader counts on a calendar.
     age_weekdays = weekdays_between(stats.latest_bar_date, today)
@@ -354,6 +409,89 @@ def evaluate_data(
         tickers_behind=stats.tickers_behind,
         coverage_pct=round(coverage * 100.0, 1) if coverage is not None else None,
         bar_count=stats.bar_count,
+        markets=market_rows,
+    )
+
+
+_DATA_SEVERITY = {"ok": 0, "updating": 1, "empty": 2, "stale": 3}
+
+
+def _market_data(
+    stats: MarketStoredStats, *, today: date, refresh_running: bool
+) -> MarketDataHealth:
+    """The same freshness rules as the whole-database verdict, for one market."""
+    newest = stats.latest_bar_date
+    coverage = (
+        stats.tickers_current / stats.tickers_tracked if stats.tickers_tracked else None
+    )
+    if newest is None:
+        status = "empty"
+    elif weekdays_between(newest, today) > _MAX_SESSION_AGE_WEEKDAYS:
+        status = "stale"
+    elif coverage is not None and coverage < _MIN_COVERAGE:
+        status = "updating" if refresh_running else "stale"
+    else:
+        status = "ok"
+    return MarketDataHealth(
+        market=stats.market,
+        status=status,
+        latest_bar_date=newest.isoformat() if newest else None,
+        session_age_days=(today - newest).days if newest else None,
+        tickers_tracked=stats.tickers_tracked,
+        tickers_with_data=stats.tickers_with_data,
+        tickers_current=stats.tickers_current,
+        coverage_pct=round(coverage * 100.0, 1) if coverage is not None else None,
+    )
+
+
+def _multi_market_data(
+    stats: StoredDataStats,
+    markets: list[MarketDataHealth],
+    *,
+    tickers_tracked: int,
+    age_days: int,
+) -> DataHealth:
+    """The whole-database verdict when several markets are served."""
+    worst = max(markets, key=lambda m: _DATA_SEVERITY.get(m.status, 3))
+    status = worst.status
+    if status == "ok":
+        summary = (
+            f"{stats.tickers_current} of {tickers_tracked} companies are current "
+            f"on {len(markets)} markets."
+        )
+    else:
+        problems = [m for m in markets if m.status != "ok"]
+        summary = " ".join(
+            f"{m.market.upper()}: "
+            + (
+                "no stored data yet."
+                if m.status == "empty"
+                else f"{m.tickers_current} of {m.tickers_tracked} companies have "
+                f"data for {m.latest_bar_date}"
+                + (" (a refresh is in progress)." if m.status == "updating" else ".")
+            )
+            for m in problems
+        )
+    coverage = stats.tickers_current / tickers_tracked if tickers_tracked else None
+    return DataHealth(
+        status=status,
+        summary=summary,
+        db_enabled=True,
+        latest_bar_date=stats.latest_bar_date.isoformat() if stats.latest_bar_date else None,
+        earliest_bar_date=(
+            stats.earliest_bar_date.isoformat() if stats.earliest_bar_date else None
+        ),
+        latest_snapshot_date=(
+            stats.latest_snapshot_date.isoformat() if stats.latest_snapshot_date else None
+        ),
+        session_age_days=age_days,
+        tickers_tracked=tickers_tracked,
+        tickers_with_data=stats.tickers_with_data,
+        tickers_current=stats.tickers_current,
+        tickers_behind=stats.tickers_behind,
+        coverage_pct=round(coverage * 100.0, 1) if coverage is not None else None,
+        bar_count=stats.bar_count,
+        markets=markets,
     )
 
 

@@ -38,7 +38,9 @@ from app.services.cache import TTLCache
 
 
 class _FakeCompanyService:
-    def get_companies(self) -> list[GpwCompany]:
+    def get_companies(self, market: str = "gpw") -> list[GpwCompany]:
+        if market != "gpw":
+            return []
         return [GpwCompany(ticker="kgh", name="KGHM", sector="Mining", market_cap=None)]
 
 
@@ -261,7 +263,7 @@ class TestGenerationGuard:
 
         # …but the cache did not keep it: the next request recomputes rather
         # than serving pre-refresh numbers for the whole TTL.
-        assert cache.get("ranking:full") is None
+        assert cache.get("ranking:gpw:full") is None
         await _call_ranking(cache)
         assert calls == 2
 
@@ -274,7 +276,7 @@ class TestGenerationGuard:
         monkeypatch.setattr(stocks, "compute_ranking", fake_compute)
 
         await _call_ranking(cache)
-        assert cache.get("ranking:full") is not None
+        assert cache.get("ranking:gpw:full") is not None
 
     async def test_scanner_stats_computed_during_a_refresh_is_not_cached(
         self, monkeypatch: pytest.MonkeyPatch, cache: _CountingCache
@@ -292,7 +294,7 @@ class TestGenerationGuard:
         stats = await _call_scanner_stats(cache)
         assert len(stats) == 1  # served
 
-        assert cache.get("scanner:stats") is None  # but not remembered
+        assert cache.get("scanner:stats:gpw") is None  # but not remembered
         await _call_scanner_stats(cache)
         assert calls == 2
 
@@ -305,4 +307,4 @@ class TestGenerationGuard:
         monkeypatch.setattr(stocks, "compute_scanner_stats", fake_compute)
 
         await _call_scanner_stats(cache)
-        assert cache.get("scanner:stats") is not None
+        assert cache.get("scanner:stats:gpw") is not None

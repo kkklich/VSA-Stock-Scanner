@@ -1,5 +1,6 @@
 // Company picker for the stock-detail header. Renders as plain heading text;
-// clicking it turns into a searchable input with a dropdown of GPW companies.
+// clicking it turns into a searchable input with a dropdown of the tracked
+// companies on every served market (each foreign one marked with its market).
 // Choosing one navigates to /stock/:ticker. Falls back to navigating to a typed
 // ticker when the company list can't be loaded.
 
@@ -7,6 +8,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { useCompanies } from '../hooks/useCompanies'
+import { displayTicker, marketOfTicker } from '../lib/markets'
+import { MarketBadge } from './ui'
 
 const MAX_RESULTS = 50
 
@@ -96,8 +99,9 @@ export function CompanyPicker({
           {name ?? ticker.toUpperCase()}
         </span>
         <span className="text-xl font-bold text-slate-500">
-          ({ticker.toUpperCase()})
+          ({displayTicker(ticker).toUpperCase()})
         </span>
+        <MarketBadge market={marketOfTicker(ticker)} />
         <ChevronDown
           size={16}
           className="text-slate-500 opacity-60 transition-opacity group-hover:opacity-100"
@@ -140,11 +144,12 @@ export function CompanyPicker({
                   (i === highlight ? 'bg-slate-800' : 'hover:bg-slate-800/60')
                 }
               >
-                <span className="min-w-0">
+                <span className="flex min-w-0 items-center gap-1.5">
                   <span className="font-semibold text-slate-100">
-                    {c.ticker.toUpperCase()}
-                  </span>{' '}
-                  <span className="text-slate-500">{c.name}</span>
+                    {displayTicker(c.ticker).toUpperCase()}
+                  </span>
+                  <MarketBadge market={c.market ?? marketOfTicker(c.ticker)} />
+                  <span className="truncate text-slate-500">{c.name}</span>
                 </span>
                 {isCurrent && (
                   <Check size={14} className="shrink-0 text-emerald-400" />

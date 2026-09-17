@@ -181,6 +181,26 @@ class IngestHealth(_CamelModel):
     # look like a failure when it is a configuration.
     scheduler_active: bool
     schedule: str
+    # Which nightly run this describes ("europe", "us") and the markets it
+    # refreshes. On the top-level object: the worst of the runs, whose own
+    # readings are in ``runs`` (empty when there is only one run).
+    run_id: str | None = None
+    markets: list[str] = []
+    runs: list[IngestHealth] = []
+
+
+class MarketDataHealth(_CamelModel):
+    """How fresh one market's stored data is."""
+
+    market: str
+    # ok | updating | stale | empty
+    status: str
+    latest_bar_date: str | None = None
+    session_age_days: int | None = None
+    tickers_tracked: int
+    tickers_with_data: int
+    tickers_current: int
+    coverage_pct: float | None = None
 
 
 class DataHealth(_CamelModel):
@@ -202,6 +222,10 @@ class DataHealth(_CamelModel):
     tickers_behind: int | None = None
     coverage_pct: float | None = None
     bar_count: int | None = None
+    # One reading per served market; the overall status is the worst of them.
+    # (Markets close at different times — US stocks without today's bar at
+    # 20:00 Warsaw are not behind, their run is at 23:15.)
+    markets: list[MarketDataHealth] = []
 
 
 class ErrorHealth(_CamelModel):

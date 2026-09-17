@@ -28,7 +28,10 @@ export interface UseCapexResult {
   refetch: () => void
 }
 
-export function useCapex(query: CapexQuery): UseCapexResult {
+export function useCapex(
+  query: CapexQuery,
+  { enabled = true }: { enabled?: boolean } = {},
+): UseCapexResult {
   const [items, setItems] = useState<ApiCapexItem[]>([])
   const [meta, setMeta] = useState<ApiCapexResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,16 +39,17 @@ export function useCapex(query: CapexQuery): UseCapexResult {
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  const { q, sector, currency, withData, page, pageSize, sortBy, sortDir } = query
+  const { q, sector, currency, withData, page, pageSize, sortBy, sortDir, market } = query
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     const firstPage = page === 1
     if (firstPage) setLoading(true)
     else setLoadingMore(true)
     setError(null)
 
-    fetchCapex({ q, sector, currency, withData, page, pageSize, sortBy, sortDir })
+    fetchCapex({ q, sector, currency, withData, page, pageSize, sortBy, sortDir, market })
       .then((resp) => {
         if (cancelled) return
         setMeta(resp)
@@ -70,7 +74,7 @@ export function useCapex(query: CapexQuery): UseCapexResult {
     return () => {
       cancelled = true
     }
-  }, [q, sector, currency, withData, page, pageSize, sortBy, sortDir, tick])
+  }, [q, sector, currency, withData, page, pageSize, sortBy, sortDir, market, tick, enabled])
 
   const hasMore = meta !== null && items.length < meta.totalCount
 

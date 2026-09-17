@@ -116,8 +116,8 @@ class _FakeCompanyService:
     def __init__(self, companies: list[GpwCompany]) -> None:
         self._companies = companies
 
-    def get_companies(self) -> list[GpwCompany]:
-        return self._companies
+    def get_companies(self, market: str = "gpw") -> list[GpwCompany]:
+        return self._companies if market == "gpw" else []
 
 
 @pytest.fixture(autouse=True)

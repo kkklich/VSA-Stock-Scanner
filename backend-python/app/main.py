@@ -10,10 +10,12 @@ Lifespan sequence
 1. Open shared stooq HTTP client.
 2. (If DATABASE_URL is set) Create async DB engine, conditionally create tables,
    build repo, and start the action log's database writer.
-3. Bootstrap: if fewer than 90% of tickers have today's data in DB, trigger a
-   full ingest in the background (non-blocking — first API call may still hit
-   stooq.pl while ingest runs).
-4. Start nightly APScheduler job (18:00 Warsaw time).
+3. Start-up check, per served market: a market with (almost) no stored data
+   gets the full ~400-day download, one whose newest finished session is
+   missing gets the ordinary top-up — in the background, so the app is live
+   meanwhile.
+4. Start the nightly APScheduler jobs: 18:00 Warsaw time for the GPW and the
+   European markets, 17:15 New York time for the US (when served).
 5. Yield (app is live).
 6. Shutdown: stop scheduler, flush and stop the action log, dispose DB engine,
    close HTTP client.
@@ -50,6 +52,7 @@ from app.dependencies import (
     set_scheduler,
     yahoo_client,
 )
+from app.markets import enabled_markets, refresh_runs
 from app.routers import admin, stocks
 from app.services.action_log import (
     OUTCOME_FINISHED,
@@ -81,6 +84,8 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     # 2026-07-21, alembic 002 — profitability ratios for the returns card.
     ("company_fundamentals", "return_on_equity", "DOUBLE PRECISION"),
     ("company_fundamentals", "return_on_assets", "DOUBLE PRECISION"),
+    # 2026-09-17, alembic 005 — reporting currency, for the non-GPW markets.
+    ("company_fundamentals", "financial_currency", "VARCHAR(8)"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is
@@ -91,7 +96,16 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
 # careless about where a value originates.
 _SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _ALLOWED_COLUMN_TYPES = frozenset(
-    {"DOUBLE PRECISION", "INTEGER", "BIGINT", "TEXT", "BOOLEAN", "NUMERIC", "DATE"}
+    {
+        "DOUBLE PRECISION",
+        "INTEGER",
+        "BIGINT",
+        "TEXT",
+        "BOOLEAN",
+        "NUMERIC",
+        "DATE",
+        "VARCHAR(8)",
+    }
 )
 
 
@@ -116,11 +130,18 @@ async def lifespan(_app: FastAPI):
     # logger, so no call site has to know it exists.
     error_handler = ErrorTrackingHandler(error_tracker)
     logging.getLogger().addHandler(error_handler)
+    served = [m.id for m in enabled_markets()]
     action_log.log_job(
         "job.startup",
         OUTCOME_STARTED,
-        detail={"version": __version__, "dbConfigured": settings.db_enabled},
+        detail={
+            "version": __version__,
+            "dbConfigured": settings.db_enabled,
+            "markets": served,
+        },
     )
+    # Said once at startup, where a typo in STOCKPILOT_MARKETS is also reported.
+    logger.info("Markets served: %s.", ", ".join(served))
 
     # ── 1. HTTP client ────────────────────────────────────────────────────────
     client = create_http_client()
@@ -177,7 +198,7 @@ async def lifespan(_app: FastAPI):
                 # database reachable.
                 set_refresh_service(
                     RefreshService(
-                        companies=gpw_company_service.get_companies(),
+                        companies=gpw_company_service.enabled_companies(),
                         stooq=yahoo_client,
                         history_cache=history_cache,
                         ranking_cache=ranking_cache,
@@ -223,7 +244,8 @@ async def lifespan(_app: FastAPI):
                         log_repo, settings.action_log_retention_days
                     )
 
-                companies = gpw_company_service.get_companies()
+                # Every company on every served market; each run picks its own.
+                companies = gpw_company_service.enabled_companies()
                 # The process-wide market-data client (app/dependencies.py) —
                 # the same object every endpoint reads through.
                 stooq = yahoo_client
@@ -249,28 +271,35 @@ async def lifespan(_app: FastAPI):
                 )
                 set_refresh_service(refresh_svc)
 
-                # ── 3. Bootstrap refresh ──────────────────────────────────────
-                if await ingest_svc.needs_bootstrap():
-                    logger.info("DB has no data for today — starting bootstrap refresh.")
-                    refresh_svc.start(full=True, trigger="bootstrap")
+                # ── 3. Start-up download ──────────────────────────────────────
+                plan = await ingest_svc.bootstrap_plan()
+                if plan.needed:
+                    logger.info(
+                        "Start-up data check: full download for %s; top-up for %s.",
+                        ", ".join(plan.full) or "no market",
+                        ", ".join(plan.catch_up) or "no market",
+                    )
+                    refresh_svc.start(
+                        trigger="bootstrap",
+                        markets=plan.markets,
+                        full_markets=plan.full,
+                    )
                 else:
-                    logger.info("DB bootstrap not needed — today's data already present.")
+                    logger.info("Start-up data check: every served market is current.")
 
                 # ── 4. Nightly scheduler ──────────────────────────────────────
-                scheduler = build_scheduler(
-                    refresh_svc,
-                    hour=settings.ingest_hour,
-                    minute=settings.ingest_minute,
-                )
+                runs = refresh_runs()
+                scheduler = build_scheduler(refresh_svc, runs=runs)
                 scheduler.start()
                 # Exposed so the health endpoint can report the next run time
                 # from the scheduler itself rather than from the setting that
                 # was meant to configure it.
                 set_scheduler(scheduler)
                 logger.info(
-                    "Scheduler started — next refresh at %02d:%02d Europe/Warsaw.",
-                    settings.ingest_hour,
-                    settings.ingest_minute,
+                    "Scheduler started — nightly runs: %s.",
+                    "; ".join(
+                        f"{run.schedule} ({', '.join(run.market_ids)})" for run in runs
+                    ),
                 )
         else:
             logger.info(
@@ -282,7 +311,7 @@ async def lifespan(_app: FastAPI):
             # is not persisted in this mode.
             set_refresh_service(
                 RefreshService(
-                    companies=gpw_company_service.get_companies(),
+                    companies=gpw_company_service.enabled_companies(),
                     stooq=yahoo_client,
                     history_cache=history_cache,
                     ranking_cache=ranking_cache,

@@ -41,6 +41,7 @@ from app.dependencies import (
     get_refresh_service,
     get_scheduler,
 )
+from app.markets import GPW_ID, refresh_runs
 from app.models import (
     ActionLogItem,
     ActionLogResponse,
@@ -55,9 +56,11 @@ from app.services.error_tracker import ErrorGroup, ErrorTracker
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.system_health import (
     JobRecord,
+    combine_ingest,
     evaluate_data,
     evaluate_errors,
     evaluate_ingest,
+    job_covers,
     overall_status,
 )
 
@@ -492,12 +495,12 @@ async def _job_records(
     ]
 
 
-def _next_scheduled_run(scheduler: Any | None) -> datetime | None:
-    """When the nightly job will next fire, asked of the scheduler itself."""
+def _next_scheduled_run(scheduler: Any | None, job_id: str) -> datetime | None:
+    """When a nightly job will next fire, asked of the scheduler itself."""
     if scheduler is None:
         return None
     try:
-        job = scheduler.get_job("daily_ingest")
+        job = scheduler.get_job(job_id)
         return getattr(job, "next_run_time", None) if job is not None else None
     except Exception:  # noqa: BLE001 — a status read must not fail on this
         logger.debug("Could not read the next scheduled run time.")
@@ -506,12 +509,13 @@ def _next_scheduled_run(scheduler: Any | None) -> datetime | None:
 
 async def _stored_data_stats(
     repo: DataHealthRepository | None,
+    tracked: dict[str, str],
 ) -> tuple[StoredDataStats | None, bool]:
     """(stats, read_failed) — a failed read is reported, never silently empty."""
     if repo is None:
         return None, False
     try:
-        return await repo.stats(), False
+        return await repo.stats(tracked), False
     except Exception:  # noqa: BLE001
         logger.exception("Reading stored-data statistics failed.")
         return None, True
@@ -541,23 +545,45 @@ async def get_system_health(
     """
     now = datetime.now(tz=UTC)
     jobs = await _job_records(log, repo, since=now - timedelta(days=_JOB_LOOKBACK_DAYS))
-    stats, read_failed = await _stored_data_stats(health_repo)
+    tracked = {c.ticker: c.market for c in companies.enabled_companies()}
+    stats, read_failed = await _stored_data_stats(health_repo, tracked)
 
-    ingest = evaluate_ingest(
-        jobs,
-        now=now,
-        running=bool(refresh is not None and refresh.is_running),
-        # The scheduler only exists when a database is configured, so its
-        # absence is a deployment mode, not a fault.
-        scheduler_active=scheduler is not None and getattr(scheduler, "running", False),
-        next_run_at=_next_scheduled_run(scheduler),
-        hour=settings.ingest_hour,
-        minute=settings.ingest_minute,
-        last_error=getattr(refresh, "last_error", None),
+    # One reading per nightly run, each measured on its own clock against the
+    # jobs that covered its markets; the headline is the worst of them.
+    running = bool(refresh is not None and refresh.is_running)
+    last_error = getattr(refresh, "last_error", None)
+    # The markets the current (or last) refresh covered: its running state and
+    # its error belong to the runs for those markets, not to every run.
+    # Unknown (empty) means it may have touched any of them.
+    refreshed = set(getattr(refresh, "run_markets", None) or ())
+
+    def touches(run_markets: tuple[str, ...]) -> bool:
+        return not refreshed or not refreshed.isdisjoint(run_markets)
+
+    scheduler_active = scheduler is not None and getattr(scheduler, "running", False)
+    ingest = combine_ingest(
+        [
+            evaluate_ingest(
+                [j for j in jobs if job_covers(j, run.market_ids, legacy=GPW_ID in run.market_ids)],
+                now=now,
+                running=running and touches(run.market_ids),
+                # The scheduler only exists when a database is configured, so
+                # its absence is a deployment mode, not a fault.
+                scheduler_active=scheduler_active,
+                next_run_at=_next_scheduled_run(scheduler, run.job_id),
+                hour=run.hour,
+                minute=run.minute,
+                last_error=last_error if touches(run.market_ids) else None,
+                timezone=run.timezone,
+                run_id=run.id,
+                markets=run.market_ids,
+            )
+            for run in refresh_runs()
+        ]
     )
     data = evaluate_data(
         stats,
-        tickers_tracked=len(companies.get_companies()),
+        tickers_tracked=len(tracked),
         db_enabled=settings.db_enabled,
         today=datetime.now(_WARSAW).date(),
         read_failed=read_failed,

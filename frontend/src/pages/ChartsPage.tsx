@@ -30,6 +30,7 @@ import {
   CardTitle,
   DisclaimerNote,
   InfoTip,
+  MarketBadge,
   RatingMeter,
   SignalBadge,
 } from '../components/ui'
@@ -48,13 +49,15 @@ import type { Candle, SignalFlag, VsaSignal } from '../types'
 import {
   deltaTone,
   fmtCompactPln,
+  fmtMoney,
   fmtPct,
-  fmtPrice,
   fmtSigned,
+  majorCurrency,
   ratingTone,
   safeHttpUrl,
 } from '../lib/format'
 import { useChartPalette } from '../lib/chartTheme'
+import { displayTicker, GPW_MARKET } from '../lib/markets'
 
 // ── Signal filtering (driven by the detection-settings panel) ─────────────────
 
@@ -490,13 +493,18 @@ function FundamentalsCard({
   // ROE/ROA arrive as fractions (0.184 = 18.4%).
   const asPct = (v: number | null | undefined) =>
     v == null ? '—' : `${(v * 100).toFixed(1)}%`
-  const asPln = (v: number | null | undefined) =>
-    v == null ? '—' : `${fmtCompactPln(v)} PLN`
+  // Revenue and income are in the currency the company REPORTS in; the
+  // market cap is in the major unit of the currency its shares trade in (HSBC:
+  // pounds for the cap, dollars for the accounts).
+  const reportCurrency = m?.financialCurrency ?? majorCurrency(data?.currency)
+  const capCurrency = majorCurrency(data?.currency)
+  const asMoney = (v: number | null | undefined, currency: string) =>
+    v == null ? '—' : `${fmtCompactPln(v)} ${currency}`
 
   const rows: [string, string][] = [
     [t('chart.fundamentals.sector'), data?.sector ?? sector ?? '—'],
     [t('chart.fundamentals.industry'), data?.industry ?? '—'],
-    [t('chart.fundamentals.marketCap'), m?.marketCap != null ? `${fmtCompactPln(m.marketCap)} PLN` : '—'],
+    [t('chart.fundamentals.marketCap'), asMoney(m?.marketCap, capCurrency)],
     [t('chart.fundamentals.pe'), m?.peRatio != null ? m.peRatio.toFixed(1) : '—'],
     [t('chart.fundamentals.eps'), m?.eps != null ? m.eps.toFixed(2) : '—'],
     [t('chart.fundamentals.dividendYield'), divYield != null ? `${divYield.toFixed(2)}%` : '—'],
@@ -513,8 +521,8 @@ function FundamentalsCard({
   ]
 
   const incomeRows: [string, string][] = [
-    [t('chart.fundamentals.revenue12m'), asPln(data?.ttmRevenue)],
-    [t('chart.fundamentals.netIncome12m'), asPln(data?.ttmNetIncome)],
+    [t('chart.fundamentals.revenue12m'), asMoney(data?.ttmRevenue, reportCurrency)],
+    [t('chart.fundamentals.netIncome12m'), asMoney(data?.ttmNetIncome, reportCurrency)],
     [t('chart.fundamentals.roe'), asPct(m?.returnOnEquity)],
     [t('chart.fundamentals.roa'), asPct(m?.returnOnAssets)],
   ]
@@ -973,9 +981,15 @@ export function ChartsPage() {
           scrolling through the cards below. */}
       <div className="sticky top-0 z-30 -mx-4 -mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-800 bg-slate-950/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mt-6 sm:px-6">
         <CompanyPicker ticker={data.ticker} name={data.name} />
+        {data.market && data.market !== GPW_MARKET && (
+          <span className="text-xs text-slate-500">
+            <MarketBadge market={data.market} className="mr-1" />
+            {data.exchange}
+          </span>
+        )}
         <FavoriteButton key={data.ticker} ticker={data.ticker} />
         <span className="text-xl font-semibold text-slate-200">
-          {fmtPrice(data.lastPrice)} {t('common.pln')}
+          {fmtMoney(data.lastPrice, data.currency)}
         </span>
         <span className={'text-sm font-medium ' + deltaTone(data.priceChangePct)}>
           {fmtPct(data.priceChangePct)}
@@ -1015,7 +1029,7 @@ export function ChartsPage() {
           <Card className="p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                {data.ticker} · {intervalOption(interval).label}
+                {displayTicker(data.ticker)} · {intervalOption(interval).label}
                 {/* Hidden while the requested bar size has no data: `data` is
                     then the previous interval's series, and its bar count
                     would describe a chart that is not on screen. */}

@@ -1,5 +1,6 @@
-// Dashboard — the app's home page ("/"). A ranked, multi-method list of GPW
-// stocks. Beyond the core VSA rating it can show one column per selected
+// Dashboard — the app's home page ("/"). A ranked, multi-method list of the
+// stocks on the market chosen in the top bar (the GPW by default, or all).
+// Beyond the core VSA rating it can show one column per selected
 // trading method (VSA, Minervini Trend Template, …) plus a "Combined" column
 // that ranks companies across all the chosen methods together. The user picks
 // which methods appear via the Methods selector; the choice is sent to
@@ -15,6 +16,8 @@ import {
   type InfiniteRankingParams,
 } from '../hooks/useRanking'
 import { useMethods } from '../hooks/useMethods'
+import { useMarketScope } from '../hooks/useMarkets'
+import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
 import type { RankingSortKey, SortDir } from '../api/stocksApi'
@@ -82,6 +85,10 @@ export function DashboardPage() {
 
   // Trading-method catalogue + the user's column selection. `null` = untouched,
   // which means "show every method"; an explicit array (even empty) is a choice.
+  // Which market the list shows — the top bar's switcher; "all" is allowed
+  // (a rating has no unit, so markets can share one list).
+  const { market } = useMarketScope({ allowAll: true })
+
   const { methods: catalogue } = useMethods()
   const [storedMethods, setStoredMethods] = usePersistentState<string[] | null>(
     METHODS_KEY,
@@ -139,8 +146,12 @@ export function DashboardPage() {
       // the catalogue resolves.
       methods:
         methodsCustomized && selectedMethods.length ? selectedMethods : undefined,
+      // Omitted for the GPW, the backend default, so a GPW-only deployment
+      // sends exactly the requests it always did.
+      market: market && market !== GPW_MARKET ? market : undefined,
     }),
     [
+      market,
       sortBy,
       sortDir,
       debouncedSearch,
@@ -161,7 +172,7 @@ export function DashboardPage() {
     error,
     loadMore,
     refetch,
-  } = useInfiniteRanking(rankingParams)
+  } = useInfiniteRanking(rankingParams, { enabled: market !== null })
 
   const toggleStar = (ticker: string) =>
     setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
@@ -275,7 +286,14 @@ export function DashboardPage() {
             {t('dashboard.heading')}
             <InfoTip text={t('dashboard.headingInfo')} />
           </h2>
-          <p className="text-sm text-slate-500">{t('dashboard.subtitle')}</p>
+          <p className="text-sm text-slate-500">
+            {t('dashboard.subtitle', {
+              market:
+                market === ALL_MARKETS
+                  ? t('markets.all')
+                  : t(`markets.short.${market ?? GPW_MARKET}`),
+            })}
+          </p>
           <DisclaimerNote className="mt-1" />
         </div>
 

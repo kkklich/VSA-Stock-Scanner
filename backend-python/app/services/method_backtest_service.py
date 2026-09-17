@@ -222,13 +222,22 @@ async def compute_method_backtest(
     bullish = method.direction != "Bearish"
     acc = _Acc()
 
+    # One stock at a time in memory, give or take the DB gate: four years of
+    # bars for every stock of a market at once (~500 US listings) is several
+    # hundred MB, and the result — not the bars — is what gets cached.
+    worker_gate = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
+
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote]:
         # Own cache key (longer window than the ranking's) — the back-test needs
-        # the full run-up, not the 120-day slice the ranking analyses.
+        # the full run-up, not the 120-day slice the ranking analyses. Only
+        # used without a database, where the provider is the only store and
+        # re-downloading four years per stock on every back-test would be far
+        # worse than holding them; with one, the bars are re-read instead.
         cache_key = f"backtest-history:{ticker}:{from_date}"
-        cached: list[StooqDailyQuote] | None = history_cache.get(cache_key)
-        if cached is not None:
-            return cached
+        if repo is None:
+            cached: list[StooqDailyQuote] | None = history_cache.get(cache_key)
+            if cached is not None:
+                return cached
         rows: list[StooqDailyQuote] = []
         if repo is not None:
             async with db_semaphore:
@@ -245,10 +254,15 @@ async def compute_method_backtest(
                         await repo.upsert_quotes(ticker, rows)
                     except Exception:
                         logger.exception("Backtest: DB write failed for %s.", ticker)
-        history_cache.set(cache_key, rows or [], history_cache_ttl)
+        if repo is None:
+            history_cache.set(cache_key, rows or [], history_cache_ttl)
         return rows or []
 
     async def process(company: GpwCompany) -> None:
+        async with worker_gate:
+            await process_one(company)
+
+    async def process_one(company: GpwCompany) -> None:
         bars = await fetch_quotes(company.ticker)
         if len(bars) <= forward_sessions:
             return

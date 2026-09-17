@@ -18,6 +18,7 @@ import { Star } from 'lucide-react'
 import type { ApiRankingItem, RankingSortKey } from '../api/stocksApi'
 import {
   CompanyLink,
+  MarketBadge,
   RatingMeter,
   SignalBadge,
   Sparkline,
@@ -25,7 +26,8 @@ import {
   WeeklyBadge,
 } from '../components/ui'
 import { Range52wCell } from '../components/Range52wCell'
-import { deltaTone, fmtCompactPln, fmtPct, fmtPrice } from './format'
+import { deltaTone, fmtCompactPln, fmtMoney, fmtPct } from './format'
+import { displayTicker } from './markets'
 
 /** localStorage key for the shared ranking-column selection. */
 export const RANKING_COLUMNS_KEY = 'stockpilot:ranking-columns:v1'
@@ -143,9 +145,12 @@ export const RANKING_COLUMNS: RankingColumn[] = [
           </button>
         )}
         <CompanyLink ticker={s.ticker} title={s.name} className="flex items-center gap-2.5">
-          <TickerMark ticker={s.ticker} />
+          <TickerMark ticker={displayTicker(s.ticker)} />
           <span className="min-w-0">
-            <span className="block font-semibold text-slate-100">{s.ticker}</span>
+            <span className="flex items-center gap-1.5 font-semibold text-slate-100">
+              {displayTicker(s.ticker)}
+              <MarketBadge market={s.market} />
+            </span>
             <span className="block max-w-[190px] truncate text-xs text-slate-500">
               {s.name}
             </span>
@@ -193,9 +198,9 @@ export const RANKING_COLUMNS: RankingColumn[] = [
     defaultVisible: true,
     width: 130,
     mobile: 'price',
-    cell: (s, ctx) => (
+    cell: (s) => (
       <span className="whitespace-nowrap font-medium tabular-nums text-slate-200">
-        {fmtPrice(s.lastPrice)} {ctx.t('common.pln')}
+        {fmtMoney(s.lastPrice, s.currency)}
       </span>
     ),
   },

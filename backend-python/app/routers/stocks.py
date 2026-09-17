@@ -2,7 +2,8 @@
 
 Routes under ``/api/stocks``:
 
-    GET /api/stocks                    — GPW company list
+    GET /api/stocks                    — tracked company list (per market)
+    GET /api/stocks/markets            — the markets this deployment serves
     GET /api/stocks/ranking            — VSA-ranked stock feed
     GET /api/stocks/{ticker}/history   — raw EOD OHLCV
     GET /api/stocks/{ticker}/signals   — OHLCV + VSA overlay for charts
@@ -17,10 +18,8 @@ ingest completes.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import math
-import re
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
@@ -60,6 +59,15 @@ from app.dependencies import (
     get_refresh_service,
     get_stooq_client,
 )
+from app.markets import (
+    GPW_ID,
+    INDEX_NAMES,
+    Market,
+    enabled_markets,
+    market_of,
+    normalize_ticker,
+    quote_currency,
+)
 from app.models import (
     AiAnalysisResponse,
     AnalyticsSummaryResponse,
@@ -70,6 +78,8 @@ from app.models import (
     CompanyFundamentalsResponse,
     GpwCompany,
     HeatmapResponse,
+    MarketIndexInfo,
+    MarketInfo,
     MethodBacktestResponse,
     MethodSignalGroup,
     MethodSignalItem,
@@ -97,7 +107,7 @@ from app.services.method_backtest_service import (
     DEFAULT_FORWARD_SESSIONS,
     compute_method_backtest,
 )
-from app.services.ranking_service import compute_ranking
+from app.services.ranking_service import compute_ranking, ranking_cache_key
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
@@ -366,6 +376,90 @@ def _parse_vsa_settings(raw: str | None) -> VsaConfig:
     return config_from_settings(payload)
 
 
+# ``market=all`` on the screens that can combine markets.
+_ALL_MARKETS = "all"
+
+# The query parameter every market-aware list endpoint takes. Absent means the
+# GPW — what every screen showed before other markets existed — so an older
+# client keeps getting exactly the answer it always got.
+MarketParam = Annotated[
+    str | None,
+    Query(
+        max_length=16,
+        description=(
+            "Market id (gpw, us, de, fr, nl, uk — only those this deployment "
+            "serves), or 'all' where the screen can combine them. Default: gpw."
+        ),
+    ),
+]
+
+
+def _resolve_markets(market: str | None, *, allow_all: bool) -> list[Market]:
+    """The enabled markets a request asked for, or a 400 naming the valid ones.
+
+    ``all`` means every enabled market, and only where the screen can combine
+    them — a heatmap sized by market cap, or a capex list sorted by amounts,
+    cannot mix currencies, so those take exactly one market.
+    """
+    served = enabled_markets()
+    wanted = (market or GPW_ID).strip().casefold()
+    if wanted == _ALL_MARKETS and allow_all:
+        return list(served)
+    for candidate in served:
+        if candidate.id == wanted:
+            return [candidate]
+    choices = [m.id for m in served] + ([_ALL_MARKETS] if allow_all else [])
+    raise HTTPException(
+        status.HTTP_400_BAD_REQUEST,
+        detail=f"Unknown market '{market}'. Choose one of: {', '.join(choices)}.",
+    )
+
+
+def _scope_id(markets: list[Market]) -> str:
+    """Cache-key fragment for a set of markets: one id, or ``all``."""
+    return markets[0].id if len(markets) == 1 else _ALL_MARKETS
+
+
+def _market_companies(
+    companies: GpwCompanyService, markets: list[Market]
+) -> list[GpwCompany]:
+    """Every tracked company on the given markets, in market order."""
+    return [c for m in markets for c in companies.get_companies(m.id)]
+
+
+def _resolve_ticker(ticker: str, companies: GpwCompanyService) -> str:
+    """The canonical ticker for a path parameter, or the right HTTP error.
+
+    400 when the value is not a ticker at all. A GPW code is served exactly as
+    before — including one missing from the seed list, which the app has
+    always fetched on demand. A ticker from any other market (``aapl.us``) must
+    be a tracked company on a market this deployment has switched on, or the
+    answer is 404: the app must not become a way to make the server download,
+    and store, whatever symbol a visitor types.
+    """
+    normalized = normalize_ticker(ticker)
+    if normalized is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    if market_of(normalized).id != GPW_ID and companies.find(normalized) is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"'{ticker.strip().upper()}' is not a tracked company.",
+        )
+    return normalized
+
+
+def _stock_identity(
+    normalized: str, company: GpwCompany | None
+) -> dict[str, str | None]:
+    """Market, quote currency and venue for a stock-page payload."""
+    market = market_of(normalized)
+    return {
+        "market": market.id,
+        "currency": quote_currency(company) if company else market.currency,
+        "exchange": (company.exchange if company else None) or market.exchange,
+    }
+
+
 # Stored history counts as covering a request when its first bar is at most
 # this many days after the requested from_date (weekends / market holidays).
 _BACKFILL_TOLERANCE_DAYS = 14
@@ -483,11 +577,54 @@ async def _get_quotes(
 # ── Endpoint 1: company list ──────────────────────────────────────────────────
 
 
-@router.get("", response_model=list[GpwCompany], summary="Tracked GPW companies")
+@router.get(
+    "",
+    response_model=list[GpwCompany],
+    # The long company descriptions are the bulk of this payload and nothing
+    # that lists companies shows them (the stock page reads its own through
+    # /{ticker}/fundamentals), so a list of a thousand stays small.
+    response_model_exclude={"__all__": {"description"}},
+    summary="Tracked companies (one market, or all served markets)",
+)
 async def get_companies(
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    market: MarketParam = None,
 ) -> list[GpwCompany]:
-    return companies.get_companies()
+    return _market_companies(companies, _resolve_markets(market, allow_all=True))
+
+
+@router.get(
+    "/markets",
+    response_model=list[MarketInfo],
+    response_model_by_alias=True,
+    summary="The stock markets this deployment serves",
+)
+async def get_markets(
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+) -> list[MarketInfo]:
+    """Every market switched on (``STOCKPILOT_MARKETS``), GPW first.
+
+    The frontend's market switcher reads this; it shows itself only when more
+    than one market is served.
+    """
+    return [
+        MarketInfo(
+            id=m.id,
+            name=m.name,
+            short_name=m.short_name,
+            country=m.country,
+            region=m.region,
+            exchange=m.exchange,
+            currency=m.currency,
+            major_currency=m.major_currency,
+            timezone=m.timezone,
+            ticker_suffix=m.ticker_suffix,
+            refresh_run=m.refresh_run,
+            company_count=len(companies.get_companies(m.id)),
+            indices=[MarketIndexInfo(id=i, name=INDEX_NAMES[i]) for i in m.indices],
+        )
+        for m in enabled_markets()
+    ]
 
 
 # ── Endpoint: trading-method catalogue ────────────────────────────────────────
@@ -540,6 +677,7 @@ async def get_method_backtest(
         int, Query(alias="forwardSessions", ge=3, le=30)
     ] = DEFAULT_FORWARD_SESSIONS,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
@@ -562,9 +700,14 @@ async def get_method_backtest(
             status.HTTP_404_NOT_FOUND, detail=f"Unknown method id '{method_id}'."
         )
 
+    # One market per back-test: the gate asks whether a method worked on that
+    # market's own history, and a multi-year scan of every market at once
+    # would not fit in memory.
+    [scope] = _resolve_markets(market, allow_all=False)
     config = _parse_vsa_settings(vsa_settings)
     cache_key = (
-        f"method-backtest:{method_id}:{forward_sessions}{config.cache_suffix()}"
+        f"method-backtest:{scope.id}:{method_id}:{forward_sessions}"
+        f"{config.cache_suffix()}"
     )
     result: MethodBacktestResponse | None = cache.get(cache_key)
 
@@ -577,7 +720,7 @@ async def get_method_backtest(
                 logger.info("Method back-test cold — computing for %s.", method_id)
                 stats = await compute_method_backtest(
                     method=method,
-                    companies=companies.get_companies(),
+                    companies=companies.get_companies(scope.id),
                     stooq=stooq,
                     history_cache=history_cache,
                     history_cache_ttl=settings.history_cache_seconds,
@@ -588,6 +731,7 @@ async def get_method_backtest(
                 result = MethodBacktestResponse(
                     method_id=stats.method_id,
                     name=stats.name,
+                    market=scope.id,
                     as_of=stats.as_of,
                     forward_sessions=stats.forward_sessions,
                     scanned_count=stats.scanned_count,
@@ -668,6 +812,7 @@ async def get_ranking(
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     methods: Annotated[str | None, Query(max_length=512)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
@@ -683,38 +828,18 @@ async def get_ranking(
             ),
         )
 
+    markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
-    cache_key = f"ranking:full{config.cache_suffix()}"
-    full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
-
-    if full_ranking is None:
-        async with _ranking_locks.get(cache_key):
-            # A concurrent request may have finished computing while we waited.
-            full_ranking = cache.get(cache_key)
-            if full_ranking is None:
-                generation = cache.generation
-                logger.info("Ranking cache cold — computing ranking.")
-                full_ranking = await compute_ranking(
-                    companies=companies.get_companies(),
-                    stooq=stooq,
-                    history_cache=history_cache,
-                    history_cache_ttl=settings.history_cache_seconds,
-                    repo=repo,
-                    config=config,
-                )
-                # If the nightly ingest cleared the cache while we were
-                # computing, this list was built from pre-refresh data — serve
-                # it to this caller but don't store it, or the dashboard would
-                # show yesterday's ranking as today's for the whole TTL.
-                if not cache.set_if_generation(
-                    cache_key, full_ranking, settings.history_cache_seconds, generation
-                ):
-                    logger.info(
-                        "Ranking cache invalidated during computation — not cached."
-                    )
-                logger.info(
-                    "Ranking ready: %d stocks passed pre-filters.", len(full_ranking)
-                )
+    # ``all`` is the per-market rankings side by side: each is computed (and
+    # cached) within its own market, which is where its relative-strength
+    # ranks mean something. One market at a time keeps the work bounded.
+    full_ranking: list[StockRankingItem] = []
+    for scope in markets:
+        full_ranking.extend(
+            await _market_ranking(
+                scope, config, companies, stooq, cache, history_cache, repo
+            )
+        )
 
     # Optional allow-list of tickers (used by the "favorites only" view).
     ticker_set: set[str] | None = None
@@ -760,6 +885,52 @@ async def get_ranking(
     return filtered[start : start + page_size]
 
 
+async def _market_ranking(
+    scope: Market,
+    config: VsaConfig,
+    companies: GpwCompanyService,
+    stooq: StooqClient,
+    cache: TTLCache,
+    history_cache: TTLCache,
+    repo: QuoteRepository | None,
+) -> list[StockRankingItem]:
+    """One market's full ranking, from the cache or computed once."""
+    cache_key = ranking_cache_key(scope.id, config)
+    full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
+    if full_ranking is not None:
+        return full_ranking
+
+    async with _ranking_locks.get(cache_key):
+        # A concurrent request may have finished computing while we waited.
+        full_ranking = cache.get(cache_key)
+        if full_ranking is not None:
+            return full_ranking
+        generation = cache.generation
+        logger.info("Ranking cache cold — computing the %s ranking.", scope.id)
+        full_ranking = await compute_ranking(
+            companies=companies.get_companies(scope.id),
+            stooq=stooq,
+            history_cache=history_cache,
+            history_cache_ttl=settings.history_cache_seconds,
+            repo=repo,
+            config=config,
+        )
+        # If the nightly ingest cleared the cache while we were computing, this
+        # list was built from pre-refresh data — serve it to this caller but
+        # don't store it, or the dashboard would show yesterday's ranking as
+        # today's for the whole TTL.
+        if not cache.set_if_generation(
+            cache_key, full_ranking, settings.history_cache_seconds, generation
+        ):
+            logger.info("Ranking cache invalidated during computation — not cached.")
+        logger.info(
+            "Ranking ready (%s): %d stocks passed pre-filters.",
+            scope.id,
+            len(full_ranking),
+        )
+        return full_ranking
+
+
 # ── Endpoints: manual data refresh ────────────────────────────────────────────
 
 
@@ -776,10 +947,10 @@ async def trigger_refresh(
 ) -> RefreshStatusResponse:
     """Kick off the refresh pipeline in the background and return its status.
 
-    This is the only way (besides the nightly 18:00 job) that fresh data is
-    pulled from Yahoo Finance. If a refresh is already running, the in-flight
-    run is kept and its status is returned — pressing the button twice never
-    starts two downloads.
+    This is the only way (besides the nightly runs) that fresh data is pulled
+    from Yahoo Finance for the whole universe; it refreshes every served
+    market. If a refresh is already running, the in-flight run is kept and its
+    status is returned — pressing the button twice never starts two downloads.
     """
     if refresh is None:
         raise HTTPException(
@@ -830,14 +1001,18 @@ _scanner_stats_locks = LockRegistry()
 )
 async def get_scanner_stats(
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
 ) -> list[SignalEffectiveness]:
+    # ``all`` pools every served market into one back-test: each signal is
+    # judged against its own stock's baseline, so pooling mixes nothing.
+    markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
-    cache_key = f"scanner:stats{config.cache_suffix()}"
+    cache_key = f"scanner:stats:{_scope_id(markets)}{config.cache_suffix()}"
     cached: list[SignalEffectiveness] | None = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -851,7 +1026,7 @@ async def get_scanner_stats(
         generation = cache.generation
         logger.info("Scanner stats cache cold — computing.")
         raw = await compute_scanner_stats(
-            companies=companies.get_companies(),
+            companies=_market_companies(companies, markets),
             stooq=stooq,
             history_cache=history_cache,
             history_cache_ttl=settings.history_cache_seconds,
@@ -898,6 +1073,7 @@ _heatmap_locks = LockRegistry()
 )
 async def get_heatmap(
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
@@ -910,8 +1086,11 @@ async def get_heatmap(
     from the market cap, tile colour from the VSA rating or from the price
     change over the selected horizon (1D / 1M / 1Y / MAX of stored history).
     """
+    # One market: tiles are sized by market cap, and caps in different
+    # currencies cannot share one treemap.
+    [scope] = _resolve_markets(market, allow_all=False)
     config = _parse_vsa_settings(vsa_settings)
-    cache_key = f"heatmap{config.cache_suffix()}"
+    cache_key = f"heatmap:{scope.id}{config.cache_suffix()}"
     cached: HeatmapResponse | None = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -926,7 +1105,7 @@ async def get_heatmap(
         generation = cache.generation
         logger.info("Heatmap cache cold — computing.")
         result = await compute_heatmap(
-            companies=companies.get_companies(),
+            companies=companies.get_companies(scope.id),
             stooq=stooq,
             history_cache=history_cache,
             history_cache_ttl=settings.history_cache_seconds,
@@ -991,6 +1170,7 @@ async def get_volume_surge(
     sort_by: Annotated[str, Query(alias="sortBy")] = "volumeRatio",
     sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
@@ -1016,44 +1196,35 @@ async def get_volume_surge(
             ),
         )
 
+    markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
-    cache_key = (
-        f"volume-surge:{recent_days}:{baseline_days}:{min_ratio}"
-        f"{config.cache_suffix()}"
-    )
-    full: VolumeSurgeResponse | None = cache.get(cache_key)
-
-    if full is None:
-        lock = _volume_surge_locks.get(cache_key)
-        async with lock:
-            # A concurrent request may have finished computing while we waited.
-            full = cache.get(cache_key)
-            if full is None:
-                generation = cache.generation
-                logger.info("Volume-surge cache cold — computing.")
-                full = await compute_volume_surge(
-                    companies=companies.get_companies(),
-                    stooq=stooq,
-                    history_cache=history_cache,
-                    history_cache_ttl=settings.history_cache_seconds,
-                    repo=repo,
-                    config=config,
-                    recent_days=recent_days,
-                    baseline_days=baseline_days,
-                    min_ratio=min_ratio,
-                )
-                if not cache.set_if_generation(
-                    cache_key, full, settings.history_cache_seconds, generation
-                ):
-                    logger.info(
-                        "Volume-surge cache invalidated during computation — not cached."
-                    )
-                logger.info(
-                    "Volume surge ready: %d of %d scanned stocks above ratio %.2f.",
-                    len(full.items),
-                    full.scanned_count,
-                    min_ratio,
-                )
+    # A relative-volume ratio has no unit, so ``all`` simply puts the per-market
+    # scans side by side; each is computed and cached on its own.
+    scans = [
+        await _market_volume_surge(
+            scope,
+            config,
+            recent_days,
+            baseline_days,
+            min_ratio,
+            companies,
+            stooq,
+            cache,
+            history_cache,
+            repo,
+        )
+        for scope in markets
+    ]
+    full = scans[0]
+    if len(scans) > 1:
+        full = full.model_copy(
+            update={
+                "as_of": max((x.as_of for x in scans if x.as_of), default=None),
+                "scanned_count": sum(x.scanned_count for x in scans),
+                "total_count": sum(x.total_count for x in scans),
+                "items": [item for x in scans for item in x.items],
+            }
+        )
 
     # Cheap per-request pass over the cached full scan — same split as the
     # ranking: the expensive computation stays fully cached, only this
@@ -1066,6 +1237,59 @@ async def get_volume_surge(
     )
     start = (page - 1) * page_size
     return full.model_copy(update={"items": ordered[start : start + page_size]})
+
+
+async def _market_volume_surge(
+    scope: Market,
+    config: VsaConfig,
+    recent_days: int,
+    baseline_days: int,
+    min_ratio: float,
+    companies: GpwCompanyService,
+    stooq: StooqClient,
+    cache: TTLCache,
+    history_cache: TTLCache,
+    repo: QuoteRepository | None,
+) -> VolumeSurgeResponse:
+    """One market's full volume-surge scan, from the cache or computed once."""
+    cache_key = (
+        f"volume-surge:{scope.id}:{recent_days}:{baseline_days}:{min_ratio}"
+        f"{config.cache_suffix()}"
+    )
+    full: VolumeSurgeResponse | None = cache.get(cache_key)
+    if full is not None:
+        return full
+
+    async with _volume_surge_locks.get(cache_key):
+        # A concurrent request may have finished computing while we waited.
+        full = cache.get(cache_key)
+        if full is not None:
+            return full
+        generation = cache.generation
+        logger.info("Volume-surge cache cold — computing the %s scan.", scope.id)
+        full = await compute_volume_surge(
+            companies=companies.get_companies(scope.id),
+            stooq=stooq,
+            history_cache=history_cache,
+            history_cache_ttl=settings.history_cache_seconds,
+            repo=repo,
+            config=config,
+            recent_days=recent_days,
+            baseline_days=baseline_days,
+            min_ratio=min_ratio,
+        )
+        if not cache.set_if_generation(
+            cache_key, full, settings.history_cache_seconds, generation
+        ):
+            logger.info("Volume-surge cache invalidated during computation — not cached.")
+        logger.info(
+            "Volume surge ready (%s): %d of %d scanned stocks above ratio %.2f.",
+            scope.id,
+            len(full.items),
+            full.scanned_count,
+            min_ratio,
+        )
+        return full
 
 
 # ── Endpoint: capital-expenditure screen ─────────────────────────────────────
@@ -1085,7 +1309,7 @@ _CAPEX_SORT_KEYS: dict[str, str] = {
     "operatingCashFlow": "operating_cash_flow",
 }
 
-_capex_lock = asyncio.Lock()
+_capex_locks = LockRegistry()
 
 
 @router.get(
@@ -1102,12 +1326,13 @@ _capex_lock = asyncio.Lock()
 async def get_capex(
     q: Annotated[str | None, Query(max_length=50)] = None,
     sector: Annotated[str | None, Query()] = None,
-    currency: Annotated[str, Query(max_length=8)] = "PLN",
+    currency: Annotated[str | None, Query(max_length=8)] = None,
     with_data: Annotated[bool, Query(alias="withData")] = True,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
     sort_by: Annotated[str, Query(alias="sortBy")] = "capex",
     sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
@@ -1119,10 +1344,12 @@ async def get_capex(
     statements (refreshed with the weekly fundamentals pass), never from a
     live fetch — the screen covers the whole universe at once.
 
-    ``currency`` defaults to ``PLN`` because amounts in different currencies
-    do not compare: a Hungarian issuer reporting in forint would top a
-    zloty-sorted list on unit size alone. ``currency=all`` lifts the filter
-    (the percentage columns stay comparable either way).
+    One market per request (``market``, default the GPW). ``currency``
+    defaults to that market's own currency (PLN for the GPW, USD for the US,
+    EUR for Germany/France/Netherlands, GBP for the UK) because amounts in
+    different currencies do not compare: a Hungarian issuer reporting in
+    forint would top a zloty-sorted list on unit size alone. ``currency=all``
+    lifts the filter (the percentage columns stay comparable either way).
 
     ``withData=false`` keeps companies Yahoo has no capex for; they carry null
     figures rather than zeros, because "not reported" is not "invested
@@ -1141,14 +1368,16 @@ async def get_capex(
             ),
         )
 
-    full: CapexResponse | None = cache.get("capex:full")
+    [scope] = _resolve_markets(market, allow_all=False)
+    cache_key = f"capex:{scope.id}:full"
+    full: CapexResponse | None = cache.get(cache_key)
     if full is None:
-        async with _capex_lock:
+        async with _capex_locks.get(cache_key):
             # A concurrent request may have finished computing while we waited.
-            full = cache.get("capex:full")
+            full = cache.get(cache_key)
             if full is None:
                 generation = cache.generation
-                loaded = await _load_capex(companies, repo)
+                loaded = await _load_capex(companies.get_companies(scope.id), repo)
                 if loaded is None:
                     # The database read failed. Caching the empty screen here
                     # would tell every visitor for the next cache lifetime that
@@ -1164,7 +1393,7 @@ async def get_capex(
                     )
                 full = loaded
                 if not cache.set_if_generation(
-                    "capex:full", full, settings.history_cache_seconds, generation
+                    cache_key, full, settings.history_cache_seconds, generation
                 ):
                     logger.info("Capex cache invalidated during load — not cached.")
 
@@ -1172,7 +1401,7 @@ async def get_capex(
     # Both text filters are stripped ONCE and the stripped value is used for
     # the "all" sentinel as well as the comparison — otherwise "%20all%20"
     # would slip past the sentinel and then match nothing.
-    wanted_currency = currency.strip().upper()
+    wanted_currency = (currency or scope.major_currency).strip().upper()
     wanted_sector = (sector or "").strip().casefold()
     rows = full.items
     if with_data:
@@ -1204,7 +1433,7 @@ async def get_capex(
 
 
 async def _load_capex(
-    companies: GpwCompanyService,
+    tracked: list[GpwCompany],
     repo: QuoteRepository | None,
 ) -> CapexResponse | None:
     """Read stored cash-flow + revenue data and build the full screen.
@@ -1218,7 +1447,6 @@ async def _load_capex(
     and "nobody has any capex" look identical once both are an empty screen,
     and the caller must never cache the first as if it were the second.
     """
-    tracked = companies.get_companies()
     if repo is None:
         logger.info("Capex screen requested without a database — returning empty.")
         return CapexResponse(scanned_count=len(tracked))
@@ -1265,9 +1493,7 @@ async def get_history(
     if from_ is not None and to is not None and from_ > to:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "'from' must not be later than 'to'.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     company = companies.find(normalized)
 
@@ -1435,9 +1661,7 @@ async def get_signals(
 
     config = _parse_vsa_settings(vsa_settings)
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     effective_from = from_date or (date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS))
     effective_to = to_date
@@ -1605,6 +1829,7 @@ async def get_signals(
         ticker=normalized.upper(),
         name=company.name if company else None,
         sector=company.sector if company else None,
+        **_stock_identity(normalized, company),
         last_price=last_close,
         price_change_pct=price_change_pct,
         current_rating=rating,
@@ -1657,11 +1882,10 @@ async def get_rating_history(
             status.HTTP_400_BAD_REQUEST, "'fromDate' must not be later than 'toDate'."
         )
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     company = companies.find(normalized)
+    currency = quote_currency(company) if company else market_of(normalized).currency
     effective_from = from_date or (date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS))
 
     # 1. Stored snapshots (the persisted "attractiveness" history).
@@ -1675,6 +1899,7 @@ async def get_rating_history(
             return RatingHistoryResponse(
                 ticker=normalized.upper(),
                 name=company.name if company else None,
+                currency=currency,
                 points=points,
                 source="db",
             )
@@ -1692,7 +1917,8 @@ async def get_rating_history(
     return RatingHistoryResponse(
         ticker=normalized.upper(),
         name=company.name if company else None,
-        points=build_rating_points(quotes),
+        currency=currency,
+        points=build_rating_points(quotes, currency=currency),
         source="computed",
     )
 
@@ -1730,9 +1956,7 @@ async def get_ai_analysis(
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     config = _parse_vsa_settings(vsa_settings)
 
@@ -1762,6 +1986,7 @@ async def get_ai_analysis(
         quotes=quotes,
         signals=signals,
         rating=rating,
+        currency=_stock_identity(normalized, company)["currency"] or "PLN",
     )
 
 
@@ -1798,9 +2023,7 @@ async def get_trust_score(
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     config = _parse_vsa_settings(vsa_settings)
 
@@ -1864,9 +2087,7 @@ async def get_opinion_summary(
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     config = _parse_vsa_settings(vsa_settings)
 
@@ -1937,9 +2158,7 @@ async def get_ticker_volume(
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     quotes = await _get_quotes(
         normalized,
@@ -2020,9 +2239,7 @@ async def get_fundamentals(
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
-    normalized = ticker.strip().casefold()
-    if not re.fullmatch(r"[a-z0-9]{1,20}", normalized):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ticker format.")
+    normalized = _resolve_ticker(ticker, companies)
 
     company = companies.find(normalized)
 
@@ -2102,6 +2319,7 @@ async def get_fundamentals(
         employees=company.employees if company else None,
         website=company.website if company else None,
         country=company.country if company else None,
+        **_stock_identity(normalized, company),
         metrics=fundamentals.metrics,
         quarterly_reports=fundamentals.quarterly_reports,
         price_returns=price_returns,

@@ -54,6 +54,11 @@ services:
       # Nightly refresh (Europe/Warsaw). GPW closes ~17:05.
       STOCKPILOT_INGEST_HOUR: ${STOCKPILOT_INGEST_HOUR:-18}
       STOCKPILOT_INGEST_MINUTE: ${STOCKPILOT_INGEST_MINUTE:-0}
+      # Stock markets served (gpw, us, de, fr, nl, uk or "all"); GPW always on.
+      STOCKPILOT_MARKETS: ${STOCKPILOT_MARKETS:-gpw}
+      # The US market's nightly run (America/New_York time).
+      STOCKPILOT_US_INGEST_HOUR: ${STOCKPILOT_US_INGEST_HOUR:-17}
+      STOCKPILOT_US_INGEST_MINUTE: ${STOCKPILOT_US_INGEST_MINUTE:-15}
       TZ: Europe/Warsaw
       # Action log (audit trail). Rows also go to the action_logs table; this
       # is the file half.

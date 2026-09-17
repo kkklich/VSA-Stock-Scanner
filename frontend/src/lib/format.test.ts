@@ -1,12 +1,37 @@
 import { describe, it, expect } from 'vitest'
 import {
+  currencyLabel,
   deltaTone,
   fmtCompactPln,
+  fmtMoney,
   fmtPct,
   fmtPrice,
+  fmtRefreshTime,
   fmtSigned,
+  majorCurrency,
   ratingTone,
 } from './format'
+
+describe('currencies', () => {
+  it('writes pence the way brokers do', () => {
+    expect(currencyLabel('GBp')).toBe('GBX')
+    expect(currencyLabel('USD')).toBe('USD')
+    // An older payload without a currency is a złoty one.
+    expect(currencyLabel(undefined)).toBe('PLN')
+  })
+
+  it('puts the currency after the price', () => {
+    expect(fmtMoney(331.65, 'PLN')).toBe('331.65 PLN')
+    expect(fmtMoney(1507.8, 'GBp')).toBe('1,507.80 GBX')
+    expect(fmtMoney(332.86)).toBe('332.86 PLN')
+  })
+
+  it('states whole amounts in pounds, not pence', () => {
+    expect(majorCurrency('GBp')).toBe('GBP')
+    expect(majorCurrency('EUR')).toBe('EUR')
+    expect(majorCurrency(null)).toBe('PLN')
+  })
+})
 
 describe('fmtPrice', () => {
   it('always shows two decimals', () => {
@@ -63,5 +88,18 @@ describe('deltaTone', () => {
     expect(deltaTone(1)).toContain('emerald')
     expect(deltaTone(-1)).toContain('rose')
     expect(deltaTone(0)).toContain('slate')
+  })
+})
+
+describe('fmtRefreshTime', () => {
+  it('uses the caller\'s word for "today"', () => {
+    const now = new Date().toISOString()
+    expect(fmtRefreshTime(now, 'dziś')).toMatch(/^dziś \d{2}:\d{2}$/)
+    expect(fmtRefreshTime(now)).toMatch(/^today \d{2}:\d{2}$/)
+  })
+
+  it('shows the day for an older refresh and a dash for garbage', () => {
+    expect(fmtRefreshTime('2020-03-04T12:00:00Z', 'dziś')).toMatch(/^04\.03 \d{2}:\d{2}$/)
+    expect(fmtRefreshTime('not a date')).toBe('—')
   })
 })

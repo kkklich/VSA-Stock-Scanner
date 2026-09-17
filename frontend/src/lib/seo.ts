@@ -4,6 +4,7 @@
 // runs (and helps when Googlebot renders JS).
 
 import { useEffect } from 'react'
+import { displayTicker, marketOfTicker } from './markets'
 
 const BRAND = 'StockPilot'
 
@@ -128,6 +129,16 @@ function setMetaByProperty(property: string, content: string) {
   el.setAttribute('content', content)
 }
 
+/** Where a market's stocks trade, as the stock-page description names it. */
+const MARKET_VENUES: Record<string, string> = {
+  gpw: 'the GPW',
+  us: 'NASDAQ / NYSE',
+  de: 'Xetra',
+  fr: 'Euronext Paris',
+  nl: 'Euronext Amsterdam',
+  uk: 'the London Stock Exchange',
+}
+
 /** Create-or-update the canonical <link>. */
 function setCanonical(href: string) {
   let el = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
@@ -144,13 +155,16 @@ export function usePageSeo(pathname: string) {
     let entry = DEFAULT_ENTRY
 
     if (pathname.startsWith('/stock/')) {
-      // Per-ticker stock detail page.
-      const ticker = (pathname.split('/')[2] ?? '').toUpperCase()
+      // Per-ticker stock detail page. A foreign ticker's suffix names its
+      // market, so the text says where the stock trades.
+      const raw = decodeURIComponent(pathname.split('/')[2] ?? '')
+      const ticker = displayTicker(raw).toUpperCase()
+      const venue = MARKET_VENUES[marketOfTicker(raw)] ?? MARKET_VENUES.gpw
       entry = {
         title: ticker ? `${ticker} — VSA chart and signals` : 'VSA chart and signals',
         description: ticker
-          ? `${ticker} candlestick chart with volume and Volume Spread Analysis (VSA) signals — VSA rating and signal history on the GPW.`
-          : 'Interactive candlestick chart with Volume Spread Analysis (VSA) signals for a GPW stock.',
+          ? `${ticker} candlestick chart with volume and Volume Spread Analysis (VSA) signals — VSA rating and signal history on ${venue}.`
+          : 'Interactive candlestick chart with Volume Spread Analysis (VSA) signals for a listed stock.',
       }
     } else {
       entry = STATIC_ENTRIES.find((e) => e.test(pathname))?.entry ?? DEFAULT_ENTRY

@@ -90,6 +90,10 @@ class CompanyFundamentalsRow(Base):
     total_revenue: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     net_income: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     shares_outstanding: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # The currency revenue / net income / EPS are reported in (Yahoo
+    # ``financialCurrency``), added 2026-09-17 for the non-GPW markets. Also a
+    # COLUMN on an existing table — see _ADDED_COLUMNS in app/main.py.
+    financial_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
     # Profitability ratios stored as fractions (0.184 = 18.4%), added
     # 2026-07-21. These are COLUMNS on an existing table, so unlike a new
     # table they do not appear via create_all — run `alembic upgrade head`.

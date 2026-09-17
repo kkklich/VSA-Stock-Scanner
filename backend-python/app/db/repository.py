@@ -13,7 +13,9 @@ SQLAlchemy async + asyncpg.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from sqlalchemy import func, select, update
@@ -63,6 +65,23 @@ class QuoteRepository(Protocol):
 
     async def has_today_data(self, ticker: str, as_of: date | None = None) -> bool:
         """Return True if there is at least one bar for ``ticker`` on ``as_of`` (default today)."""
+        ...
+
+    async def get_first_closes(self, tickers: Sequence[str]) -> dict[str, tuple[date, Decimal]]:
+        """The oldest stored bar (date, close) of each ticker, in one read.
+
+        The heatmap's "MAX" change needs only this one number per stock — not
+        the years of bars in between.
+        """
+        ...
+
+    async def get_latest_bar_dates(self) -> dict[str, date]:
+        """The newest stored bar date of every ticker, in one read.
+
+        What the startup check asks for the whole universe at once — one
+        question per ticker would be a thousand queries once several markets
+        are tracked.
+        """
         ...
 
     async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
@@ -253,6 +272,29 @@ class PostgresQuoteRepository:
             )
             return (await session.execute(stmt)).scalar() is not None
 
+    async def get_first_closes(self, tickers: Sequence[str]) -> dict[str, tuple[date, Decimal]]:
+        if not tickers:
+            return {}
+        async with self._sf() as session:
+            # DISTINCT ON (ticker) … ORDER BY ticker, date: the first row of
+            # each ticker, served by the (ticker, date) unique index.
+            stmt = (
+                select(DailyQuoteRow.ticker, DailyQuoteRow.date, DailyQuoteRow.close)
+                .where(DailyQuoteRow.ticker.in_(list(tickers)))
+                .distinct(DailyQuoteRow.ticker)
+                .order_by(DailyQuoteRow.ticker, DailyQuoteRow.date)
+            )
+            rows = (await session.execute(stmt)).all()
+        return {ticker: (day, close) for ticker, day, close in rows}
+
+    async def get_latest_bar_dates(self) -> dict[str, date]:
+        async with self._sf() as session:
+            stmt = select(DailyQuoteRow.ticker, func.max(DailyQuoteRow.date)).group_by(
+                DailyQuoteRow.ticker
+            )
+            rows = (await session.execute(stmt)).all()
+        return {ticker: newest for ticker, newest in rows if newest is not None}
+
     async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
         async with self._sf() as session:
             stmt = select(
@@ -303,6 +345,7 @@ class PostgresQuoteRepository:
             "total_revenue": metrics.total_revenue,
             "net_income": metrics.net_income,
             "shares_outstanding": metrics.shares_outstanding,
+            "financial_currency": metrics.financial_currency,
             "return_on_equity": metrics.return_on_equity,
             "return_on_assets": metrics.return_on_assets,
         }
@@ -490,6 +533,7 @@ class PostgresQuoteRepository:
                 total_revenue=fund_row.total_revenue,
                 net_income=fund_row.net_income,
                 shares_outstanding=fund_row.shares_outstanding,
+                financial_currency=fund_row.financial_currency,
                 return_on_equity=fund_row.return_on_equity,
                 return_on_assets=fund_row.return_on_assets,
             )
@@ -554,6 +598,18 @@ class InMemoryQuoteRepository:
     async def has_today_data(self, ticker: str, as_of: date | None = None) -> bool:
         effective = as_of or date.today()
         return effective in self._quotes.get(ticker, {})
+
+    async def get_first_closes(self, tickers: Sequence[str]) -> dict[str, tuple[date, Decimal]]:
+        result: dict[str, tuple[date, Decimal]] = {}
+        for ticker in tickers:
+            bars = self._quotes.get(ticker)
+            if bars:
+                first = bars[min(bars)]
+                result[ticker] = (first.date, first.close)
+        return result
+
+    async def get_latest_bar_dates(self) -> dict[str, date]:
+        return {ticker: max(bars) for ticker, bars in self._quotes.items() if bars}
 
     async def get_quote_date_range(self, ticker: str) -> tuple[date, date] | None:
         dates = self._quotes.get(ticker, {}).keys()

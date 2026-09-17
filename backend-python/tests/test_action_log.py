@@ -375,7 +375,7 @@ class TestJobLogging:
             action_log=service,
         )
 
-        async def boom(full: bool) -> None:
+        async def boom(**_kwargs) -> None:
             raise RuntimeError("Yahoo unreachable")
 
         refresh._do_run = boom  # type: ignore[assignment]
@@ -434,7 +434,7 @@ class TestIngestOutcome:
         from app.services.refresh_service import RefreshService
 
         class _OneBadTicker:
-            async def run(self, full: bool = False) -> IngestStats:
+            async def run(self, full: bool = False, **_kwargs) -> IngestStats:
                 return IngestStats(companies=288, fetched=287, failed=1)
 
         service = ActionLogService(to_file=False)

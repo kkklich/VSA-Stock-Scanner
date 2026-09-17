@@ -11,11 +11,14 @@ import {
   Card,
   CompanyLink,
   InfoTip,
+  MarketBadge,
   SignalBadge,
   SortHeader,
   TickerMark,
 } from '../components/ui'
 import { useVolumeSurge } from '../hooks/useVolumeSurge'
+import { useMarketScope } from '../hooks/useMarkets'
+import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { usePersistentState } from '../hooks/usePersistentState'
 import type {
   ApiVolumeSurgeItem,
@@ -23,7 +26,7 @@ import type {
   VolumeSurgeSortKey,
 } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
-import { deltaTone, fmtCompactPln, fmtPct, fmtPrice, ratingTone } from '../lib/format'
+import { deltaTone, fmtCompactPln, fmtMoney, fmtPct, ratingTone } from '../lib/format'
 
 const PAGE_SIZE = 25
 
@@ -111,16 +114,27 @@ export function VolumeSurgePage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
 
+  // The top bar's market; relative volume has no unit, so "all" is fine.
+  const { market } = useMarketScope({ allowAll: true })
+  const marketParam = market && market !== GPW_MARKET ? market : undefined
+  useEffect(() => {
+    setPage(1)
+  }, [marketParam])
+
   const { items, meta, loading, loadingMore, error, hasMore, refetch } =
-    useVolumeSurge({
-      recentDays,
-      baselineDays,
-      minRatio,
-      page,
-      pageSize: PAGE_SIZE,
-      sortBy,
-      sortDir,
-    })
+    useVolumeSurge(
+      {
+        recentDays,
+        baselineDays,
+        minRatio,
+        page,
+        pageSize: PAGE_SIZE,
+        sortBy,
+        sortDir,
+        market: marketParam,
+      },
+      { enabled: market !== null },
+    )
 
   const totalCount = meta?.totalCount ?? 0
 
@@ -229,7 +243,7 @@ export function VolumeSurgePage() {
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-24 text-slate-400">
           <Loader2 className="animate-spin" size={18} />
-          Scanning volume across the GPW…
+          Scanning volume…
         </div>
       ) : error && items.length === 0 ? (
         <div className="py-24 text-center text-sm text-rose-400">
@@ -426,9 +440,12 @@ function SurgeRow({
           title={item.name}
           className="flex items-center gap-2.5"
         >
-          <TickerMark ticker={item.ticker} />
+          <TickerMark ticker={displayTicker(item.ticker)} />
           <div className="min-w-0">
-            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-slate-100">
+              {displayTicker(item.ticker)}
+              <MarketBadge market={item.market} />
+            </div>
             <div className="max-w-[180px] truncate text-xs text-slate-500">
               {item.name}
             </div>
@@ -464,7 +481,7 @@ function SurgeRow({
         {fmtPct(item.priceChangePct)}
       </td>
       <td className="hidden px-4 py-3 text-right text-sm tabular-nums text-slate-200 sm:table-cell">
-        {fmtPrice(item.lastPrice)}
+        {fmtMoney(item.lastPrice, item.currency)}
       </td>
       <td className="px-4 py-3 text-right">
         <span
@@ -498,7 +515,7 @@ function SurgeCard({
       onClick={onOpen}
       role="button"
       tabIndex={0}
-      aria-label={`${item.ticker} ${item.name}, open details`}
+      aria-label={`${displayTicker(item.ticker)} ${item.name}, open details`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -509,9 +526,12 @@ function SurgeCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <TickerMark ticker={item.ticker} />
+          <TickerMark ticker={displayTicker(item.ticker)} />
           <div className="min-w-0">
-            <div className="font-semibold text-slate-100">{item.ticker}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-slate-100">
+              {displayTicker(item.ticker)}
+              <MarketBadge market={item.market} />
+            </div>
             <div className="truncate text-xs text-slate-500">{item.name}</div>
           </div>
         </div>
@@ -539,7 +559,9 @@ function SurgeCard({
         </div>
         <div className="flex justify-between gap-2">
           <span className="text-slate-500">Price</span>
-          <span className="tabular-nums text-slate-200">{fmtPrice(item.lastPrice)}</span>
+          <span className="tabular-nums text-slate-200">
+            {fmtMoney(item.lastPrice, item.currency)}
+          </span>
         </div>
         <div className="flex justify-between gap-2">
           <span className="text-slate-500">Volume</span>

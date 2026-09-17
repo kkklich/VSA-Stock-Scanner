@@ -11,6 +11,7 @@ import asyncio
 import threading
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from typing import Generic, TypeVar
 
 T = TypeVar("T")
@@ -81,7 +82,7 @@ class TTLCache(Generic[T]):
 
     @property
     def generation(self) -> int:
-        """Monotonic counter bumped by every ``clear()``.
+        """Monotonic counter bumped by every ``clear()`` and ``invalidate()``.
 
         A slow computation can read this before starting and use
         ``set_if_generation`` afterwards, so a result built from pre-refresh
@@ -93,7 +94,7 @@ class TTLCache(Generic[T]):
     def set_if_generation(
         self, key: str, value: T, ttl_seconds: float, generation: int
     ) -> bool:
-        """Cache ``value`` only if no ``clear()`` ran since ``generation`` was read.
+        """Cache ``value`` only if nothing was invalidated since ``generation``.
 
         Returns ``True`` when the value was stored, ``False`` when it was
         discarded because the cache has been invalidated in the meantime.
@@ -109,6 +110,21 @@ class TTLCache(Generic[T]):
         with self._lock:
             self._store.clear()
             self._generation += 1
+
+    def invalidate(self, predicate: Callable[[str], bool]) -> int:
+        """Drop every entry whose key matches ``predicate``; returns how many.
+
+        The partial form of ``clear()``, for a refresh that renewed only some
+        of the data (one market's nightly run). It bumps the generation just as
+        ``clear()`` does: a computation that started before the refresh may be
+        holding data that has just been replaced, and must not write it back.
+        """
+        with self._lock:
+            doomed = [key for key in self._store if predicate(key)]
+            for key in doomed:
+                del self._store[key]
+            self._generation += 1
+            return len(doomed)
 
     def __len__(self) -> int:
         """How many entries are currently held (expired ones included)."""

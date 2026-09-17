@@ -4,10 +4,14 @@
 the two in-memory caches, it fetches OHLCV data for all tracked companies and
 persists it. It is called:
 
-  * On startup (if today's data is missing from the DB).
-  * By the APScheduler ``AsyncIOScheduler`` every day at 18:00 Warsaw time
-    (one hour after the GPW close at 17:05), when stooq.pl has published the
-    final EOD bars.
+  * On startup, for the markets whose stored data is missing or behind
+    (``bootstrap_plan``).
+  * By the APScheduler ``AsyncIOScheduler``, once a night per group of markets
+    (``app.markets.refresh_runs``): the GPW and the European exchanges at 18:00
+    Warsaw time, the US at 17:15 New York time.
+
+A run can be limited to some markets; it then only touches — and only clears
+the cached data of — those markets.
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -25,9 +30,11 @@ from apscheduler.triggers.cron import CronTrigger
 from app.analysis.corporate_actions import detect_adjustment
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
+from app.markets import MARKETS, RefreshRun, get_market, market_of
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
+from app.services.market_cache import invalidate_markets
 from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
 
@@ -78,6 +85,36 @@ _MAX_REPORTED_FAILURES = 20
 # smaller number holds a whole night's worth — and the two limits must be free
 # to move apart without one silently changing the other.
 _MAX_REPORTED_ADJUSTED = 20
+# Start-up check (``bootstrap_plan``). A market where fewer than this share of
+# the tracked tickers has ANY stored bar is new to this database and gets the
+# full ~400-day download; one where fewer than ``_CURRENT_SHARE`` carry its
+# newest finished session is merely behind and gets the ordinary top-up.
+_BOOTSTRAP_MIN_SHARE = 0.5
+_CURRENT_SHARE = 0.9
+
+
+def markets_in(companies: Iterable[GpwCompany]) -> list[str]:
+    """The ids of the markets these companies trade on, in display order."""
+    present = {market_of(c.ticker).id for c in companies}
+    return [m.id for m in MARKETS if m.id in present]
+
+
+@dataclass(slots=True)
+class BootstrapPlan:
+    """What the app should download when it starts."""
+
+    # Markets this database has (almost) nothing for: download ~400 days.
+    full: list[str] = field(default_factory=list)
+    # Markets whose newest finished session is missing: the ordinary top-up.
+    catch_up: list[str] = field(default_factory=list)
+
+    @property
+    def needed(self) -> bool:
+        return bool(self.full or self.catch_up)
+
+    @property
+    def markets(self) -> list[str]:
+        return [m.id for m in MARKETS if m.id in self.full or m.id in self.catch_up]
 
 
 @dataclass(slots=True)
@@ -91,6 +128,8 @@ class IngestStats:
 
     full: bool = False
     companies: int = 0
+    # The markets this run covered (ids from app/markets.py).
+    markets: list[str] = field(default_factory=list)
     # Tickers whose fetch returned at least one bar.
     fetched: int = 0
     # Tickers the data provider could not serve (renamed, withdrawn, dead
@@ -115,6 +154,7 @@ class IngestStats:
         return {
             "full": self.full,
             "companies": self.companies,
+            "markets": list(self.markets),
             "fetched": self.fetched,
             "skipped": self.skipped,
             "failed": self.failed,
@@ -148,14 +188,23 @@ class IngestService:
         # the service rather than in history_cache, which every run clears.
         self._gap_retry_after: dict[str, float] = {}
 
-    async def run(self, full: bool = False) -> IngestStats | None:
-        """Fetch and persist data for every tracked ticker.
+    async def run(
+        self,
+        full: bool = False,
+        markets: Sequence[str] | None = None,
+        full_markets: Iterable[str] = (),
+    ) -> IngestStats | None:
+        """Fetch and persist data for the tracked tickers.
 
         Args:
-            full:  When ``True``, requests up to ``_FULL_HISTORY_DAYS`` days
-                   (used on first run to bootstrap the DB).  When ``False``
-                   (the normal nightly run), only the last few days are
-                   refreshed — faster and lighter on stooq.pl.
+            full:          When ``True``, every ticker requests up to
+                           ``_FULL_HISTORY_DAYS`` days (bootstrapping the DB).
+                           When ``False`` (the nightly run), only the last few
+                           days are refreshed — faster and lighter on Yahoo.
+            markets:       Only these markets (ids); ``None`` = every market
+                           the tracked companies trade on.
+            full_markets:  Markets that get the full download even though
+                           ``full`` is ``False`` — a market new to this DB.
 
         Returns:
             What the run did (:class:`IngestStats`), or ``None`` when another
@@ -165,21 +214,47 @@ class IngestService:
             logger.warning("Ingest already running — skipping duplicate trigger.")
             return None
         async with self._running:
-            return await self._do_run(full=full)
+            return await self._do_run(
+                full=full, markets=markets, full_markets=set(full_markets)
+            )
 
-    async def _do_run(self, full: bool = False) -> IngestStats:
+    def _scope(self, markets: Sequence[str] | None) -> list[str]:
+        """The market ids a run covers, in display order."""
+        present = markets_in(self._companies)
+        if markets is None:
+            return present
+        wanted = set(markets)
+        return [m for m in present if m in wanted]
+
+    async def _do_run(
+        self,
+        full: bool = False,
+        markets: Sequence[str] | None = None,
+        full_markets: set[str] | None = None,
+    ) -> IngestStats:
         """Internal: actual ingest body, called under ``_running`` lock."""
         started = time.perf_counter()
-        stats = IngestStats(full=full, companies=len(self._companies))
+        scope = self._scope(markets)
+        in_scope = set(scope)
+        full_ids = (full_markets or set()) & in_scope
+        companies = [c for c in self._companies if market_of(c.ticker).id in in_scope]
+        stats = IngestStats(
+            full=full or bool(full_ids), companies=len(companies), markets=scope
+        )
         today = datetime.now(_WARSAW).date()
-        days = _FULL_HISTORY_DAYS if full else _INCREMENTAL_DAYS
-        from_date = today - timedelta(days=days)
+        incremental_from = today - timedelta(days=_INCREMENTAL_DAYS)
+        bootstrap_from = today - timedelta(days=_FULL_HISTORY_DAYS)
+
+        def download_window(company: GpwCompany) -> tuple[date, bool]:
+            """Where this company's fetch starts, and whether it is a full one."""
+            company_full = full or market_of(company.ticker).id in full_ids
+            return (bootstrap_from if company_full else incremental_from), company_full
 
         logger.info(
-            "Starting %s ingest — %d companies from %s.",
-            "FULL" if full else "incremental",
-            len(self._companies),
-            from_date,
+            "Starting ingest — %d companies on %s (full download: %s).",
+            len(companies),
+            ", ".join(scope) or "no market",
+            "all" if full else (", ".join(sorted(full_ids)) or "none"),
         )
 
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
@@ -191,6 +266,7 @@ class IngestService:
 
         async def ingest_one(company: GpwCompany) -> None:
             ticker = company.ticker
+            from_date, company_full = download_window(company)
 
             # What the database already holds for the window about to be
             # fetched. Two uses: it is the yardstick the fresh bars are checked
@@ -207,7 +283,7 @@ class IngestService:
                 stored = []
 
             effective_from = from_date
-            if not stored and not full:
+            if not stored and not company_full:
                 effective_from = await self._widen_for_gap(
                     ticker, from_date, today, db_semaphore
                 )
@@ -278,11 +354,11 @@ class IngestService:
                     stats.adjusted_tickers.append(ticker)
                 logger.debug("Persisted %d bars for %s.", len(quotes), ticker)
 
-        await asyncio.gather(*(ingest_one(c) for c in self._companies))
+        await asyncio.gather(*(ingest_one(c) for c in companies))
 
-        # Keep company metadata in sync with the seed file.
+        # Keep company metadata in sync with the seed files.
         try:
-            await self._repo.upsert_companies(self._companies)
+            await self._repo.upsert_companies(companies)
         except Exception:
             logger.exception("Failed to sync company metadata to DB; continuing.")
 
@@ -292,17 +368,28 @@ class IngestService:
         # figures only change when a company publishes a report. The extra
         # backfill check makes a newly added fundamentals table fill itself on
         # the next refresh instead of waiting for the next Monday.
-        run_fundamentals = (
-            full or today.weekday() == 0 or await self._fundamentals_missing()
-        )
-        if run_fundamentals:
-            logger.info("Fetching financial fundamentals for %d companies.", len(self._companies))
-            await self._ingest_fundamentals(semaphore)
+        #
+        # A market new to the database needs its fundamentals now, but that is
+        # no reason to re-fetch every other market's too: ~4 Yahoo calls per
+        # company, and the weekly pass will get to them.
+        if full or today.weekday() == 0 or await self._fundamentals_missing():
+            fundamentals_for = companies
+        else:
+            fundamentals_for = [
+                c for c in companies if market_of(c.ticker).id in full_ids
+            ]
+        if fundamentals_for:
+            logger.info(
+                "Fetching financial fundamentals for %d companies.", len(fundamentals_for)
+            )
+            await self._ingest_fundamentals(semaphore, fundamentals_for)
             stats.fundamentals_run = True
 
-        # Flush in-memory caches so the next API call reads the freshly persisted data.
-        self._history_cache.clear()
-        self._ranking_cache.clear()
+        # Flush what the refreshed markets fed, so the next API call reads the
+        # freshly persisted data — and leave the other markets' caches alone.
+        invalidate_markets(
+            scope, (self._history_cache, "history"), (self._ranking_cache, "ranking")
+        )
 
         stats.duration_ms = (time.perf_counter() - started) * 1000.0
         logger.info(
@@ -509,8 +596,10 @@ class IngestService:
             logger.debug("Could not check stored cash-flow data; skipping backfill.")
             return False
 
-    async def _ingest_fundamentals(self, semaphore: asyncio.Semaphore) -> None:
-        """Fetch metrics, quarterly reports and cash flow for all companies."""
+    async def _ingest_fundamentals(
+        self, semaphore: asyncio.Semaphore, companies: list[GpwCompany]
+    ) -> None:
+        """Fetch metrics, quarterly reports and cash flow for the given companies."""
 
         async def fetch_one(company: GpwCompany) -> None:
             async with semaphore:
@@ -545,56 +634,75 @@ class IngestService:
                         "Could not update cash-flow data for %s.", company.ticker
                     )
 
-        await asyncio.gather(*(fetch_one(c) for c in self._companies))
+        await asyncio.gather(*(fetch_one(c) for c in companies))
+
+    async def bootstrap_plan(self, now: datetime | None = None) -> BootstrapPlan:
+        """Which markets need downloading at startup, and how much.
+
+        One read — the newest stored bar of every ticker — judged per market:
+
+          * **full** when under half of the market's tickers have any stored
+            bar at all: a market just switched on, or an empty database;
+          * **catch-up** when under 90% carry the market's newest *finished*
+            session (on its own clock — a US stock at 20:00 Warsaw is not
+            behind, its session is still trading): the app was down when the
+            nightly run came due;
+          * nothing otherwise. Before multi-market support a restart any time
+            before 18:00 re-downloaded 400 days of every stock, because
+            "today's bar" did not exist yet; that is gone.
+        """
+        plan = BootstrapPlan()
+        if not self._companies:
+            return plan
+        latest = await self._repo.get_latest_bar_dates()
+        for market_id in self._scope(None):
+            market = get_market(market_id)
+            assert market is not None  # ids come from the registry
+            tickers = [c.ticker for c in self._companies if market_of(c.ticker).id == market_id]
+            stored = [latest[t] for t in tickers if t in latest]
+            if len(stored) < len(tickers) * _BOOTSTRAP_MIN_SHARE:
+                plan.full.append(market_id)
+                continue
+            expected = market.latest_final_session(now)
+            current = sum(1 for newest in stored if newest >= expected)
+            if current < len(tickers) * _CURRENT_SHARE:
+                plan.catch_up.append(market_id)
+        return plan
 
     async def needs_bootstrap(self) -> bool:
-        """Return True if fewer than 90% of tracked companies have today's data.
-
-        This runs during startup, before anything else has warmed up, and asks
-        one question per tracked company. Firing all ~290 of them at once at a
-        15-connection pool means most of them queue for a connection and the
-        slowest ones time out — so the app's very first act would be to conclude
-        (wrongly) that the database is empty and kick off a full bootstrap
-        ingest. The probes are throttled to the same budget every other
-        full-universe scan uses (DB_SCAN_CONCURRENCY, app/db/base.py); they are
-        tiny queries, so the wall-clock cost of queueing them is negligible.
-        """
-        if not self._companies:
-            return False
-
-        db_semaphore = asyncio.Semaphore(DB_SCAN_CONCURRENCY)
-
-        async def probe(ticker: str) -> bool:
-            async with db_semaphore:
-                return await self._repo.has_today_data(ticker)
-
-        checks = await asyncio.gather(*(probe(c.ticker) for c in self._companies))
-        return sum(checks) < len(self._companies) * 0.9
+        """True when any served market needs a download at startup."""
+        return (await self.bootstrap_plan()).needed
 
 
 def build_scheduler(
     refresh_service,  # RefreshService (duck-typed to avoid a circular import)
     hour: int = 18,
     minute: int = 0,
+    runs: Sequence[RefreshRun] | None = None,
 ) -> AsyncIOScheduler:
     """Create (but don't start) the nightly refresh scheduler.
 
-    The scheduler fires the full *daily* refresh pipeline (incremental Yahoo
-    ingest → ranking recompute → rating snapshots). The bootstrap (full)
-    refresh is handled separately in the app lifespan.
+    One job per run (``app.markets.refresh_runs``), each firing the *daily*
+    refresh pipeline (incremental Yahoo ingest → ranking recompute → rating
+    snapshots) for its own markets, on its own clock. Without ``runs`` there is
+    the single original job at ``hour:minute`` Warsaw time covering every
+    market. The start-up download is handled separately in the app lifespan.
     """
+    if runs is None:
+        runs = [RefreshRun("europe", hour, minute, "Europe/Warsaw", ())]
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        refresh_service.run,
-        trigger=CronTrigger(
-            hour=hour,
-            minute=minute,
-            timezone="Europe/Warsaw",
-        ),
-        id="daily_ingest",
-        name="GPW daily data refresh (ingest + ranking + rating snapshots)",
-        replace_existing=True,
-        # If the server was down at trigger time, run the missed job within 1 h.
-        misfire_grace_time=3_600,
-    )
+    for run in runs:
+        scheduler.add_job(
+            refresh_service.run,
+            trigger=CronTrigger(hour=run.hour, minute=run.minute, timezone=run.timezone),
+            kwargs={"markets": list(run.market_ids) or None},
+            id=run.job_id,
+            name=(
+                "Daily data refresh (ingest + ranking + rating snapshots): "
+                + (", ".join(run.market_ids) or "all markets")
+            ),
+            replace_existing=True,
+            # If the server was down at trigger time, run the missed job within 1 h.
+            misfire_grace_time=3_600,
+        )
     return scheduler

@@ -10,6 +10,10 @@ import os
 # Must be set before app.config is imported (i.e. before test files are collected).
 os.environ["STOCKPILOT_DATABASE_URL"] = ""
 
+# The suite assumes the default market set (the GPW alone) whatever a local
+# .env switches on; tests that need other markets turn them on themselves.
+os.environ["STOCKPILOT_MARKETS"] = "gpw"
+
 # The action log would otherwise write a real logs/actions.jsonl next to the
 # backend on every test run. The middleware still runs (and its in-memory
 # buffer is still exercised) — only the file is off. tests/test_action_log.py

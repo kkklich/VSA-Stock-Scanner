@@ -20,7 +20,9 @@ export function RefreshButton({ onRefreshed }: { onRefreshed: () => void }) {
     : error
       ? t('refresh.failed')
       : status?.lastRefreshAt
-        ? t('refresh.updated', { time: fmtRefreshTime(status.lastRefreshAt) })
+        ? t('refresh.updated', {
+            time: fmtRefreshTime(status.lastRefreshAt, t('refresh.today')),
+          })
         : null
 
   const title = error ? t('refresh.titleFailed', { error }) : t('refresh.title')

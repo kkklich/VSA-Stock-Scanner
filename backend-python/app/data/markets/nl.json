@@ -1,0 +1,437 @@
+{
+  "market": "nl",
+  "name": "Euronext Amsterdam",
+  "generatedAt": "2026-09-16",
+  "sources": {
+    "aex": "https://en.wikipedia.org/wiki/AEX_index"
+  },
+  "verification": "Each company returned at least 5 traded daily bars in the 21 days before the generation date, a company name and a sector from Yahoo Finance, and prices quoted in EUR.",
+  "companies": [
+    {
+      "ticker": "abn.as",
+      "symbol": "ABN.AS",
+      "name": "ABN AMRO Bank N.V.",
+      "sector": "Financial Services",
+      "industry": "Banks - Diversified",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 35343761408,
+      "employees": 22905,
+      "website": "https://www.abnamro.com",
+      "description": "ABN AMRO Bank N.V. provides various banking products and financial services to retail, private, and corporate banking clients in the Netherlands, rest of Europe, the United States, Asia, and internationally. It operates through three segments: Personal & Business Banking, Wealth Management, and Corporate Banking. The company offers fixed deposits; home improvement; mortgage products; investment products; and car, home travel, and legal expenses insurances. It also provides pension savings; asset-based solutions, including working capital solutions, equipment leases, equipment loans and vendor lease services, clearing services, equity brokerage services, payment and credit cards services; and internet and online banking. The company was incorporated in 2009 and is headquartered in Amsterdam, the Netherlands. ABN AMRO Bank N.V. operates as a subsidiary of Stichting Administratiekantoor Continuïteit Abn Amro Bank.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "ad.as",
+      "symbol": "AD.AS",
+      "name": "Koninklijke Ahold Delhaize N.V.",
+      "sector": "Consumer Defensive",
+      "industry": "Grocery Stores",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 28073973760,
+      "employees": 384000,
+      "website": "https://www.aholddelhaize.com",
+      "description": "Koninklijke Ahold Delhaize N.V. operates retail food stores and e-commerce in the Netherlands, the United States, and internationally. The company's stores offer produce, dairy, meat, deli, bakery, seafood, and frozen products; grocery, beer, and wine; floral, pet food, health and beauty care, kitchen and cookware, gardening tools, general merchandise articles, electronics, newspapers and magazines, and tobacco; gasoline; and pharmacy products. It operates its supermarkets, convenience stores, and online stores under the Albert, Albert Heijin, Alfa Beta Vassilopoulos, bol, Delhaize, ENA, Food Lion, Gall & Gall, Giant Food, The GIANT Company, Hannaford, Maxi, Mega Image, Stop & Shop, Profi, and Super Indo brands. The company was formerly known as Koninklijke Ahold N.V. and changed its name to Koninklijke Ahold Delhaize N.V. in July 2016. The company was founded in 1867 and is headquartered in Zaandam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "adyen.as",
+      "symbol": "ADYEN.AS",
+      "name": "Adyen N.V.",
+      "sector": "Technology",
+      "industry": "Software - Infrastructure",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 28874039296,
+      "employees": 5020,
+      "website": "https://www.adyen.com",
+      "description": "Adyen N.V. operates a payments platform in Europe, the Middle East, Africa, North America, the Asia Pacific, and Latin America. Its platform integrates payments stack, including gateway, risk management, processing, acquiring, and settlement services. The company offers a back-end infrastructure for authorizing. It accepts payment through online, in-person payments, cross channel, and Adyen for Platforms. The company also provides optimization services, including Adyen Uplift, protect, authenticate and tokenize. In addition, it offers financial products, such as accounts, capital, issuing, and payouts. It serves digital, mobility, SaaS platforms, retail, food and beverages, subscription, and travel and hospitality businesses. The company was incorporated in 2006 and is based in Amsterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "agn.as",
+      "symbol": "AGN.AS",
+      "name": "Aegon Ltd.",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 11748165632,
+      "employees": 12100,
+      "website": "https://www.aegon.com",
+      "description": "Aegon Ltd. provides insurance services in the Americas, the Netherlands, the United Kingdom, and internationally. It offers retirement plans, mutual funds, and unit-linked products; and annuities, life, and health insurance. The company provides its products under the Transamerica and World Financial Group brands. Aegon Ltd. was founded in 1844 and is based in Schiphol, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "akza.as",
+      "symbol": "AKZA.AS",
+      "name": "Akzo Nobel N.V.",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 9862355968,
+      "employees": 30900,
+      "website": "https://www.akzonobel.com",
+      "description": "Akzo Nobel N.V. produces and sells paints and coatings worldwide. It operates through Decorative Paints and Performance Coatings segments. The company offers decorative paints, including paints, enamels, varnishes, and surface preparation products; and a range of mixing machines, color concepts and advice, and training for applicators. It also provides performance coatings that produces engineered coatings designed to deliver functional properties, such as corrosion and fouling control, anti-scratch performance, and fire protection to protect and enhance ships, cars, aircraft, yachts, and architectural components, consumer goods, and oil and gas facilities. The company offers its products under the AkzoNobel, Alabastine, Alba, Andercol, Apla, Armstead Trade, Astral, Astral Batiment, AwlGrip, Brikol, Bruguer, Cetabever, Cetol, Chemcraft, Colourland Paints, CONSOLAN, Coral, Cromadex, Cuprinol, Dulux, Dynacoat, Flexa, Glitsa, Grip-Gard, Hammerite, Herbol, Inca, Innenweis, Interlux, International, Interpon, Lesonal, Levis, Luxol, Mactra, Marshall, Mauvilac, Maxilite, Modern Classikk, Molto, Nordsjo, Oxirite, Pintuco, Pinotex, Polycell, Polyfilla, Procolor, Protecto, Relest, Resicoat, Sadolin, Salcomix, Savana, Sea Hawk, Sikkens, Sparlack, Taubmans, Titanlux, Trimetal, U-Tech, Vivechrom, VPowdertech, Wanda, Xyladecor, and Xylazel brands. The company serves energy, packaging, infrastructure, and shipbuilding and maintenance industries, as well as general industries, such as agricultural and construction equipment, construction-related steel, metal fabrication, pipes, appliances, and transportation. The company was formerly known as Akzo NV and changed its name to Akzo Nobel N.V. in 1994. Akzo Nobel N.V. was founded in 1646 and is headquartered in Amsterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "asm.as",
+      "symbol": "ASM.AS",
+      "name": "ASM International NV",
+      "sector": "Technology",
+      "industry": "Semiconductor Equipment & Materials",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 37690073088,
+      "employees": 4908,
+      "website": "https://www.asm.com",
+      "description": "ASM International NV, together with its subsidiaries, engages in the research, development, manufacturing, marketing, and servicing of equipment and materials used to produce semiconductor devices in the United States, Europe, and Asia. The company offers equipment used in wafer processing, which encompasses the fabrication steps in which silicon wafers are layered with semiconductor devices. It also provides wafer-processing deposition systems for surface modification, atomic layer deposition (ALD), such as plasma enhanced ALD (PEALD); epitaxy (Epi); plasma enhanced chemical vapor deposition (PECVD); and vertical furnace systems, including low pressure chemical vapor deposition (LPCVD), diffusion, oxidation, and cure. In addition, the company provides silicon carbide epitaxy (SiC Epi) tools for power and wafer applications; chemical mechanical polishing equipment for compound semiconductors and More-than-Moore manufacturing; and spare parts and support services. It sells its products to semiconductor manufacturers. The company was formerly known as Advanced Semiconductor Materials International NV. ASM International NV was incorporated in 1968 and is headquartered in Almere, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "asml.as",
+      "symbol": "ASML.AS",
+      "name": "ASML Holding N.V.",
+      "sector": "Technology",
+      "industry": "Semiconductor Equipment & Materials",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 536280399872,
+      "employees": 43938,
+      "website": "https://www.asml.com",
+      "description": "ASML Holding N.V. provides lithography solutions for the development, production, marketing, sales, upgrading, and servicing of advanced semiconductor equipment systems. The company offers lithography, metrology, and inspection systems. It also provides extreme ultraviolet lithography systems; and deep ultraviolet lithography systems comprising immersion and dry lithography systems solutions to manufacture various range of semiconductor nodes and technologies. In addition, the company offers metrology and inspection systems, including YieldStar optical metrology systems, a diffraction-based wafer metrology platform to assess the quality of patterns on the wafers; and HMI electron beam solutions to locate and analyze individual chip defects. Further, it provides computational lithography solutions, and lithography systems and control software solutions; and refurbishes and upgrades lithography systems, as well as offers customer support and related services. Additionally, the company offers hardware, software, and services to chipmakers to produce the patterns of integrated circuits. It operates in Japan, South Korea, Singapore, Taiwan, China, rest of Asia, the Netherlands, rest of Europe, the Middle East, Africa, and the United States. The company was formerly known as ASM Lithography Holding N.V. and changed its name to ASML Holding N.V. in 2001. ASML Holding N.V. was founded in 1984 and is headquartered in Veldhoven, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "asrnl.as",
+      "symbol": "ASRNL.AS",
+      "name": "ASR Nederland N.V.",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 15007380480,
+      "employees": 9542,
+      "website": "https://www.asrnl.com",
+      "description": "ASR Nederland N.V. provides insurance, pensions, and mortgages products and services for consumers, businesses, and employers in the Netherlands. The company operates through five segments: Non-Life, Life, Asset Management, Distribution and Services, and Holding and Other. It offers individual and group disability, as well as sickness leave; property and casualty, including motor, fire, liability, legal aid, travel and recreation, pet, and transport insurance; and health insurance, such as basic and supplementary health insurance. The company also provides pension products; Individual term life insurance; and funeral capital insurance. In addition, it is involved in the provision of asset management services, including investment property management, as well as managing of corporate bonds, government bonds, and equities; investment solutions; manages non-listed sector funds, which invest in retail and residential properties, offices, real estate on science parks, agricultural land, and renewable energy sources comprising wind, solar farms, and energy storage; and develops investment strategies. Further, the company operates in the residential mortgage markets under a.s.r. and Aegon brands; and specialised products for first-time buyers, customers who want to finance sustainable home modifications and senior citizens. Additionally, it engages in the provision of distribution and services; involved in the group-related activities, real estate development business, and activities relating to private investments for customers; offers expert guidance, software and advice on creating healthy and safe working environments services under the ArboNed, Mensely, HumanCapitalCare, Focus, and IT&Care brands; and health and reintegration services. The company was formerly known as Fortis Verzekeringen Nederland N.V. and changed its name to ASR Nederland N.V. in October 2008. The company was founded in 1720 and is based in Utrecht, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "besi.as",
+      "symbol": "BESI.AS",
+      "name": "BE Semiconductor Industries N.V.",
+      "sector": "Technology",
+      "industry": "Semiconductor Equipment & Materials",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 14153600000,
+      "employees": 1952,
+      "website": "https://www.besi.com",
+      "description": "BE Semiconductor Industries N.V. develops, manufactures, markets, sells, and services semiconductor assembly equipment for the semiconductor and electronics industries in the Netherlands, Switzerland, Austria, Singapore, Malaysia, and internationally. It operates through three segments: Die Attach, Packaging, and Plating. The company offers single chip, multi chip, multi module, flip chip, epoxy and soft solder die bonding systems, hybrid, TCB and embedded bridge die bonding, die lid attach, and fan out wafer level packaging systems; and conventional, ultra-thin and wafer level molding, trim and form, and singulation systems. It also provides tin, copper, precious metal and solar plating systems, and related process chemicals; and tooling, conversion kits, spare parts, and other services. The company sells its products under the Fico, Meco, Datacon, and Esec brands. It serves multinational chip manufacturers, foundries, assembly subcontractors and electronics, and industrial companies. BE Semiconductor Industries N.V. was incorporated in 1995 and is headquartered in Duiven, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "dsfir.as",
+      "symbol": "DSFIR.AS",
+      "name": "DSM-Firmenich AG",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "Switzerland",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 22547884032,
+      "employees": 20786,
+      "website": "https://www.dsm-firmenich.com",
+      "description": "DSM-Firmenich AG provides nutrition, health, and beauty solutions in Switzerland, the Netherlands, rest of Europe, the Middle East and Africa, North America, Latin America, China, and rest of Asia. The company operates through Perfumery & Beauty; Taste, Texture & Health; and Health, Nutrition & Care segments. The Perfumery & Beauty creates scents using natural, synthetic, and biotech ingredients. The Taste, Texture & Health segment provides food and beverages solutions, including flavors, natural extracts, and sugar reduction; and food enzymes, hydrocolloids, cultures, natural colorants, nutritional ingredients, and plant-based proteins. The Health, Nutrition & Care segment provides solutions for the early life nutrition, dietary supplement, pharmaceutical, medical nutrition, biomedical materials, and nutrition improvement markets. This segment also offers vitamins, nutritional lipids, minerals, carotenoids, botanical nutraceuticals, digestive enzymes, postbiotics, probiotics and prebiotics, and active pharmaceutical ingredients; biomedical solutions; and premix, market-ready, and personalized nutrition solutions, as well as expert services in regulatory affairs and nutrition. DSM-Firmenich AG was founded in 1902 and is based in Kaiseraugst, Switzerland.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "exo.as",
+      "symbol": "EXO.AS",
+      "name": "Exor N.V.",
+      "sector": "Financial Services",
+      "industry": "Asset Management",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 23451111424,
+      "employees": 20,
+      "website": "https://www.exor.com",
+      "description": "Exor N.V. engages in the automotive, agriculture and construction, sports car, commercial vehicle, health technology, football and powertrain businesses in the Netherlands and internationally. The company designs, engineers, produces, and sells luxury performance sports cars under the Ferrari brand. It also provides automotive vehicles and mobility solutions under the Abarth, Alfa Romeo, Chrysler, Citroen, Dodge, DS, Fiat, Fiat Professional, Jeep, Lancia, Maserati, Mopar, Opel, Peugeot, Ram, and Vauxhall brands; diagnostic imaging, ultrasound, image-guided therapy, monitoring and enterprise informatic, and personal health equipment under Philips brand; agricultural and construction equipment and services; heavy, medium, and light-duty trucks; powertrain technologies; mass-transit and premium buses and coaches; defense and civil protection equipment; heavy-duty quarry and construction vehicles; and firefighting vehicles and equipment, as well as financing services. In addition, the company offers men's footwear, leather goods, beauty, and accessories; equipment for the building and repairing of oil and gas wells; clean energy solutions; data, insights and analytics, expert, and workflow solutions; information through newspapers and magazines to conferences and electronic services and publishes The Economist; and apparel, furniture, homeware, and jewelry products. Further, it engages in the management of professional football teams under the Juventus Football Club name; and hospitals and outpatient clinics, as well as operates as investment management company and technology company specializing in the data-driven optimization of public mobility systems. Exor N.V. was founded in 1899 and is headquartered in Amsterdam, the Netherlands. Exor N.V. is a subsidiary of Giovanni Agnelli B.V.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "heia.as",
+      "symbol": "HEIA.AS",
+      "name": "Heineken N.V.",
+      "sector": "Consumer Defensive",
+      "industry": "Beverages - Brewers",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 39723376640,
+      "employees": 85000,
+      "website": "https://www.theheinekencompany.com",
+      "description": "Heineken N.V. brews and sells beer and cider in Europe, the Americas, Africa, the Middle East, and the Asia Pacific. The company also provides soft drinks. It sells its products under the Heineken, Heineken 0.0, Heineken Silver, Amstel, Moretti, Tiger, Desperados, Edelweiss, Lagunitas, Orchard Thieves, Windhoek, Dos Equis, Red Stripe, Kingfisher, Bintang, Gosser, Affligem, Mort Subite, Strongbow, Stassen, Bulmers, Old Mout, Savanna, Turbo King, Tecate, Lagunitas Hoppy Refresher, Bia Viet, Tiger Crystal, Birra Moretti, Harar, Cruzcampo, Bernini, Legend Stout, Beavertown, Stëlz, Texels, Ladrón, Bandida, Stibitzer, El Aguila, and Murphy's brands. In addition, the company engages in rental of pubs and bars; wholesale activities; and pub management and technical services. The company offers its products to retailers, wholesalers and distributors, bars, restaurants, clubs, cafes, and hotels. Heineken N.V. was incorporated in 1864 and is headquartered in Amsterdam, the Netherlands. Heineken N.V. is a subsidiary of Heineken Holding N.V.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "imcd.as",
+      "symbol": "IMCD.AS",
+      "name": "IMCD N.V.",
+      "sector": "Basic Materials",
+      "industry": "Specialty Chemicals",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 5657688064,
+      "employees": 5237,
+      "website": "https://www.imcdgroup.com",
+      "description": "IMCD N.V. distributes, markets, and sells specialty chemicals and ingredients in the Netherlands, rest of Europe, the Middle East, Africa, North America, South America, and the Asia-Pacific. The company provides adhesives, core materials, filler reinforcements, flame retardants, masterbatch, modifiers, operating materials, pigments, plasticizers, processing aids, PUR raw materials, rubber elastomers, solvents, stabilizers, thermoplastic elastomers, thermoplastics, thermoplastics, and other additives. It offers actives, UV sunscreens, rheology modifiers, thickeners, surfactants, emulsifiers, emollients, film formers, humectants, waxes, conditioners, hair styling polymers, solvent, solubilizers, pigments, pearls, powders and colorants, opacifiers, pearlizers, preservatives, antioxidants, fragrances, and essential oils. In addition, the company provides functional fillers, pigments, resins, and specialty solvents; taste, texture, nutrition, and function; and abrasives, acids, alkalines, anti-soil redeposition and foam control systems, bio-actives, biocides, bittering and bleaching agents, builders, capsules, chelating agents, concentrates/ready-to-use, corrosion and dye transfer inhibitors, disintegrants, dispersants, emulsifiers, enzymes, fluorinated polymers, oleo chemicals, optical brighteners, perfumes, dyes, phosphates, plasticisers, proteins, rheology modifiers and thickeners, silicones, solvents/diluents, TAED, UV-filters, and waxes. Further, it offers base oils; lubricants addictive; lubricants finished fluids; fuel additives; solvents, degreasers, and fuel compounds; and upstream, midstream, and downstream oil, gas, and energy. IMCD N.V. was founded in 1995 and is headquartered in Rotterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "inga.as",
+      "symbol": "INGA.AS",
+      "name": "ING Groep N.V.",
+      "sector": "Financial Services",
+      "industry": "Banks - Diversified",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 91027644416,
+      "employees": 60000,
+      "website": "https://www.ing.com",
+      "description": "ING Groep N.V. provides various banking products and services in the Netherlands, Belgium, Germany, rest of Europe, and internationally. The company operates through five segments: Retail Netherlands, Retail Belgium, Retail Germany, Retail Other, and Wholesale Banking. It accepts current and savings accounts; and time deposits. The company also offers business lending products; SME loans; consumer lending products, such as residential mortgage loans and other consumer lending loans; and mortgages. In addition, it provides working capital solutions; debt and equity market solutions; various loans; payments; and cash management, trade and corporate finance, and treasury services, as well as savings, investment, insurance, and digital banking services. The company serves individual customers, corporate clients, and financial institutions. ING Groep N.V. was founded in 1762 and is headquartered in Amsterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "kpn.as",
+      "symbol": "KPN.AS",
+      "name": "Koninklijke KPN N.V.",
+      "sector": "Communication Services",
+      "industry": "Telecom Services",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 15895720960,
+      "employees": 4789,
+      "website": "https://www.kpn.com",
+      "description": "Koninklijke KPN N.V. provides telecommunications and information technology (IT) services in the Netherlands. The company operates through Consumer, Business, Wholesale and Network, and Operations & IT segments. It offers fixed and mobile telephony, fixed and mobile broadband internet, and TV to retail and business consumers; infrastructure and network-related IT solutions to business customers; and wholesale network services to third parties. The company also provides network-related ICT solutions, such as security, internet of things, cloud, connectivity, and smart combinations; interconnect traffic, visitor roaming, digital products, and NL-ix interconnect exchange services; and sale of handsets and peripheral equipment, as well as software licenses. It offers its products and services under the KPN, XS4ALL, Simyo, KPN Security, KPN Health, Solcon, Inspark, and KPN Partner Network, KPN IoT, and youfone brands. The company was formerly known as Koninklijke PTT Nederland NV and changed its name to Koninklijke KPN N.V. in June 1998. Koninklijke KPN N.V. was founded in 1881 and is headquartered in Rotterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "mt.as",
+      "symbol": "MT.AS",
+      "name": "ArcelorMittal S.A.",
+      "sector": "Basic Materials",
+      "industry": "Steel",
+      "country": "Luxembourg",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 48667918336,
+      "employees": 125554,
+      "website": "https://corporate.arcelormittal.com",
+      "description": "ArcelorMittal S.A., together with its subsidiaries, operates as integrated steel and mining companies in the Americas, Europe, Asia, and Africa. It offers semi-finished flat products, including slabs; finished flat products comprising plates, hot- and cold-rolled coils and sheets, hot-dipped and electro-galvanized coils and sheets, tinplate, and color coated coils and sheets; semi-finished long products, such as blooms and billets; finished long products consisting of bars, wire-rods, structural sections, rails, sheet piles, and wire-products; and seamless and welded pipes and tubes. The company also provides mining products, such as iron ore lumps, fines, concentrate, pellets, and sinter feeds; and coking coal. It sells its products to various customers in the automotive, appliance, engineering, construction, energy, and machinery industries through a centralized marketing organization, and distributors. The company operates iron ore mining activities in Brazil, Bosnia, Liberia, Mexico, South Africa, and Ukraine, as well as in India and in Canada. ArcelorMittal S.A. was founded in 1976 and is headquartered in Luxembourg, Luxembourg.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "nn.as",
+      "symbol": "NN.AS",
+      "name": "NN Group N.V.",
+      "sector": "Financial Services",
+      "industry": "Insurance - Diversified",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 20803069952,
+      "employees": 13393,
+      "website": "https://www.nn-group.com",
+      "description": "NN Group N.V., a financial services company, provides life and non-life insurance products in the Netherlands and internationally. It operates through the Netherlands Life, the Netherlands Non-Life, Insurance Europe, Japan Life, and NN Bank segments. The company provides insured defined benefit, defined contribution, pensions under the Nationale-Nederlanden brand name; premium pension institution services under the BeFrank brand name; and general pension fund administration and advisory services under AZL brand name, as well as non-life insurance products, including motor, fire, liability, transport, travel, health, and disability and accident insurance products. It also provides long-term protection to cover a variety of risks including disability, critical illness and health; and protection, savings and retirement solutions. In addition, the company offers financial services, such as savings, investments, bancassurance and mortgages under the Woonnu brand name. The company offers its products to individuals, small and medium-sized enterprises, and corporate customers directly through tied agents, advisors, brokers, and direct channels. The company was formerly known as ING Insurance Topholding N.V. and changed its name to NN Group N.V. in March 2014. NN Group N.V. was founded in 1845 and is headquartered in The Hague, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "phia.as",
+      "symbol": "PHIA.AS",
+      "name": "Koninklijke Philips N.V.",
+      "sector": "Healthcare",
+      "industry": "Medical Devices",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 21200402432,
+      "employees": 63670,
+      "website": "https://www.philips.com",
+      "description": "Koninklijke Philips N.V. operates as a health technology company in North America, the Greater China, and internationally. It operates through Diagnosis & Treatment, Connected Care, and Personal Health segments. The company provides diagnostic imaging solutions, includes ultrasound business unit, magnetic resonance imaging, computed tomography, and diagnostic x-ray; Image Guided Therapy, including image guided therapy systems and image guided therapy devices. It also offers monitoring, enterprise informatics, and sleep and respiratory care, as well as personal health. Koninklijke Philips N.V. has strategic alliance with WellSpan Health to advanced imaging and diagnostics technology products and platforms. The company was formerly known as Koninklijke Philips Electronics N.V. and changed its name to Koninklijke Philips N.V. in May 2013. Koninklijke Philips N.V. was founded in 1891 and is headquartered in Amsterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "prx.as",
+      "symbol": "PRX.AS",
+      "name": "Prosus N.V.",
+      "sector": "Consumer Cyclical",
+      "industry": "Internet Retail",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 74471948288,
+      "employees": 41998,
+      "website": "https://www.prosus.com",
+      "description": "Prosus N.V. engages in the e-commerce and internet businesses in Asia, Europe, Latin America, North America, and internationally. It operates internet platforms, such as classifieds, payments and fintech, etail, food delivery, education technology, Etail, ventures, tencent, and other platforms. It also provides online food delivery service. The company was formerly known as Myriad International Holdings N.V. and changed its name to Prosus N.V. Prosus N.V. was incorporated in 1994 and is headquartered in Amsterdam, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "rand.as",
+      "symbol": "RAND.AS",
+      "name": "Randstad N.V.",
+      "sector": "Industrials",
+      "industry": "Staffing & Employment Services",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 6456584192,
+      "employees": 38000,
+      "website": "https://www.randstad.com",
+      "description": "Randstad N.V. provides solutions in the field of work and human resources services primarily in North America, Northern Europe, Southern Europe, the United Kingdom, Latin America, and the Asia Pacific. The company offers temporary staffing and permanent placement, job posting, and résumé services on digital platforms. It also provides recruitment process outsourcing, payroll, and outplacement services, as well as managed services programs. In addition, the company offers inhouse, enterprise and digital, and tech suite services, as well as career development and online talent acquisition services. The company was formerly known as Randstad Holding NV and changed its name to Randstad N.V. in April 2018. Randstad N.V. was founded in 1960 and is headquartered in Diemen, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "ren.as",
+      "symbol": "REN.AS",
+      "name": "RELX PLC",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "United Kingdom",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 51830579200,
+      "employees": 37000,
+      "website": "https://www.relx.com",
+      "description": "RELX PLC, together with its subsidiaries, provides information-based analytics and decision tools for professional and business customers in North America, Europe, and internationally. It operates through four segments: Risk; Scientific, Technical & Medical; Legal; and Exhibitions. The Risk segment offers information-based analytics and decision tools that combine public and industry specific content with technology and algorithms to assist clients in evaluating and predicting risk, as well as a portfolio of commercial healthcare products. Its Scientific, Technical & Medical segment provides scientific and medical information and data sets for science and healthcare. The Legal segment provides legal, regulatory, and business information and analytics. Its Exhibitions segment combines digital tools and data to help customers connect in-person and online, discover new markets, source products, generate leads, and transact. The company was formerly known as Reed Elsevier PLC and changed its name to RELX PLC in July 2015. RELX PLC was incorporated in 1903 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "shell.as",
+      "symbol": "SHELL.AS",
+      "name": "Shell plc",
+      "sector": "Energy",
+      "industry": "Oil & Gas Integrated",
+      "country": "United Kingdom",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 239088828416,
+      "employees": 84000,
+      "website": "https://www.shell.com",
+      "description": "Shell plc operates as an energy and petrochemical company in Europe, Asia, Oceania, Africa, the United States, and other parts of the Americas. It operates through the following segments: Integrated Gas, Upstream, Marketing, Chemicals and Products, and Renewables and Energy Solutions. The company explores for and extracts natural gas to produce liquefied natural gas or convert it into gas-to-liquids (GTL) fuels and other products; explores for and extracts crude oil, natural gas, and natural gas liquids; and operates marketing and transportation of oil, gas, and liquids, supported by the infrastructure required to deliver them to market or to process them within Shell's chemical manufacturing plants and refineries. It is also involved in marketing, which includes mobility, lubricants, and sectors focused on decarbonization; operates a retail network, including electric vehicle charging, convenience retail, and the wholesale commercial fuels business for transport and industry; sells products for road transport and machinery in manufacturing, mining, power generation, agriculture, and construction; and provides low-carbon energy solutions, such as biofuels, to a broad range of commercial customers, including those in the aviation, marine, and agriculture sectors. In addition, the company offers chemicals and products, including chemicals manufacturing plants with their own marketing network, and refineries that turn crude oil and other feedstocks into a range of oil products, which are moved and marketed around the world for domestic, industrial, and transport use; and operates a pipeline business, trading, and optimization of crude oil, oil products, and petrochemicals. The company was formerly known as Royal Dutch Shell plc and changed its name to Shell plc in January 2022. Shell plc was founded in 1897 and is headquartered in London, United Kingdom.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "umg.as",
+      "symbol": "UMG.AS",
+      "name": "Universal Music Group N.V.",
+      "sector": "Communication Services",
+      "industry": "Entertainment",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 26640488448,
+      "employees": null,
+      "website": "https://www.universalmusic.com",
+      "description": "Universal Music Group N.V. operates as a music company worldwide. The company operates through Recorded Music, Music Publishing, and Merchandising & Other segments. Its Recorded Music segment discovers and develops recording artists, as well as licenses, markets, promotes, distributes, and sells their music across various formats and platforms; and engages in the live events, sponsorship, film, and television operations. The Music Publishing segment discovers and develops songwriters, as well as owns and administers the copyright for musical compositions used in recordings, public performances, and related uses, such as films and advertisements. Its Merchandising & Other segment produces and sells artist and other branded products through various sales channels, including fashion retail, concert touring, and online, as well as offers brand rights management services. Universal Music Group N.V. was incorporated in 2020 and is headquartered in Hilversum, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "una.as",
+      "symbol": "UNA.AS",
+      "name": "Unilever PLC",
+      "sector": "Consumer Defensive",
+      "industry": "Household & Personal Products",
+      "country": "United Kingdom",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 116577746944,
+      "employees": 93731,
+      "website": "https://www.unilever.com",
+      "description": "Unilever PLC operates as a fast-moving consumer goods company in the Asia Pacific, Africa, the Americas, and Europe. It operates through four segments: Beauty & Wellbeing, Personal Care, Home Care, and Foods. The Beauty & Wellbeing segment offers hair care, such as shampoo, conditioner, and styling; face, hand, and body moisturizer skin care products; and Prestige Beauty and Wellbeing products. The Personal Care segment provides soap and shower skin cleansing products; and deodorant and oral care, including toothpaste, toothbrush, and mouthwash products. The Home Care segment offers washing powders and liquids, and rinse conditioner fabric care products; and a range of home and hygiene cleaning products. The Foods segment provides cooking aids and mini meals comprising soups, bouillons, and seasonings, as well as mayonnaise and ketchup condiments; and Unilever food solutions. The company provides its products under the AXE, Clear, Cif, Closeup, Comfort, Dermalogica, Domestos, Dove, Dove Men+Care, Hellmann's, Horlicks, Knorr, LUX, Lifebuoy, Liquid I.V., Nexxus, Nutrafol, OMO, Pond's, Paula's Choice, Pepsodent, Radiant, Rexona, Sunlight, Sunsilk, Surf, TRESemmé, and Vaseline brand names. Unilever PLC was founded in 1860 and is headquartered in London, the United Kingdom.",
+      "indices": [
+        "aex"
+      ]
+    },
+    {
+      "ticker": "wkl.as",
+      "symbol": "WKL.AS",
+      "name": "Wolters Kluwer N.V.",
+      "sector": "Industrials",
+      "industry": "Specialty Business Services",
+      "country": "Netherlands",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "marketCap": 15322912768,
+      "employees": 20771,
+      "website": "https://www.wolterskluwer.com",
+      "description": "Wolters Kluwer N.V. provides information, software solutions, and services for professionals in the Netherlands, rest of Europe, the United States, Canada, the Asia Pacific, and internationally. The company operates through Health; Tax & Accounting; Financial & Corporate Compliance; Legal & Regulatory; and Corporate Performance & ESG segments. The Health segment offers clinical solutions and develops GenAI and agentic solutions to drive better patient care and health outcomes. It serves hospitals, healthcare organizations, clinicians, students, schools, libraries, payers, life sciences, digital health companies, and pharmacies. The Tax & Accounting segment offers AI-powered, cloud-based and on-premise software suites, research solutions to tax and accounting firms; and professional services to support professional workflows, including compliance, audit, and firm management. It also serves businesses, government agencies, and academia. The Financial & Corporate Compliance segment provides financial institutions, corporations, small businesses, and law firms with solutions that enable compliance with ever-changing regulatory and legal obligations, improve efficiency, and help achieve better business outcomes. The Legal & Regulatory segment provides Legal & Regulatory trusted information, insights, and analytics for optimal decisions with accuracy and speed. It serves legal and compliance professionals in law firms, corporate legal departments, universities, and government organizations. The Corporate Performance & ESG segment offers delivers software solutions that support organizations in planning, simulating, and managing financial, sustainability, operational, and risk management activities to drive better outcomes. The company also develops a hosted platform for managing and controlling external legal costs. Wolters Kluwer N.V. was founded in 1836 and is headquartered in Alphen aan den Rijn, the Netherlands.",
+      "indices": [
+        "aex"
+      ]
+    }
+  ],
+  "rejected": []
+}

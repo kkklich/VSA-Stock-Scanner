@@ -62,6 +62,24 @@ export interface ApiIngestHealth {
   nextRunLocal: string | null
   schedulerActive: boolean
   schedule: string
+  /** Which nightly run this is ("europe", "us"); on the headline, the worst. */
+  runId?: string | null
+  /** The markets the run refreshes. */
+  markets?: string[]
+  /** Each run's own reading, when there is more than one. */
+  runs?: ApiIngestHealth[]
+}
+
+/** One market's stored-data freshness. */
+export interface ApiMarketDataHealth {
+  market: string
+  status: 'ok' | 'updating' | 'stale' | 'empty'
+  latestBarDate: string | null
+  sessionAgeDays: number | null
+  tickersTracked: number
+  tickersWithData: number
+  tickersCurrent: number
+  coveragePct: number | null
 }
 
 export interface ApiDataHealth {
@@ -78,6 +96,8 @@ export interface ApiDataHealth {
   tickersBehind: number | null
   coveragePct: number | null
   barCount: number | null
+  /** One reading per served market (older backends: absent). */
+  markets?: ApiMarketDataHealth[]
 }
 
 /** One *kind* of error, with how often it has happened. */

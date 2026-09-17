@@ -119,7 +119,7 @@ describe('DashboardPage ranking table', () => {
   it('shows the loading state while the first page loads', () => {
     useInfiniteRankingMock.mockReturnValue(result({ items: null, loading: true }))
     renderWithProviders(<DashboardPage />)
-    expect(screen.getByText(/Loading GPW rankings/i)).toBeInTheDocument()
+    expect(screen.getByText(/Loading rankings/i)).toBeInTheDocument()
   })
 
   it('shows a backend error with a retry action', () => {

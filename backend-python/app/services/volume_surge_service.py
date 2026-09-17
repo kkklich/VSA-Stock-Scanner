@@ -40,7 +40,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from app.analysis.statistics import median_volume_pln
+from app.analysis.statistics import median_turnover
 from app.analysis.vsa import (
     VsaConfig,
     compute_rating,
@@ -49,6 +49,12 @@ from app.analysis.vsa import (
 )
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
+from app.markets import (
+    below_liquidity_floor,
+    below_market_cap_floor,
+    market_of,
+    quote_currency,
+)
 from app.models import (
     GpwCompany,
     StooqDailyQuote,
@@ -67,8 +73,6 @@ logger = logging.getLogger(__name__)
 # so both services keep sharing one cached per-ticker history; analysis here
 # still runs on this 120-day slice.
 _HISTORY_DAYS = 120
-_MIN_MEDIAN_VOLUME_PLN = 100_000.0
-_MIN_MARKET_CAP_PLN = 100_000_000
 _MAX_CONCURRENT = 4
 # Recency pre-filter, same as the ranking: drop tickers whose last bar lags
 # the newest session across the scan by more than this many calendar days
@@ -232,7 +236,8 @@ async def compute_volume_surge(
     ) -> tuple[VolumeSurgeItem, date] | None:
         nonlocal scanned
 
-        if company.market_cap is not None and company.market_cap < _MIN_MARKET_CAP_PLN:
+        currency = quote_currency(company)
+        if below_market_cap_floor(company.market_cap, currency):
             return None
 
         quotes = await fetch_quotes(company.ticker)
@@ -245,7 +250,7 @@ async def compute_volume_surge(
 
         # Guard the analysis: one malformed stock must never 500 the scan.
         try:
-            if median_volume_pln(recent) < _MIN_MEDIAN_VOLUME_PLN:
+            if below_liquidity_floor(median_turnover(recent), currency):
                 return None
 
             metrics = compute_surge_metrics(recent, recent_days, baseline_days)
@@ -267,6 +272,8 @@ async def compute_volume_surge(
             item = VolumeSurgeItem(
                 ticker=company.ticker.upper(),
                 name=company.name,
+                market=market_of(company.ticker).id,
+                currency=currency,
                 sector=company.sector,
                 last_price=float(recent[-1].close),
                 recent_avg_volume=metrics.recent_avg_volume,

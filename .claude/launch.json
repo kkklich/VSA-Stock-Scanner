@@ -37,6 +37,15 @@
       "autoPort": true
     },
     {
+      "name": "backend-markets",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d backend-python && set STOCKPILOT_MARKETS=all&& .venv\\Scripts\\python.exe -m uvicorn app.main:app --port 5112"
+      ],
+      "port": 5112
+    },
+    {
       "name": "backend-verify-b",
       "runtimeExecutable": "cmd",
       "runtimeArgs": [

@@ -1,6 +1,6 @@
-// Custom hook: fetch the tracked GPW company list once. The list is static
-// seed data on the backend, so it works even when the ranking feed is down —
-// which is what makes it a reliable source for the company picker.
+// Custom hook: fetch the tracked companies of every served market once. The list
+// is static seed data on the backend, so it works even when the ranking feed is
+// down — which is what makes it a reliable source for the company picker.
 
 import { useEffect, useState } from 'react'
 import { fetchCompanies, type ApiCompany } from '../api/stocksApi'

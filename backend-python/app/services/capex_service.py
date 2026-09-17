@@ -180,6 +180,7 @@ def build_capex_screen(
                 ticker=company.ticker.upper(),
                 name=company.name,
                 sector=company.sector,
+                market=company.market,
                 **summary.model_dump(),
             )
         )
@@ -188,12 +189,13 @@ def build_capex_screen(
     as_of = max(
         (i.annual_period_end for i in items if i.annual_period_end), default=None
     )
-    # Newest quarter end can be more recent than the newest year end.
+    # Newest quarter end can be more recent than the newest year end. Only the
+    # companies on this screen count: ``cashflow`` may hold other markets too.
     latest_quarter = max(
         (
             p.period_end
-            for periods in cashflow.values()
-            for p in periods
+            for company in companies
+            for p in cashflow.get(company.ticker, [])
             if p.period_type == "quarterly"
         ),
         default=None,

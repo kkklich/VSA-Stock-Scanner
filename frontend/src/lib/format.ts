@@ -4,13 +4,34 @@
 export const fmtPrice = (n: number): string =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+/**
+ * How a currency is written next to an amount. Yahoo's "GBp" (London prices
+ * quoted in pence) is written GBX, the way Polish brokers show it; anything
+ * unknown is shown as given, and a missing one is the app's home currency.
+ */
+export function currencyLabel(currency: string | null | undefined): string {
+  if (!currency) return 'PLN'
+  if (currency === 'GBp' || currency === 'GBX') return 'GBX'
+  return currency
+}
+
+/** A price with its currency: "331.65 PLN", "332.86 USD", "1,507.80 GBX". */
+export const fmtMoney = (n: number, currency?: string | null): string =>
+  `${fmtPrice(n)} ${currencyLabel(currency)}`
+
+/** The currency whole amounts (a market cap) are stated in — GBP for pence. */
+export function majorCurrency(currency: string | null | undefined): string {
+  if (!currency) return 'PLN'
+  return currency === 'GBp' || currency === 'GBX' ? 'GBP' : currency
+}
+
 /** Signed percent, e.g. +1.12% / -0.62%. */
 export const fmtPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`
 
 /** Signed integer, e.g. +2 / -1. */
 export const fmtSigned = (n: number): string => `${n >= 0 ? '+' : ''}${n}`
 
-/** Large PLN amounts in compact form, e.g. "3.42 B" / "319 M". */
+/** Large amounts in compact form, e.g. "3.42 B" / "319 M" (add the currency yourself). */
 export const fmtCompactPln = (n: number): string => {
   if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} B`
   if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(0)} M`
@@ -46,8 +67,11 @@ export function ratingTone(rating: number): {
   }
 }
 
-/** Compact timestamp for the refresh status: "today 18:02" or "12.07 18:02". */
-export const fmtRefreshTime = (iso: string): string => {
+/**
+ * Compact timestamp for the refresh status: "today 18:02" or "12.07 18:02".
+ * `todayLabel` is the translated word for "today" — the caller has `t()`.
+ */
+export const fmtRefreshTime = (iso: string, todayLabel = 'today'): string => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   const time = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
@@ -56,7 +80,7 @@ export const fmtRefreshTime = (iso: string): string => {
     d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate()
-  if (sameDay) return `today ${time}`
+  if (sameDay) return `${todayLabel} ${time}`
   const day = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' })
   return `${day} ${time}`
 }

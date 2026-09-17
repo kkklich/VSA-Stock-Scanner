@@ -13,6 +13,34 @@ import {
 } from 'lucide-react'
 import type { SignalVerdict, WeeklyAgreement } from '../types'
 import { ratingTone } from '../lib/format'
+import { GPW_MARKET, MARKET_CODES } from '../lib/markets'
+
+/**
+ * A small chip naming the market a stock trades on ("US", "DE", "UK"…). The
+ * GPW is the home market and gets none, so GPW rows look as they always did.
+ */
+export function MarketBadge({
+  market,
+  className = '',
+}: {
+  market?: string | null
+  className?: string
+}) {
+  const { t } = useTranslation()
+  if (!market || market === GPW_MARKET) return null
+  const code = MARKET_CODES[market] ?? market.toUpperCase()
+  return (
+    <span
+      title={t(`markets.name.${market}`, { defaultValue: code })}
+      className={
+        'inline-flex shrink-0 items-center rounded border border-slate-700 bg-slate-800/60 px-1 py-px text-[9px] font-semibold leading-none tracking-wide text-slate-400 ' +
+        className
+      }
+    >
+      {code}
+    </span>
+  )
+}
 
 /**
  * A company's ticker/name rendered as a real link to its detail page

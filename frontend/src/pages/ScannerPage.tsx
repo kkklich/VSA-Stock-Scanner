@@ -1,4 +1,4 @@
-// Scanner configuration page ("VSA Scanner GPW"). Three columns:
+// Scanner configuration page ("VSA Scanner"). Three columns:
 //   1. VSA Engine — toggleable strength/weakness rules (click a rule to tune it).
 //   2. Selected signal — per-signal tuning sliders.
 //   3. Effectiveness — effectiveness donut + sortable table.
@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, MoreHorizontal, RotateCcw, Save } from 'lucide-react'
 import { Card, CardTitle, InfoTip } from '../components/ui'
 import { useScannerStats } from '../hooks/useScannerStats'
+import { useMarketScope } from '../hooks/useMarkets'
 import type { ApiSignalEffectiveness } from '../api/stocksApi'
 import {
   HORIZON_IDS,
@@ -565,7 +566,7 @@ function EffectivenessStats({
         Effectiveness{' '}
         <InfoTip
           align="right"
-          text="Historical hit-rate and reward/risk for each VSA signal on the GPW, from a 10-session back-test over the last 120 sessions — recomputed with YOUR current thresholds. The donut shows the average success rate across your enabled signals. Success% = success rate, R/R = reward-to-risk, Trades = number of occurrences."
+          text="Historical hit-rate and reward/risk for each VSA signal on the selected market (all markets pooled when 'All markets' is chosen), from a 10-session back-test over the last 120 sessions — recomputed with YOUR current thresholds. The donut shows the average success rate across your enabled signals. Success% = success rate, R/R = reward-to-risk, Trades = number of occurrences."
         />
       </CardTitle>
 
@@ -702,11 +703,13 @@ export function ScannerPage() {
     return () => clearTimeout(t)
   }, [settings])
 
+  // The back-test runs on the top bar's market ("all" pools every market).
+  const { market } = useMarketScope({ allowAll: true })
   const {
     data: statsData,
     loading: statsLoading,
     error: statsError,
-  } = useScannerStats(debouncedQuery)
+  } = useScannerStats(debouncedQuery, market)
 
   const enabledNames = useMemo(
     () =>

@@ -1,11 +1,14 @@
 """Data-refresh pipeline: Yahoo ingest → VSA ranking → daily rating snapshots.
 
 ``RefreshService`` is the single entry point for refreshing the application's
-data. It runs in exactly two situations:
+data. It runs in exactly three situations:
 
-  * the nightly APScheduler job (18:00 Europe/Warsaw, after the GPW close), and
+  * the nightly APScheduler jobs — one per group of markets: the GPW and the
+    European exchanges at 18:00 Europe/Warsaw, the US at 17:15 New York time
+    (``app.markets.refresh_runs``), each refreshing only its own markets;
   * the user pressing the **Refresh** button in the UI
-    (``POST /api/stocks/refresh``).
+    (``POST /api/stocks/refresh``), which refreshes every served market; and
+  * the start-up check, for markets whose stored data is missing or behind.
 
 Outside these two triggers no Yahoo Finance calls are made for data that is
 already in the database — the API serves everything from PostgreSQL and the
@@ -16,8 +19,9 @@ One full run:
   1. Ingest fresh EOD bars from Yahoo Finance into PostgreSQL
      (skipped when the app runs without a database — caches are just cleared
      so the ranking recomputes from a fresh live fetch).
-  2. Recompute the full VSA ranking with the DEFAULT engine settings and warm
-     the ranking cache, so the first page load after a refresh is instant.
+  2. Recompute each refreshed market's VSA ranking with the DEFAULT engine
+     settings and warm the ranking cache, so the first page load after a
+     refresh is instant.
   3. Persist one rating snapshot per (ticker, day) to ``rating_snapshots``.
      Every run also (re)writes the ratings for the whole loaded history
      window, so the "rating over time" chart is populated immediately after
@@ -40,11 +44,12 @@ import time
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from app.analysis.statistics import median_volume_pln
+from app.analysis.statistics import median_turnover
 from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
 from app.config import settings
 from app.db.repository import QuoteRepository
-from app.jobs.daily_ingest import IngestService, IngestStats
+from app.jobs.daily_ingest import IngestService, IngestStats, markets_in
+from app.markets import GPW, below_liquidity_floor, market_of, quote_currency
 from app.models import (
     GpwCompany,
     RatingPoint,
@@ -60,7 +65,12 @@ from app.services.action_log import (
     ActionLogService,
 )
 from app.services.cache import TTLCache
-from app.services.ranking_service import CONTEXT_HISTORY_DAYS, compute_ranking
+from app.services.market_cache import invalidate_markets
+from app.services.ranking_service import (
+    CONTEXT_HISTORY_DAYS,
+    compute_ranking,
+    ranking_cache_key,
+)
 from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
 
@@ -73,7 +83,6 @@ _WARSAW = ZoneInfo("Europe/Warsaw")
 _HISTORY_DAYS = 120
 # A stock needs this many bars before its historical ratings mean anything.
 _MIN_BARS = 25
-_MIN_MEDIAN_VOLUME_PLN = 100_000.0
 
 # Share of the tracked universe that has to error before the download step is
 # reported as FAILED. See `ingest_outcome` for why it is not zero.
@@ -127,6 +136,9 @@ class RefreshService:
         action_log: ActionLogService | None = None,
     ) -> None:
         self._companies = companies
+        # Quote currency per ticker, for the liquidity floor of the rating
+        # snapshots (a London line may be quoted in pence or in dollars).
+        self._currencies = {c.ticker.casefold(): quote_currency(c) for c in companies}
         self._stooq = stooq
         self._history_cache = history_cache
         self._ranking_cache = ranking_cache
@@ -144,6 +156,11 @@ class RefreshService:
         self.last_started_at: datetime | None = None
         self.last_refresh_at: datetime | None = None
         self.last_error: str | None = None
+        # The markets of the run in progress, or of the last one — which is
+        # also the run ``last_error`` belongs to (it is reset on every start).
+        # The health check needs it: with two nightly runs, "a refresh is
+        # running" or "it failed" is only news for the run covering them.
+        self.run_markets: list[str] = []
         self.stocks_ranked: int | None = None
         # How many stocks got rating snapshots written on the last run — kept
         # so the run's log entry can report it.
@@ -175,15 +192,18 @@ class RefreshService:
         full: bool = False,
         trigger: str = "manual",
         request_id: str | None = None,
+        markets: list[str] | None = None,
+        full_markets: list[str] | None = None,
     ) -> bool:
         """Kick off a refresh in the background.
 
         ``trigger`` says who asked — ``manual`` (the Refresh button),
-        ``bootstrap`` (an empty database on startup) or ``nightly`` (the 18:00
-        scheduler). It is recorded, so the log can tell an owner-initiated run
-        from an automatic one. ``request_id`` carries the id of the HTTP call
-        that pressed the button, so the request entry and the job entries it
-        set off share one id in the action log.
+        ``bootstrap`` (missing data on startup) or ``nightly`` (a scheduled
+        run). It is recorded, so the log can tell an owner-initiated run from
+        an automatic one. ``request_id`` carries the id of the HTTP call that
+        pressed the button, so the request entry and the job entries it set
+        off share one id in the action log. ``markets`` limits the run (default:
+        every served market); ``full_markets`` get the full history download.
 
         Returns ``True`` if a new run was started, ``False`` when one is
         already in progress (the in-flight run is left alone).
@@ -197,7 +217,13 @@ class RefreshService:
             )
             return False
         self._task = asyncio.create_task(
-            self.run(full=full, trigger=trigger, request_id=request_id),
+            self.run(
+                full=full,
+                trigger=trigger,
+                request_id=request_id,
+                markets=markets,
+                full_markets=full_markets,
+            ),
             name="data_refresh",
         )
         return True
@@ -207,6 +233,8 @@ class RefreshService:
         full: bool = False,
         trigger: str = "nightly",
         request_id: str | None = None,
+        markets: list[str] | None = None,
+        full_markets: list[str] | None = None,
     ) -> None:
         """Execute the full pipeline; safe to call from the scheduler.
 
@@ -226,17 +254,25 @@ class RefreshService:
             self.last_started_at = datetime.now(tz=UTC)
             self.last_error = None
             started = time.perf_counter()
+            scope = self._scope(markets)
+            self.run_markets = scope
+            full_ids = [m for m in (full_markets or []) if m in scope]
             # Held for the duration of the run so the ingest step's own entry
             # carries the same id as the refresh that contains it.
             self._run_request_id = request_id
             self._log_job(
                 "job.refresh",
                 OUTCOME_STARTED,
-                detail={"trigger": trigger, "full": full},
+                detail={
+                    "trigger": trigger,
+                    "full": full,
+                    "markets": scope,
+                    "fullMarkets": full_ids,
+                },
                 request_id=request_id,
             )
             try:
-                await self._do_run(full=full)
+                await self._do_run(full=full, scope=scope, full_markets=full_ids)
                 self.last_refresh_at = datetime.now(tz=UTC)
                 self._log_job(
                     "job.refresh",
@@ -245,6 +281,8 @@ class RefreshService:
                     detail={
                         "trigger": trigger,
                         "full": full,
+                        "markets": scope,
+                        "fullMarkets": full_ids,
                         "stocksRanked": self.stocks_ranked,
                         "snapshotsWritten": self.snapshots_written,
                         "dbEnabled": self._repo is not None,
@@ -261,6 +299,7 @@ class RefreshService:
                     detail={
                         "trigger": trigger,
                         "full": full,
+                        "markets": scope,
                         "error": f"{type(exc).__name__}: {exc}"[:500],
                     },
                     request_id=request_id,
@@ -293,13 +332,25 @@ class RefreshService:
 
     # ── Pipeline body ─────────────────────────────────────────────────────────
 
-    async def _do_run(self, full: bool) -> None:
+    def _scope(self, markets: list[str] | None) -> list[str]:
+        """The market ids a run covers, in display order."""
+        present = markets_in(self._companies)
+        if markets is None:
+            return present
+        wanted = set(markets)
+        return [m for m in present if m in wanted]
+
+    async def _do_run(
+        self, full: bool, scope: list[str], full_markets: list[str]
+    ) -> None:
         today = datetime.now(_WARSAW).date()
 
         # 1. Fresh bars from Yahoo Finance.
         if self._ingest is not None:
-            # Persists to PostgreSQL and clears both caches when done.
-            stats = await self._ingest.run(full=full)
+            # Persists to PostgreSQL and clears the refreshed markets' caches.
+            stats = await self._ingest.run(
+                full=full, markets=scope, full_markets=full_markets
+            )
             if stats is not None:
                 self._log_job(
                     "job.ingest",
@@ -314,23 +365,34 @@ class RefreshService:
                     detail={"reason": "already running"},
                 )
         else:
-            # No DB: just drop the caches so the ranking below live-fetches.
-            self._history_cache.clear()
-            self._ranking_cache.clear()
+            # No DB: just drop the refreshed markets' caches so the ranking
+            # below live-fetches.
+            invalidate_markets(
+                scope, (self._history_cache, "history"), (self._ranking_cache, "ranking")
+            )
 
-        # 2. Recompute the ranking with DEFAULT settings and pre-warm the cache
-        #    (the same key the /ranking endpoint uses for the default config).
-        ranking = await compute_ranking(
-            companies=self._companies,
-            stooq=self._stooq,
-            history_cache=self._history_cache,
-            history_cache_ttl=settings.history_cache_seconds,
-            repo=self._repo,
-            today=today,
-        )
-        self._ranking_cache.set("ranking:full", ranking, settings.history_cache_seconds)
+        # 2. Recompute each market's ranking with DEFAULT settings and pre-warm
+        #    the cache (the same key the /ranking endpoint uses for the default
+        #    config). One market at a time: each ranking is computed within its
+        #    own market, and this keeps the work — and the memory — bounded.
+        ranking: list[StockRankingItem] = []
+        for market_id in scope:
+            rows = await compute_ranking(
+                companies=[
+                    c for c in self._companies if market_of(c.ticker).id == market_id
+                ],
+                stooq=self._stooq,
+                history_cache=self._history_cache,
+                history_cache_ttl=settings.history_cache_seconds,
+                repo=self._repo,
+                today=today,
+            )
+            self._ranking_cache.set(
+                ranking_cache_key(market_id), rows, settings.history_cache_seconds
+            )
+            logger.info("Refresh: %s ranking recomputed (%d stocks).", market_id, len(rows))
+            ranking.extend(rows)
         self.stocks_ranked = len(ranking)
-        logger.info("Refresh: ranking recomputed (%d stocks).", len(ranking))
 
         # 3. Persist rating snapshots so the rating's evolution can be charted.
         if self._repo is not None:
@@ -351,7 +413,8 @@ class RefreshService:
             ticker = item.ticker.lower()
             try:
                 quotes = await self._load_quotes(ticker, from_date, context_from)
-                points = build_rating_points(quotes)
+                currency = self._currencies.get(ticker) or market_of(ticker).currency
+                points = build_rating_points(quotes, currency=currency)
                 if points:
                     await self._repo.upsert_rating_snapshots(ticker, points)
                     written += 1
@@ -383,17 +446,22 @@ class RefreshService:
         return []
 
 
-def build_rating_points(quotes: list[StooqDailyQuote]) -> list[RatingPoint]:
+def build_rating_points(
+    quotes: list[StooqDailyQuote], currency: str = GPW.currency
+) -> list[RatingPoint]:
     """Compute one rating snapshot per trading day from an OHLCV series.
 
     Uses the DEFAULT VSA settings so stored history stays comparable across
     days. Signal detection has no lookahead and ``compute_rating`` ignores
     signals dated after the as-of day, so the value for a past day matches
     what the engine would have reported on that day.
+
+    ``currency`` is the stock's quote currency — the liquidity floor is
+    judged in it (złoty unless said otherwise).
     """
     if len(quotes) < _MIN_BARS:
         return []
-    if median_volume_pln(quotes) < _MIN_MEDIAN_VOLUME_PLN:
+    if below_liquidity_floor(median_turnover(quotes), currency):
         return []
 
     signals = detect_signals(quotes)

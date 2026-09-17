@@ -29,11 +29,16 @@ class _CamelModel(BaseModel):
 # ── Existing models (unchanged contract) ─────────────────────────────────────
 
 class GpwCompany(BaseModel):
-    """A company listed on the Warsaw Stock Exchange (GPW)."""
+    """A tracked company — a GPW listing, or one from another market.
+
+    The name predates the multi-market work (app/markets.py); every company in
+    the original seed file is a GPW listing, hence the defaults below.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    # Stooq ticker symbol (always lower-case), e.g. "kgh".
+    # The app's ticker (always lower-case): "kgh" on the GPW, a market suffix
+    # elsewhere — "aapl.us", "sap.de" (see app/markets.py).
     ticker: str
     name: str
     sector: str | None = None
@@ -42,9 +47,21 @@ class GpwCompany(BaseModel):
     industry: str | None = None
     employees: int | None = None
     website: str | None = None
+    # Where the company is based (Yahoo's profile), which is not always where
+    # it is listed: plenty of GPW listings are domiciled abroad.
     country: str | None = None
-    # Market capitalisation in PLN — feeds the ranking pre-filter (> 100M PLN).
+    # Market capitalisation in the market's major currency (PLN on the GPW,
+    # pounds — not pence — in London). Feeds the ranking pre-filter (> 100M PLN).
     market_cap: int | None = None
+    # The market id from app/markets.py ("gpw", "us", …).
+    market: str = "gpw"
+    # The listing venue as shown to the reader ("GPW", "NASDAQ", "Xetra", …).
+    exchange: str | None = None
+    # The currency prices are quoted in, as Yahoo writes it ("PLN", "GBp").
+    currency: str | None = None
+    # The indices the company was selected through ("sp500", "ndx", …); empty
+    # for the GPW list, which is not index-based.
+    indices: tuple[str, ...] = ()
 
 
 class StooqDailyQuote(BaseModel):
@@ -111,6 +128,37 @@ class TradingMethodInfo(_CamelModel):
     direction: str = "Bullish"
 
 
+class MarketIndexInfo(_CamelModel):
+    """One index a market's tracked companies are drawn from."""
+
+    id: str
+    name: str
+
+
+class MarketInfo(_CamelModel):
+    """One market this deployment serves (``GET /api/stocks/markets``)."""
+
+    id: str
+    name: str
+    short_name: str
+    country: str
+    # "poland", "europe" or "usa".
+    region: str
+    exchange: str
+    # The currency most prices on this market are quoted in ("GBp" = pence).
+    currency: str
+    # The currency whole amounts are stated in ("GBP" for a pence market) —
+    # also the default for the capex screen's currency filter.
+    major_currency: str
+    timezone: str
+    # What the app appends to an exchange symbol on this market ("" for GPW).
+    ticker_suffix: str
+    # Which nightly data run refreshes it ("europe" or "us").
+    refresh_run: str
+    company_count: int
+    indices: list[MarketIndexInfo] = []
+
+
 class MethodBacktestResponse(_CamelModel):
     """GPW back-test of one trading method (``GET .../methods/{id}/backtest``).
 
@@ -122,6 +170,9 @@ class MethodBacktestResponse(_CamelModel):
 
     method_id: str
     name: str
+    # The market whose stored history was tested (one market per back-test:
+    # a stock's baseline and a method's edge are read within one market).
+    market: str = "gpw"
     # Newest bar date across the scanned stocks.
     as_of: date | None = None
     # Forward horizon (sessions) each firing is judged over.
@@ -161,7 +212,12 @@ class StockRankingItem(_CamelModel):
 
     ticker: str
     name: str
-    # Last EOD closing price in PLN.
+    # The market the stock trades on (app/markets.py id: "gpw", "us", …).
+    market: str = "gpw"
+    # The currency its prices are quoted in, as Yahoo writes it ("PLN",
+    # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
+    currency: str = "PLN"
+    # Last EOD closing price, in ``currency``.
     last_price: float
     # Day-over-day price change, percent.
     price_change_pct: float
@@ -177,7 +233,7 @@ class StockRankingItem(_CamelModel):
     sparkline: list[float]
     # 20-session median volume (shares).
     volume: int
-    # Sector from the GPW company list.
+    # Sector from the company list.
     sector: str | None = None
     # Confidence (0–100) of the built-in AI-insight engine's verdict.
     ai_confidence: int = 0
@@ -234,9 +290,15 @@ class HeatmapItem(_CamelModel):
     ticker: str
     name: str
     sector: str | None = None
-    # Market capitalisation in PLN (tile size); None when not known.
+    # The market the stock trades on (app/markets.py id: "gpw", "us", …).
+    market: str = "gpw"
+    # The currency its prices are quoted in, as Yahoo writes it ("PLN",
+    # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
+    currency: str = "PLN"
+    # Market capitalisation (tile size) in the major unit of ``currency``
+    # (pounds for a pence quote); None when not known.
     market_cap: int | None = None
-    # Last EOD closing price in PLN.
+    # Last EOD closing price, in ``currency``.
     last_price: float
     # Computed VSA rating 0–100 (tile colour in the default view).
     current_rating: int
@@ -273,7 +335,12 @@ class VolumeSurgeItem(_CamelModel):
     ticker: str
     name: str
     sector: str | None = None
-    # Last EOD closing price in PLN.
+    # The market the stock trades on (app/markets.py id: "gpw", "us", …).
+    market: str = "gpw"
+    # The currency its prices are quoted in, as Yahoo writes it ("PLN",
+    # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
+    currency: str = "PLN"
+    # Last EOD closing price, in ``currency``.
     last_price: float
     # Average daily volume over the recent window (shares).
     recent_avg_volume: int
@@ -410,6 +477,14 @@ class StockSignalsResponse(_CamelModel):
     ticker: str
     name: str | None = None
     sector: str | None = None
+    # The market the stock trades on (app/markets.py id: "gpw", "us", …).
+    market: str = "gpw"
+    # The currency its prices are quoted in, as Yahoo writes it ("PLN",
+    # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
+    currency: str = "PLN"
+    # The listing venue as shown to the reader ("GPW", "NASDAQ", "Xetra"…).
+    exchange: str | None = None
+    # Last close, in ``currency`` (as are all the candles below).
     last_price: float
     price_change_pct: float
     current_rating: int
@@ -465,6 +540,10 @@ class FinancialMetrics(_CamelModel):
     total_revenue: int | None = None
     net_income: int | None = None
     shares_outstanding: int | None = None
+    # The currency the company reports in (Yahoo ``financialCurrency``) —
+    # revenue, net income, EPS and the quarterly reports are in it. Not always
+    # the currency the shares trade in: HSBC trades in pence, reports in USD.
+    financial_currency: str | None = None
     # Profitability ratios as fractions from Yahoo (0.184 = 18.4%); the UI
     # renders them as percentages. Return on equity / on assets — how much
     # profit the company earns per zloty of shareholder capital / of assets.
@@ -563,6 +642,9 @@ class CapexItem(CapexSummary):
     ticker: str
     name: str
     sector: str | None = None
+    # The market the company trades on. (``currency`` above is the currency
+    # the company REPORTS in, which is what these figures are in.)
+    market: str = "gpw"
 
 
 class CapexResponse(_CamelModel):
@@ -590,6 +672,12 @@ class CompanyFundamentalsResponse(_CamelModel):
     employees: int | None = None
     website: str | None = None
     country: str | None = None
+    # The market the stock trades on (app/markets.py id: "gpw", "us", …).
+    market: str = "gpw"
+    # The currency its prices are quoted in, as Yahoo writes it ("PLN",
+    # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
+    currency: str = "PLN"
+    exchange: str | None = None
     metrics: FinancialMetrics | None = None
     quarterly_reports: list[QuarterlyReport] = []
     # Trailing price returns computed from the stored EOD bars.
@@ -815,7 +903,8 @@ class RatingPoint(_CamelModel):
     rating: int = Field(ge=0, le=100)
     # Verdict badge on that day, e.g. "Strong Buy" / "Hold".
     verdict: str
-    # Closing price that day (PLN); lets the UI plot rating vs price.
+    # Closing price that day (in the stock's quote currency); lets the UI
+    # plot rating vs price.
     close: float | None = None
 
 
@@ -824,6 +913,8 @@ class RatingHistoryResponse(_CamelModel):
 
     ticker: str
     name: str | None = None
+    # The currency the snapshots' closing prices are in.
+    currency: str = "PLN"
     # Chronological (oldest → newest) rating snapshots.
     points: list[RatingPoint] = []
     # "db" when served from stored snapshots, "computed" when derived

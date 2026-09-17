@@ -23,7 +23,15 @@ export interface UseRankingResult {
 /** Everything the caller controls; `settings` is added automatically. */
 export type RankingParams = Omit<RankingQuery, 'settings'>
 
-export function useRanking(params: RankingParams = {}): UseRankingResult {
+/** Hook options. `enabled: false` holds the request (e.g. while the market is resolved). */
+export interface RankingHookOptions {
+  enabled?: boolean
+}
+
+export function useRanking(
+  params: RankingParams = {},
+  { enabled = true }: RankingHookOptions = {},
+): UseRankingResult {
   const [data, setData] = useState<ApiRankingItem[] | null>(null)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -35,6 +43,7 @@ export function useRanking(params: RankingParams = {}): UseRankingResult {
   const key = useMemo(() => JSON.stringify(params), [params])
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -59,7 +68,7 @@ export function useRanking(params: RankingParams = {}): UseRankingResult {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, tick])
+  }, [key, tick, enabled])
 
   return { data, total, loading, error, refetch: () => setTick((t) => t + 1) }
 }
@@ -93,6 +102,7 @@ export type InfiniteRankingParams = Omit<RankingParams, 'page'>
 
 export function useInfiniteRanking(
   params: InfiniteRankingParams = {},
+  { enabled = true }: RankingHookOptions = {},
 ): UseInfiniteRankingResult {
   const [items, setItems] = useState<ApiRankingItem[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -118,6 +128,7 @@ export function useInfiniteRanking(
   }
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     inFlight.current = true
     if (page === 1) {
@@ -153,7 +164,7 @@ export function useInfiniteRanking(
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, page, tick])
+  }, [key, page, tick, enabled])
 
   const loadMore = useCallback(() => {
     if (inFlight.current) return

@@ -21,7 +21,7 @@ from datetime import date, timedelta
 from app.analysis.ai_insight import analyze_stock
 from app.analysis.methods import MethodResult, all_methods
 from app.analysis.methods.vsa_method import vsa_result_from_signals
-from app.analysis.statistics import median_volume_pln
+from app.analysis.statistics import median_turnover
 from app.analysis.vsa import (
     VsaConfig,
     VsaSignal,
@@ -32,6 +32,13 @@ from app.analysis.vsa import (
 from app.analysis.weekly import compute_weekly_view, weekly_agreement
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
+from app.markets import (
+    MIN_MARKET_CAP_PLN,
+    below_liquidity_floor,
+    below_market_cap_floor,
+    market_of,
+    quote_currency,
+)
 from app.models import GpwCompany, MethodResultModel, StockRankingItem, StooqDailyQuote
 from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
 from app.services.exceptions import StooqAccessError
@@ -75,8 +82,10 @@ _WEEK52_DAYS = 365
 # days (~47 weeks) leaves room for a listing that started just under a year ago
 # and for the gaps a thin GPW series can have, while still being a real year.
 _MIN_52W_COVERAGE_DAYS = 330
-_MIN_MEDIAN_VOLUME_PLN = 100_000.0
-_MIN_MARKET_CAP_PLN = 100_000_000
+# The floors themselves (turnover > 100k PLN, market cap > 100M PLN) live in
+# app/markets.py, which converts each market's currency; the old name stays
+# importable.
+_MIN_MARKET_CAP_PLN = MIN_MARKET_CAP_PLN
 _MAX_CONCURRENT = 4
 _SPARKLINE_BARS = 10
 # Recency pre-filter: exclude suspended/stale listings, whose last bar keeps
@@ -86,6 +95,18 @@ _SPARKLINE_BARS = 10
 # the whole scan — dataset-global, not wall-clock, so cached results stay
 # deterministic; 10 days tolerates holidays and long weekends.
 _MAX_SESSION_LAG_DAYS = 10
+
+
+def ranking_cache_key(market_id: str, config: VsaConfig | None = None) -> str:
+    """Where one market's full ranking is cached (per engine settings).
+
+    One entry per market: a ranking is computed within a market (its
+    relative-strength ranks are percentiles of that market alone), and the
+    nightly runs refresh markets separately. Shared by the endpoint and the
+    refresh pipeline, which pre-warms the default-settings entry.
+    """
+    suffix = config.cache_suffix() if config is not None else VsaConfig.default().cache_suffix()
+    return f"ranking:{market_id}:full{suffix}"
 
 
 # ── Cross-sectional relative strength (Minervini's rule 8) ────────────────────
@@ -315,7 +336,8 @@ async def compute_ranking(
         # Capitalisation floor (blueprint §5): market cap must exceed 100M PLN.
         # Applied only when the value is known, so missing metadata never
         # silently hides a company from the ranking.
-        if company.market_cap is not None and company.market_cap < _MIN_MARKET_CAP_PLN:
+        currency = quote_currency(company)
+        if below_market_cap_floor(company.market_cap, currency):
             logger.debug("Skipping %s: market cap below floor.", company.ticker)
             return None
 
@@ -346,7 +368,7 @@ async def compute_ranking(
         # Guard the analysis + model construction: a single company with
         # malformed data must never 500 the whole ranking — skip it instead.
         try:
-            if median_volume_pln(recent) < _MIN_MEDIAN_VOLUME_PLN:
+            if below_liquidity_floor(median_turnover(recent), currency):
                 logger.debug("Skipping %s: below liquidity threshold.", company.ticker)
                 return None
 
@@ -430,6 +452,8 @@ async def compute_ranking(
             item = StockRankingItem(
                 ticker=company.ticker.upper(),
                 name=company.name,
+                market=market_of(company.ticker).id,
+                currency=currency,
                 sector=company.sector,
                 last_price=last_close,
                 price_change_pct=price_change_pct,
@@ -461,7 +485,7 @@ async def compute_ranking(
     # network or DB fetch. Stocks below the market-cap floor or without a full
     # ~12-month history get no rank (Minervini then uses its structural rules).
     async def rs_raw_for(company: GpwCompany) -> tuple[str, float | None]:
-        if company.market_cap is not None and company.market_cap < _MIN_MARKET_CAP_PLN:
+        if below_market_cap_floor(company.market_cap, quote_currency(company)):
             return company.ticker, None
         quotes = await fetch_quotes(company.ticker)
         return company.ticker, _relative_strength_raw(quotes or [])
