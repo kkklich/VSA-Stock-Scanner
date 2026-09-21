@@ -10,8 +10,10 @@ import {
   GPW_MARKET,
   MARKET_STORAGE_KEY,
   marketOfTicker,
+  plnHint,
   readStoredMarket,
   setMarketSelection,
+  toPln,
   useMarketSelection,
 } from './markets'
 
@@ -83,5 +85,37 @@ describe('effectiveMarket', () => {
 
   it('treats "all" on a GPW-only site as the GPW', () => {
     expect(effectiveMarket(ALL_MARKETS, ['gpw'], { allowAll: true })).toBe('gpw')
+  })
+})
+
+describe('money across markets', () => {
+  it('converts a quote to approximate złoty', () => {
+    expect(toPln(100, 'PLN')).toBe(100)
+    expect(toPln(100, 'USD')).toBeCloseTo(380)
+    expect(toPln(100, 'EUR')).toBeCloseTo(435)
+    // London quotes most lines in PENCE, which is the whole point: 17,760
+    // there is ~906 PLN, far less than 6,242 dollars (~23,720 PLN), however
+    // much bigger the raw figure looks.
+    expect(toPln(17_760, 'GBp')).toBeCloseTo(905.76)
+    expect(toPln(6_242.23, 'USD')).toBeCloseTo(23_720.47)
+    // Yahoo's other spelling of the same unit.
+    expect(toPln(1000, 'GBX')).toBe(toPln(1000, 'GBp'))
+  })
+
+  it('reads a missing currency as złoty, like the API model does', () => {
+    expect(toPln(100, undefined)).toBe(100)
+    expect(toPln(100, null)).toBe(100)
+  })
+
+  it('has no answer for a currency it has no rate for', () => {
+    expect(toPln(100, 'JPY')).toBeNull()
+    expect(toPln(null, 'USD')).toBeNull()
+  })
+
+  it('offers a hint only where there is something to explain', () => {
+    // A złoty price converts to itself — a second line would be noise.
+    expect(plnHint(100, 'PLN')).toBeNull()
+    expect(plnHint(100, undefined)).toBeNull()
+    expect(plnHint(100, 'USD')).toBeCloseTo(380)
   })
 })

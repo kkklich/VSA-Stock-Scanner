@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   currencyLabel,
   deltaTone,
+  fmtApproxPln,
   fmtCompactPln,
   fmtMoney,
   fmtPct,
@@ -67,6 +68,20 @@ describe('fmtCompactPln', () => {
     expect(fmtCompactPln(319_000_000)).toBe('319 M')
     expect(fmtCompactPln(5_000)).toBe('5 K')
     expect(fmtCompactPln(750)).toBe('750')
+  })
+})
+
+describe('fmtApproxPln', () => {
+  it('keeps neighbouring prices of a pooled list apart', () => {
+    // Four rows the compact form would all print as "6 K".
+    expect(fmtApproxPln(6444.09)).toBe('6,444')
+    expect(fmtApproxPln(6383.7)).toBe('6,384')
+    expect(fmtApproxPln(23_371.79)).toBe('23,372')
+  })
+
+  it('keeps the grosze on a cheap share', () => {
+    expect(fmtApproxPln(12.345)).toBe('12.35')
+    expect(fmtApproxPln(0.9)).toBe('0.9')
   })
 })
 

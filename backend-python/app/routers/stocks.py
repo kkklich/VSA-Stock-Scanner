@@ -62,11 +62,13 @@ from app.dependencies import (
 from app.markets import (
     GPW_ID,
     INDEX_NAMES,
+    PLN_PER_UNIT,
     Market,
     enabled_markets,
     market_of,
     normalize_ticker,
     quote_currency,
+    to_pln_or_none,
 )
 from app.models import (
     AiAnalysisResponse,
@@ -222,15 +224,83 @@ _SIGNAL_RANK: dict[str, int] = {
 }
 
 
-def _sort_value(item: object, attr: str) -> object:
+# Columns whose values are amounts of money, in each row's OWN quote currency.
+# One market is not always one currency — London quotes most lines in pence but
+# Compass and IHG in dollars and Metlen in euros — and pooled markets bring
+# five: 17,760 (pence, ~906 PLN) would outrank 6,242 (dollars, ~23,720 PLN)
+# purely because a pound is a hundred pence. So they are compared in one
+# currency (see ``_price_in`` and ``_money_sort_value``).
+_MONEY_COLUMNS = frozenset({"last_price"})
+# Columns counted in SHARES. A share is the same unit everywhere, so the raw
+# number is comparable across markets — but a 15-pound London line and a 5-złoty
+# GPW line trade wildly different share counts for the same money, so a pooled
+# ordering by share count is economically meaningless. Sorted by the money that
+# changed hands (shares × last close, in złoty) when markets are pooled.
+_SHARE_COUNT_COLUMNS = frozenset(
+    {"volume", "recent_avg_volume", "baseline_avg_volume"}
+)
+
+
+def _price_in(value: float, currency: str | None, unit: str) -> float | None:
+    """``value`` quoted in ``currency``, restated in ``unit`` (``None``: no rate).
+
+    Returned as it is when it already is in ``unit`` — every row of a
+    single-currency market — so those keep their exact figures. Otherwise it is
+    converted through the fixed złoty rates the quality floors use
+    (``PLN_PER_UNIT``).
+    """
+    if currency == unit:
+        return value
+    pln = to_pln_or_none(value, currency)
+    rate = PLN_PER_UNIT.get(unit)
+    return None if pln is None or not rate else pln / rate
+
+
+def _money_sort_value(
+    item: object, attr: str, value: float | None, unit: str
+) -> object:
+    """A sort key for one money (or share-count) column, expressed in ``unit``.
+
+    The DISPLAYED figure is untouched — this only decides the ordering, so that
+    "most expensive first" means most expensive rather than "quoted in the
+    smallest unit first". A row whose currency has no rate sorts as a missing
+    value rather than failing the whole listing.
+    """
+    if value is None:
+        return float("-inf")
+    if attr in _SHARE_COUNT_COLUMNS:
+        # Share count → the money it represents, so the column compares like
+        # for like across markets.
+        last_price = getattr(item, "last_price", None)
+        if last_price is None:
+            return float("-inf")
+        value = value * float(last_price)
+    converted = _price_in(float(value), getattr(item, "currency", None), unit)
+    return float("-inf") if converted is None else converted
+
+
+def _sort_value(
+    item: object, attr: str, *, pooled: bool = False, price_unit: str | None = None
+) -> object:
     """Return a type-consistent, comparable key for one column.
 
     Shared by the ranking and volume-surge feeds (both carry ``last_signal``,
     optional ``sector`` and otherwise numeric/string columns).
+
+    ``pooled`` says the list mixes markets (``market=all``); it switches the
+    money and share-count columns onto a common złoty scale. ``price_unit`` is
+    the currency one market's money columns compare in (its own quote
+    currency): a row quoted in another — a London line in dollars — is
+    converted to it, and a row already in it keeps its exact figure. Without
+    either, every key is exactly what it always was.
     """
     value = getattr(item, attr)
     if attr == "last_signal":
         return _SIGNAL_RANK.get(value, 0)
+    if pooled and (attr in _MONEY_COLUMNS or attr in _SHARE_COUNT_COLUMNS):
+        return _money_sort_value(item, attr, value, "PLN")
+    if price_unit is not None and attr in _MONEY_COLUMNS:
+        return _money_sort_value(item, attr, value, price_unit)
     if value is None:
         # Missing sector sorts as an empty string; a missing value in an
         # optional NUMERIC column (the 52-week distances) must sort as a
@@ -280,6 +350,8 @@ def _query_ranking(
     selected_methods: list[str] | None = None,
     sort_by: str,
     sort_dir: str,
+    pooled: bool = False,
+    price_unit: str | None = None,
 ) -> list[StockRankingItem]:
     """Filter → search → sort the full ranking (pagination is applied later).
 
@@ -288,6 +360,13 @@ def _query_ranking(
     in-memory pass runs per request. ``selected_methods`` chooses which
     per-method scores fold into each row's combined score (default: all methods
     present on the row).
+
+    ``pooled`` says the rows come from more than one market (``market=all``),
+    so money is denominated in several currencies: the price bounds are then
+    read as złoty and the money columns sort on a złoty scale. ``price_unit``
+    is the currency a single market's price bounds and price sort are stated
+    in — its own quote currency; the odd row quoted in another (a London line
+    in dollars) is converted to it, every other row keeps its exact figure.
     """
     rows = items
     if tickers is not None:
@@ -313,10 +392,29 @@ def _query_ranking(
         # days_since_signal is 999 when no signal ever fired, so a recency
         # filter naturally drops signal-less stocks too.
         rows = [r for r in rows if r.days_since_signal <= max_days_since_signal]
-    if min_price is not None:
-        rows = [r for r in rows if r.last_price >= min_price]
-    if max_price is not None:
-        rows = [r for r in rows if r.last_price <= max_price]
+    if min_price is not None or max_price is not None:
+        # A bound is one amount in one currency. "At least 100" would otherwise
+        # mean 100 złoty, 100 dollars or 100 *pence* depending on the row —
+        # across pooled markets, and even within London — so each row is
+        # converted to the bound's currency: złoty when markets are pooled, the
+        # market's own quote currency otherwise.
+        bound_unit = "PLN" if pooled else price_unit
+
+        def price_key(row: StockRankingItem) -> float | None:
+            if bound_unit is None:
+                return row.last_price
+            return _price_in(row.last_price, row.currency, bound_unit)
+
+        if min_price is not None:
+            rows = [
+                r for r in rows
+                if (v := price_key(r)) is not None and v >= min_price
+            ]
+        if max_price is not None:
+            rows = [
+                r for r in rows
+                if (v := price_key(r)) is not None and v <= max_price
+            ]
     if min_volume is not None:
         rows = [r for r in rows if r.volume >= min_volume]
     if max_dist_from_52w_high_pct is not None:
@@ -353,7 +451,11 @@ def _query_ranking(
 
     attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
     reverse = sort_dir.casefold() != "asc"
-    return sorted(rows, key=lambda r: _sort_value(r, attr), reverse=reverse)
+    return sorted(
+        rows,
+        key=lambda r: _sort_value(r, attr, pooled=pooled, price_unit=price_unit),
+        reverse=reverse,
+    )
 
 
 def _parse_vsa_settings(raw: str | None) -> VsaConfig:
@@ -875,6 +977,8 @@ async def get_ranking(
         selected_methods=selected_methods,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        pooled=len(markets) > 1,
+        price_unit=markets[0].currency if len(markets) == 1 else None,
     )
 
     # Total matching rows before pagination — the frontend reads this to build
@@ -1232,7 +1336,12 @@ async def get_volume_surge(
     attr = _SURGE_SORT_KEYS[sort_by]
     ordered = sorted(
         full.items,
-        key=lambda i: _sort_value(i, attr),
+        key=lambda i: _sort_value(
+            i,
+            attr,
+            pooled=len(markets) > 1,
+            price_unit=markets[0].currency if len(markets) == 1 else None,
+        ),
         reverse=sort_dir != "asc",
     )
     start = (page - 1) * page_size

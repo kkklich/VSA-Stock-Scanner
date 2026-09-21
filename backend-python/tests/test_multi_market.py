@@ -116,6 +116,21 @@ class TestCompanyService:
         tickers = [c.ticker for c in _service(tmp_path).get_companies("us")]
         assert tickers == ["aapl.us", "nvda.us"]
 
+    def test_an_entry_that_is_not_an_object_is_skipped(self, tmp_path: Path) -> None:
+        # A stray null or number in a hand-edited file used to raise out of the
+        # loader and take every market's list down, the GPW's included.
+        _write_market(tmp_path, "us", [None, 42, {**_APPLE, "ticker": 7}, _APPLE])
+        service = _service(tmp_path)
+        assert [c.ticker for c in service.get_companies("us")] == ["aapl.us"]
+        assert len(service.get_companies()) > 0
+
+    def test_a_file_without_a_list_costs_that_market_only(self, tmp_path: Path) -> None:
+        tmp_path.mkdir(exist_ok=True)
+        (tmp_path / "uk.json").write_text('{"companies": 5}', encoding="utf-8")
+        service = _service(tmp_path)
+        assert service.get_companies("uk") == []
+        assert len(service.get_companies()) > 0
+
     def test_a_missing_file_is_an_empty_market(self, tmp_path: Path) -> None:
         assert _service(tmp_path).get_companies("de") == []
 
@@ -558,3 +573,234 @@ class TestStockPageIdentity:
         body = http.get("/api/stocks/bbb.us/ai-analysis").json()
         levels = [o for o in body["keyObservations"] if o.startswith("Nearest support")]
         assert levels and "USD" in levels[0] and "PLN" not in levels[0]
+
+
+# ── Money across pooled markets ───────────────────────────────────────────────
+#
+# Within one market every price is in one currency and the raw numbers compare
+# directly. Pool several and they stop being comparable: London quotes most
+# lines in pence, so 5,000 there is £50 while 5,000 in Warsaw is 5,000 złoty.
+# A "most expensive first" ordering that ignores this ranks by the size of the
+# currency's unit rather than by money, which is what these pin down.
+
+
+class _PricedCompanies:
+    """A gpw + uk universe whose two stocks differ in currency, price, volume."""
+
+    _BY_MARKET = {
+        "gpw": [GpwCompany(ticker="aaa", name="AAA S.A.", market="gpw", currency="PLN")],
+        "uk": [
+            GpwCompany(
+                ticker="bbb.l", name="BBB plc", market="uk", currency="GBp"
+            )
+        ],
+    }
+
+    def get_companies(self, market: str = "gpw") -> list[GpwCompany]:
+        return self._BY_MARKET.get(market, [])
+
+    def enabled_companies(self) -> list[GpwCompany]:
+        return [c for companies in self._BY_MARKET.values() for c in companies]
+
+    def find(self, ticker: str) -> GpwCompany | None:
+        wanted = ticker.strip().casefold()
+        return next((c for c in self.enabled_companies() if c.ticker == wanted), None)
+
+
+class _PricedClient:
+    """Serves each ticker its own close and volume.
+
+    aaa   1,000 PLN × 100,000 shares → 1,000 PLN a share, ~100M PLN turnover
+    bbb.l 5,000 GBp × 300,000 shares →   255 PLN a share,  ~76M PLN turnover
+
+    So the raw numbers and the money disagree in BOTH directions: bbb.l has the
+    bigger price figure and the bigger share count, aaa is the more expensive
+    share and the more heavily traded stock.
+    """
+
+    _QUOTES = {"aaa": (1000.0, 100_000), "bbb.l": (5000.0, 300_000)}
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        close, volume = self._QUOTES[ticker]
+        return _bars(close=close, volume=volume)
+
+
+@pytest.fixture
+def priced_markets(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "markets", "gpw,uk")
+    history_cache.clear()
+    ranking_cache.clear()
+    app.dependency_overrides[get_gpw_company_service] = lambda: _PricedCompanies()
+    app.dependency_overrides[get_stooq_client] = lambda: _PricedClient()
+    with TestClient(app) as http:
+        yield http
+    app.dependency_overrides.clear()
+    history_cache.clear()
+    ranking_cache.clear()
+
+
+def _tickers(resp) -> list[str]:
+    return [r["ticker"] for r in resp.json()]
+
+
+class TestPooledMoneyOrdering:
+    def test_price_sorts_by_money_not_by_the_size_of_the_unit(
+        self, priced_markets
+    ) -> None:
+        # 5,000 pence (~255 PLN) must not outrank 1,000 złoty.
+        resp = priced_markets.get(
+            "/api/stocks/ranking?market=all&sortBy=lastPrice&sortDir=desc"
+        )
+        assert _tickers(resp) == ["AAA", "BBB.L"]
+
+    def test_the_ascending_order_is_the_mirror_image(self, priced_markets) -> None:
+        resp = priced_markets.get(
+            "/api/stocks/ranking?market=all&sortBy=lastPrice&sortDir=asc"
+        )
+        assert _tickers(resp) == ["BBB.L", "AAA"]
+
+    def test_one_market_keeps_its_own_currency_untouched(self, priced_markets) -> None:
+        # With a single market there is nothing to convert: the figures are
+        # already in one currency and must sort exactly as they always did.
+        resp = priced_markets.get(
+            "/api/stocks/ranking?market=uk&sortBy=lastPrice&sortDir=desc"
+        )
+        assert _tickers(resp) == ["BBB.L"]
+        assert resp.json()[0]["lastPrice"] == 5000.0
+        assert resp.json()[0]["currency"] == "GBp"
+
+    def test_the_displayed_price_is_never_converted(self, priced_markets) -> None:
+        # The conversion decides the ORDER only. A London price stays in pence
+        # on the row, next to the currency that says so.
+        rows = priced_markets.get("/api/stocks/ranking?market=all").json()
+        bbb = next(r for r in rows if r["ticker"] == "BBB.L")
+        assert (bbb["lastPrice"], bbb["currency"]) == (5000.0, "GBp")
+
+    def test_volume_sorts_by_the_money_that_changed_hands(
+        self, priced_markets
+    ) -> None:
+        # bbb.l trades three times as many shares, aaa trades more money.
+        resp = priced_markets.get(
+            "/api/stocks/ranking?market=all&sortBy=volume&sortDir=desc"
+        )
+        assert _tickers(resp) == ["AAA", "BBB.L"]
+        # …and the published figure is still a share count.
+        assert resp.json()[0]["volume"] == 100_000
+
+    def test_volume_on_one_market_stays_a_share_count(self, priced_markets) -> None:
+        rows = priced_markets.get(
+            "/api/stocks/ranking?market=uk&sortBy=volume&sortDir=desc"
+        ).json()
+        assert rows[0]["volume"] == 300_000
+
+    def test_a_pooled_price_bound_is_read_as_zloty(self, priced_markets) -> None:
+        # "at least 500" cannot mean 500 of whatever each row is quoted in, or
+        # it would admit BBB.L (5,000 pence = ~255 PLN) and exclude nothing.
+        resp = priced_markets.get("/api/stocks/ranking?market=all&minPrice=500")
+        assert _tickers(resp) == ["AAA"]
+        resp = priced_markets.get("/api/stocks/ranking?market=all&maxPrice=500")
+        assert _tickers(resp) == ["BBB.L"]
+
+    def test_a_single_market_bound_keeps_that_market_s_currency(
+        self, priced_markets
+    ) -> None:
+        # 500 pence, not 500 złoty: BBB.L clears it at 5,000 pence.
+        assert _tickers(
+            priced_markets.get("/api/stocks/ranking?market=uk&minPrice=500")
+        ) == ["BBB.L"]
+        assert (
+            priced_markets.get("/api/stocks/ranking?market=uk&maxPrice=500").json()
+            == []
+        )
+
+    def test_every_row_reports_the_session_it_describes(self, priced_markets) -> None:
+        # Pooled markets settle hours apart, so a row has to say which session
+        # its figures come from or the UI cannot warn that two are mixed.
+        rows = priced_markets.get("/api/stocks/ranking?market=all").json()
+        assert {r["lastSession"] for r in rows} == {date.today().isoformat()}
+
+
+# ── Money within one market that quotes in several currencies ─────────────────
+#
+# One market is not always one currency: London quotes most lines in pence but
+# Compass and IHG in dollars and Metlen in euros. Ranked on their raw figures,
+# those three read as the cheapest stocks in London (30.08 "pence" for a share
+# worth ~2,240p), and a pence price bound judged them by a dollar number.
+
+
+class _MixedLondon:
+    """A London universe with one line in pence and one in dollars."""
+
+    _UK = [
+        GpwCompany(ticker="ccc.l", name="CCC plc", market="uk", currency="GBp"),
+        GpwCompany(ticker="ddd.l", name="DDD plc", market="uk", currency="USD"),
+    ]
+
+    def get_companies(self, market: str = "gpw") -> list[GpwCompany]:
+        return list(self._UK) if market == "uk" else []
+
+    def enabled_companies(self) -> list[GpwCompany]:
+        return list(self._UK)
+
+    def find(self, ticker: str) -> GpwCompany | None:
+        wanted = ticker.strip().casefold()
+        return next((c for c in self._UK if c.ticker == wanted), None)
+
+
+class _MixedLondonClient:
+    """ccc.l 5,000 GBp (~255 PLN); ddd.l 100 USD (~380 PLN, ~7,451 pence).
+
+    The raw figures and the money disagree: 5,000 > 100, yet the dollar line is
+    the dearer share. The last three sessions trade three times the usual
+    volume, so both lines also appear on the volume-surge screen.
+    """
+
+    _CLOSES = {"ccc.l": 5000.0, "ddd.l": 100.0}
+
+    async def get_daily_history(self, ticker, from_date=None, to_date=None):
+        bars = _bars(close=self._CLOSES[ticker], volume=300_000)
+        return [
+            b.model_copy(update={"volume": 900_000}) if i >= len(bars) - 3 else b
+            for i, b in enumerate(bars)
+        ]
+
+
+@pytest.fixture
+def mixed_london(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "markets", "gpw,uk")
+    history_cache.clear()
+    ranking_cache.clear()
+    app.dependency_overrides[get_gpw_company_service] = lambda: _MixedLondon()
+    app.dependency_overrides[get_stooq_client] = lambda: _MixedLondonClient()
+    with TestClient(app) as http:
+        yield http
+    app.dependency_overrides.clear()
+    history_cache.clear()
+    ranking_cache.clear()
+
+
+class TestOneMarketManyCurrencies:
+    def test_price_sorts_by_money_within_london(self, mixed_london) -> None:
+        resp = mixed_london.get("/api/stocks/ranking?market=uk&sortBy=lastPrice&sortDir=desc")
+        assert _tickers(resp) == ["DDD.L", "CCC.L"]
+
+    def test_the_displayed_price_stays_in_its_own_currency(self, mixed_london) -> None:
+        rows = mixed_london.get("/api/stocks/ranking?market=uk").json()
+        ddd = next(r for r in rows if r["ticker"] == "DDD.L")
+        assert (ddd["lastPrice"], ddd["currency"]) == (100.0, "USD")
+
+    def test_a_price_bound_is_in_the_market_s_own_currency(self, mixed_london) -> None:
+        # 6,000 pence: the dollar line (~7,451p) clears it, the pence line does
+        # not — read raw, neither would (100 and 5,000 are both under 6,000).
+        assert _tickers(
+            mixed_london.get("/api/stocks/ranking?market=uk&minPrice=6000")
+        ) == ["DDD.L"]
+        assert _tickers(
+            mixed_london.get("/api/stocks/ranking?market=uk&maxPrice=6000")
+        ) == ["CCC.L"]
+
+    def test_the_volume_surge_screen_sorts_price_the_same_way(self, mixed_london) -> None:
+        body = mixed_london.get(
+            "/api/stocks/volume-surge?market=uk&sortBy=lastPrice&sortDir=desc"
+        ).json()
+        assert [i["ticker"] for i in body["items"]] == ["DDD.L", "CCC.L"]

@@ -18,7 +18,8 @@ import {
 } from '../components/ui'
 import { useVolumeSurge } from '../hooks/useVolumeSurge'
 import { useMarketScope } from '../hooks/useMarkets'
-import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { ALL_MARKETS, displayTicker, GPW_MARKET } from '../lib/markets'
+import { plnLine } from '../lib/rankingColumns'
 import { usePersistentState } from '../hooks/usePersistentState'
 import type {
   ApiVolumeSurgeItem,
@@ -117,6 +118,10 @@ export function VolumeSurgePage() {
   // The top bar's market; relative volume has no unit, so "all" is fine.
   const { market } = useMarketScope({ allowAll: true })
   const marketParam = market && market !== GPW_MARKET ? market : undefined
+  // Pooled, the backend orders price and volume by their value in złoty (a
+  // share count × its close), so the rows print that value beneath — without
+  // it a sorted column reads as unsorted.
+  const pooled = market === ALL_MARKETS
   useEffect(() => {
     setPage(1)
   }, [marketParam])
@@ -361,6 +366,7 @@ export function VolumeSurgePage() {
                   <SurgeRow
                     key={item.ticker}
                     item={item}
+                    pooled={pooled}
                     recentDays={meta?.recentDays ?? recentDays}
                     onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
                   />
@@ -375,6 +381,7 @@ export function VolumeSurgePage() {
               <SurgeCard
                 key={item.ticker}
                 item={item}
+                pooled={pooled}
                 recentDays={meta?.recentDays ?? recentDays}
                 onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
               />
@@ -422,10 +429,12 @@ export function VolumeSurgePage() {
 
 function SurgeRow({
   item,
+  pooled,
   recentDays,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
+  pooled: boolean
   recentDays: number
   onOpen: () => void
 }) {
@@ -468,6 +477,7 @@ function SurgeRow({
       <td className="hidden px-4 py-3 text-right text-xs tabular-nums md:table-cell">
         <span className="text-slate-200">{fmtCompactPln(item.recentAvgVolume)}</span>
         <span className="text-slate-500"> / {fmtCompactPln(item.baselineAvgVolume)}</span>
+        {plnLine(item.recentAvgVolume * item.lastPrice, item.currency, pooled, 'turnover')}
       </td>
       <td className="hidden px-4 py-3 text-right text-xs tabular-nums text-slate-300 md:table-cell">
         {item.daysAboveBaseline}/{recentDays}
@@ -482,6 +492,7 @@ function SurgeRow({
       </td>
       <td className="hidden px-4 py-3 text-right text-sm tabular-nums text-slate-200 sm:table-cell">
         {fmtMoney(item.lastPrice, item.currency)}
+        {plnLine(item.lastPrice, item.currency, pooled)}
       </td>
       <td className="px-4 py-3 text-right">
         <span
@@ -503,10 +514,12 @@ function SurgeRow({
 /** Compact card form of one surge row, shown below lg where the table is hidden. */
 function SurgeCard({
   item,
+  pooled,
   recentDays,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
+  pooled: boolean
   recentDays: number
   onOpen: () => void
 }) {
@@ -559,18 +572,20 @@ function SurgeCard({
         </div>
         <div className="flex justify-between gap-2">
           <span className="text-slate-500">Price</span>
-          <span className="tabular-nums text-slate-200">
+          <span className="text-right tabular-nums text-slate-200">
             {fmtMoney(item.lastPrice, item.currency)}
+            {plnLine(item.lastPrice, item.currency, pooled)}
           </span>
         </div>
         <div className="flex justify-between gap-2">
           <span className="text-slate-500">Volume</span>
-          <span className="tabular-nums text-slate-300">
+          <span className="text-right tabular-nums text-slate-300">
             {fmtCompactPln(item.recentAvgVolume)}
             <span className="text-slate-500">
               {' / '}
               {fmtCompactPln(item.baselineAvgVolume)}
             </span>
+            {plnLine(item.recentAvgVolume * item.lastPrice, item.currency, pooled, 'turnover')}
           </span>
         </div>
         <div className="flex justify-between gap-2">

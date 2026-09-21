@@ -6,7 +6,9 @@
 export interface StockRankingItem {
   ticker: string
   name: string
-  /** Last traded price in PLN. */
+  /** The session (YYYY-MM-DD) every figure on this row describes. */
+  lastSession?: string | null
+  /** Last traded price, in the row's own `currency`. */
   lastPrice: number
   /** Intraday price change, percent. */
   priceChangePct: number

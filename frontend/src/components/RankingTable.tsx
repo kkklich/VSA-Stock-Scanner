@@ -29,6 +29,11 @@ interface SharedProps {
   showRank?: boolean
   /** Rank of the first row (for paginated pages); defaults to 1. */
   rankOffset?: number
+  /**
+   * The rows come from more than one market ("All markets"), so the money
+   * columns carry a złoty equivalent explaining the order they are sorted in.
+   */
+  pooled?: boolean
 }
 
 /* ── Wide-screen table (lg+) ─────────────────────────────────────────────── */
@@ -40,6 +45,7 @@ export function RankingTable({
   onToggleStar,
   showRank = false,
   rankOffset = 1,
+  pooled = false,
   minWidth,
   sortBy,
   sortDir,
@@ -149,7 +155,7 @@ export function RankingTable({
                     'px-4 py-3 ' + (col.align === 'right' ? 'text-right' : '')
                   }
                 >
-                  {col.cell(row, { t, starred: row.starred, onToggleStar })}
+                  {col.cell(row, { t, starred: row.starred, onToggleStar, pooled })}
                 </td>
               ))}
             </tr>
@@ -170,6 +176,7 @@ export function RankingCardList({
   onToggleStar,
   showRank = false,
   rankOffset = 1,
+  pooled = false,
 }: SharedProps) {
   const { t } = useTranslation()
 
@@ -180,7 +187,7 @@ export function RankingCardList({
   return (
     <ul className="flex flex-col gap-2 lg:hidden">
       {rows.map((row, i) => {
-        const ctx: CellContext = { t, starred: row.starred, onToggleStar }
+        const ctx: CellContext = { t, starred: row.starred, onToggleStar, pooled }
         return (
           <li key={row.ticker}>
             <div

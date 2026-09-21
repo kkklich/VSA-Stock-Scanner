@@ -77,8 +77,3 @@ def median_turnover(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> floa
     if n % 2 == 0:
         return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2
     return sorted_vals[n // 2]
-
-
-# The name the helper had while every tracked stock traded in złoty; kept so
-# existing imports keep working.
-median_volume_pln = median_turnover

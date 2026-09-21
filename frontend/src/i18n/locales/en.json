@@ -560,6 +560,9 @@
       "all": "all markets"
     },
     "oneAtATime": "This page shows one market at a time.",
-    "ownCurrency": "Prices are in each company's own currency."
+    "ownCurrency": "Prices are in each company's own currency.",
+    "sessionMismatch": "These rows come from two different sessions: {{newest}} and {{oldest}}. {{behind}} companies have no bar from the newest one yet — exchanges close at different times (Europe in the afternoon, the US at 22:15 Warsaw time). Price changes are therefore not comparable row for row.",
+    "pricePln": "PLN, converted",
+    "sortedInPln": "With every market pooled, the money columns are ordered by their value in złoty — otherwise 17,760 pence (~906 zł) would outrank 6,242 dollars (~23,720 zł). The displayed price stays in its own currency, with the approximate złoty value beneath it."
   }
 }

@@ -454,6 +454,7 @@ async def compute_ranking(
                 name=company.name,
                 market=market_of(company.ticker).id,
                 currency=currency,
+                last_session=last_bar_date,
                 sector=company.sector,
                 last_price=last_close,
                 price_change_pct=price_change_pct,

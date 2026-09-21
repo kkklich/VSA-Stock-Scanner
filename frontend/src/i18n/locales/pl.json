@@ -568,6 +568,9 @@
       "all": "wszystkich rynkach"
     },
     "oneAtATime": "Ta strona pokazuje jeden rynek naraz.",
-    "ownCurrency": "Ceny w walucie danej spółki."
+    "ownCurrency": "Ceny w walucie danej spółki.",
+    "sessionMismatch": "Wiersze pochodzą z dwóch różnych sesji: {{newest}} i {{oldest}}. {{behind}} spółek nie ma jeszcze notowania z najnowszej sesji — giełdy zamykają się o różnych porach (Europa po południu, USA o 22:15 czasu warszawskiego). Zmiany ceny nie są więc porównywalne wiersz w wiersz.",
+    "pricePln": "PLN, przeliczone",
+    "sortedInPln": "Przy wszystkich rynkach kolumny pieniężne są sortowane po wartości w złotych — inaczej 17 760 pensów (~906 zł) wyprzedziłoby 6 242 dolary (~23 720 zł). Wyświetlana cena zostaje w oryginalnej walucie, a pod nią widać przybliżoną wartość w złotych."
   }
 }

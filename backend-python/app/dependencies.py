@@ -27,6 +27,7 @@ from app.config import settings
 from app.db.action_log_repository import ActionLogRepository
 from app.db.health_repository import DataHealthRepository
 from app.db.repository import QuoteRepository
+from app.markets import enabled_markets
 from app.services.action_log import ActionLogService
 from app.services.cache import TTLCache
 from app.services.error_tracker import ErrorTracker
@@ -71,7 +72,17 @@ history_cache: TTLCache = TTLCache(max_entries=4096)
 # back-tests, a couple of volume-surge parameter sets) plus a handful of
 # settings variants. Past that the least-recently-used entry is evicted and
 # whoever wants it pays one recomputation — much the better trade.
-ranking_cache: TTLCache = TTLCache(max_entries=32)
+#
+# Every served market keeps its own warm set (ranking, heatmap, volume surge,
+# capex, scanner stats — five entries), so with all six markets on, 32 would be
+# spent on the defaults alone and browsing one market would evict another's
+# pre-warmed ranking (a 518-ticker US rescan). Each extra market therefore adds
+# room for its own set plus a little slack; a GPW-only deployment keeps 32.
+# Memory stays bounded: most extra markets are small (25–100 rows an entry).
+_RANKING_SLOTS_PER_EXTRA_MARKET = 8
+ranking_cache: TTLCache = TTLCache(
+    max_entries=32 + _RANKING_SLOTS_PER_EXTRA_MARKET * (len(enabled_markets()) - 1)
+)
 
 # The action log (audit trail). Created here rather than in the lifespan so
 # that a request arriving while the app is still starting up — or a test that

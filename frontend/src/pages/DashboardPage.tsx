@@ -25,6 +25,7 @@ import { RefreshButton } from '../components/RefreshButton'
 import { ColumnPicker } from '../components/ColumnPicker'
 import { MethodPicker } from '../components/MethodPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SessionNote } from '../components/SessionNote'
 import { SortMenu } from '../components/SortMenu'
 import { CombinedScoreCell, MethodScoreCell } from '../components/MethodCells'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
@@ -190,6 +191,11 @@ export function DashboardPage() {
 
   // Which columns to show — shared with the Watchlist and Filters pages.
   const columns = useRankingColumns()
+
+  // Rows from several markets at once are quoted in several currencies and can
+  // even come from different sessions, so the table says so (see SessionNote
+  // and the "≈ PLN" line under the money columns).
+  const pooled = market === ALL_MARKETS
 
   // VSA is both a registry column (the rating meter) and a trading method, so
   // selecting both would print the same 0–100 score twice. The registry column
@@ -484,12 +490,15 @@ export function DashboardPage() {
           after the Signal they qualify. */}
       {!loading && !error && rows.length > 0 && (
         <>
+          <SessionNote rows={rows} enabled={pooled} />
+
           <RankingTable
             columns={tableColumns}
             rows={rows}
             onOpen={openTicker}
             onToggleStar={toggleStar}
             showRank
+            pooled={pooled}
             sortBy={sortBy}
             sortDir={sortDir}
             onSort={onSort}
@@ -502,6 +511,7 @@ export function DashboardPage() {
             onOpen={openTicker}
             onToggleStar={toggleStar}
             showRank
+            pooled={pooled}
           />
         </>
       )}

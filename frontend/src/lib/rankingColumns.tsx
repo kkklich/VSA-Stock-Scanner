@@ -26,8 +26,8 @@ import {
   WeeklyBadge,
 } from '../components/ui'
 import { Range52wCell } from '../components/Range52wCell'
-import { deltaTone, fmtCompactPln, fmtMoney, fmtPct } from './format'
-import { displayTicker } from './markets'
+import { deltaTone, fmtApproxPln, fmtCompactPln, fmtMoney, fmtPct } from './format'
+import { displayTicker, plnHint, toPln } from './markets'
 
 /** localStorage key for the shared ranking-column selection. */
 export const RANKING_COLUMNS_KEY = 'stockpilot:ranking-columns:v1'
@@ -70,6 +70,44 @@ export interface CellContext {
   /** Present only on pages with favorites (Dashboard, Watchlist). */
   starred?: boolean
   onToggleStar?: (ticker: string) => void
+  /**
+   * The list mixes markets ("All markets"), so its rows are quoted in several
+   * currencies and the backend orders the money columns on a common złoty
+   * scale. The cells add a "≈ N PLN" second line so that ordering is legible
+   * — without it a pence price sorting below a dollar price looks broken.
+   */
+  pooled?: boolean
+}
+
+/**
+ * The "≈ 906 PLN" second line under a money figure in a pooled list, or null
+ * when there is nothing to explain.
+ *
+ * A price is already money in some currency, so a złoty row needs no line —
+ * it converts to itself — and the figure is printed in whole złoty, precise
+ * enough to tell neighbouring rows apart. The volume column (`turnover`) is
+ * different: its sort key is not the displayed share count at all but the
+ * turnover it represents, so a złoty row needs the line just as much, and
+ * amounts that run into billions read best compact.
+ *
+ * A plain render function rather than a component, like every other cell
+ * renderer in this registry file. Exported for the volume-surge list, whose
+ * pooled sort converts the same columns the same way.
+ */
+export function plnLine(
+  value: number,
+  currency: string | null | undefined,
+  show: boolean | undefined,
+  kind: 'price' | 'turnover' = 'price',
+): ReactNode {
+  if (!show) return null
+  const pln = kind === 'turnover' ? toPln(value, currency) : plnHint(value, currency)
+  if (pln === null) return null
+  return (
+    <span className="block text-[10px] font-normal tabular-nums text-slate-500">
+      ≈ {kind === 'turnover' ? fmtCompactPln(pln) : fmtApproxPln(pln)} PLN
+    </span>
+  )
 }
 
 export interface RankingColumn {
@@ -198,9 +236,10 @@ export const RANKING_COLUMNS: RankingColumn[] = [
     defaultVisible: true,
     width: 130,
     mobile: 'price',
-    cell: (s) => (
+    cell: (s, ctx) => (
       <span className="whitespace-nowrap font-medium tabular-nums text-slate-200">
         {fmtMoney(s.lastPrice, s.currency)}
+        {plnLine(s.lastPrice, s.currency, ctx.pooled)}
       </span>
     ),
   },
@@ -334,8 +373,14 @@ export const RANKING_COLUMNS: RankingColumn[] = [
     sortAscFirst: false,
     defaultVisible: false,
     width: 120,
-    cell: (s) => (
-      <span className="tabular-nums text-slate-300">{fmtCompactPln(s.volume)}</span>
+    // Shares are the same unit everywhere, but a 15-pound London line and a
+    // 5-złoty GPW line trade wildly different share counts for the same money,
+    // so a pooled list is ordered by the turnover the second line shows.
+    cell: (s, ctx) => (
+      <span className="tabular-nums text-slate-300">
+        {fmtCompactPln(s.volume)}
+        {plnLine(s.volume * s.lastPrice, s.currency, ctx.pooled, 'turnover')}
+      </span>
     ),
   },
   {

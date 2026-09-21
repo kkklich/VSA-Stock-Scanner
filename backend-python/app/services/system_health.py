@@ -24,7 +24,7 @@ fetched, so it can be tested without a database, an HTTP client or a clock.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -303,6 +303,7 @@ def evaluate_data(
     today: date,
     read_failed: bool = False,
     refresh_running: bool = False,
+    refreshing_markets: Collection[str] | None = None,
 ) -> DataHealth:
     """How fresh and how complete the stored market data is.
 
@@ -314,6 +315,10 @@ def evaluate_data(
     an ingest is working through the universe, only part of it has the newest
     session yet. That is the run in progress, not a fault, and calling it
     "behind" every night at 18:00 would teach the reader to ignore the word.
+    ``refreshing_markets`` narrows that to the markets the running refresh
+    covers (``None``: unknown, so any of them): the nightly runs refresh
+    different markets, and one run in progress says nothing about the others —
+    a US market left behind last night is not "updating" at 18:00 Warsaw.
     """
     if not db_enabled:
         return DataHealth(
@@ -344,7 +349,12 @@ def evaluate_data(
 
     age_days = (today - stats.latest_bar_date).days
     market_rows = [
-        _market_data(m, today=today, refresh_running=refresh_running)
+        _market_data(
+            m,
+            today=today,
+            refresh_running=refresh_running
+            and (refreshing_markets is None or m.market in refreshing_markets),
+        )
         for m in stats.markets
     ]
     if len(market_rows) > 1:

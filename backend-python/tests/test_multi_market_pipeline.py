@@ -596,7 +596,12 @@ def _stats(*markets: MarketStoredStats) -> StoredDataStats:
 class TestDataHealthPerMarket:
     TODAY = date(2026, 9, 16)
 
-    def _evaluate(self, stats: StoredDataStats, running: bool = False):
+    def _evaluate(
+        self,
+        stats: StoredDataStats,
+        running: bool = False,
+        refreshing: set[str] | None = None,
+    ):
         tracked = sum(m.tickers_tracked for m in stats.markets)
         return evaluate_data(
             stats,
@@ -604,6 +609,7 @@ class TestDataHealthPerMarket:
             db_enabled=True,
             today=self.TODAY,
             refresh_running=running,
+            refreshing_markets=refreshing,
         )
 
     def test_us_a_session_behind_the_gpw_is_not_stale(self) -> None:
@@ -638,6 +644,20 @@ class TestDataHealthPerMarket:
             running=True,
         )
         assert health.status == "updating"
+
+    def test_a_run_in_progress_excuses_only_its_own_markets(self) -> None:
+        """The 18:00 European run says nothing about a US market left behind."""
+        europe = {"gpw", "de", "fr", "nl", "uk"}
+        health = self._evaluate(
+            _stats(_market("gpw", self.TODAY, 288, 120), _market("us", self.TODAY, 518, 100)),
+            running=True,
+            refreshing=europe,
+        )
+        assert {m.market: m.status for m in health.markets} == {
+            "gpw": "updating",
+            "us": "stale",
+        }
+        assert health.status == "stale"
 
     def test_a_single_market_keeps_the_original_wording(self) -> None:
         health = self._evaluate(_stats(_market("gpw", self.TODAY, 288, 288)))

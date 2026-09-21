@@ -31,6 +31,15 @@ export const fmtPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)
 /** Signed integer, e.g. +2 / -1. */
 export const fmtSigned = (n: number): string => `${n >= 0 ? '+' : ''}${n}`
 
+/**
+ * An approximate złoty value shown beside a price quoted in another currency:
+ * whole złoty from 100 up ("23,372"), two decimals below it ("12.34"). Precise
+ * enough to tell neighbouring rows of a pooled list apart, which is the point —
+ * a compact "6 K" would print four different prices identically.
+ */
+export const fmtApproxPln = (n: number): string =>
+  n.toLocaleString('en-US', { maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 })
+
 /** Large amounts in compact form, e.g. "3.42 B" / "319 M" (add the currency yourself). */
 export const fmtCompactPln = (n: number): string => {
   if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} B`

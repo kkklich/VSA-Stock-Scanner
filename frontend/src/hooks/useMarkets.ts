@@ -6,6 +6,7 @@
 // GPW-only deployment, which is exactly what it is.
 
 import { useEffect, useState } from 'react'
+import { ApiError } from '../api/client'
 import { fetchMarkets, type ApiMarket } from '../api/stocksApi'
 import {
   ALL_MARKETS,
@@ -34,18 +35,32 @@ export const GPW_ONLY: ApiMarket[] = [
   },
 ]
 
-let shared: Promise<ApiMarket[]> | null = null
+/** How long to wait before asking again when the backend did not answer. */
+export const MARKETS_RETRY_MS = 30_000
 
-function loadMarkets(): Promise<ApiMarket[]> {
+interface Catalogue {
+  markets: ApiMarket[]
+  /** The backend did not answer (down, restarting) — worth asking again. */
+  retry: boolean
+}
+
+let shared: Promise<Catalogue> | null = null
+
+/** "Not answering yet" (no connection, a gateway error), not "no such endpoint". */
+function isTransient(err: unknown): boolean {
+  return !(err instanceof ApiError) || err.status === 0 || err.status >= 500
+}
+
+function loadMarkets(): Promise<Catalogue> {
   if (shared === null) {
     shared = fetchMarkets()
-      .then((list) => (list.length > 0 ? list : GPW_ONLY))
-      .catch(() => {
-        // Answer GPW-only for now, but let the next component that mounts ask
-        // again — a backend that was restarting must not hide the other
-        // markets for the rest of the session.
+      .then((list) => ({ markets: list.length > 0 ? list : GPW_ONLY, retry: false }))
+      .catch((err: unknown) => {
+        // Answer GPW-only for now, but forget the failure so the next ask goes
+        // back to the backend — one that was restarting must not hide the
+        // other markets for the rest of the session.
         shared = null
-        return GPW_ONLY
+        return { markets: GPW_ONLY, retry: isTransient(err) }
       })
   }
   return shared
@@ -66,11 +81,21 @@ export function useMarkets({ enabled = true }: { enabled?: boolean } = {}): ApiM
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
-    void loadMarkets().then((list) => {
-      if (!cancelled) setMarkets(list)
-    })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const ask = () => {
+      void loadMarkets().then(({ markets: list, retry }) => {
+        if (cancelled) return
+        setMarkets(list)
+        // The top bar's switcher is mounted once per page load, so "the next
+        // component to mount asks again" never reaches it: a backend that did
+        // not answer is asked again from here until it does.
+        if (retry) timer = setTimeout(ask, MARKETS_RETRY_MS)
+      })
+    }
+    ask()
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
   }, [enabled])
   return markets

@@ -20,7 +20,7 @@ import {
   Star,
 } from 'lucide-react'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
-import { useMarketScope } from '../hooks/useMarkets'
+import { useMarkets, useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import {
   fetchRanking,
@@ -35,6 +35,7 @@ import { Pagination } from '../components/ui'
 import { RefreshButton } from '../components/RefreshButton'
 import { ColumnPicker } from '../components/ColumnPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SessionNote } from '../components/SessionNote'
 import { SortMenu } from '../components/SortMenu'
 import { useDropdownPosition } from '../hooks/useDropdownPosition'
 import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
@@ -129,6 +130,11 @@ export function WatchlistPage() {
   const { market: scopedMarket } = useMarketScope({ allowAll: true })
   const market = favoritesOnly ? ALL_MARKETS : scopedMarket
   const marketParam = market && market !== GPW_MARKET ? market : undefined
+  // Pooled — money sorted in złoty, sessions possibly mixed — only when "all"
+  // really spans several markets. The favorites view asks for "all" on every
+  // site, and on a GPW-only one the backend answers with the GPW alone.
+  const served = useMarkets()
+  const pooled = market === ALL_MARKETS && (served?.length ?? 0) > 1
 
   // Everything below is computed by the backend — this hook just requests the
   // right page with the right sort/filter/search.
@@ -456,11 +462,14 @@ export function WatchlistPage() {
           both layouts. */}
       {!loading && !error && rows.length > 0 && (
         <>
+          <SessionNote rows={rows} enabled={pooled} />
+
           <RankingTable
             columns={columns.renderColumns}
             rows={rows}
             onOpen={openTicker}
             onToggleStar={toggleStar}
+            pooled={pooled}
             sortBy={sortBy}
             sortDir={sortDir}
             onSort={onSort}
@@ -488,6 +497,7 @@ export function WatchlistPage() {
             rows={rows}
             onOpen={openTicker}
             onToggleStar={toggleStar}
+            pooled={pooled}
           />
         </>
       )}

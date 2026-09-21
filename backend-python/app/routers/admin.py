@@ -587,7 +587,10 @@ async def get_system_health(
         db_enabled=settings.db_enabled,
         today=datetime.now(_WARSAW).date(),
         read_failed=read_failed,
-        refresh_running=ingest.running,
+        # Per market, not the headline run's flag: the headline is the WORST
+        # run, which need not be the one in progress.
+        refresh_running=running,
+        refreshing_markets=refreshed or None,
     )
 
     error_since = now - timedelta(hours=_ERROR_WINDOW_HOURS)

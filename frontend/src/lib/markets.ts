@@ -55,6 +55,52 @@ export function displayTicker(ticker: string): string {
   return dot < 0 ? ticker : ticker.slice(0, dot)
 }
 
+// ── Money across markets ──────────────────────────────────────────────────────
+
+/**
+ * Approximate złoty value of one unit of each quote currency — the frontend
+ * copy of `PLN_PER_UNIT` in backend-python/app/markets.py, and it must stay in
+ * step with it.
+ *
+ * It exists only to EXPLAIN an ordering, never to produce one: when markets
+ * are pooled the backend sorts the money columns on this same scale, and a
+ * London price of 17,760 (pence) landing below a US price of 6,242 (dollars)
+ * looks like a broken sort until the row can show that the first is ~906 PLN
+ * and the second ~23,720. Rates are fixed approximations; the figure is shown
+ * with a "≈".
+ */
+export const PLN_PER_UNIT: Record<string, number> = {
+  PLN: 1,
+  USD: 3.8,
+  EUR: 4.35,
+  GBP: 5.1,
+  GBp: 0.051,
+  GBX: 0.051,
+}
+
+/**
+ * `amount` of `currency` in approximate złoty; null when the rate is unknown.
+ *
+ * A missing currency is read as złoty, matching the API model's own default —
+ * an older backend omits the field on a GPW row, and dropping the conversion
+ * there would leave the home market as the one market whose ordering the table
+ * cannot explain.
+ */
+export function toPln(amount: number | null | undefined, currency?: string | null): number | null {
+  if (amount == null) return null
+  const rate = PLN_PER_UNIT[currency || 'PLN']
+  return rate == null ? null : amount * rate
+}
+
+/**
+ * The złoty equivalent worth showing beside a figure, or null when there is
+ * nothing to explain — a złoty row converts to itself.
+ */
+export function plnHint(amount: number | null | undefined, currency?: string | null): number | null {
+  if (!currency || currency === 'PLN') return null
+  return toPln(amount, currency)
+}
+
 // ── The stored choice ─────────────────────────────────────────────────────────
 
 const VALID_SELECTION = /^[a-z]{2,8}$/

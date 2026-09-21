@@ -86,6 +86,13 @@ export interface ApiRankingItem {
   market?: string
   /** The currency its prices are in, as Yahoo writes it ("PLN", "GBp"…); absent = PLN. */
   currency?: string
+  /**
+   * The session (YYYY-MM-DD) every figure on this row describes. Markets close
+   * hours apart — Europe in the late Warsaw afternoon, the US at ~22:15 Warsaw
+   * time — so a pooled list can legitimately carry today's European rows
+   * beside yesterday's American ones. Absent on an older backend.
+   */
+  lastSession?: string | null
   lastPrice: number
   priceChangePct: number
   currentRating: number
@@ -171,7 +178,11 @@ export interface RankingQuery {
   sector?: string
   /** Only stocks whose last signal fired at most this many sessions ago. */
   maxDaysSinceSignal?: number
-  /** Price range in each stock's own currency (either bound optional). */
+  /**
+   * Price range. Read in each stock's own currency when one market is
+   * requested, and in złoty when markets are pooled (`market=all`), where
+   * "at least 100" would otherwise mean złoty, dollars or *pence* by row.
+   */
   minPrice?: number
   maxPrice?: number
   /** Minimum 20-session median volume, shares. */

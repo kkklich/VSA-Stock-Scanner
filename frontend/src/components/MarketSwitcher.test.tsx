@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../test/utils'
 import type { ApiMarket } from '../api/stocksApi'
-import { GPW_ONLY, resetMarketsCache } from '../hooks/useMarkets'
+import { GPW_ONLY, MARKETS_RETRY_MS, resetMarketsCache } from '../hooks/useMarkets'
 import { MARKET_STORAGE_KEY } from '../lib/markets'
 
 const { fetchMarketsMock } = vi.hoisted(() => ({ fetchMarketsMock: vi.fn() }))
@@ -65,6 +65,25 @@ describe('MarketSwitcher', () => {
     renderWithProviders(<MarketSwitcher />)
     expect(await screen.findByRole('combobox', { name: 'Market' })).toBeInTheDocument()
     expect(fetchMarketsMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks again by itself, since the top bar is never remounted', async () => {
+    // In the app the switcher lives in the persistent layout: navigating
+    // between pages does not mount it again, so it has to retry on its own.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      fetchMarketsMock.mockRejectedValueOnce(new Error('502'))
+      fetchMarketsMock.mockResolvedValue([GPW_ONLY[0], US])
+      const { container } = renderWithProviders(<MarketSwitcher />)
+      await waitFor(() => expect(fetchMarketsMock).toHaveBeenCalledTimes(1))
+      expect(container).toBeEmptyDOMElement()
+
+      await vi.advanceTimersByTimeAsync(MARKETS_RETRY_MS)
+      expect(await screen.findByRole('combobox', { name: 'Market' })).toBeInTheDocument()
+      expect(fetchMarketsMock).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('offers every served market and all of them, and remembers the choice', async () => {

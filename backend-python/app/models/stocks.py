@@ -217,6 +217,14 @@ class StockRankingItem(_CamelModel):
     # The currency its prices are quoted in, as Yahoo writes it ("PLN",
     # "USD", "EUR", "GBp" for pence) — every price on the row is in it.
     currency: str = "PLN"
+    # The date of the last EOD bar this row was computed from — the session
+    # every figure below describes. It matters when markets are pooled
+    # (``market=all``): the European exchanges settle in the late Warsaw
+    # afternoon but the US only at ~22:15 Warsaw time, so for several hours
+    # each evening a pooled list legitimately carries today's European rows
+    # beside yesterday's American ones. Without this field the UI cannot say
+    # so, and "today's biggest movers" silently mixes two sessions.
+    last_session: date | None = None
     # Last EOD closing price, in ``currency``.
     last_price: float
     # Day-over-day price change, percent.

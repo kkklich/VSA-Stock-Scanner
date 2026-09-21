@@ -169,14 +169,21 @@ class GpwCompanyService:
         except Exception:
             logger.exception("Could not read the %s company list at '%s'.", market_id, path)
             return []
+        if not isinstance(items, list):
+            logger.error("The %s company list at '%s' holds no list of companies.", market_id, path)
+            return []
 
         companies: list[GpwCompany] = []
         seen: set[str] = set()
         for item in items:
-            ticker = normalize_ticker(item.get("ticker"))
+            # Checked before use: a stray null or number in a hand-edited file
+            # must cost that one entry, not raise out of the loader and take
+            # every market's company list (the GPW's included) down with it.
+            raw_ticker = item.get("ticker") if isinstance(item, dict) else item
+            ticker = normalize_ticker(raw_ticker) if isinstance(raw_ticker, str) else None
             if ticker is None or market_of(ticker).id != market_id:
                 logger.warning(
-                    "Skipping %r in %s: not a %s ticker.", item.get("ticker"), path.name, market_id
+                    "Skipping %r in %s: not a %s ticker.", raw_ticker, path.name, market_id
                 )
                 continue
             if ticker in seen:

@@ -496,3 +496,17 @@ def below_market_cap_floor(market_cap: float | None, currency: str) -> bool:
     if market_cap is None:
         return False
     return to_pln(market_cap, major_currency(currency)) < MIN_MARKET_CAP_PLN
+
+
+def to_pln_or_none(amount: float | None, currency: str | None) -> float | None:
+    """``to_pln`` that answers ``None`` instead of raising on unknown input.
+
+    The floors above want a hard failure on bad data: a company whose currency
+    has no rate must not silently clear a quality gate. Sorting wants the
+    opposite — one row with an unexpected currency must never 500 a whole
+    listing — so it sorts last (``None``) instead.
+    """
+    if amount is None or not currency:
+        return None
+    rate = PLN_PER_UNIT.get(currency)
+    return None if rate is None else amount * rate

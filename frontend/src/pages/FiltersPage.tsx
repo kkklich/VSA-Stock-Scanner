@@ -10,6 +10,7 @@ import { BookmarkPlus, Loader2, RotateCcw, X } from 'lucide-react'
 import { Card, InfoTip, Pagination } from '../components/ui'
 import { ColumnPicker } from '../components/ColumnPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
+import { SessionNote } from '../components/SessionNote'
 import { SortMenu } from '../components/SortMenu'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
@@ -127,10 +128,16 @@ export function FiltersPage() {
   const marketParam = market && market !== GPW_MARKET ? market : undefined
   // Price bounds are compared with each stock's own price, so the label says
   // which currency that is — or that it varies.
+  // Within one market the bound is in that market's own currency. Across
+  // pooled markets it cannot be: "at least 100" would mean złoty, dollars or
+  // *pence* depending on the row, so the backend reads it as złoty and the
+  // label says so (`_query_ranking`, backend-python/app/routers/stocks.py).
   const priceUnit =
     market === ALL_MARKETS
-      ? "in each stock's currency"
+      ? t('markets.pricePln')
       : currencyLabel(markets?.find((m) => m.id === market)?.currency ?? 'PLN')
+  // Why the pooled bound is in złoty — the label alone would read as arbitrary.
+  const priceInfo = market === ALL_MARKETS ? t('markets.sortedInPln') : undefined
 
   // Back to page 1 whenever the effective query changes.
   useEffect(() => {
@@ -478,7 +485,7 @@ export function FiltersPage() {
             />
           </Field>
 
-          <Field label={`Price from (${priceUnit})`}>
+          <Field label={`Price from (${priceUnit})`} info={priceInfo}>
             <input
               type="number"
               min={0}
@@ -490,7 +497,7 @@ export function FiltersPage() {
             />
           </Field>
 
-          <Field label={`Price to (${priceUnit})`}>
+          <Field label={`Price to (${priceUnit})`} info={priceInfo}>
             <input
               type="number"
               min={0}
@@ -567,10 +574,13 @@ export function FiltersPage() {
             />
           </div>
 
+          <SessionNote rows={rows} enabled={market === ALL_MARKETS} />
+
           <RankingTable
             columns={columns.renderColumns}
             rows={rows}
             onOpen={openTicker}
+            pooled={market === ALL_MARKETS}
             sortBy={sortBy}
             sortDir={sortDir}
             onSort={onSort}
@@ -581,6 +591,7 @@ export function FiltersPage() {
             columns={columns.renderColumns}
             rows={rows}
             onOpen={openTicker}
+            pooled={market === ALL_MARKETS}
           />
 
           {/* Pager */}
