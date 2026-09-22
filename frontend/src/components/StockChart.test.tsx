@@ -144,6 +144,41 @@ describe('StockChart', () => {
     })
   })
 
+  it('draws a near-miss ("Watch") overlay marker as a muted square', () => {
+    // A pattern the method assessed and refused. It must be visible — that is
+    // the point of it — but must never look like an entry, so it gets its own
+    // shape and a faded colour, with the reason as its label.
+    render(
+      <StockChart
+        candles={CANDLES}
+        signals={[]}
+        overlays={[
+          {
+            methodId: 'vsa3',
+            color: '#84CC16',
+            signals: [
+              { date: '2026-01-02', label: 'Hammer + Shakeout · no sequence', type: 'Watch' },
+              { date: '2026-01-03', label: 'Hammer + Test', type: 'Bullish' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
+      unknown,
+      Array<{ position: string; shape: string; text: string; color: string }>,
+    ]
+    expect(markers[0]).toMatchObject({
+      shape: 'square',
+      position: 'belowBar',
+      text: 'Hammer + Shakeout · no sequence',
+      color: '#84CC1699',
+    })
+    // The real firing keeps the solid circle in the method's own colour.
+    expect(markers[1]).toMatchObject({ shape: 'circle', color: '#84CC16' })
+  })
+
   it('tears the chart down on unmount', () => {
     const { unmount } = render(<StockChart candles={CANDLES} signals={SIGNALS} />)
     unmount()

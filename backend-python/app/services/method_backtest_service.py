@@ -271,9 +271,10 @@ async def compute_method_backtest(
         except Exception:  # noqa: BLE001 — one bad stock must not sink the gate
             logger.exception("Backtest: %s signals failed for %s.", method.id, company.ticker)
             return
-        # Long-only gate: judge only the bullish entries (VSA also emits bearish
-        # structures, which are not long trades).
-        sig_dates = sorted({s.date for s in raw if s.type != "Bearish"})
+        # Long-only gate: judge only the bullish entries. VSA also emits bearish
+        # structures, and VSA V3 emits "Watch" markers for patterns it looked at
+        # and refused — neither is a long trade, so neither is judged.
+        sig_dates = sorted({s.date for s in raw if s.type == "Bullish"})
 
         acc.scanned += 1
         acc.last_dates.append(max(b.date for b in bars))

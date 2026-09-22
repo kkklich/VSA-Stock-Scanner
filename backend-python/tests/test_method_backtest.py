@@ -168,6 +168,35 @@ class TestComputeBacktest:
             < 0.05
         )
 
+    def test_watch_markers_are_never_judged_as_trades(self) -> None:
+        # A "Watch" marker is a bar the method looked at and did NOT take (VSA
+        # V3's near misses, drawn on the chart with their reason). Counting one
+        # as an entry would put trades the method refused into its statistics.
+        class _OnlyWatches(_EveryThirdBar):
+            def signals(self, bars, config=None):
+                return [
+                    MethodSignal(date=b.date, label="not taken", type="Watch")
+                    for i, b in enumerate(bars)
+                    if i % 3 == 0
+                ]
+
+        company = GpwCompany(ticker="t", name="T", sector="X", market_cap=None)
+        client = _Client({"t": _series([100.0 + (i % 7) for i in range(400)])})
+        stats = asyncio.run(
+            compute_method_backtest(
+                method=_OnlyWatches(),
+                companies=[company],
+                stooq=client,
+                history_cache=TTLCache(),
+                history_cache_ttl=60,
+                repo=None,
+            )
+        )
+        assert stats.scanned_count == 1
+        assert stats.signal_count == 0
+        assert stats.evaluated_count == 0
+        assert stats.grade == "insufficient"
+
     def test_no_signals_is_insufficient(self) -> None:
         # A method that never fires → nothing to judge → insufficient, not a pass.
         class _NeverFires(_EveryThirdBar):

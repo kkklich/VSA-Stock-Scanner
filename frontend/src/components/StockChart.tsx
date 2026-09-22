@@ -34,7 +34,17 @@ function isIntraday(candles: Candle[]): boolean {
 export interface MethodOverlay {
   methodId: string
   color: string
-  signals: { date: string; label: string; type: 'Bullish' | 'Bearish' }[]
+  signals: { date: string; label: string; type: 'Bullish' | 'Bearish' | 'Watch' }[]
+}
+
+/**
+ * A "watch" marker — a pattern the method looked at and did NOT take — drawn
+ * in the method's colour at 60% so it reads as a quieter note beside the solid
+ * markers of its real firings. Appending an alpha pair works on the 6-digit
+ * hex values in `chartTheme`; anything else is left as it is.
+ */
+function muted(color: string): string {
+  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}99` : color
 }
 
 /** What the user is currently looking at, reported after they stop scrolling. */
@@ -187,16 +197,21 @@ export function StockChart({
 
     // Other methods' markers — coloured circles so each method reads as its
     // own layer (bullish below the bar, bearish above), told apart by colour.
+    // A "watch" marker is a pattern the method assessed and refused: a hollow-
+    // looking square in the same colour, muted, below the bar, labelled with
+    // the reason. Different shape, so a refused pattern is never read as an
+    // entry.
     const overlayMarkers: SortedMarker[] = (overlays ?? []).flatMap((o) =>
       o.signals.map((s) => {
-        const bull = s.type === 'Bullish'
+        const watch = s.type === 'Watch'
+        const bear = s.type === 'Bearish'
         return {
           sortKey: s.date,
           marker: {
             time: toChartTime(s.date),
-            position: bull ? ('belowBar' as const) : ('aboveBar' as const),
-            color: o.color,
-            shape: 'circle' as const,
+            position: bear ? ('aboveBar' as const) : ('belowBar' as const),
+            color: watch ? muted(o.color) : o.color,
+            shape: watch ? ('square' as const) : ('circle' as const),
             text: s.label,
           },
         }

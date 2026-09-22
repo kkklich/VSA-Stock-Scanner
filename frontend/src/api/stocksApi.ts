@@ -603,12 +603,17 @@ export async function fetchScannerStats(
 
 // ── GET /api/stocks/{ticker}/signals ─────────────────────────────────────────
 
-/** One bar where a trading method's setup fired — a chart overlay marker. */
+/** One bar a trading method marked on the chart — a firing, or a near miss. */
 export interface ApiMethodSignal {
   date: string
   /** Short on-chart tag, e.g. "Trend Template". */
   label: string
-  type: 'Bullish' | 'Bearish'
+  /**
+   * "Bullish"/"Bearish" are firings — the setup was taken. "Watch" is a bar
+   * the method assessed and did NOT take, its `label` carrying the reason
+   * (VSA V3's near misses); it is never counted as a trade.
+   */
+  type: 'Bullish' | 'Bearish' | 'Watch'
 }
 
 /** All chart-overlay markers for one trading method (excludes VSA). */

@@ -453,12 +453,16 @@ class VsaSignalResponse(_CamelModel):
 
 
 class MethodSignalItem(_CamelModel):
-    """One bar where a trading method's setup fired — a chart overlay marker."""
+    """One bar a trading method marked on the chart — a firing, or a near miss."""
 
     date: date | datetime
     # Short on-chart tag, e.g. "Spring", "Trend Template".
     label: str
-    type: Literal["Bullish", "Bearish"]
+    # "Bullish"/"Bearish" are firings — the setup was taken. "Watch" is a bar
+    # the method assessed and did NOT take, its label carrying the reason (VSA
+    # V3's near misses); the chart draws it differently and the back-test never
+    # counts it as a trade.
+    type: Literal["Bullish", "Bearish", "Watch"]
 
 
 class MethodSignalGroup(_CamelModel):

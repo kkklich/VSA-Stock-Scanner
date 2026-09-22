@@ -42,9 +42,13 @@ class MethodSignal:
     Attributes:
         date:  The session the setup fired on.
         label: Short on-chart tag (e.g. "Spring", "Trend Template").
-        type:  ``"Bullish"`` or ``"Bearish"``. Every setup we ship is a
-               long entry ("Bullish"); VSA also surfaces the bearish
-               structures that shape its rating.
+        type:  ``"Bullish"``, ``"Bearish"`` or ``"Watch"``. Every setup we ship
+               is a long entry ("Bullish"); VSA also surfaces the bearish
+               structures that shape its rating. **"Watch" is not a trade**: it
+               marks a bar the method looked at and did NOT take, with the
+               label saying why (VSA V3's near misses), so the chart can show
+               that the method saw a pattern there. The back-test judges only
+               ``"Bullish"`` markers, so a "Watch" can never enter a statistic.
     """
 
     date: date
