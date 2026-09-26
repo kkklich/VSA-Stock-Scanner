@@ -26,6 +26,11 @@ One full run:
      Every run also (re)writes the ratings for the whole loaded history
      window, so the "rating over time" chart is populated immediately after
      the very first refresh instead of growing one point per day.
+  4. Today's live prices for whichever refreshed markets are trading right
+     now (``app/services/live_prices.py``) — what makes the Refresh button,
+     pressed during a session, show today's prices at once instead of at the
+     next hourly run. A nightly run finds every one of its markets closed, so
+     for it this step does nothing.
 
 The service also tracks its own status (idle/running, last refresh time,
 last error) for the ``GET /api/stocks/refresh/status`` endpoint, and records
@@ -65,6 +70,7 @@ from app.services.action_log import (
     ActionLogService,
 )
 from app.services.cache import TTLCache
+from app.services.live_prices import LivePriceService
 from app.services.market_cache import invalidate_markets
 from app.services.ranking_service import (
     CONTEXT_HISTORY_DAYS,
@@ -134,6 +140,7 @@ class RefreshService:
         repo: QuoteRepository | None = None,
         ingest: IngestService | None = None,
         action_log: ActionLogService | None = None,
+        live: LivePriceService | None = None,
     ) -> None:
         self._companies = companies
         # Quote currency per ticker, for the liquidity floor of the rating
@@ -147,6 +154,9 @@ class RefreshService:
         # Optional: the pipeline works without it, so tests and any other
         # caller can build a RefreshService without wiring up a log.
         self._action_log = action_log
+        # Optional too: the hourly live prices, refreshed as the last step of
+        # a run for any of its markets trading right now.
+        self._live = live
         self._running = asyncio.Lock()
         # Id of the HTTP request that started the run in progress, if any.
         self._run_request_id: str | None = None
@@ -273,6 +283,7 @@ class RefreshService:
             )
             try:
                 await self._do_run(full=full, scope=scope, full_markets=full_ids)
+                live_prices = await self._refresh_live(scope, trigger)
                 self.last_refresh_at = datetime.now(tz=UTC)
                 self._log_job(
                     "job.refresh",
@@ -286,6 +297,7 @@ class RefreshService:
                         "stocksRanked": self.stocks_ranked,
                         "snapshotsWritten": self.snapshots_written,
                         "dbEnabled": self._repo is not None,
+                        "livePrices": live_prices,
                     },
                     request_id=request_id,
                 )
@@ -304,6 +316,25 @@ class RefreshService:
                     },
                     request_id=request_id,
                 )
+
+    async def _refresh_live(self, scope: list[str], trigger: str) -> int | None:
+        """Step 4: today's live prices for the run's markets that are trading.
+
+        Returns how many stocks got a price, or ``None`` when there is no live
+        service or it had nothing to do. Never raises: the live prices have
+        their own log entry (``job.live``), and a failure there must not turn
+        a refresh whose ingest and ranking worked into a failed one.
+        """
+        if self._live is None:
+            return None
+        try:
+            stats = await self._live.run(markets=scope, trigger=f"refresh:{trigger}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Refresh: the live-price step failed.")
+            return None
+        if stats is None or not stats.markets:
+            return None
+        return stats.updated + stats.not_traded
 
     def _log_job(
         self,
@@ -444,6 +475,36 @@ class RefreshService:
         if self._repo is not None:
             return await self._repo.get_quotes(ticker, from_date)
         return []
+
+    async def run_insider_refresh(self) -> None:
+        """Scheduled daily at 12:00 (Europe/Warsaw): refresh insider transactions."""
+        self._history_cache.invalidate(
+            lambda k: k.startswith("insider-checked:") or k.startswith("insider-miss:")
+        )
+        if self._ingest is None:
+            return
+        if self._action_log is not None:
+            self._action_log.log_job(
+                "job.insider_refresh",
+                OUTCOME_STARTED,
+                detail={"schedule": "12:00 Europe/Warsaw"},
+            )
+        try:
+            detail = await self._ingest.run_insider_refresh()
+            if self._action_log is not None:
+                self._action_log.log_job(
+                    "job.insider_refresh",
+                    OUTCOME_FINISHED,
+                    detail=detail,
+                )
+        except Exception as exc:
+            logger.exception("Scheduled 12:00 insider refresh failed.")
+            if self._action_log is not None:
+                self._action_log.log_job(
+                    "job.insider_refresh",
+                    OUTCOME_FAILED,
+                    detail={"error": str(exc)},
+                )
 
 
 def build_rating_points(

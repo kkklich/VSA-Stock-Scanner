@@ -205,6 +205,43 @@ class MethodBacktestResponse(_CamelModel):
     engine: str = "method-backtest-1"
 
 
+# ── Live prices (today's session while it trades) ────────────────────────────
+
+class LivePrice(_CamelModel):
+    """Today's session so far for one stock, downloaded while it trades.
+
+    Filled by the hourly live-price run (``app/services/live_prices.py``) and
+    laid over a payload only while the session it describes is NEWER than the
+    finished data that payload was computed from. It never feeds a rating, a
+    signal or a method score: those stay computed from finished sessions,
+    because an unfinished day carries a fraction of its volume and VSA reads
+    low volume as a signal. Once the evening run stores the day's final bar,
+    the finished data supersedes it and it is no longer attached.
+    """
+
+    # The trading day in progress, on the exchange's own calendar.
+    session_date: date
+    # The latest price and the session's range so far, in the stock's quote
+    # currency (the same currency as every other price on the payload).
+    price: float
+    open: float
+    high: float
+    low: float
+    # Shares traded so far today; 0 = no trade yet today (the price is then
+    # the previous close). None when the provider did not say.
+    volume: int | None = None
+    # The previous session's close and the change from it, percent.
+    previous_close: float | None = None
+    change_pct: float | None = None
+    # When that price was traded, as the data provider reports it (UTC).
+    # European quotes on Yahoo are delayed ~15 minutes, and a thinly traded
+    # stock's last trade can be hours old — this says so. Falls back to the
+    # download time when the provider gives no time.
+    as_of: datetime
+    # When the app downloaded it (the hourly run), UTC.
+    fetched_at: datetime
+
+
 # ── New models: ranking endpoint ──────────────────────────────────────────────
 
 class StockRankingItem(_CamelModel):
@@ -225,9 +262,11 @@ class StockRankingItem(_CamelModel):
     # beside yesterday's American ones. Without this field the UI cannot say
     # so, and "today's biggest movers" silently mixes two sessions.
     last_session: date | None = None
-    # Last EOD closing price, in ``currency``.
+    # Last EOD closing price, in ``currency`` — or, while ``live`` is set, the
+    # latest price of today's session so far.
     last_price: float
-    # Day-over-day price change, percent.
+    # Day-over-day price change, percent — while ``live`` is set, today's
+    # change so far against the previous close.
     price_change_pct: float
     # Computed VSA rating 0–100.
     current_rating: int
@@ -284,6 +323,12 @@ class StockRankingItem(_CamelModel):
     # non-neutral direction), "conflicts" (opposite), or "neutral" (either side
     # is Hold — the weekly neither backs nor contradicts the daily call).
     weekly_agreement: Literal["confirms", "conflicts", "neutral"] | None = None
+    # Today's session so far, while the stock's exchange is trading and the
+    # day's final bar is not stored yet (see ``LivePrice``). When set,
+    # ``last_price``, ``price_change_pct`` and the last sparkline point are
+    # its figures; ``last_session`` and everything else still describe the
+    # last FINISHED session. Attached per request, never cached.
+    live: LivePrice | None = None
 
 
 # ── New models: sector heatmap endpoint ───────────────────────────────────────
@@ -320,6 +365,20 @@ class HeatmapItem(_CamelModel):
     change_1y: float | None = None
     # Change vs the oldest stored bar (full stored history), percent.
     change_max: float | None = None
+    # Today's session so far, while the exchange is trading (see
+    # ``LivePrice``). When set, ``last_price`` and all four changes are
+    # measured from its price; the rating is still the finished-session one.
+    live: LivePrice | None = None
+
+    # Internal — never serialised. What the live overlay needs to restate the
+    # changes from today's price: the session the tile was computed from (a
+    # live price only applies to a newer one) and the closes each horizon is
+    # measured against. The 1D reference is the live price's own previous
+    # close, so it is not kept here.
+    last_session: date | None = Field(default=None, exclude=True)
+    baseline_1m: float | None = Field(default=None, exclude=True)
+    baseline_1y: float | None = Field(default=None, exclude=True)
+    baseline_max: float | None = Field(default=None, exclude=True)
 
 
 class HeatmapResponse(_CamelModel):
@@ -329,6 +388,73 @@ class HeatmapResponse(_CamelModel):
     as_of: date | None = None
     # Tiles sorted by market cap (largest first, unknown caps last).
     items: list[HeatmapItem] = []
+
+
+# ── Market overview: breadth + biggest rating movers ─────────────────────────
+
+
+class MarketBreadth(_CamelModel):
+    """How the tracked universe leans today — counts, not opinions.
+
+    Every figure is a tally over the ranked stocks (those that passed the
+    ranking's liquidity / size / recency pre-filters), so it describes the same
+    list the Dashboard shows.
+    """
+
+    # Stocks tallied.
+    total: int = 0
+    # The verdict badge distribution (sums to ``total``).
+    strong_buy: int = 0
+    buy: int = 0
+    hold: int = 0
+    sell: int = 0
+    strong_sell: int = 0
+    # Strong Buy + Buy, and Sell + Strong Sell, as a share of ``total``, percent.
+    bullish_pct: float = 0.0
+    bearish_pct: float = 0.0
+    # Mean VSA rating across the universe, 0–100 (None when nothing ranked).
+    average_rating: float | None = None
+    # Price breadth: stocks that closed the session up / down / flat.
+    advancers: int = 0
+    decliners: int = 0
+    unchanged: int = 0
+    # Rating momentum: stocks whose rating rose / fell since the previous session.
+    rating_up: int = 0
+    rating_down: int = 0
+    # Stocks that set a fresh 52-week high / low in the latest session.
+    new_52w_highs: int = Field(default=0, alias="new52wHighs")
+    new_52w_lows: int = Field(default=0, alias="new52wLows")
+
+
+class RatingMover(_CamelModel):
+    """One stock in a "biggest rating movers" list."""
+
+    ticker: str
+    name: str
+    market: str = "gpw"
+    currency: str = "PLN"
+    last_session: date | None = None
+    last_price: float
+    price_change_pct: float
+    # Rating before the newest session, after it, and the difference.
+    previous_rating: int
+    current_rating: int
+    rating_change: int
+    last_signal: str
+
+
+class MarketOverviewResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/market-overview``."""
+
+    # Date of the newest session across the tallied stocks.
+    as_of: date | None = None
+    # Market id this describes ("gpw", "us", … or "all").
+    market: str = "gpw"
+    breadth: MarketBreadth = MarketBreadth()
+    # The stocks whose rating rose the most / fell the most in the latest
+    # session; only stocks that actually moved, so either list may be short.
+    movers_up: list[RatingMover] = []
+    movers_down: list[RatingMover] = []
 
 
 # ── New models: volume-surge endpoint ─────────────────────────────────────────
@@ -420,6 +546,101 @@ class TickerVolumeResponse(_CamelModel):
     price_change_pct: float | None = None
     # Latest session's raw volume (shares).
     last_volume: int | None = None
+
+
+# ── Trade simulation (VSA V4, the owner's program) ───────────────────────────
+
+
+class SimulatedTrade(_CamelModel):
+    """One trade from the VSA program's own simulator (``trades.csv``)."""
+
+    # "open" = still held at the last bar, valued at its close (not realised).
+    status: Literal["closed", "open"]
+    direction: Literal["long", "short"]
+    # The confirmation bar; the entry is the next session's open.
+    signal_date: date
+    entry_date: date
+    exit_date: date | None = None
+    # "Shakeout → No Supply": the sequence's primary signal → its test.
+    setup: str
+    entry_price: float
+    stop_loss: float
+    take_profit: float
+    exit_price: float | None = None
+    # The program's reason: stop, take_profit, stop_gap_open,
+    # take_profit_gap_open, stop_same_bar_both_hit, end_of_data_close,
+    # open_at_end.
+    exit_reason: str
+    quantity: float
+    # Net of both commissions and slippage, in the account's money.
+    net_pnl: float
+    # Net result in multiples of the planned risk (entry-to-stop distance).
+    net_r: float | None = None
+    # Price move from entry to exit (or to the last close), in the trade's
+    # favour, percent — before costs.
+    return_pct: float | None = None
+
+
+class EquityPoint(_CamelModel):
+    """The simulated account after one session's close (thinned for the chart)."""
+
+    date: date
+    equity: float
+    drawdown_pct: float
+
+
+class TradeSimulationResponse(_CamelModel):
+    """Response payload for ``GET /api/stocks/{ticker}/trade-simulation``.
+
+    The owner's VSA program (``app/analysis/vsa4``) run on this stock's stored
+    history: its sequence detection plus its own single-position simulator
+    (next-open fills, stop-first when stop and target share a bar, a fixed
+    fraction of the account risked per trade, a target ``reward_risk`` times
+    the stop distance). An educational replay, not a forecast.
+    """
+
+    ticker: str
+    method_id: str = "vsa4"
+    # The stock's own quote currency — prices below are in it.
+    currency: str | None = None
+    # First and last session simulated.
+    from_date: date | None = None
+    as_of: date | None = None
+    bar_count: int = 0
+    # "long" = short setups ignored (the default); "both" = the program as shipped.
+    sides: Literal["long", "both"] = "long"
+    # The assumptions, as the program was configured.
+    initial_capital: float
+    risk_pct: float
+    reward_risk: float
+    commission_pct: float
+    slippage_pct: float
+    # Results. ``final_equity`` values an open position at the last close
+    # minus the estimated cost of closing it.
+    final_equity: float
+    total_return_pct: float
+    max_drawdown_pct: float
+    closed_trades: int
+    open_trades: int
+    wins: int
+    losses: int
+    # Share of CLOSED trades that made money after costs; None with none closed.
+    win_rate_pct: float | None = None
+    # Gross winnings ÷ gross losses; None when there were no losses.
+    profit_factor: float | None = None
+    # Mean net R per closed trade — the expectancy in units of risk.
+    avg_r: float | None = None
+    skipped_entries: int = 0
+    # How many setups the program confirmed in the window (either side).
+    long_setups: int = 0
+    short_setups: int = 0
+    # A plain reference point: buying on the first simulated close and holding
+    # to the last. Not like-for-like (the simulation risks ~1% a trade and sits
+    # in cash in between); it says what the stock itself did.
+    buy_hold_return_pct: float | None = None
+    trades: list[SimulatedTrade] = []
+    equity: list[EquityPoint] = []
+    engine: str
 
 
 # ── New models: signals endpoint ──────────────────────────────────────────────
@@ -535,6 +756,12 @@ class StockSignalsResponse(_CamelModel):
     weekly_rating: int | None = None
     weekly_signal: str | None = None
     weekly_agreement: Literal["confirms", "conflicts", "neutral"] | None = None
+    # Today's session so far, while the stock's exchange is trading (see
+    # ``LivePrice``) — only when the chart reaches today (no ``toDate``). When
+    # set, ``last_price``/``price_change_pct`` are its figures; the rating,
+    # the history candles and every marker stay on finished sessions. The
+    # chart may draw it as today's forming candle, apart from ``history``.
+    live: LivePrice | None = None
 
 
 # ── New models: fundamentals endpoint ─────────────────────────────────────────
@@ -949,6 +1176,12 @@ class RefreshStatusResponse(_CamelModel):
     # False when the app runs without PostgreSQL — ratings are then
     # recalculated but not stored, so no history accumulates.
     db_enabled: bool = False
+    # When today's live prices last changed (ISO datetime), across markets —
+    # a page that is left open polls this to know there is something new.
+    live_prices_at: str | None = None
+    # Per market id, when that market's live prices were last downloaded
+    # today (ISO datetime); a market appears only on a day it traded.
+    live_markets: dict[str, str] = Field(default_factory=dict)
 
 
 # ── New models: scanner stats endpoint ───────────────────────────────────────
@@ -970,3 +1203,70 @@ class SignalEffectiveness(_CamelModel):
     reward_risk: float | None
     # Number of stocks whose last detected signal is this type right now.
     active_count: int
+
+
+# ── New models: insider transactions endpoint ─────────────────────────────────
+
+
+class InsiderTransactionItem(_CamelModel):
+    """One reported trade in a company's shares by an insider."""
+
+    id: int | None = None
+    trade_date: date | None = None
+    publication_date: date
+    insider_name: str | None = None
+    role: str | None = None
+    # "buy" | "sell" | "grant" | "option" | "gift" | "buyback" | "other"
+    transaction_type: str
+    is_open_market: bool = True
+    shares: int | None = None
+    price: float | None = None
+    currency: str | None = None
+    value: float | None = None
+    source: str
+    source_url: str | None = None
+    notes: str | None = None
+
+
+class InsiderChartMarker(_CamelModel):
+    """One daily aggregated insider trade marker on the price chart.
+
+    Multiple trades on the same day are merged into one marker.
+    Purchases sit below the bar (Bullish / emerald), sales above the bar (Bearish / rose).
+    """
+
+    date: str  # YYYY-MM-DD
+    type: Literal["Bullish", "Bearish", "Watch"]
+    label: str
+    shares: int | None = None
+    value: float | None = None
+    currency: str | None = None
+    transaction_count: int = 1
+    roles: list[str] = Field(default_factory=list)
+
+
+class InsiderSummary(_CamelModel):
+    """Aggregate statistics for a stock's insider trading activity."""
+
+    total_purchases_count: int = 0
+    total_sales_count: int = 0
+    total_purchases_shares: int = 0
+    total_sales_shares: int = 0
+    total_purchases_value: float = 0.0
+    total_sales_value: float = 0.0
+    net_shares: int = 0
+    net_value: float = 0.0
+    currency: str | None = None
+
+
+class InsiderTransactionsResponse(_CamelModel):
+    """Response payload for GET /api/stocks/{ticker}/insider-transactions."""
+
+    ticker: str
+    name: str | None = None
+    market: str | None = None
+    currency: str | None = None
+    summary: InsiderSummary = Field(default_factory=InsiderSummary)
+    transactions: list[InsiderTransactionItem] = Field(default_factory=list)
+    chart_markers: list[InsiderChartMarker] = Field(default_factory=list)
+

@@ -21,6 +21,8 @@ import { useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, displayTicker, GPW_MARKET } from '../lib/markets'
 import { plnLine } from '../lib/rankingColumns'
 import { usePersistentState } from '../hooks/usePersistentState'
+import { SortMenu, type SortOption } from '../components/SortMenu'
+import { useTableSort } from '../hooks/useTableSort'
 import type {
   ApiVolumeSurgeItem,
   SortDir,
@@ -33,6 +35,22 @@ const PAGE_SIZE = 25
 
 /** Columns that read naturally A→Z on the first click. */
 const TEXT_COLUMNS: VolumeSurgeSortKey[] = ['ticker', 'name', 'sector']
+
+const initialSortDir = (col: VolumeSurgeSortKey): SortDir =>
+  TEXT_COLUMNS.includes(col) ? 'asc' : 'desc'
+
+/** The sortable columns, labelled as their table headers are. */
+const SORT_OPTIONS: SortOption<VolumeSurgeSortKey>[] = [
+  { key: 'ticker', label: 'Company' },
+  { key: 'sector', label: 'Sector' },
+  { key: 'volumeRatio', label: 'RVOL' },
+  { key: 'recentAvgVolume', label: 'Volume now / normal' },
+  { key: 'daysAboveBaseline', label: 'Hot days' },
+  { key: 'priceChangePct', label: 'Price move' },
+  { key: 'lastPrice', label: 'Price' },
+  { key: 'currentRating', label: 'VSA' },
+  { key: 'lastSignal', label: 'Signal' },
+]
 
 /* ── Screen parameter presets ───────────────────────────────────────────── */
 
@@ -111,9 +129,16 @@ export function VolumeSurgePage() {
     'stockpilot:volume-surge:minRatio',
     1.5,
   )
-  const [sortBy, setSortBy] = useState<VolumeSurgeSortKey>('volumeRatio')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
+  // Changing the ordering starts a fresh list: the pages accumulate, so page 2
+  // of the old order can't be appended under the new one.
+  const backToFirstPage = useCallback(() => setPage(1), [])
+  const { sort, onSort, onSortDirChange, onRemoveLevel } =
+    useTableSort<VolumeSurgeSortKey>(
+      { key: 'volumeRatio', dir: 'desc' },
+      initialSortDir,
+      backToFirstPage,
+    )
 
   // The top bar's market; relative volume has no unit, so "all" is fine.
   const { market } = useMarketScope({ allowAll: true })
@@ -134,8 +159,7 @@ export function VolumeSurgePage() {
         minRatio,
         page,
         pageSize: PAGE_SIZE,
-        sortBy,
-        sortDir,
+        sort,
         market: marketParam,
       },
       { enabled: market !== null },
@@ -171,16 +195,6 @@ export function VolumeSurgePage() {
   /** Change a screen parameter and start a fresh list from page 1. */
   const applyParam = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v)
-    setPage(1)
-  }
-
-  const onSort = (col: VolumeSurgeSortKey) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortBy(col)
-      setSortDir(TEXT_COLUMNS.includes(col) ? 'asc' : 'desc')
-    }
     setPage(1)
   }
 
@@ -268,6 +282,19 @@ export function VolumeSurgePage() {
         </div>
       ) : (
         <>
+          {/* Sort. Shown on every screen: the wide table also sorts by its
+              column headers (shift-click there adds a further level), but that
+              gesture is invisible — this names the levels outright. */}
+          <div className="flex justify-end">
+            <SortMenu
+              options={SORT_OPTIONS}
+              sort={sort}
+              onSort={onSort}
+              onSortDirChange={onSortDirChange}
+              onRemoveLevel={onRemoveLevel}
+            />
+          </div>
+
           {/* ── Desktop table (lg+) ─────────────────────────────────────────
               min-width (not an overflow wrapper) so the sticky header can pin to
               the page as you scroll; the table stays inside the card and the
@@ -281,23 +308,20 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Company"
                     col="ticker"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                   />
                   <SortHeader
                     label="Sector"
                     col="sector"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     className="hidden lg:table-cell"
                   />
                   <SortHeader
                     label="RVOL"
                     col="volumeRatio"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Relative volume: average volume of the surge window ÷ the baseline average. 2× = double the normal activity."
@@ -306,8 +330,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Volume now / normal"
                     col="recentAvgVolume"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Average shares traded per session: during the surge window vs the baseline period."
@@ -316,8 +339,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Hot days"
                     col="daysAboveBaseline"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="How many sessions of the surge window individually beat the baseline average — more days = a sustained surge, not a one-off."
@@ -326,8 +348,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Price move"
                     col="priceChangePct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Price change across the surge window. Direction alone doesn't classify a surge in VSA: high volume on a rise can be genuine buying or a buying climax (weakness), and on a fall genuine selling or stopping volume (strength). Read it together with the VSA signal and the chart."
@@ -336,8 +357,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Price"
                     col="lastPrice"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     className="hidden text-right sm:table-cell"
@@ -345,8 +365,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="VSA"
                     col="currentRating"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     className="text-right"
@@ -354,8 +373,7 @@ export function VolumeSurgePage() {
                   <SortHeader
                     label="Signal"
                     col="lastSignal"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     className="hidden sm:table-cell"
                   />

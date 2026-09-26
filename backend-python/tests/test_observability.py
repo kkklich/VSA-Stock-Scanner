@@ -660,3 +660,38 @@ class TestAdminEndpoints:
                 )
         finally:
             settings.admin_token = ""
+
+    def test_authenticated_admin_user_can_access_admin_endpoints(self) -> None:
+        settings.admin_token = "s3cret"
+        from app.services.auth import create_access_token
+        from app.dependencies import get_user_repository
+        from app.db.models import UserRow
+
+        class _MockRepo:
+            async def get_by_id(self, user_id: int):
+                return UserRow(
+                    id=1,
+                    email="admin@example.com",
+                    password_hash="hash",
+                    display_name="Admin",
+                    role="admin",
+                    is_active=True,
+                    email_verified=True,
+                    token_version=1,
+                    created_at=datetime.now(tz=UTC),
+                )
+
+        app.dependency_overrides[get_user_repository] = lambda: _MockRepo()
+        try:
+            token, _ = create_access_token(
+                user_id=1, email="admin@example.com", role="admin", token_version=1
+            )
+            with TestClient(app) as client:
+                ok = client.get(
+                    "/api/admin/health",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert ok.status_code == 200
+        finally:
+            settings.admin_token = ""
+            app.dependency_overrides.clear()

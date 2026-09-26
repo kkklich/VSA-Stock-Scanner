@@ -16,3 +16,14 @@ target-version = "py311"
 [tool.ruff.lint]
 # A sensible, idiomatic default rule set (pyflakes, pycodestyle, isort, bugbear, pyupgrade).
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# The owner's VSA program, vendored as supplied (app/analysis/vsa4/__init__.py).
+# Kept in its original style so a later version of the package diffs cleanly
+# against it; each ignore below is style only (long lines, unused locals, a
+# closure called within its own loop iteration, pre-3.11 typing spellings).
+"app/analysis/vsa4/engine.py" = ["E501", "B023", "B905", "F841", "UP017", "UP035", "UP037"]
+"app/analysis/vsa4/backtest.py" = ["E501", "F841"]
+"app/analysis/vsa4/cli.py" = ["E501", "I001"]
+# The program's own tests, ported as-is.
+"tests/test_vsa4_program.py" = ["E501", "E702", "E741", "I001", "UP017"]

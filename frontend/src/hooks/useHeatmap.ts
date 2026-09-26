@@ -2,9 +2,10 @@
 // The user's saved Scanner settings are sent along so tile ratings match the
 // ranking computed with the same VSA rules.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchHeatmap, type ApiHeatmapResponse } from '../api/stocksApi'
 import { settingsQueryValue } from '../lib/vsaSettings'
+import { useDataVersion } from './useDataVersion'
 
 export interface UseHeatmapResult {
   data: ApiHeatmapResponse | null
@@ -20,12 +21,20 @@ export function useHeatmap(market: string | null = 'gpw'): UseHeatmapResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
+  // Moves when the server's data changes; the map then reloads quietly (no
+  // loading overlay, and a failure keeps the tiles on screen).
+  const version = useDataVersion()
+  const loaded = useRef<{ tick: number; market: string } | null>(null)
 
   useEffect(() => {
     if (market === null) return
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    const quiet = loaded.current?.tick === tick && loaded.current.market === market
+    loaded.current = { tick, market }
+    if (!quiet) {
+      setLoading(true)
+      setError(null)
+    }
 
     // The GPW is the backend default; leaving it out keeps the request as it was.
     fetchHeatmap(settingsQueryValue(), market === 'gpw' ? undefined : market)
@@ -36,7 +45,7 @@ export function useHeatmap(market: string | null = 'gpw'): UseHeatmapResult {
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
+        if (!cancelled && !quiet) {
           setError(err instanceof Error ? err.message : 'Unknown error')
           setLoading(false)
         }
@@ -45,7 +54,7 @@ export function useHeatmap(market: string | null = 'gpw'): UseHeatmapResult {
     return () => {
       cancelled = true
     }
-  }, [tick, market])
+  }, [tick, market, version])
 
   return { data, loading, error, refetch: () => setTick((t) => t + 1) }
 }

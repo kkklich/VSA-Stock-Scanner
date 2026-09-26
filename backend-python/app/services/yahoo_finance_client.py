@@ -17,6 +17,7 @@ import logging
 import math
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
@@ -26,6 +27,7 @@ from app.markets import market_for_yahoo_symbol, yahoo_symbol
 from app.models import (
     CashflowPeriod,
     FinancialMetrics,
+    InsiderTransactionItem,
     QuarterlyReport,
     StooqDailyQuote,
 )
@@ -87,6 +89,77 @@ _FCF_ROWS = ("Free Cash Flow",)
 # 5 years covers the year-on-year comparison with room to spare.
 _MAX_QUARTERS = 8
 _MAX_YEARS = 5
+
+
+# How far back a session download reaches. It needs the previous finished
+# session's close, and the longest break between two sessions on a tracked
+# exchange is the Christmas cluster plus a weekend (the GPW is shut 24–26
+# December): ten calendar days covers that with room to spare.
+_SESSION_LOOKBACK_DAYS = 10
+
+
+@dataclass(frozen=True, slots=True)
+class SessionBar:
+    """Today's daily bar as Yahoo serves it — possibly still changing."""
+
+    open: float
+    high: float
+    low: float
+    #: The latest price (the close, once the session is over).
+    close: float
+    #: Shares traded so far; ``None`` when Yahoo did not report a volume.
+    volume: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionQuote:
+    """One stock's current session, apart from its finished history.
+
+    What the hourly live prices are built from (``get_session_quote``). The bar
+    of a session still trading is exactly what ``get_daily_history`` refuses to
+    return; here it is the point, and it travels in its own field so it can
+    never be mistaken for a finished one.
+    """
+
+    #: Today on the exchange's own calendar.
+    today: date
+    #: Today's bar so far — ``None`` when Yahoo has none: no trade yet today,
+    #: or no session today at all (a public holiday).
+    bar: SessionBar | None
+    #: True once today's session has finished and settled
+    #: (``Market.session_is_final``); ``bar`` is then the final bar.
+    final: bool
+    #: The newest bar before today — the close today's change is measured from.
+    previous_date: date | None
+    previous_close: float | None
+    #: When the latest price was traded (UTC), as Yahoo reports it.
+    last_trade_at: datetime | None
+
+
+def _last_trade_at(ticker_obj) -> datetime | None:
+    """When the latest price was traded, from the response just downloaded.
+
+    Yahoo sends ``regularMarketTime`` (epoch seconds) in the metadata of every
+    chart request. yfinance keeps that metadata on the ticker's price-history
+    object; its public ``history_metadata`` property would return it too, but
+    only after fetching a SECOND, intraday series to add trading periods — a
+    doubled request per stock per run. So it is read where the first request
+    left it. That is a private attribute: when a yfinance version moves it,
+    this answers ``None`` and the caller falls back to the download time.
+    """
+    try:
+        meta = ticker_obj._price_history._history_metadata or {}
+        raw = meta.get("regularMarketTime")
+    except Exception:  # noqa: BLE001 — optional detail, never worth a failure
+        return None
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=UTC)
+    if isinstance(raw, int | float) and not isinstance(raw, bool) and raw > 0:
+        try:
+            return datetime.fromtimestamp(raw, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
+    return None
 
 
 def _volume_or_nan(row) -> float:
@@ -251,6 +324,107 @@ class YahooFinanceClient:
             )
 
         return sorted(quotes, key=lambda q: q.date)
+
+    # ── Today's session (live prices) ─────────────────────────────────────────
+
+    async def get_session_quote(self, ticker: str) -> SessionQuote:
+        """Today's session so far for one ticker, plus the close before it.
+
+        The hourly live prices' download (``app/services/live_prices.py``).
+        One small request: the last ``_SESSION_LOOKBACK_DAYS`` of daily bars,
+        which is where Yahoo serves the day in progress — its price so far and
+        the volume traded so far — beside the finished sessions.
+
+        Raises:
+            ValueError:       Ticker is empty or not a valid ticker.
+            StooqAccessError: Yahoo Finance returned no usable data.
+        """
+        if not ticker or not ticker.strip():
+            raise ValueError("Ticker must be provided.")
+
+        yf_ticker = yahoo_symbol(ticker)
+        async with self._get_semaphore():
+            return await asyncio.to_thread(self._fetch_session_sync, yf_ticker)
+
+    def _fetch_session_sync(self, yf_ticker: str) -> SessionQuote:
+        """Synchronous session download — runs inside a ThreadPoolExecutor thread."""
+        import yfinance as yf  # deferred: yfinance is a heavy import
+
+        market = market_for_yahoo_symbol(yf_ticker)
+        now = _utcnow()
+        today = market.local_date(now)
+        start = (today - timedelta(days=_SESSION_LOOKBACK_DAYS)).isoformat()
+
+        ticker_obj = yf.Ticker(yf_ticker)
+        try:
+            df = _with_rate_limit_retry(
+                lambda: ticker_obj.history(
+                    start=start,
+                    auto_adjust=True,
+                    actions=False,
+                    raise_errors=False,
+                ),
+                yf_ticker,
+            )
+        except Exception as exc:
+            raise StooqAccessError(
+                f"Yahoo Finance request failed for '{yf_ticker}': {exc}"
+            ) from exc
+
+        if df is None or df.empty:
+            raise StooqAccessError(f"Yahoo Finance returned no data for '{yf_ticker}'.")
+
+        df.columns = [c.capitalize() for c in df.columns]
+
+        bar: SessionBar | None = None
+        previous: tuple[date, float] | None = None
+        for ts, row in df.iterrows():
+            try:
+                # Daily bars are stamped at midnight in the exchange's own
+                # zone, so the timestamp's date is the session date.
+                day = ts.date()
+                open_ = float(row["Open"])
+                high = float(row["High"])
+                low = float(row["Low"])
+                close = float(row["Close"])
+            except Exception:  # noqa: BLE001
+                logger.debug("Skipping malformed row for %s on %s.", yf_ticker, ts)
+                continue
+            if any(math.isnan(v) for v in (open_, high, low, close)):
+                continue
+            if day < today:
+                if previous is None or day > previous[0]:
+                    previous = (day, close)
+                continue
+            if day > today:
+                # A date after today's cannot be a real session; read in the
+                # wrong zone at worst. Never let it pose as today's bar.
+                continue
+            volume = _volume_or_nan(row)
+            # Unlike the daily history, a missing volume does not cost the
+            # bar: the price is what this download is for, and the volume is
+            # only ever shown, never analysed.
+            bar = SessionBar(
+                open=round(open_, 4),
+                high=round(high, 4),
+                low=round(low, 4),
+                close=round(close, 4),
+                volume=None if math.isnan(volume) else int(volume),
+            )
+
+        if bar is None and previous is None:
+            raise StooqAccessError(
+                f"Yahoo Finance returned no parseable rows for '{yf_ticker}'."
+            )
+
+        return SessionQuote(
+            today=today,
+            bar=bar,
+            final=market.session_is_final(today, now),
+            previous_date=previous[0] if previous else None,
+            previous_close=round(previous[1], 4) if previous else None,
+            last_trade_at=_last_trade_at(ticker_obj),
+        )
 
     # ── Intraday bars (chart timeframes) ─────────────────────────────────────
 
@@ -501,6 +675,32 @@ class YahooFinanceClient:
 
         return periods
 
+    # ── Insider transactions ──────────────────────────────────────────────────
+
+    async def get_insider_transactions(
+        self, ticker: str
+    ) -> list[InsiderTransactionItem]:
+        """Fetch reported insider transactions from Yahoo Finance (US/UK markets)."""
+        if not ticker or not ticker.strip():
+            return []
+        yf_ticker = yahoo_symbol(ticker)
+        async with self._get_semaphore():
+            return await asyncio.to_thread(self._fetch_insiders_sync, yf_ticker)
+
+    def _fetch_insiders_sync(self, yf_ticker: str) -> list[InsiderTransactionItem]:
+        import yfinance as yf
+
+        try:
+            tk = yf.Ticker(yf_ticker)
+            frame = _with_rate_limit_retry(
+                lambda: tk.insider_transactions, yf_ticker
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("No insider_transactions for %s: %s", yf_ticker, exc)
+            return []
+
+        return _parse_insider_frame(frame, yf_ticker)
+
 
 # ── Cash-flow frame parsing (module level: pure, unit-testable) ───────────────
 
@@ -568,3 +768,129 @@ def _periods_from_frame(
             )
         )
     return periods
+
+
+import re as _re
+
+_PRICE_RE = _re.compile(r"price\s+([\d.]+)(?:\s*-\s*([\d.]+))?", _re.IGNORECASE)
+
+
+def _classify_yahoo_trade(text: str, tx_col: str, price: float | None) -> tuple[str, bool]:
+    """Return (transaction_type, is_open_market) for a Yahoo insider row."""
+    combined = f"{tx_col} {text}".strip().lower()
+    if not combined:
+        return ("grant", False)
+    if "buy back" in combined or "buyback" in combined:
+        return ("buyback", False)
+    if "gift" in combined:
+        return ("gift", False)
+    if "option" in combined or "exercise" in combined or "conversion" in combined:
+        return ("option", False)
+    if "award" in combined or "grant" in combined or "withholding" in combined:
+        return ("grant", False)
+
+    # Zero-price purchases/sales are option exercises, grants, or gifts
+    if price is not None and price <= 0:
+        return ("grant", False)
+
+    if any(k in combined for k in ("purchase", "bought", "buy", "acquisition")):
+        return ("buy", True)
+    if any(k in combined for k in ("sale", "sold", "sell")):
+        return ("sell", True)
+
+    return ("other", False)
+
+
+def _parse_insider_frame(frame, yf_ticker: str) -> list[InsiderTransactionItem]:
+    """Parse a yfinance insider_transactions DataFrame into InsiderTransactionItem list."""
+    if frame is None or getattr(frame, "empty", True):
+        return []
+
+    mkt = market_for_yahoo_symbol(yf_ticker)
+    # UK insider transactions report values in pounds (or USD), not pence (GBX)
+    currency = "GBP" if mkt.currency in ("GBX", "GBP") else mkt.currency
+
+    items: list[InsiderTransactionItem] = []
+    for _, row in frame.iterrows():
+        raw_date = row.get("Start Date")
+        if raw_date is None:
+            continue
+        pub_date: date | None = None
+        if hasattr(raw_date, "date"):
+            try:
+                pub_date = raw_date.date()
+            except Exception:
+                pub_date = None
+        elif isinstance(raw_date, date):
+            pub_date = raw_date
+        elif isinstance(raw_date, str):
+            try:
+                pub_date = date.fromisoformat(raw_date[:10])
+            except ValueError:
+                pub_date = None
+        if pub_date is None:
+            continue
+
+        text = str(row.get("Text") or "").strip()
+        tx_col = str(row.get("Transaction") or "").strip()
+
+        shares: int | None = None
+        raw_shares = row.get("Shares")
+        if raw_shares is not None:
+            try:
+                sf = float(raw_shares)
+                if not math.isnan(sf):
+                    shares = abs(int(round(sf)))
+            except (TypeError, ValueError):
+                pass
+
+        value: float | None = None
+        raw_val = row.get("Value")
+        if raw_val is not None:
+            try:
+                vf = float(raw_val)
+                if not math.isnan(vf) and vf > 0:
+                    value = round(abs(vf), 2)
+            except (TypeError, ValueError):
+                pass
+
+        price: float | None = None
+        m = _PRICE_RE.search(text)
+        if m:
+            try:
+                p1 = float(m.group(1))
+                p2 = float(m.group(2)) if m.group(2) else p1
+                price = round((p1 + p2) / 2.0, 4)
+            except ValueError:
+                pass
+        if price is None and value is not None and shares and shares > 0:
+            price = round(value / shares, 4)
+        if value is None and price is not None and price > 0 and shares and shares > 0:
+            value = round(price * shares, 2)
+
+        tx_type, is_open = _classify_yahoo_trade(text, tx_col, price)
+
+        insider = str(row.get("Insider") or "").strip() or None
+        position = str(row.get("Position") or "").strip() or None
+        url = str(row.get("URL") or "").strip() or None
+
+        items.append(
+            InsiderTransactionItem(
+                trade_date=pub_date,
+                publication_date=pub_date,
+                insider_name=insider,
+                role=position,
+                transaction_type=tx_type,
+                is_open_market=is_open,
+                shares=shares,
+                price=price if (price is not None and price > 0) else None,
+                currency=currency,
+                value=value,
+                source="yahoo",
+                source_url=url,
+                notes=text or tx_col or None,
+            )
+        )
+
+    return items
+

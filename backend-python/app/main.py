@@ -15,7 +15,9 @@ Lifespan sequence
    missing gets the ordinary top-up — in the background, so the app is live
    meanwhile.
 4. Start the nightly APScheduler jobs: 18:00 Warsaw time for the GPW and the
-   European markets, 17:15 New York time for the US (when served).
+   European markets, 17:15 New York time for the US (when served) — plus the
+   hourly live prices for whichever market is trading (and one download right
+   away when a market is open at start-up).
 5. Yield (app is live).
 6. Shutdown: stop scheduler, flush and stop the action log, dispose DB engine,
    close HTTP client.
@@ -47,19 +49,22 @@ from app.dependencies import (
     set_action_log_repository,
     set_data_health_repository,
     set_http_client,
+    set_live_prices,
     set_quote_repository,
     set_refresh_service,
     set_scheduler,
+    set_user_repository,
     yahoo_client,
 )
 from app.markets import enabled_markets, refresh_runs
-from app.routers import admin, stocks
+from app.routers import admin, auth, stocks
 from app.services.action_log import (
     OUTCOME_FINISHED,
     OUTCOME_STARTED,
     ActionLogMiddleware,
 )
 from app.services.error_tracker import ErrorTrackingHandler
+from app.services.live_prices import LivePriceService
 from app.services.refresh_service import RefreshService
 
 logging.basicConfig(level=logging.INFO)
@@ -159,6 +164,7 @@ async def lifespan(_app: FastAPI):
             from app.db.base import Base, build_engine, build_session_factory
             from app.db.health_repository import DataHealthRepository
             from app.db.repository import PostgresQuoteRepository
+            from app.db.user_repository import UserRepository
             from app.jobs.daily_ingest import IngestService, build_scheduler
 
             engine = build_engine(settings.database_url)
@@ -232,6 +238,11 @@ async def lifespan(_app: FastAPI):
                 repo = PostgresQuoteRepository(session_factory)
                 set_quote_repository(repo)
 
+                # Optional visitor accounts (app/routers/auth.py). Only
+                # available with a database: without one there is nowhere to
+                # keep them, and /api/auth/* says so instead of pretending.
+                set_user_repository(UserRepository(session_factory))
+
                 # Mirror the action log into the action_logs table as well as
                 # the file, and start its periodic retention prune.
                 log_repo = ActionLogRepository(session_factory)
@@ -258,8 +269,19 @@ async def lifespan(_app: FastAPI):
                     ranking_cache=ranking_cache,
                 )
 
-                # Full pipeline: ingest → ranking → rating snapshots. Used by
-                # the bootstrap, the nightly job and the manual Refresh button.
+                # Today's prices while an exchange is open, downloaded hourly
+                # and shown beside the finished-session analysis (never fed
+                # into it). Kept in memory; see app/services/live_prices.py.
+                live_svc: LivePriceService | None = None
+                if settings.live_prices_enabled:
+                    live_svc = LivePriceService(
+                        companies=companies, client=stooq, action_log=action_log
+                    )
+                    set_live_prices(live_svc)
+
+                # Full pipeline: ingest → ranking → rating snapshots (→ live
+                # prices for any market trading). Used by the bootstrap, the
+                # nightly job and the manual Refresh button.
                 refresh_svc = RefreshService(
                     companies=companies,
                     stooq=stooq,
@@ -268,6 +290,7 @@ async def lifespan(_app: FastAPI):
                     repo=repo,
                     ingest=ingest_svc,
                     action_log=action_log,
+                    live=live_svc,
                 )
                 set_refresh_service(refresh_svc)
 
@@ -286,19 +309,46 @@ async def lifespan(_app: FastAPI):
                     )
                 else:
                     logger.info("Start-up data check: every served market is current.")
+                # A restart during a session would otherwise show no live prices
+                # until the next full hour. A bootstrap refresh started above
+                # ends with the live step for its own markets, so only the
+                # others are downloaded here.
+                covered = set(plan.markets) if plan.needed else set()
+                live_due = (
+                    [m for m in live_svc.due_markets() if m not in covered]
+                    if live_svc is not None
+                    else []
+                )
+                if live_svc is not None and live_due:
+                    logger.info(
+                        "Start-up: %s trading now — downloading live prices.",
+                        ", ".join(live_due),
+                    )
+                    live_svc.start(markets=live_due, trigger="startup")
 
                 # ── 4. Nightly scheduler ──────────────────────────────────────
                 runs = refresh_runs()
-                scheduler = build_scheduler(refresh_svc, runs=runs)
+                scheduler = build_scheduler(
+                    refresh_svc,
+                    runs=runs,
+                    live=live_svc,
+                    live_interval_minutes=settings.live_prices_interval_minutes,
+                )
                 scheduler.start()
                 # Exposed so the health endpoint can report the next run time
                 # from the scheduler itself rather than from the setting that
                 # was meant to configure it.
                 set_scheduler(scheduler)
                 logger.info(
-                    "Scheduler started — nightly runs: %s.",
+                    "Scheduler started — nightly runs: %s; live prices: %s.",
                     "; ".join(
                         f"{run.schedule} ({', '.join(run.market_ids)})" for run in runs
+                    ),
+                    (
+                        f"every {settings.live_prices_interval_minutes} min while "
+                        "a market is trading"
+                        if live_svc is not None
+                        else "off"
                     ),
                 )
         else:
@@ -331,6 +381,7 @@ async def lifespan(_app: FastAPI):
         if scheduler is not None and scheduler.running:
             scheduler.shutdown(wait=False)
         set_scheduler(None)
+        set_live_prices(None)
         action_log.log_job("job.shutdown", OUTCOME_FINISHED)
         # Flush the queued rows BEFORE the engine goes away, or the tail of the
         # log would be dropped exactly when a shutdown is worth explaining.
@@ -339,6 +390,7 @@ async def lifespan(_app: FastAPI):
         logging.getLogger().removeHandler(error_handler)
         set_action_log_repository(None)
         set_data_health_repository(None)
+        set_user_repository(None)
         if engine is not None:
             await engine.dispose()
         set_http_client(None)
@@ -357,12 +409,13 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
-    allow_credentials=False,
+    allow_credentials=True,
     # POST is needed only by /api/stocks/refresh (the manual Refresh button).
     allow_methods=["GET", "POST"],
     # X-Admin-Token is the optional shared secret for /api/admin/*; the browser
     # may only send it if CORS says so.
-    allow_headers=["Content-Type", "X-Admin-Token"],
+    # Authorization carries the signed-in visitor's bearer token.
+    allow_headers=["Content-Type", "X-Admin-Token", "Authorization"],
     # Let the browser read the pagination total the ranking endpoint sets and
     # the id that ties a response to its action-log entry.
     expose_headers=["X-Total-Count", "X-Request-Id"],
@@ -380,6 +433,7 @@ app.add_middleware(
 
 app.include_router(stocks.router)
 app.include_router(admin.router)
+app.include_router(auth.router)
 
 
 @app.get("/health", tags=["meta"], summary="Liveness probe")

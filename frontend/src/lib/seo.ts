@@ -80,6 +80,14 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
+    test: (p) => p.startsWith('/vsa-kompendium'),
+    entry: {
+      title: 'VSA Kompendium — price and volume analysis',
+      description:
+        'The full Volume Spread Analysis compendium behind StockPilot\'s VSA V4 method: bar anatomy, the signal catalogue, sequences, WFO, risk and the code formalisation.',
+    },
+  },
+  {
     test: (p) => p.startsWith('/legal'),
     entry: {
       title: 'Legal information — disclaimer, terms and privacy',
@@ -93,6 +101,17 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
       title: 'System status',
       description:
         'Operational status of the StockPilot backend: the last data refresh, how current the stored data is, and recent errors.',
+      noindex: true,
+    },
+  },
+  {
+    test: (p) => p.startsWith('/login'),
+    entry: {
+      title: 'Sign in',
+      description:
+        'Sign in to StockPilot or create an account. An account is optional — every page works without one.',
+      // Nothing for a search engine here, and a sign-in form in the results
+      // is a phishing target: keep it out of the index like /system.
       noindex: true,
     },
   },

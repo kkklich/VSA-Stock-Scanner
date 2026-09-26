@@ -115,3 +115,19 @@ export function safeHttpUrl(url: string | null | undefined): string | null {
     return null
   }
 }
+
+/** Up to two letters for the avatar: initials of the display name.
+ *
+ *  Falling back to the e-mail uses only the part before the "@": splitting the
+ *  whole address would read "ola.nowak@example.com" as three words and take
+ *  the initials of the first and the *domain suffix* ("OC"). */
+export function initialsOf(name: string, email: string): string {
+  const source = name.trim() || email.trim().split('@', 1)[0]
+  const words = source.split(/[\s._-]+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  const letters =
+    words.length === 1
+      ? words[0].slice(0, 2)
+      : words[0][0] + words[words.length - 1][0]
+  return letters.toUpperCase()
+}

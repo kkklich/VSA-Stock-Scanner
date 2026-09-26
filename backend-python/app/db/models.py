@@ -13,6 +13,8 @@ Tables:
   * ``action_logs``                — audit trail: one row per API call and per
                                      background job (what was done, when, how it
                                      ended)
+  * ``users``                      — registered visitors (e-mail + bcrypt password
+                                     hash) for the optional sign-in
 
 Per-request VSA signals are still computed on-the-fly from the raw OHLCV bars
 (and cached in-process); only the daily rating snapshot is persisted.
@@ -26,6 +28,7 @@ from decimal import Decimal
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     Date,
     DateTime,
     Float,
@@ -215,3 +218,79 @@ class ActionLogRow(Base):
     # Job counters and error text. JSON so a new job can add its own numbers
     # without a migration.
     detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class UserRow(Base):
+    """One registered visitor.
+
+    Accounts are optional on this site: every page can still be read signed
+    out. Only the bcrypt hash of the password is stored — never the password —
+    and ``token_version`` is bumped whenever the password changes, which
+    invalidates every login token issued before that moment without the server
+    having to remember the tokens themselves.
+
+    ``email`` is stored lower-cased (see ``normalize_email``) and is the
+    natural key; the surrogate ``id`` is what the tokens carry, so a future
+    "change your e-mail address" feature cannot orphan anyone's session.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("email", name="uq_user_email"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    # "user" or "admin". See is_admin_email() — set from STOCKPILOT_ADMIN_EMAILS
+    # at registration, never by the visitor.
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
+    # False disables sign-in without deleting the row (and the audit trail).
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # True once the address has been confirmed. Always False today: this app
+    # sends no e-mail yet (agent/ROADMAP.md #30). The column exists so turning
+    # verification on later needs no migration.
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class InsiderTransactionRow(Base):
+    """One reported trade in a company's shares by an insider (manager/director).
+
+    Populated from Yahoo Finance (US/UK) or GPW ESPI current reports under
+    MAR art. 19 (GPW).
+
+    Publication date is when the market was informed about the trade — the date
+    the chart marker and any signal logic sits on (to avoid lookahead bias).
+    """
+
+    __tablename__ = "insider_transactions"
+    __table_args__ = (
+        Index("ix_insider_transactions_ticker", "ticker"),
+        Index("ix_insider_transactions_publication_date", "publication_date"),
+        Index("ix_insider_transactions_ticker_pubdate", "ticker", "publication_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
+    market: Mapped[str] = mapped_column(String(10), nullable=False)
+    trade_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    publication_date: Mapped[date] = mapped_column(Date, nullable=False)
+    insider_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # "buy" | "sell" | "grant" | "option" | "gift" | "buyback" | "other"
+    transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    # True for open-market purchases and sales; False for awards, options, gifts
+    is_open_market: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    shares: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    value: Mapped[Decimal | None] = mapped_column(Numeric(16, 2), nullable=True)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+

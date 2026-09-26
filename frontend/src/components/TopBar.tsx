@@ -1,15 +1,18 @@
 // Slim top bar: hamburger (mobile) + page title on the left; the market
 // switcher, that market's status and last EOD sync, and a user avatar on the
 // right (DOCUMENTATION.md §3). With "All markets" selected the status shows
-// the GPW, the home market.
+// the GPW, the home market. The avatar is the sign-in control (UserMenu):
+// "Sign in" when signed out, the visitor's initials and a small menu when in.
 
 import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { MarketSwitcher } from './MarketSwitcher'
 import { ThemeToggle } from './ThemeToggle'
+import { UserMenu } from './UserMenu'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { useMarketScope } from '../hooks/useMarkets'
+import { useLiveMarketTimes } from '../hooks/useDataVersion'
 import { isMarketOpen, lastSyncLabel } from '../lib/marketClock'
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -27,8 +30,17 @@ export function TopBar({
   const { market } = useMarketScope({ allowAll: true })
   const statusMarket = !market || market === ALL_MARKETS ? GPW_MARKET : market
   const open = isMarketOpen(statusMarket)
+  // While the market trades its prices are downloaded every hour; the last
+  // download is then the newest sync. Subscribing here also keeps the app-wide
+  // data watcher running on every page (hooks/useDataVersion).
+  const liveTimes = useLiveMarketTimes()
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur sm:px-6">
+    // `relative z-30` so the account menu's dropdown paints ABOVE the page
+    // below it: the header comes first in the DOM, and without a stacking
+    // order the toolbars on the pages (Methods / Columns / Filter) drew over
+    // it. Below the mobile sidebar drawer (z-40/z-50), which must cover
+    // everything.
+    <header className="relative z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <button
           onClick={onMenuClick}
@@ -46,7 +58,9 @@ export function TopBar({
         {/* Wide screens only: the market switcher needs the room below xl. */}
         <span className="hidden whitespace-nowrap text-slate-500 xl:inline">
           {t('topbar.lastSync')}{' '}
-          <span className="text-slate-300">{lastSyncLabel(statusMarket)}</span>
+          <span className="text-slate-300">
+            {lastSyncLabel(statusMarket, undefined, liveTimes[statusMarket])}
+          </span>
         </span>
         <span className="flex items-center gap-1.5 text-slate-400">
           <span
@@ -66,9 +80,7 @@ export function TopBar({
         <MarketSwitcher />
         <ThemeToggle />
         <LanguageSwitcher />
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-300 ring-1 ring-slate-700">
-          AM
-        </div>
+        <UserMenu />
       </div>
     </header>
   )

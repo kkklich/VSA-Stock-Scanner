@@ -12,6 +12,8 @@ from __future__ import annotations
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
 from app.analysis.methods import get_method, method_ids
 from app.analysis.methods import vsa3 as v3
 from app.analysis.methods.base import NEVER_FIRED
@@ -145,17 +147,17 @@ def _read(bars: list[StooqDailyQuote]) -> tuple[v3._Engine, int, v3._Leg]:
 
 
 class TestRegistry:
-    def test_vsa3_is_registered_after_vsa2(self) -> None:
+    def test_vsa3_is_registered_after_glinicki(self) -> None:
         ids = method_ids()
-        # order: ... glinicki (40) < vsa2 (50) < vsa3 (60)
-        assert ids.index("vsa3") > ids.index("vsa2")
-        v2, m = get_method("vsa2"), get_method("vsa3")
-        assert v2 is not None and m is not None
+        # order: ... glinicki (40) < vsa3 (60)
+        assert ids.index("vsa3") > ids.index("glinicki")
+        v1, m = get_method("glinicki"), get_method("vsa3")
+        assert v1 is not None and m is not None
         assert m.name == "VSA V3"
         assert m.description and m.source and m.source_url
         assert m.direction == "Bullish"  # long-only
-        # Same author and course as V2, read from a different layer of it.
-        assert m.source != v2.source
+        # Same author, two different methods: the sources must not be copied.
+        assert m.source != v1.source
         assert "transcripts" in m.source
 
 
@@ -188,14 +190,18 @@ class TestSetup:
         bars = _scenario()
         overlay = get_method("vsa3").signals(bars)
         fired = [s for s in overlay if s.type == "Bullish"]
-        assert [(s.label, s.date) for s in fired] == [
-            ("Bullish Engulfing + No Supply", bars[-1].date)
+        assert [s.label for s in fired] == [
+            "Piercing Line + Stopping Volume",
+            "Bullish Engulfing + Two Bar Reversal",
+            "Bullish Engulfing + No Supply",
         ]
-        # Anything else on the chart is a near miss, never a second entry.
+        assert fired[-1].date == bars[-1].date
+        # Anything else on the chart is a near miss or setup
         assert {s.type for s in overlay} <= {"Bullish", "Watch"}
         # Whatever happens afterwards cannot move a marker already printed.
         later = get_method("vsa3").signals(_scenario(tail=6))
         assert fired[0] in later
+        assert fired[-1] in later
 
     def test_recency_reported_after_the_setup(self) -> None:
         bars = _scenario(tail=4)
@@ -206,21 +212,24 @@ class TestSetup:
 
     def test_two_signals_are_not_a_sequence(self) -> None:
         # Without the Two Bar Reversal, the pullback's low carries only the
-        # Stopping Volume and the No Supply. Everything else still stands, so it
-        # is the sequence gate — "three signals following one another" — that
-        # refuses the trade: the course says to wait for the next signal.
+        # Stopping Volume and the No Supply. Everything else still stands, so
+        # Scenariusz 5's core criteria are met and the trade fires (score 90).
+        # A 3-signal sequence acts as a quality booster (score 100).
         bars = _scenario(tbr=False)
         eng, i, leg = _read(bars)
         assert eng.place(leg, i) is not None
         assert eng.correction(leg, i) == (True, "Stopping Volume")
         assert eng.sequence(leg, i) is None
         result = get_method("vsa3").evaluate(bars)
-        assert result.fired is False
-        assert result.score == round(5 / 7 * 100)
-        # The reader is told the method saw the pattern, and why it said no.
-        assert result.detail == (
-            "Bullish Engulfing + No Supply today, not taken: no 3-signal sequence"
-        )
+        assert result.fired is True
+        assert result.score == 90
+        assert result.detail == "Bullish Engulfing + No Supply @ 50%, R/R 6.7:1"
+
+        # With the full 3-signal sequence, confidence is boosted to 100:
+        boosted = get_method("vsa3").evaluate(_scenario(tbr=True))
+        assert boosted.fired is True
+        assert boosted.score == 100
+        assert "(3-sig seq)" in boosted.detail
 
     def test_bearish_volume_is_never_played(self) -> None:
         # The same prices with the volume swapped: the down-waves now trade
@@ -247,7 +256,8 @@ class TestSetup:
         eng, i, leg = _read(bars)
         formation = v3._formation_at(eng.s, i)
         assert formation is not None
-        rr = (eng.s.highs[leg.peak] - formation.entry) / (formation.entry - formation.stop)
+        risk = formation.entry - formation.stop
+        rr = (eng.s.highs[leg.peak] - formation.entry) / risk if risk > 0 else 0.0
         assert rr < 3.0
         result = get_method("vsa3").evaluate(bars)
         assert result.fired is False
@@ -298,17 +308,17 @@ class TestAliorHammer:
     2.6:1), and no test has followed the Shakeout to close a sequence.
     """
 
-    def test_the_hammer_is_seen_and_refused_for_two_reasons(self) -> None:
+    def test_the_hammer_is_seen_and_refused_for_rr(self) -> None:
         bars = _alior(until=date(2026, 9, 15))
         eng = v3._Engine(bars)
         found = v3._assess(eng, len(bars) - 1)
         assert found is not None
         assert (found.formation, found.signal, found.place) == ("Hammer", "Shakeout", "ABC")
-        assert found.missing == ("no 3-signal sequence", "R/R 2.6:1")
+        assert found.missing == ("R/R 2.6:1",)
         result = get_method("vsa3").evaluate(bars)
         assert result.fired is False
         assert result.detail == (
-            "Hammer + Shakeout today, not taken: no 3-signal sequence, R/R 2.6:1"
+            "Hammer + Shakeout today, not taken: R/R 2.6:1"
         )
 
     def test_the_second_low_is_a_textbook_wfo_once_price_reacts(self) -> None:
@@ -328,8 +338,7 @@ class TestAliorHammer:
         # By 22.09 a newer pattern at the low (21.09) is the one reported.
         result = get_method("vsa3").evaluate(bars)
         assert result.detail == (
-            "Piercing Line + Two Bar Reversal 1d ago, not taken: "
-            "no 3-signal sequence, R/R 0.4:1"
+            "Piercing Line + Two Bar Reversal 1d ago, not taken: R/R 0.4:1"
         )
 
     def test_the_hammer_is_marked_on_the_chart_as_a_near_miss(self) -> None:
@@ -340,7 +349,7 @@ class TestAliorHammer:
         watch = [s for s in overlay if s.date == date(2026, 9, 15)]
         assert len(watch) == 1
         assert watch[0].type == "Watch"
-        assert watch[0].label == "Hammer + Shakeout · no sequence, R/R 2.6:1"
+        assert watch[0].label == "Hammer + Shakeout · R/R 2.6:1"
 
 
 # ── The superior timeframe ────────────────────────────────────────────────────
@@ -569,3 +578,104 @@ class TestGuards:
         assert get_method("vsa3").signals(frozen) == []
         assert get_method("vsa3").evaluate([]).available is False
         assert get_method("vsa3").signals([]) == []
+
+
+# ── Edge cases & boosters ─────────────────────────────────────────────────────
+
+
+class TestEdgeCasesAndBoosters:
+    def test_wfo_divergence_acts_as_booster_score_100(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """WFO divergence at the low boosts the score to 100 even without a 3-signal sequence."""
+        bars = _scenario(tbr=False)
+        monkeypatch.setattr(v3._Engine, "wfo", lambda self, leg, i: True)
+        result = get_method("vsa3").evaluate(bars)
+        assert result.fired is True
+        assert result.score == 100
+
+    def test_leg_zero_height_defensive(self) -> None:
+        """If a leg has zero or negative height, geometry returns None without ZeroDivisionError."""
+        bars = [_bar(i, 100.0, 100.0, 100.0, 100.0) for i in range(150)]
+        eng = v3._Engine(bars)
+        fake_leg = v3._Leg(origin=10, peak=20, halt=30)
+        assert fake_leg.height(eng.s) == 0.0
+        assert eng.geometry(fake_leg) is None
+
+    def test_zero_risk_formation_handled_without_division_by_zero(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If entry equals stop, risk is <= 0; rr defaults to 0.0 and misses R/R filter."""
+        bars = _scenario()
+        eng = v3._Engine(bars)
+        last = len(bars) - 1
+        zero_risk_formation = v3._Formation("FlatMother", last - 1, 100.0, 100.0)
+        monkeypatch.setattr(v3, "_formation_at", lambda s, i: zero_risk_formation)
+        assessment = v3._assess(eng, last)
+        assert assessment is not None
+        assert assessment.rr == 0.0
+        assert any("R/R 0.0:1" in m for m in assessment.missing)
+
+    def test_inside_bar_break_zero_spread_mother_rejected(self) -> None:
+        """A flat bar with zero spread cannot be accepted as a mother bar."""
+        bars = [_bar(i, 100.0, 100.0, 100.0, 100.0) for i in range(50)]
+        s = v3._Series.build(bars)
+        assert v3._inside_bar_break(s, 49) is None
+
+    def test_confirming_signal_zero_range_hammer_defensive(self) -> None:
+        """A zero-range bar cannot qualify as a confirming Hammer signal."""
+        bars = [_bar(i, 100.0, 100.0, 100.0, 100.0, 300_000) for i in range(50)]
+        eng = v3._Engine(bars)
+        formation = v3._Formation("Hammer", 49, 100.0, 100.0)
+        assert eng.confirming_signal(formation, 49, 101.0) is None
+
+    def test_approach_with_occasional_zero_volume_bar_handled(self) -> None:
+        """In a pullback, an occasional zero-volume session does not raise ZeroDivisionError."""
+        bars = list(_scenario())
+        b = bars[-5]
+        bars[-5] = StooqDailyQuote(
+            date=b.date, open=b.open, high=b.high, low=b.low, close=b.close, volume=0
+        )
+        eng = v3._Engine(bars)
+        last = len(bars) - 1
+        leg = eng.leg(last)
+        assert leg is not None
+        corrective, _ = eng.correction(leg, last)
+        assert isinstance(corrective, bool)
+
+    def test_near_miss_with_two_layers_reported(self) -> None:
+        """A pattern missing two layers (<= 2) is reported in detail and Watch signal."""
+        bars = _scenario(up_vol=150_000, down_vol=300_000, confirm_reach=3.0)
+        res = get_method("vsa3").evaluate(bars)
+        assert res.fired is False
+        assert "not taken:" in res.detail
+        assert "bearish volume" in res.detail
+        assert "R/R" in res.detail
+        assert res.score == round(5 / 7 * 100)
+
+    def test_miss_with_three_layers_not_reported_as_near_miss(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When 3 layers are missing (> _NEAR_MISS_LAYERS), it is NOT reported as a near miss."""
+        bars = _scenario()
+        orig_assess = v3._assess
+
+        def mock_assess(eng: v3._Engine, i: int) -> v3._Assessment | None:
+            res = orig_assess(eng, i)
+            if res is not None and i == len(eng.s) - 1:
+                return v3._Assessment(
+                    formation=res.formation,
+                    signal=res.signal,
+                    place=res.place,
+                    rr=res.rr,
+                    missing=("weekly trend not up", "bearish volume", "no WM"),
+                )
+            return None
+
+        monkeypatch.setattr(v3, "_assess", mock_assess)
+        res = get_method("vsa3").evaluate(bars)
+        assert res.fired is False
+        assert "not taken:" not in res.detail
+        signals = get_method("vsa3").signals(bars)
+        assert not any(s.date == bars[-1].date and s.type == "Watch" for s in signals)
+

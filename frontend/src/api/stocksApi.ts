@@ -6,11 +6,13 @@
 // VSA calculation on the backend.
 
 import { apiFetch, apiFetchWithHeaders } from './client'
+import { serializeSort, type SortDir, type SortLevel } from '../lib/sorting'
 import type { Candle, SignalVerdict, VsaSignal } from '../types'
 
 // Re-exported so a page can take the whole payload's vocabulary from this one
-// module (ChartsPage imports SignalVerdict alongside ChartInterval).
-export type { SignalVerdict }
+// module (ChartsPage imports SignalVerdict alongside ChartInterval; the sort
+// types live in lib/sorting.ts, which owns the multi-column sorting rules).
+export type { SignalVerdict, SortDir, SortLevel }
 
 // ── GET /api/stocks/markets (the markets this deployment serves) ─────────────
 
@@ -120,6 +122,39 @@ export interface ApiRankingItem {
   weeklySignal: SignalVerdict | null
   /** How the weekly timeframe relates to the daily verdict; null when history too short. */
   weeklyAgreement: WeeklyAgreement | null
+  /**
+   * Today's session so far, while the stock's exchange is trading and the
+   * day's final bar is not stored yet. When present, `lastPrice`,
+   * `priceChangePct` and the last sparkline point are its figures — every
+   * rating, signal and method score is still the last FINISHED session's
+   * (`lastSession`). Absent (null) otherwise, and on older backends.
+   */
+  live?: ApiLivePrice | null
+}
+
+/**
+ * Today's session so far for one stock, downloaded every hour while its
+ * exchange trades (backend `app/services/live_prices.py`). Shown beside the
+ * analysis, never part of it: an unfinished day has only part of its volume,
+ * and VSA reads low volume as a signal.
+ */
+export interface ApiLivePrice {
+  /** The trading day in progress, YYYY-MM-DD on the exchange's calendar. */
+  sessionDate: string
+  /** Latest price and today's range so far, in the stock's own currency. */
+  price: number
+  open: number
+  high: number
+  low: number
+  /** Shares traded so far today; 0 = no trade yet today. Null when unknown. */
+  volume: number | null
+  previousClose: number | null
+  /** Today's change so far against the previous close, percent. */
+  changePct: number | null
+  /** When that price was traded (ISO, UTC) — quotes can be delayed ~15 min. */
+  asOf: string
+  /** When the app downloaded it (ISO, UTC) — the hourly run. */
+  fetchedAt: string
 }
 
 /** How the weekly VSA verdict relates to the daily one. */
@@ -158,14 +193,16 @@ export type RankingSortKey =
   | 'weeklyRating'
   | 'combinedScore'
 
-export type SortDir = 'asc' | 'desc'
-
 /** All server-side query options for the ranking feed. */
 export interface RankingQuery {
   page?: number
   pageSize?: number
-  sortBy?: RankingSortKey
-  sortDir?: SortDir
+  /**
+   * Sort levels, outermost first: `[{sector, asc}, {currentRating, desc}]` is
+   * "sector A→Z, best rating first within each". One level is an ordinary
+   * single-column sort. Serialised as `sortBy`/`sortDir` comma-separated lists.
+   */
+  sort?: SortLevel<RankingSortKey>[]
   /** Free-text search over ticker + name. */
   q?: string
   /** Minimum VSA rating (0 = no filter). */
@@ -220,8 +257,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   const {
     page = 1,
     pageSize = 50,
-    sortBy,
-    sortDir,
+    sort,
     q,
     minRating,
     maxRating,
@@ -246,8 +282,11 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     page: String(page),
     pageSize: String(pageSize),
   })
-  if (sortBy) params.set('sortBy', sortBy)
-  if (sortDir) params.set('sortDir', sortDir)
+  const sortParams = sort && serializeSort(sort)
+  if (sortParams) {
+    params.set('sortBy', sortParams.sortBy)
+    params.set('sortDir', sortParams.sortDir)
+  }
   if (q && q.trim()) params.set('q', q.trim())
   if (minRating && minRating > 0) params.set('minRating', String(minRating))
   if (maxRating !== undefined && maxRating < 100) {
@@ -305,6 +344,12 @@ export interface ApiHeatmapItem {
   change1Y: number | null
   /** Change vs the oldest stored bar (full stored history). */
   changeMax: number | null
+  /**
+   * Today's session so far while the exchange trades; `lastPrice` and every
+   * change are then measured from its price (the rating stays the finished
+   * session's). Absent on older backends.
+   */
+  live?: ApiLivePrice | null
 }
 
 export interface ApiHeatmapResponse {
@@ -324,6 +369,68 @@ export async function fetchHeatmap(
   if (market) params.set('market', market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiHeatmapResponse>(`/api/stocks/heatmap${qs}`)
+}
+
+// ── GET /api/stocks/market-overview ───────────────────────────────────────────
+
+/** Counts over the ranked stocks — how the market leans, not a score. */
+export interface ApiMarketBreadth {
+  /** Stocks tallied (those the ranking shows). */
+  total: number
+  strongBuy: number
+  buy: number
+  hold: number
+  sell: number
+  strongSell: number
+  /** Strong Buy + Buy, and Sell + Strong Sell, as a share of `total` (percent). */
+  bullishPct: number
+  bearishPct: number
+  averageRating: number | null
+  /** Stocks that rose / fell / were flat in the latest session. */
+  advancers: number
+  decliners: number
+  unchanged: number
+  /** Stocks whose rating rose / fell since the previous session. */
+  ratingUp: number
+  ratingDown: number
+  new52wHighs: number
+  new52wLows: number
+}
+
+export interface ApiRatingMover {
+  ticker: string
+  name: string
+  market: string
+  currency: string
+  lastSession: string | null
+  lastPrice: number
+  priceChangePct: number
+  /** Rating before the newest session, after it, and the difference. */
+  previousRating: number
+  currentRating: number
+  ratingChange: number
+  lastSignal: SignalVerdict
+}
+
+export interface ApiMarketOverview {
+  asOf: string | null
+  market: string
+  breadth: ApiMarketBreadth
+  /** Rating rose the most / fell the most; only stocks that actually moved. */
+  moversUp: ApiRatingMover[]
+  moversDown: ApiRatingMover[]
+}
+
+/** Breadth + rating movers of one market, or `all` of them together. */
+export async function fetchMarketOverview(
+  settings?: string,
+  market?: string,
+): Promise<ApiMarketOverview> {
+  const params = new URLSearchParams()
+  if (settings) params.set('settings', settings)
+  if (market) params.set('market', market)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<ApiMarketOverview>(`/api/stocks/market-overview${qs}`)
 }
 
 // ── GET /api/stocks/volume-surge ──────────────────────────────────────────────
@@ -392,9 +499,8 @@ export interface VolumeSurgeQuery {
   minRatio?: number
   page?: number
   pageSize?: number
-  /** Sort column (default volumeRatio). */
-  sortBy?: VolumeSurgeSortKey
-  sortDir?: SortDir
+  /** Sort levels, outermost first (default: volumeRatio descending). */
+  sort?: SortLevel<VolumeSurgeSortKey>[]
   /** URL-encoded VSA settings JSON from the Scanner page. */
   settings?: string
   /** Market id, or 'all' for every served market (default: the GPW). */
@@ -410,8 +516,11 @@ export async function fetchVolumeSurge(
   if (query.minRatio) params.set('minRatio', String(query.minRatio))
   if (query.page) params.set('page', String(query.page))
   if (query.pageSize) params.set('pageSize', String(query.pageSize))
-  if (query.sortBy) params.set('sortBy', query.sortBy)
-  if (query.sortDir) params.set('sortDir', query.sortDir)
+  const surgeSort = query.sort && serializeSort(query.sort)
+  if (surgeSort) {
+    params.set('sortBy', surgeSort.sortBy)
+    params.set('sortDir', surgeSort.sortDir)
+  }
   if (query.settings) params.set('settings', query.settings)
   if (query.market) params.set('market', query.market)
   const qs = params.size > 0 ? `?${params}` : ''
@@ -496,9 +605,8 @@ export interface CapexQuery {
   withData?: boolean
   page?: number
   pageSize?: number
-  /** Sort column (default capex). */
-  sortBy?: CapexSortKey
-  sortDir?: SortDir
+  /** Sort levels, outermost first (default: capex descending). */
+  sort?: SortLevel<CapexSortKey>[]
 }
 
 export async function fetchCapex(query: CapexQuery = {}): Promise<ApiCapexResponse> {
@@ -509,8 +617,11 @@ export async function fetchCapex(query: CapexQuery = {}): Promise<ApiCapexRespon
   if (query.withData === false) params.set('withData', 'false')
   if (query.page) params.set('page', String(query.page))
   if (query.pageSize) params.set('pageSize', String(query.pageSize))
-  if (query.sortBy) params.set('sortBy', query.sortBy)
-  if (query.sortDir) params.set('sortDir', query.sortDir)
+  const capexSort = query.sort && serializeSort(query.sort)
+  if (capexSort) {
+    params.set('sortBy', capexSort.sortBy)
+    params.set('sortDir', capexSort.sortDir)
+  }
   if (query.market) params.set('market', query.market)
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<ApiCapexResponse>(`/api/stocks/capex${qs}`)
@@ -529,6 +640,13 @@ export interface ApiRefreshStatus {
   stocksRanked: number | null
   /** False = no PostgreSQL, so rating history is not being stored. */
   dbEnabled: boolean
+  /**
+   * When today's live prices last changed (ISO), across markets — a page left
+   * open polls this to learn there is something new. Absent on older backends.
+   */
+  livePricesAt?: string | null
+  /** Per market id, when its live prices were last downloaded today (ISO). */
+  liveMarkets?: Record<string, string>
 }
 
 /** Start a full data refresh (Yahoo download → ratings → saved snapshots). */
@@ -666,6 +784,13 @@ export interface ApiStockSignals {
   weeklyRating: number | null
   weeklySignal: SignalVerdict | null
   weeklyAgreement: WeeklyAgreement | null
+  /**
+   * Today's session so far while the exchange trades — only on a chart that
+   * reaches today. `lastPrice`/`priceChangePct` are then its figures; the
+   * rating, `history` and every marker stay on finished sessions, so the chart
+   * draws it as a separate, still-forming candle. Absent on older backends.
+   */
+  live?: ApiLivePrice | null
 }
 
 /**
@@ -948,3 +1073,119 @@ export async function fetchTickerVolume(ticker: string): Promise<ApiTickerVolume
     `/api/stocks/${encodeURIComponent(ticker)}/volume`,
   )
 }
+
+// ── GET /api/stocks/{ticker}/trade-simulation ────────────────────────────────
+
+/** Which setups the simulated account takes: long only (default) or both. */
+export type SimulationSides = 'long' | 'both'
+
+/** One trade from the VSA V4 program's own simulator. */
+export interface ApiSimulatedTrade {
+  /** "open" = still held at the last bar, valued at its close. */
+  status: 'closed' | 'open'
+  direction: 'long' | 'short'
+  /** The confirmation bar; the entry is the next session's open. */
+  signalDate: string
+  entryDate: string
+  exitDate: string | null
+  /** "Selling Climax → No Supply": the sequence's primary → its test. */
+  setup: string
+  entryPrice: number
+  stopLoss: number
+  takeProfit: number
+  exitPrice: number | null
+  /** stop | take_profit | stop_gap_open | take_profit_gap_open |
+   *  stop_same_bar_both_hit | end_of_data_close | open_at_end */
+  exitReason: string
+  quantity: number
+  /** Net of both commissions and slippage, in the account's money. */
+  netPnl: number
+  /** Net result in multiples of the planned risk (entry-to-stop distance). */
+  netR: number | null
+  /** Price move from entry to exit (or last close) in the trade's favour, %. */
+  returnPct: number | null
+}
+
+export interface ApiEquityPoint {
+  date: string
+  equity: number
+  drawdownPct: number
+}
+
+/**
+ * The owner's VSA program (method "VSA V4") replayed over this stock's stored
+ * history with its own simulator: next-open entries, a structural stop, a 3R
+ * target, one position at a time, a fixed share of the account risked per
+ * trade. Educational, not a forecast.
+ */
+export interface ApiTradeSimulation {
+  ticker: string
+  methodId: string
+  /** The stock's own quote currency — every price is in it. */
+  currency: string | null
+  fromDate: string | null
+  asOf: string | null
+  barCount: number
+  sides: SimulationSides
+  initialCapital: number
+  riskPct: number
+  rewardRisk: number
+  /** Per side, percent (0.2 = 0.20%). */
+  commissionPct: number
+  slippagePct: number
+  finalEquity: number
+  totalReturnPct: number
+  maxDrawdownPct: number
+  closedTrades: number
+  openTrades: number
+  wins: number
+  losses: number
+  /** Share of closed trades that made money after costs; null with none. */
+  winRatePct: number | null
+  /** Gross wins ÷ gross losses; null when nothing lost. */
+  profitFactor: number | null
+  /** Mean net R per closed trade — the expectancy in units of risk. */
+  avgR: number | null
+  skippedEntries: number
+  longSetups: number
+  shortSetups: number
+  /** Buy on the first simulated close, hold to the last — a reference only. */
+  buyHoldReturnPct: number | null
+  trades: ApiSimulatedTrade[]
+  equity: ApiEquityPoint[]
+  engine: string
+}
+
+export async function fetchTradeSimulation(
+  ticker: string,
+  sides: SimulationSides = 'long',
+): Promise<ApiTradeSimulation> {
+  const qs = sides === 'long' ? '' : `?sides=${sides}`
+  return apiFetch<ApiTradeSimulation>(
+    `/api/stocks/${encodeURIComponent(ticker)}/trade-simulation${qs}`,
+  )
+}
+
+// ── GET /api/stocks/{ticker}/insider-transactions ────────────────────────────
+
+export type {
+  InsiderChartMarker as ApiInsiderChartMarker,
+  InsiderSummary as ApiInsiderSummary,
+  InsiderTransactionItem as ApiInsiderTransactionItem,
+  InsiderTransactionsResponse as ApiInsiderTransactionsResponse,
+} from '../types'
+import type { InsiderTransactionsResponse } from '../types'
+
+export async function fetchInsiderTransactions(
+  ticker: string,
+  options?: { includeAll?: boolean; fromDate?: string },
+): Promise<InsiderTransactionsResponse> {
+  const params = new URLSearchParams()
+  if (options?.includeAll) params.set('includeAll', 'true')
+  if (options?.fromDate) params.set('fromDate', options.fromDate)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return apiFetch<InsiderTransactionsResponse>(
+    `/api/stocks/${encodeURIComponent(ticker)}/insider-transactions${qs}`,
+  )
+}
+

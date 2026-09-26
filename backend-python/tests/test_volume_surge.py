@@ -435,10 +435,28 @@ class TestGetVolumeSurge:
             assert page1["totalCount"] == 3
             assert page2["totalCount"] == 3
 
+            # Two sort levels: all three share a sector, so the tie-break —
+            # biggest price move first — decides the whole order. It matches
+            # none of the single-column orders above, so the second level is
+            # demonstrably doing the work.
+            body = client.get(
+                "/api/stocks/volume-surge",
+                params={"sortBy": "sector,priceChangePct", "sortDir": "asc,desc"},
+            ).json()
+            assert [i["ticker"] for i in body["items"]] == ["CCC", "AAA", "BBB"]
+
     def test_invalid_sort_by_rejected(self) -> None:
         with TestClient(app) as client:
             resp = client.get(
                 "/api/stocks/volume-surge", params={"sortBy": "nonsense"}
+            )
+        assert resp.status_code == 400
+
+    def test_invalid_sort_dir_rejected(self) -> None:
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/volume-surge",
+                params={"sortBy": "ticker", "sortDir": "sideways"},
             )
         assert resp.status_code == 400
 

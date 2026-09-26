@@ -13,7 +13,7 @@ import {
   type Time,
 } from 'lightweight-charts'
 import type { Candle, VsaSignal } from '../types'
-import { useChartPalette } from '../lib/chartTheme'
+import { markerColor, useChartPalette, type MarkerType } from '../lib/chartTheme'
 import { toChartTime } from '../lib/chartTime'
 
 /** Empty slots kept to the right of the newest bar (time-scale `rightOffset`). */
@@ -26,25 +26,47 @@ function isIntraday(candles: Candle[]): boolean {
 
 /**
  * One trading method's overlay layer on the chart: its historical firings
- * drawn as coloured circle markers (bullish below the bar, bearish above), so
- * several methods can be read side by side and told apart by colour. VSA keeps
- * its own arrow markers via the `signals` prop; every OTHER method comes in
- * here. `color` is chosen by the page so the chart and its legend agree.
+ * drawn as dots in the method's own `color` (bullish below the bar, bearish
+ * above), each with a label coloured by direction. VSA keeps its own arrow
+ * markers via the `signals` prop; every OTHER method comes in here. `color` is
+ * chosen by the page so the chart and its legend agree.
  */
 export interface MethodOverlay {
   methodId: string
   color: string
-  signals: { date: string; label: string; type: 'Bullish' | 'Bearish' | 'Watch' }[]
+  /**
+   * When true, colour the marker dot itself by direction (green below bar for
+   * buys, red above bar for sells) instead of a fixed method colour. Used for
+   * the Insider Transactions layer.
+   */
+  directionalColor?: boolean
+  signals: { date: string; label: string; type: MarkerType }[]
 }
 
 /**
- * A "watch" marker — a pattern the method looked at and did NOT take — drawn
- * in the method's colour at 60% so it reads as a quieter note beside the solid
- * markers of its real firings. Appending an alpha pair works on the 6-digit
- * hex values in `chartTheme`; anything else is left as it is.
+ * A "watch" marker — a pattern the method looked at and did NOT take — is a
+ * square in the method's colour at 60%, so it reads as a quieter note beside
+ * the solid dots of its real firings. Appending an alpha pair works on the
+ * 6-digit hex values in `chartTheme`; anything else is left as it is.
  */
 function muted(color: string): string {
   return /^#[0-9a-f]{6}$/i.test(color) ? `${color}99` : color
+}
+
+/**
+ * Today's session so far (live prices), drawn after the finished bars as a
+ * hollow candle with a grey volume bar: it is still forming, the VSA engine
+ * never saw it, and none of the markers are about it.
+ */
+export interface FormingCandle {
+  /** The session date, YYYY-MM-DD — later than every finished bar. */
+  time: string
+  open: number
+  high: number
+  low: number
+  close: number
+  /** Shares traded so far today; null when unknown (then no volume bar). */
+  volume: number | null
 }
 
 /** What the user is currently looking at, reported after they stop scrolling. */
@@ -64,6 +86,7 @@ export function StockChart({
   candles,
   signals,
   overlays,
+  forming,
   onSpanSettled,
   preserveViewRef,
 }: {
@@ -71,6 +94,11 @@ export function StockChart({
   signals: VsaSignal[]
   /** Extra per-method overlay layers (Minervini, …); VSA uses `signals`. */
   overlays?: MethodOverlay[]
+  /**
+   * Today's still-forming candle, drawn after `candles` (daily charts only —
+   * the page decides). Ignored unless it is later than the newest candle.
+   */
+  forming?: FormingCandle | null
   /**
    * Called once the user stops scrolling/zooming the time scale. Lets the page
    * grow or shrink the loaded time range to match what they scrolled to.
@@ -94,7 +122,6 @@ export function StockChart({
   // because the candles are the same objects, so the rebuild is invisible
   // apart from the colours.
   const palette = useChartPalette()
-  const { bull: BULL, bear: BEAR } = palette
 
   // Keep the latest callback without re-creating the chart when it changes.
   const spanCb = useRef(onSpanSettled)
@@ -138,23 +165,48 @@ export function StockChart({
       height: el.clientHeight,
     })
 
-    // Candlesticks (top pane).
+    // Today's forming candle, when it really is newer than the finished bars.
+    const newest = candles.length > 0 ? candles[candles.length - 1].time : null
+    const formingBar =
+      forming && !intraday && (newest === null || forming.time > newest) ? forming : null
+    const formingColor =
+      formingBar && formingBar.close < formingBar.open ? palette.bear : palette.bull
+
+    // Candlesticks (top pane). Borders in the body colours, so a finished
+    // candle looks exactly as it always did — the border only shows on the
+    // forming candle, which is drawn hollow.
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: BULL,
-      downColor: BEAR,
-      wickUpColor: BULL,
-      wickDownColor: BEAR,
-      borderVisible: false,
+      upColor: palette.bull,
+      downColor: palette.bear,
+      wickUpColor: palette.bull,
+      wickDownColor: palette.bear,
+      borderVisible: true,
+      borderUpColor: palette.bull,
+      borderDownColor: palette.bear,
     })
-    candleSeries.setData(
-      candles.map((c) => ({
+    candleSeries.setData([
+      ...candles.map((c) => ({
         time: toChartTime(c.time),
         open: c.open,
         high: c.high,
         low: c.low,
         close: c.close,
       })),
-    )
+      ...(formingBar
+        ? [
+            {
+              time: toChartTime(formingBar.time),
+              open: formingBar.open,
+              high: formingBar.high,
+              low: formingBar.low,
+              close: formingBar.close,
+              color: 'rgba(0,0,0,0)',
+              borderColor: formingColor,
+              wickColor: formingColor,
+            },
+          ]
+        : []),
+    ])
 
     // Volume histogram pinned to a lower overlay band.
     const volumeSeries = chart.addSeries(HistogramSeries, {
@@ -164,14 +216,24 @@ export function StockChart({
     chart.priceScale('vol').applyOptions({
       scaleMargins: { top: 0.78, bottom: 0 },
     })
-    volumeSeries.setData(
-      candles.map((c) => ({
+    volumeSeries.setData([
+      ...candles.map((c) => ({
         time: toChartTime(c.time),
         value: c.volume,
         color:
           c.close >= c.open ? palette.bullVolume : palette.bearVolume,
       })),
-    )
+      // Grey: only part of a day's volume so far, not to be read like a bar.
+      ...(formingBar && formingBar.volume !== null
+        ? [
+            {
+              time: toChartTime(formingBar.time),
+              value: formingBar.volume,
+              color: palette.formingVolume,
+            },
+          ]
+        : []),
+    ])
 
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
     // Each marker travels next to `sortKey`, the original API date string, so
@@ -188,39 +250,61 @@ export function StockChart({
         marker: {
           time: toChartTime(s.date),
           position: bull ? ('belowBar' as const) : ('aboveBar' as const),
-          color: bull ? BULL : BEAR,
+          color: markerColor(s.type, palette),
           shape: bull ? ('arrowUp' as const) : ('arrowDown' as const),
           text: s.signalName,
         },
       }
     })
 
-    // Other methods' markers — coloured circles so each method reads as its
-    // own layer (bullish below the bar, bearish above), told apart by colour.
-    // A "watch" marker is a pattern the method assessed and refused: a hollow-
-    // looking square in the same colour, muted, below the bar, labelled with
-    // the reason. Different shape, so a refused pattern is never read as an
-    // entry.
+    // Other methods' markers say two things — which method, and good or bad
+    // news — so each is a pair stacked on its bar: a dot in the method's own
+    // colour (the same colour as its chip in the legend), then the label in the
+    // direction colour, green positive / red negative like the VSA arrows. The
+    // label is a size-0 marker, which Lightweight Charts draws as text alone,
+    // in the next stack slot after the dot. Bullish below the bar, bearish
+    // above. A "watch" — a pattern the method assessed and refused — is a
+    // muted square with a grey label: a different shape and no direction
+    // colour, so a refused pattern is never read as an entry.
     const overlayMarkers: SortedMarker[] = (overlays ?? []).flatMap((o) =>
-      o.signals.map((s) => {
+      o.signals.flatMap((s) => {
+        const time = toChartTime(s.date)
+        const position = s.type === 'Bearish' ? ('aboveBar' as const) : ('belowBar' as const)
         const watch = s.type === 'Watch'
-        const bear = s.type === 'Bearish'
-        return {
-          sortKey: s.date,
-          marker: {
-            time: toChartTime(s.date),
-            position: bear ? ('aboveBar' as const) : ('belowBar' as const),
-            color: watch ? muted(o.color) : o.color,
-            shape: watch ? ('square' as const) : ('circle' as const),
-            text: s.label,
+        const dotColor = o.directionalColor
+          ? markerColor(s.type, palette)
+          : watch
+            ? muted(o.color)
+            : o.color
+        return [
+          {
+            sortKey: s.date,
+            marker: {
+              time,
+              position,
+              color: dotColor,
+              shape: watch ? ('square' as const) : ('circle' as const),
+            },
           },
-        }
+          {
+            sortKey: s.date,
+            marker: {
+              time,
+              position,
+              color: markerColor(s.type, palette),
+              shape: 'circle' as const,
+              size: 0,
+              text: s.label,
+            },
+          },
+        ]
       }),
     )
 
     // Lightweight Charts requires markers in ascending time order; merging the
     // VSA + overlay layers interleaves them, so sort the combined set by the
     // API date string, which is chronological as text in both bar formats.
+    // The sort is stable, which keeps each dot directly followed by its label.
     const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers]
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
       .map((m) => m.marker)
@@ -299,7 +383,7 @@ export function StockChart({
       observer.disconnect()
       chart.remove()
     }
-  }, [candles, signals, overlays, preserveViewRef, palette, BULL, BEAR])
+  }, [candles, signals, overlays, forming, preserveViewRef, palette])
 
   return <div ref={containerRef} className="h-full w-full" />
 }

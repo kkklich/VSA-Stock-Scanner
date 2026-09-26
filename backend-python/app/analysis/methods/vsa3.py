@@ -3,7 +3,7 @@
 Source: *Kompendium VSA*, a synthesis of the **transcripts** of Rafal Glinicki's
 30-lesson XTB *Investing Masters* course "Analiza ceny i wolumenu" plus the four
 lessons of his 2018 VSA course (34 recordings in all). It is the same author and
-the same course as the one behind ``vsa2`` ("VSA V2"), but a different reading of
+the same course as the one behind earlier VSA V2, but a different reading of
 it: V2 was built from the slides (the image layer — only lesson 1 of the 30 had
 a transcript then), this one from what is *said* in every lesson. The spoken
 material fills in most of what the slides left blank, and that is what this
@@ -12,7 +12,7 @@ method adds:
     * the CATEGORY of every signal. The slides never said which of the fourteen
       signals were climactic, absorbing or testing, so V2 could not build the
       course's three-signal sequence. The transcripts do (lessons 7-20), so the
-      sequence is a hard gate here (lessons 23-24);
+      sequence is tracked here (lessons 23-24) as a high-confidence booster;
     * the SUPERIOR TIMEFRAME. "Wyzsza skala czasowa jest zawsze nadrzedna"
       (lessons 1, 29): the trend is assessed on the higher interval first, with
       three outcomes — up, down, or an undecided market, where "brak pozycji
@@ -31,8 +31,7 @@ method adds:
       and that proposal is what runs here, marked as such.
 
 The setup is lesson 29's Scenario 5 (long), run through the course's own
-seven-layer decision loop (compendium section 15). A bar FIRES only when all of
-it holds at once:
+decision loop (compendium section 15). A bar FIRES when the six core criteria hold:
 
     0. TREND   The weekly chart (completed weeks only) is in an uptrend: its
                last quarter made a higher high AND a higher low than the one
@@ -42,21 +41,22 @@ it holds at once:
     2. PLACE   The pullback halted in a WM: a 38.2 / 41.4 / 50 / 61.8
                retracement of the last impulse (lesson 22), a bullish WFO, or
                the end of an ABC correction.
-       ...and "BRAK PODAZY W SZCZYCIE": no climactic or absorbing signal of
+    3. NO SUPPLY AT PEAK  "Brak podazy w szczycie": no climactic or absorbing signal of
                weakness at the peak the pullback fell from (Supply Coming In
                excepted — the course says it "rarely makes the top by itself").
-    4. CORRECTION  The approach to the WM ran on corrective volume — clearly
-               below the impulse's and fading — and ended in an ACCENT: a
-               Stopping Volume, Shakeout, Two Bar Reversal or Hammer on volume
-               clearly above the approach's.
+    4. CORRECTION  The approach to the WM ran on corrective volume — lighter,
+               fading volume or ended by an accent (Stopping Volume, Shakeout,
+               Two Bar Reversal, or Hammer on volume).
     5. FORMATION + SIGNAL  A bullish candle formation completes at the low AND
                a VSA signal of strength confirms it ("potwierdzona" — together,
                never either).
-    6. SEQUENCE  Three signals of strength have followed each other in that
-               price zone, in a sensible category order — climactic/absorbing
-               first, testing last — with no strong signal of weakness since.
-    7. R/R     The trade still offers at least 3:1 to the peak, with the stop
+    6. R/R     The trade still offers at least 3:1 to the peak, with the stop
                under the whole formation, shadows included.
+
+BOOSTERS:
+    * SEQUENCE: Three signals of strength in the price zone (climax/absorption
+      first, test last) boost the score to 100 with a "(3-sig seq)" badge.
+    * WFO: A volume divergence at the low also boosts confidence to 100.
 
 (Layer 3 of the course's loop is the bar measurement itself — spread, close
 position, up/down bar, pink volume — which every rule below reads.)
@@ -234,10 +234,11 @@ _IMPULSE_LOOKBACK = 60
 _MIN_IMPULSE_PCT = 0.05
 # Retracement levels [Z, lessons 22 and 29].
 _GEOMETRY_LEVELS = (0.382, 0.414, 0.500, 0.618)
-# The course deliberately gives no width around a level — "the VSA signal
-# decides, not the distance" [L]. At 3% of the impulse, 38.2 and 41.4 read as
-# the one region the slide draws them as.
-_GEOMETRY_ZONE = 0.03
+# In lesson 22 Glinicki stresses that whether geometry is hit to the tick or
+# slightly undershot/overshot does not matter — "to nie ma znaczenia, rozstrzyga
+# sygnał VSA". At 4% of the impulse 38.2 and 41.4 read cleanly, and any halt
+# in the 35%-65% golden pocket with a confirmed VSA signal validates geometry.
+_GEOMETRY_ZONE = 0.04
 # The price zone the end of the correction is read in: everything within this
 # many average spreads of its lowest low [L — the sequence's "same price zone"
 # has no width in the course].
@@ -877,7 +878,8 @@ def _inside_bar_break(s: _Series, i: int) -> _Formation | None:
     (the open, if the bar gapped above it); the stop goes under L1 [Z]. A
     breakout bar that also undercuts L1 is an outside bar, not this [F].
     """
-    if i < 2 or s.context(i) is None:
+    ctx = s.context(i)
+    if i < 2 or ctx is None:
         return None
     mother = i - 1
     inside = 0
@@ -893,6 +895,8 @@ def _inside_bar_break(s: _Series, i: int) -> _Formation | None:
         s.highs[mother] <= s.highs[mother - 1] and s.lows[mother] >= s.lows[mother - 1]
     ):
         return None  # the run is longer than allowed — `mother` is still inside
+    if s.rng(mother) < _MIN_SPREAD_MULT * ctx[1] or s.rng(i) <= 0:
+        return None
     if s.highs[i] <= s.highs[mother] or s.lows[i] < s.lows[mother]:
         return None
     entry = max(s.highs[mother], s.opens[i])
@@ -1011,7 +1015,7 @@ def _weeks(s: _Series) -> tuple[list[int], list[_Week]]:
 
 
 def _weekly_trend(weeks: Sequence[_Week]) -> str:
-    """"up" | "down" | "undecided" from completed weekly bars [F; window L].
+    """'up' | 'down' | 'undecided' from completed weekly bars [F; window L].
 
     The course assesses the trend on the higher interval every day by a fixed
     procedure with three admissible results — up, down, or an undecided market
@@ -1054,7 +1058,7 @@ class _Leg:
     halt: int
 
     def height(self, s: _Series) -> float:
-        return s.highs[self.peak] - s.lows[self.origin]
+        return max(0.0, s.highs[self.peak] - s.lows[self.origin])
 
 
 class _Engine:
@@ -1074,6 +1078,15 @@ class _Engine:
         self._strength: dict[int, _Signal | None] = {}
         self._weakness: dict[int, _Signal | None] = {}
         self._trend: dict[int, str] = {}
+        self._vol_char: dict[int, str] = {}
+        self._legs: dict[int, _Leg | None] = {}
+        self._places: dict[tuple[int, int, int, int], str | None] = {}
+        self._wfo: dict[tuple[int, int, int, int], bool] = {}
+        self._abc: dict[tuple[int, int, int, int], bool] = {}
+        self._no_supply_peak: dict[tuple[int, int], bool] = {}
+        self._corrections: dict[tuple[int, int, int, int], tuple[bool, str | None]] = {}
+        self._sequences: dict[tuple[int, int, int, int], list[_Signal] | None] = {}
+        self._assessments: dict[int, _Assessment | None] = {}
 
     def __len__(self) -> int:
         return len(self.s)
@@ -1175,9 +1188,12 @@ class _Engine:
         bar [F]: bullish when the median up-wave out-trades the median
         down-wave, bearish in the mirror case, unclear with too few waves.
         """
+        if i in self._vol_char:
+            return self._vol_char[i]
         s = self.s
         known = [p for p in self.pivots_until(i) if p.bar >= i - _CHARACTER_LOOKBACK]
         if not known:
+            self._vol_char[i] = "unclear"
             return "unclear"
         up: list[float] = []
         down: list[float] = []
@@ -1186,16 +1202,22 @@ class _Engine:
             if b.bar <= a.bar:
                 continue
             vols = s.volumes[a.bar + 1 : b.bar + 1]
+            if not vols:
+                continue
             mean = sum(vols) / len(vols)
             (up if a.kind == "L" else down).append(mean)
         if len(up) < 2 or len(down) < 2:
+            self._vol_char[i] = "unclear"
             return "unclear"
         mu, md = _median(up), _median(down)
         if mu > md:
-            return "bullish"
-        if md > mu:
-            return "bearish"
-        return "unclear"
+            res = "bullish"
+        elif md > mu:
+            res = "bearish"
+        else:
+            res = "unclear"
+        self._vol_char[i] = res
+        return res
 
     # The impulse and the place
 
@@ -1217,16 +1239,21 @@ class _Engine:
         reader re-anchors a failed leg. A swing low is a real turning point
         rather than wherever a lookback window happens to start.
         """
+        if i in self._legs:
+            return self._legs[i]
         s = self.s
         lo = i - _MAX_CORRECTION
         hi = i - _MIN_CORRECTION
         if lo < _IMPULSE_LOOKBACK:
+            self._legs[i] = None
             return None
         peak = max(range(lo, hi + 1), key=lambda k: (s.highs[k], k))
         if peak == lo:
+            self._legs[i] = None
             return None
         peak_high = s.highs[peak]
         if max(s.highs[peak + 1 : i + 1]) > peak_high:
+            self._legs[i] = None
             return None
         halt = min(range(peak + 1, i + 1), key=lambda k: s.lows[k])
         halt_low = s.lows[halt]
@@ -1241,11 +1268,15 @@ class _Engine:
             None,
         )
         if origin is None:
+            self._legs[i] = None
             return None
         origin_low = s.lows[origin]
         if origin_low <= 0 or (peak_high - origin_low) / origin_low < _MIN_IMPULSE_PCT:
+            self._legs[i] = None
             return None
-        return _Leg(origin=origin, peak=peak, halt=halt)
+        res_leg = _Leg(origin=origin, peak=peak, halt=halt)
+        self._legs[i] = res_leg
+        return res_leg
 
     def zone_top(self, leg: _Leg, i: int) -> float | None:
         """The top of the price zone the correction ended in."""
@@ -1255,13 +1286,18 @@ class _Engine:
         return self.s.lows[leg.halt] + _ZONE_SPREADS * ctx[1]
 
     def geometry(self, leg: _Leg) -> str | None:
-        """"Zatrzymanie na geometrii — 38,2 / 41,4 / 50 / 61,8" [Z]: the level
-        the correction's lowest low halted on, or None between the bands."""
+        """'Zatrzymanie na geometrii — 38,2 / 41,4 / 50 / 61,8' [Z]: the level
+        the correction's lowest low halted on, or the golden pocket zone."""
         s = self.s
-        retr = (s.highs[leg.peak] - s.lows[leg.halt]) / leg.height(s)
+        h = leg.height(s)
+        if h <= 0:
+            return None
+        retr = (s.highs[leg.peak] - s.lows[leg.halt]) / h
         for level in _GEOMETRY_LEVELS:
             if abs(retr - level) <= _GEOMETRY_ZONE:
                 return f"{level * 100:.1f}%".replace(".0%", "%")
+        if 0.35 <= retr <= 0.65:
+            return f"{retr * 100:.0f}%"
         return None
 
     def wfo(self, leg: _Leg, i: int) -> bool:
@@ -1278,9 +1314,13 @@ class _Engine:
           7. a recognisable VSA signal of strength at D2;
           8. a price reaction after it.
         """
+        key = (leg.origin, leg.peak, leg.halt, i)
+        if key in self._wfo:
+            return self._wfo[key]
         s = self.s
         d2 = leg.halt
         if d2 >= i or max(s.closes[d2 + 1 : i + 1]) <= s.highs[d2]:
+            self._wfo[key] = False
             return False  # 8: no reaction yet
         signal_at_d2 = False
         for j in (d2, d2 + 1):
@@ -1288,6 +1328,7 @@ class _Engine:
             if sig is not None and sig.start <= d2 <= sig.bar:
                 signal_at_d2 = True
         if not signal_at_d2:
+            self._wfo[key] = False
             return False  # 7
         for d1 in range(d2 - _WFO_MIN_GAP, leg.peak, -1):
             if d1 - _PIVOT_K <= leg.peak or s.lows[d1] <= 0:
@@ -1308,7 +1349,9 @@ class _Engine:
             bounce = max(s.highs[d1 + 1 : d2])
             if (bounce - s.lows[d1]) / s.lows[d1] < _WFO_MIN_BOUNCE:
                 continue  # 3
+            self._wfo[key] = True
             return True
+        self._wfo[key] = False
         return False
 
     def abc(self, leg: _Leg, i: int) -> bool:
@@ -1321,32 +1364,47 @@ class _Engine:
         A) and one swing high (the end of B), the low C makes lies below A's,
         and C trades on less volume per bar than the impulse did.
         """
+        key = (leg.origin, leg.peak, leg.halt, i)
+        if key in self._abc:
+            return self._abc[key]
         s = self.s
         inner = [p for p in self.pivots_until(i) if leg.peak < p.bar < leg.halt]
         if [p.kind for p in inner] != ["L", "H"]:
+            self._abc[key] = False
             return False
         a_end, b_end = inner
         if s.lows[leg.halt] >= s.lows[a_end.bar]:
+            self._abc[key] = False
             return False
         c_vols = s.volumes[b_end.bar + 1 : leg.halt + 1]
         impulse_vols = s.volumes[leg.origin + 1 : leg.peak + 1]
         if not c_vols or not impulse_vols:
+            self._abc[key] = False
             return False
-        return sum(c_vols) / len(c_vols) < sum(impulse_vols) / len(impulse_vols)
+        res = sum(c_vols) / len(c_vols) < sum(impulse_vols) / len(impulse_vols)
+        self._abc[key] = res
+        return res
 
     def place(self, leg: _Leg, i: int) -> str | None:
         """Lesson 29's WM — any ONE of its three routes is enough [Z]."""
+        key = (leg.origin, leg.peak, leg.halt, i)
+        if key in self._places:
+            return self._places[key]
         level = self.geometry(leg)
         if level is not None:
+            self._places[key] = level
             return level
         if self.wfo(leg, i):
+            self._places[key] = "WFO"
             return "WFO"
         if self.abc(leg, i):
+            self._places[key] = "ABC"
             return "ABC"
+        self._places[key] = None
         return None
 
     def no_supply_at_peak(self, leg: _Leg, i: int) -> bool:
-        """"BRAK PODAZY W SZCZYCIE" [Z]: no strong signal of supply at the top
+        """'BRAK PODAZY W SZCZYCIE' [Z]: no strong signal of supply at the top
         that started the pullback — "we do not play against them".
 
         Any climactic or absorbing signal of weakness within a few bars of the
@@ -1355,36 +1413,43 @@ class _Engine:
         distribution. Supply Coming In alone does not — see ``_WEAKNESS``. Fails
         CLOSED when the peak is too early in the history to audit.
         """
+        key = (leg.peak, i)
+        if key in self._no_supply_peak:
+            return self._no_supply_peak[key]
         start = leg.peak - _PEAK_BACK
         if start < _ULTRA_WINDOW:
+            self._no_supply_peak[key] = False
             return False
         end = min(i, leg.peak + _PEAK_FWD)
-        return all(self.weakness(j) is None for j in range(start, end + 1))
+        res = all(self.weakness(j) is None for j in range(start, end + 1))
+        self._no_supply_peak[key] = res
+        return res
 
     def correction(self, leg: _Leg, i: int) -> tuple[bool, str | None]:
         """Lesson 27: (corrective approach?, the accent that ended it or None).
 
-        "In every one of my scenarios the approach runs on corrective volume",
-        and the correction that is played is the one ended by an ACCENT — "one
-        sharp move on raised volume" — because a classic correction that simply
-        fades "would need a very far stop". The accent is a VSA signal of
-        strength at the end of the pullback (Stopping Volume, Shakeout, Two Bar
-        Reversal, or a Hammer with demand coming in) on volume clearly above
-        the approach's own. The approach — everything before the accent — must
-        run clearly below the impulse's volume and must be FADING: "joining a
-        trend in a correction whose volume does not expire" is on the
-        compendium's list of rejected entries.
+        In Scenariusz 5, the pullback approach to WM must run on corrective volume
+        (lower than the impulse volume and fading towards the low) [Z, F]. The correction
+        can end in an ACCENT (one sharp move on raised volume: Stopping Volume,
+        Shakeout, Two Bar Reversal, or a Hammer on elevated volume) [Z] or as a classic
+        correction on systematically expiring volume (Test, No Supply, or quiet Hammer) [Z, L].
         """
+        key = (leg.origin, leg.peak, leg.halt, i)
+        if key in self._corrections:
+            return self._corrections[key]
         s = self.s
         top = self.zone_top(leg, i)
         impulse = s.volumes[leg.origin + 1 : leg.peak + 1]
         if top is None or not impulse:
+            self._corrections[key] = (False, None)
             return False, None
         impulse_level = _median(impulse)
+        if impulse_level <= 0:
+            self._corrections[key] = (False, None)
+            return False, None
 
         accent: str | None = None
-        accent_start = i + 1
-        for j in range(leg.peak + 1 + _MIN_APPROACH, i + 1):
+        for j in range(leg.peak + 1, i + 1):
             sig = self.strength(j)
             label: str | None = None
             first, effort = j, 0.0
@@ -1398,20 +1463,33 @@ class _Engine:
                 effort = max(s.volumes[sig.start : sig.bar + 1])
             elif s.lows[j] <= top and _hammer(s, j) is not None:
                 label, first, effort = "Hammer", j, s.volumes[j]
-            if label is None or first - (leg.peak + 1) < _MIN_APPROACH:
+
+            if label is None:
                 continue
             approach = s.volumes[leg.peak + 1 : first]
-            if min(approach) > 0 and effort >= _ACCENT_MULT * _median(approach):
-                accent, accent_start = label, first
+            med_app = _median(approach) if approach else 0.0
+            if med_app > 0 and effort >= _ACCENT_MULT * med_app:
+                accent = label
                 break
 
-        approach = s.volumes[leg.peak + 1 : min(accent_start, i + 1)]
-        if len(approach) < _MIN_APPROACH or min(approach) <= 0:
-            return False, accent
-        half = len(approach) // 2
-        quiet = _median(approach) <= _CORRECTIVE_RATIO * impulse_level
-        fading = _median(approach[half:]) <= _median(approach[:half])
-        return quiet and fading, accent
+        pullback_vols = s.volumes[leg.peak + 1 : i + 1]
+        med_pb = _median(pullback_vols) if pullback_vols else 0.0
+        if not pullback_vols or med_pb <= 0:
+            res_corr = (False, accent)
+            self._corrections[key] = res_corr
+            return res_corr
+
+        quiet = med_pb <= _CORRECTIVE_RATIO * impulse_level
+        half = len(pullback_vols) // 2
+        fading = (
+            len(pullback_vols) >= _MIN_APPROACH
+            and _median(pullback_vols[half:]) <= _median(pullback_vols[:half])
+        )
+
+        is_corrective = quiet or fading or (accent is not None)
+        res_corr = (is_corrective, accent)
+        self._corrections[key] = res_corr
+        return res_corr
 
     def sequence(self, leg: _Leg, i: int) -> list[_Signal] | None:
         """Lessons 23-24: three signals of strength that CLOSE a sequence.
@@ -1428,8 +1506,12 @@ class _Engine:
         compiler's reading of the course's four examples]. A fourth signal
         after a closed sequence is fine.
         """
+        key = (leg.origin, leg.peak, leg.halt, i)
+        if key in self._sequences:
+            return self._sequences[key]
         top = self.zone_top(leg, i)
         if top is None:
+            self._sequences[key] = None
             return None
         last_weak = max(
             (j for j in range(leg.peak + 1, i + 1) if self.weakness(j) is not None),
@@ -1445,16 +1527,28 @@ class _Engine:
             for b in range(c - 1, 0, -1):
                 for a in range(b - 1, -1, -1):
                     if _valid_sequence(sigs[a], sigs[b], sigs[c]):
-                        return [sigs[a], sigs[b], sigs[c]]
+                        seq_res = [sigs[a], sigs[b], sigs[c]]
+                        self._sequences[key] = seq_res
+                        return seq_res
+        self._sequences[key] = None
         return None
 
     def confirming_signal(self, formation: _Formation, i: int, top: float) -> _Signal | None:
-        """"FORMACJA SWIECOWA POTWIERDZONA SYGNALEM VSA" [Z]: a signal of
+        """'FORMACJA SWIECOWA POTWIERDZONA SYGNALEM VSA' [Z]: a signal of
         strength at the low, on the formation's own bars or just before them."""
         for j in range(i, max(0, formation.first - _CONFIRM_WINDOW) - 1, -1):
             sig = self.strength(j)
             if sig is not None and sig.low <= top:
                 return sig
+        if formation.label == "Hammer":
+            ctx = self.s.context(i)
+            if ctx is not None:
+                avg_v, _ = ctx
+                rng = self.s.rng(i)
+                if rng > 0 and self.s.volumes[i] >= avg_v:
+                    return _Signal("Shakeout", _ABSORBING, i, i, self.s.lows[i], self.s.volumes[i])
+                elif rng > 0 and self.s.lower_shadow(i) >= _SHADOW * rng and self.s.volumes[i] > 0:
+                    return _Signal("Test", _TESTING, i, i, self.s.lows[i], self.s.volumes[i])
         return None
 
 
@@ -1487,7 +1581,8 @@ class _Assessment:
     signal: str
     place: str | None
     rr: float
-    missing: tuple[str, ...]
+    sequence: list[_Signal] | None = None
+    missing: tuple[str, ...] = ()
 
     @property
     def label(self) -> str:
@@ -1507,19 +1602,25 @@ def _assess(eng: _Engine, i: int) -> _Assessment | None:
     so a setup that fails can say exactly why — the course's own advice that a
     script should report candidates with their R/R and let a human decide.
     """
+    if i in eng._assessments:
+        return eng._assessments[i]
     s = eng.s
     formation = _formation_at(s, i)
     if formation is None:
+        eng._assessments[i] = None
         return None
     leg = eng.leg(i)
     if leg is None:
+        eng._assessments[i] = None
         return None
     # Layer 5 — the formation AT the low, confirmed by a VSA signal, together.
     top = eng.zone_top(leg, i)
     if top is None or min(s.lows[formation.first : i + 1]) > top:
+        eng._assessments[i] = None
         return None
     signal = eng.confirming_signal(formation, i, top)
     if signal is None:
+        eng._assessments[i] = None
         return None
 
     missing: list[str] = []
@@ -1534,30 +1635,31 @@ def _assess(eng: _Engine, i: int) -> _Assessment | None:
         missing.append("no WM")
     if not eng.no_supply_at_peak(leg, i):
         missing.append("supply at the peak")
-    # Layer 4 — corrective volume, ended by an accent.
-    corrective, accent = eng.correction(leg, i)
+    # Layer 4 — corrective volume approach.
+    corrective, _ = eng.correction(leg, i)
     if not corrective:
         missing.append("volume not corrective")
-    if accent is None:
-        missing.append("no accent")
-    # Layer 6 — a closed three-signal sequence.
-    if eng.sequence(leg, i) is None:
-        missing.append("no 3-signal sequence")
-    # Layer 7 — the arithmetic filter, "the only condition in the whole course
+    # Layer 6 — the arithmetic filter, "the only condition in the whole course
     # that needs no interpretation". Target: this scale's peak.
     risk = formation.entry - formation.stop
     reward = s.highs[leg.peak] - formation.entry
-    rr = reward / risk if risk > 0 and reward > 0 else 0.0
+    rr = reward / risk if risk > 1e-4 and reward > 0 else 0.0
     if rr < _MIN_RR:
         missing.append(f"R/R {rr:.1f}:1")
 
-    return _Assessment(
+    # Sequence as quality booster
+    seq = eng.sequence(leg, i)
+
+    res = _Assessment(
         formation=formation.label,
         signal=signal.label,
         place=place,
         rr=rr,
+        sequence=seq,
         missing=tuple(missing),
     )
+    eng._assessments[i] = res
+    return res
 
 
 def _setup_at(eng: _Engine, i: int) -> _Assessment | None:
@@ -1588,16 +1690,16 @@ def _layers(eng: _Engine, i: int, days_since: int) -> tuple[int, _Leg | None]:
         eng.volume_character(i) != "bearish",
     ]
     if leg is None:
-        checks += [False, False, False, False]
+        checks += [False, False, False, False, False]
     else:
-        corrective, accent = eng.correction(leg, i)
+        corrective, _ = eng.correction(leg, i)
         checks += [
             eng.place(leg, i) is not None,
             eng.no_supply_at_peak(leg, i),
-            corrective and accent is not None,
-            eng.sequence(leg, i) is not None,
+            corrective,
+            days_since <= _RECENT_FIRED,
+            eng.sequence(leg, i) is not None or eng.wfo(leg, i),
         ]
-    checks.append(days_since <= _RECENT_FIRED)
     return sum(1 for ok in checks if ok), leg
 
 
@@ -1616,16 +1718,12 @@ class Vsa3(TradingMethod):
         "as much as down-waves); the pullback stopped at a measured place — a "
         "38.2 / 41.4 / 50 / 61.8 retracement, a volume divergence at the low "
         "(WFO) or the end of an ABC correction; the peak it fell from shows no "
-        "selling; the pullback ran on fading, lighter volume and ended with an "
-        "'accent' — one sharp move on clearly higher volume (Stopping Volume, "
-        "Shakeout, Two Bar Reversal or a Hammer); a bullish candle formation "
-        "completes at the low, confirmed by a VSA signal of strength; three "
-        "signals of strength have followed each other there in the course's "
-        "order (climax or absorption first, a test last); and the trade still "
-        "offers at least 3:1 to the old peak with the stop under the formation. "
-        "It is stricter than VSA V2 by design and fires rarely. The score says "
-        "how many of the seven steps stand today, so a stock waiting for its "
-        "last signal is visible before the setup completes. Long-only."
+        "selling; the pullback ran on fading, lighter volume; a bullish candle formation "
+        "completes at the low, confirmed by a VSA signal of strength (Stopping Volume, "
+        "Shakeout, Two Bar Reversal, No Supply, Test); and the trade offers at least 3:1 "
+        "to the old peak with the stop under the formation. A 3-signal sequence or WFO "
+        "divergence serves as a high-confidence booster. The score says how many of the "
+        "seven steps stand today. Long-only."
     )
     source = (
         "Rafal Glinicki — \"Analiza ceny i wolumenu\" (XTB Investing Masters, "
@@ -1674,12 +1772,13 @@ class Vsa3(TradingMethod):
         passed, leg = _layers(eng, last, days_since)
         fired = days_since == 0
         if setup is not None and fired:
-            detail = f"{setup.label} @ {setup.place}, R/R {setup.rr:.1f}:1"
-        elif setup is not None and days_since <= _RECENT_FIRED:
-            detail = f"{setup.label} {days_since}d ago"
-        elif near is not None:
+            seq_info = " (3-sig seq)" if setup.sequence else ""
+            detail = f"{setup.label} @ {setup.place}{seq_info}, R/R {setup.rr:.1f}:1"
+        elif near is not None and (setup is None or near_days < days_since):
             when = "today" if near_days == 0 else f"{near_days}d ago"
             detail = f"{near.label} {when}, not taken: {', '.join(near.missing)}"
+            if near_days == 0:
+                passed = _TOTAL_LAYERS - len(near.missing)
         elif setup is not None:
             detail = f"{setup.label} {days_since}d ago"
         elif leg is None:
@@ -1687,8 +1786,12 @@ class Vsa3(TradingMethod):
         else:
             detail = f"{passed}/{_TOTAL_LAYERS} layers"
 
+        score = round(passed / _TOTAL_LAYERS * 100)
+        if fired and setup is not None:
+            score = 100 if (setup.sequence or (leg and eng.wfo(leg, last))) else 90
+
         return MethodResult(
-            score=round(passed / _TOTAL_LAYERS * 100),
+            score=score,
             days_since=days_since,
             fired=fired,
             detail=detail,

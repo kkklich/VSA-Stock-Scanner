@@ -214,10 +214,13 @@ def _content_length(response: Response) -> int | None:
 def _client_ip(request: Request) -> str | None:
     """The caller's address, honouring the reverse proxy in production.
 
-    In the deployed stack Nginx and the web container sit in front of the API,
-    so ``request.client`` is the proxy. The first entry of X-Forwarded-For is
-    the original client.
+    In the deployed stack the edge Nginx sets X-Real-IP to $remote_addr (which
+    cannot be spoofed by client headers). When present, X-Real-IP is preferred.
+    Otherwise the first entry of X-Forwarded-For or request.client is used.
     """
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()[:64]
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         first = forwarded.split(",")[0].strip()

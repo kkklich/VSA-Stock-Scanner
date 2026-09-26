@@ -143,6 +143,44 @@ def _ai_source(verdict: str, confidence: int) -> _Directional:
     return _Directional(src, lean, _WEIGHT_AI)
 
 
+def _compact_method_detail(detail: str | None) -> str | None:
+    """Shorten multi-clause method details so the summary row fits on one line.
+
+    Full sequence descriptions (e.g. ``"Two Bar Reversal → No Supply confirmed,
+    stop 5.24"``) belong in the hover tooltip; the inline row keeps the primary
+    signal and recency/state.
+    """
+    if not detail:
+        return None
+    pending = "awaiting confirmation" in detail
+    head = detail.split(", ", 1)[0].strip()
+    if head.startswith("Strength: "):
+        head = head[len("Strength: "):]
+    if " → " in head:
+        primary, right = head.split(" → ", 1)
+        if right.endswith(" confirmed"):
+            head = primary
+        elif right.endswith(" pending") or pending:
+            head = f"{primary} (pending)"
+        elif right.endswith("d ago"):
+            parts = right.rsplit(" ", 2)
+            age = " ".join(parts[-2:]) if len(parts) >= 2 else right
+            head = f"{primary} {age}"
+        else:
+            head = primary
+    elif " + " in head:
+        head = head.replace(" (3-sig seq)", "")
+        left, right = head.split(" + ", 1)
+        for marker in (" @ ", " today", " "):
+            if marker in right and (marker != " " or right.endswith("d ago")):
+                suffix = right[right.index(marker):] if marker != " " else " " + " ".join(right.rsplit(" ", 2)[-2:])
+                head = f"{left}{suffix}"
+                break
+        else:
+            head = left
+    return head
+
+
 def _method_source(method: TradingMethod, result: MethodResult) -> _Directional | None:
     """A directional source for one non-VSA trading method, or None if it
     could not be evaluated on this stock (too little history)."""
@@ -172,14 +210,16 @@ def _method_source(method: TradingMethod, result: MethodResult) -> _Directional 
         recency = f"and its setup last fired {result.days_since} day(s) ago"
     else:
         recency = "and its setup is not currently triggering"
+    short_detail = _compact_method_detail(result.detail)
+    full_note = f" ({result.detail})" if result.detail else ""
     src = AnalyticsOpinionSource(
         key=method.id,
         label=method.name,
         kind="direction",
         stance=_stance_from_lean(lean),
-        headline=(f"{result.detail} · {result.score}/100" if result.detail
+        headline=(f"{short_detail} · {result.score}/100" if short_detail
                   else f"{result.score}/100"),
-        detail=f"{method.name} scores {result.score}/100 {recency}.",
+        detail=f"{method.name}{full_note} scores {result.score}/100 {recency}.",
         fired_recently=recent,
     )
     return _Directional(src, lean, _WEIGHT_METHOD)

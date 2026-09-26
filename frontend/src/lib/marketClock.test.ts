@@ -60,4 +60,16 @@ describe('lastSyncLabel', () => {
     // Monday 03:00 Warsaw is still Sunday in New York → Friday's US run.
     expect(lastSyncLabel('us', at('2026-09-14T01:00:00Z'))).toBe('2026-09-11 23:15')
   })
+
+  it('shows the hourly live-price download while it is the newer one', () => {
+    // 14:05 Warsaw: the 14:00 live download beats yesterday's 18:00 run.
+    const now = at('2026-09-16T12:05:00Z')
+    expect(lastSyncLabel('gpw', now, '2026-09-16T12:00:20Z')).toBe('2026-09-16 14:00')
+    // After the evening run the run is newer again.
+    const evening = at('2026-09-16T18:00:00Z')
+    expect(lastSyncLabel('gpw', evening, '2026-09-16T15:00:20Z')).toBe('2026-09-16 18:00')
+    // Nothing usable: the scheduled run, as before.
+    expect(lastSyncLabel('gpw', now, 'nonsense')).toBe('2026-09-15 18:00')
+    expect(lastSyncLabel('gpw', now, null)).toBe('2026-09-15 18:00')
+  })
 })

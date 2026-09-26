@@ -187,16 +187,42 @@ describe('DashboardPage ranking table', () => {
 
     // Default sort is the latest session's price change, descending.
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sortBy: 'priceChangePct',
-      sortDir: 'desc',
+      sort: [{ key: 'priceChangePct', dir: 'desc' }],
     })
 
     await user.click(screen.getByRole('button', { name: 'Sort by Company' }))
 
     // The last render requested a ticker-sorted page (ascending for a label col).
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sortBy: 'ticker',
-      sortDir: 'asc',
+      sort: [{ key: 'ticker', dir: 'asc' }],
+    })
+  })
+
+  // Sorting by one column and then by another: shift-click adds a level
+  // instead of replacing the sort, and a plain click goes back to one column.
+  it('shift-clicking a header adds a second sort level', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<DashboardPage />)
+
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByRole('button', { name: 'Sort by Company' }))
+    await user.keyboard('{/Shift}')
+
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      sort: [
+        { key: 'priceChangePct', dir: 'desc' },
+        { key: 'ticker', dir: 'asc' },
+      ],
+    })
+
+    // The header now says which level it is, and a plain click resets to one.
+    expect(
+      screen.getByRole('button', { name: 'Sort by Company (level 2)' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Company (level 2)' }))
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      sort: [{ key: 'ticker', dir: 'asc' }],
     })
   })
 
@@ -206,22 +232,38 @@ describe('DashboardPage ranking table', () => {
     const user = userEvent.setup()
     renderWithProviders(<DashboardPage />)
 
-    // The trigger names the column currently sorted on.
-    await user.click(screen.getByRole('button', { name: 'Change' }))
-    await user.click(screen.getByRole('menuitemradio', { name: 'Price' }))
+    // The trigger names the column currently sorted on. Tapping a column that
+    // is not sorted on adds it as a "then by" level (the touch equivalent of
+    // shift-click), so the opening sort stays primary.
+    await user.click(screen.getByRole('button', { name: /^Change/ }))
+    await user.click(screen.getByRole('menuitem', { name: /Price/ }))
 
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sortBy: 'lastPrice',
-      sortDir: 'desc',
+      sort: [
+        { key: 'priceChangePct', dir: 'desc' },
+        { key: 'lastPrice', dir: 'desc' },
+      ],
     })
 
-    // Flipping the direction re-requests the same column ascending.
-    await user.click(screen.getByRole('button', { name: 'Price' }))
-    await user.click(screen.getByRole('button', { name: /Ascending/ }))
+    // Flipping that level's direction re-requests it ascending.
+    await user.click(screen.getByRole('button', { name: /^Change/ }))
+    await user.click(screen.getByRole('button', { name: 'Price ascending' }))
 
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sortBy: 'lastPrice',
-      sortDir: 'asc',
+      sort: [
+        { key: 'priceChangePct', dir: 'desc' },
+        { key: 'lastPrice', dir: 'asc' },
+      ],
+    })
+
+    // Setting a direction keeps the panel open (you may want to flip it back),
+    // so the remove button is already on screen.
+    await user.click(
+      screen.getByRole('button', { name: 'Remove Price from the sort' }),
+    )
+
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      sort: [{ key: 'priceChangePct', dir: 'desc' }],
     })
   })
 

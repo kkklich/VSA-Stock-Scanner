@@ -14,6 +14,7 @@ import pytest
 
 from app.analysis.analytics_summary import (
     ENGINE_VERSION,
+    _compact_method_detail,
     _consensus,
     _Directional,
     _join,
@@ -131,6 +132,27 @@ class TestJoin:
         assert _join(["A"]) == "A"
         assert _join(["A", "B"]) == "A and B"
         assert _join(["A", "B", "C"]) == "A, B and C"
+
+
+class TestCompactMethodDetail:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("Two Bar Reversal → No Supply confirmed, stop 5.24", "Two Bar Reversal"),
+            ("Two Bar Reversal → No Supply 3d ago, trade live", "Two Bar Reversal 3d ago"),
+            ("Selling Climax → No Supply, awaiting confirmation", "Selling Climax (pending)"),
+            ("Strength: Two Bar Reversal 12d ago, awaiting a test", "Two Bar Reversal 12d ago"),
+            ("Weakness: Buying Climax → No Demand confirmed", "Weakness: Buying Climax"),
+            ("Bullish Engulfing + No Supply @ 50% (3-sig seq), R/R 6.7:1", "Bullish Engulfing @ 50%"),
+            ("Bullish Engulfing + No Supply today, not taken: R/R 2.1:1", "Bullish Engulfing today"),
+            ("Bullish Engulfing + No Supply 12d ago", "Bullish Engulfing 12d ago"),
+            ("Outside Bar 70d ago", "Outside Bar 70d ago"),
+            ("3/6 below 30w MA", "3/6 below 30w MA"),
+        ],
+    )
+    def test_shortens_long_method_details(self, raw: str, expected: str) -> None:
+        assert _compact_method_detail(raw) == expected
+
 
 
 # ── Integration over the real engines ──────────────────────────────────────

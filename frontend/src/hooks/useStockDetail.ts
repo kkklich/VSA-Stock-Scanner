@@ -10,6 +10,26 @@ import {
   type ChartInterval,
 } from '../api/stocksApi'
 import { settingsQueryValue } from '../lib/vsaSettings'
+import type { Candle } from '../types'
+import { useDataVersion } from './useDataVersion'
+
+/**
+ * The same finished history as before? Then the page keeps the very same
+ * candles array, and the chart holds the reader's zoom instead of re-fitting
+ * each time today's live price moves.
+ */
+function sameHistory(a: Candle[], b: Candle[]): boolean {
+  if (a.length !== b.length) return false
+  if (a.length === 0) return true
+  const [firstA, lastA] = [a[0], a[a.length - 1]]
+  const [firstB, lastB] = [b[0], b[b.length - 1]]
+  return (
+    firstA.time === firstB.time &&
+    lastA.time === lastB.time &&
+    lastA.close === lastB.close &&
+    lastA.volume === lastB.volume
+  )
+}
 
 export interface UseStockDetailResult {
   data: ApiStockSignals | null
@@ -35,6 +55,10 @@ export function useStockDetail(
   const [error, setError] = useState<string | null>(null)
   const [noDataForInterval, setNoDataForInterval] = useState(false)
   const lastTickerRef = useRef<string | null>(null)
+  // Moves when the server's data changes (today's live price, the evening
+  // refresh); the page then reloads quietly — see `quiet` below.
+  const version = useDataVersion()
+  const loaded = useRef<string | null>(null)
 
   useEffect(() => {
     if (!ticker) {
@@ -43,9 +67,16 @@ export function useStockDetail(
     }
 
     let cancelled = false
-    setLoading(true)
-    setError(null)
-    setNoDataForInterval(false)
+    // Same request as the one on screen, re-asked only because the data
+    // changed: no loading state, and a failure keeps the page as it is.
+    const request = `${ticker}|${fromDate ?? ''}|${interval ?? ''}`
+    const quiet = loaded.current === request
+    loaded.current = request
+    if (!quiet) {
+      setLoading(true)
+      setError(null)
+      setNoDataForInterval(false)
+    }
     // Clear the chart only when switching companies; when only the time range
     // changes, keep the current chart on screen while the new one loads.
     if (lastTickerRef.current !== ticker) {
@@ -56,12 +87,16 @@ export function useStockDetail(
     fetchSignals(ticker, fromDate, undefined, settingsQueryValue(), interval)
       .then((result) => {
         if (!cancelled) {
-          setData(result)
+          setData((prev) =>
+            quiet && prev && sameHistory(prev.history, result.history)
+              ? { ...result, history: prev.history }
+              : result,
+          )
           setLoading(false)
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
+        if (!cancelled && !quiet) {
           // A 404 means "this bar size does not exist for this company", which
           // the page presents as information rather than as a failure.
           setNoDataForInterval(err instanceof ApiError && err.status === 404)
@@ -73,7 +108,7 @@ export function useStockDetail(
     return () => {
       cancelled = true
     }
-  }, [ticker, fromDate, interval])
+  }, [ticker, fromDate, interval, version])
 
   return { data, loading, error, noDataForInterval }
 }

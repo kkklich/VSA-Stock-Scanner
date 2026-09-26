@@ -15,6 +15,12 @@ Singletons created once in the app lifespan (``main.py``) and accessed here:
                           the action_logs table.
     ErrorTracker        — grouped, counted errors: every ERROR-level log line
                           in the app, readable at GET /api/admin/errors.
+    UserRepository      — optional accounts; None when no DATABASE_URL is
+                          configured (the sign-in endpoints then answer 503).
+    LivePriceService    — today's prices while an exchange is open, downloaded
+                          hourly; None when not running (no DATABASE_URL, or
+                          STOCKPILOT_LIVE_PRICES_ENABLED=false).
+    LoginThrottle       — in-process count of recent failed sign-ins.
 """
 
 from __future__ import annotations
@@ -27,11 +33,14 @@ from app.config import settings
 from app.db.action_log_repository import ActionLogRepository
 from app.db.health_repository import DataHealthRepository
 from app.db.repository import QuoteRepository
+from app.db.user_repository import UserRepository
 from app.markets import enabled_markets
 from app.services.action_log import ActionLogService
+from app.services.auth import LoginThrottle
 from app.services.cache import TTLCache
 from app.services.error_tracker import ErrorTracker
 from app.services.gpw_company_service import GpwCompanyService
+from app.services.live_prices import LivePriceService
 from app.services.yahoo_finance_client import YahooFinanceClient
 
 _USER_AGENT = (
@@ -108,6 +117,11 @@ error_tracker = ErrorTracker(
     max_groups=settings.error_tracking_max_groups,
 )
 
+# Failed sign-ins, counted per e-mail and per caller IP so a password list
+# cannot be walked through the login endpoint. In-process like every other
+# cache here: the API runs as a single worker.
+login_throttle = LoginThrottle()
+
 # When this process started — the uptime shown on the system-health screen.
 # Module import time is close enough to the start and needs no wiring.
 APP_STARTED_AT = datetime.now(tz=UTC)
@@ -128,6 +142,16 @@ _action_log_repository: ActionLogRepository | None = None
 # Set during lifespan when DATABASE_URL is configured; None otherwise. Used by
 # GET /api/admin/health to report how fresh the stored market data is.
 _data_health_repository: DataHealthRepository | None = None
+
+# Set during lifespan when DATABASE_URL is configured; None otherwise. Without
+# it there is nowhere to keep accounts and /api/auth/* answers 503.
+_user_repository: UserRepository | None = None
+
+# Today's prices while an exchange is open (app/services/live_prices.py). Set
+# during lifespan together with the scheduler that refreshes it — only when a
+# database is configured, like every other automatic job; None otherwise, and
+# the endpoints then serve the finished-session figures alone.
+_live_prices: LivePriceService | None = None
 
 # The APScheduler instance running the nightly refresh, when there is one (it
 # is only started when a database is configured). The health endpoint reads its
@@ -171,6 +195,18 @@ def set_data_health_repository(repo: DataHealthRepository | None) -> None:
     """Install (or clear) the data-health repository. Called by the lifespan."""
     global _data_health_repository
     _data_health_repository = repo
+
+
+def set_user_repository(repo: UserRepository | None) -> None:
+    """Install (or clear) the user repository. Called by the lifespan."""
+    global _user_repository
+    _user_repository = repo
+
+
+def set_live_prices(service: LivePriceService | None) -> None:
+    """Install (or clear) the live-price service. Called by the lifespan."""
+    global _live_prices
+    _live_prices = service
 
 
 def set_scheduler(scheduler) -> None:
@@ -235,6 +271,21 @@ def get_data_health_repository() -> DataHealthRepository | None:
 def get_scheduler():
     """Return the nightly scheduler, or None when it was never started."""
     return _scheduler
+
+
+def get_live_prices() -> LivePriceService | None:
+    """Return the live-price service, or None when it is not running."""
+    return _live_prices
+
+
+def get_user_repository() -> UserRepository | None:
+    """Return the user repository, or None when no DB is configured."""
+    return _user_repository
+
+
+def get_login_throttle() -> LoginThrottle:
+    """Return the process-wide sign-in throttle. Always present."""
+    return login_throttle
 
 
 def get_error_tracker() -> ErrorTracker:

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './i18n'
 import App from './App.tsx'
+import { AuthProvider } from './components/AuthProvider'
 import { initTheme } from './lib/theme'
 
 // Load the saved light/dark choice before the first render. The inline script
@@ -14,7 +15,11 @@ initTheme()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      {/* Who is signed in, for the whole app. Nobody has to be: every page
+          works signed out. */}
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -11,6 +11,7 @@ import { Card, InfoTip, Pagination } from '../components/ui'
 import { ColumnPicker } from '../components/ColumnPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
 import { SessionNote } from '../components/SessionNote'
+import { LiveNote } from '../components/LivePrice'
 import { SortMenu } from '../components/SortMenu'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
@@ -21,8 +22,9 @@ import {
   sortOptionsFrom,
   useRankingColumns,
 } from '../hooks/useRankingColumns'
+import { useTableSort } from '../hooks/useTableSort'
 import { initialSortDir, tableMinWidth } from '../lib/rankingColumns'
-import type { RankingSortKey, SortDir } from '../api/stocksApi'
+import type { RankingSortKey } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
 import { SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
@@ -103,8 +105,10 @@ export function FiltersPage() {
   // Debounced copy — typing in the text/number inputs shouldn't fire a
   // request per keystroke.
   const [applied, setApplied] = useState<ScreenFilters>(EMPTY_FILTERS)
-  const [sortBy, setSortBy] = useState<RankingSortKey>('currentRating')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  // The sort is a list of levels — a shift-click on a second header adds a
+  // tie-break ("sector A→Z, best rating first") — and starts as one column.
+  const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
+    useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir)
   const [page, setPage] = useState(1)
 
   // Saved presets (localStorage) + the "save as…" inline form.
@@ -142,7 +146,7 @@ export function FiltersPage() {
   // Back to page 1 whenever the effective query changes.
   useEffect(() => {
     setPage(1)
-  }, [applied, sortBy, sortDir, marketParam])
+  }, [applied, sortStateKey, marketParam])
 
   const set = <K extends keyof ScreenFilters>(key: K, value: ScreenFilters[K]) => {
     setFilters((f) => ({ ...f, [key]: value }))
@@ -161,8 +165,7 @@ export function FiltersPage() {
     () => ({
       page,
       pageSize: PAGE_SIZE,
-      sortBy,
-      sortDir,
+      sort,
       q: applied.q.trim() || undefined,
       minRating: applied.minRating || undefined,
       maxRating: applied.maxRating < 100 ? applied.maxRating : undefined,
@@ -176,7 +179,7 @@ export function FiltersPage() {
       weeklyConfirms: applied.weeklyConfirms || undefined,
       market: marketParam,
     }),
-    [page, sortBy, sortDir, applied, marketParam],
+    [page, sort, applied, marketParam],
   )
 
   const { data, total, loading, error, refetch } = useRanking(rankingParams, {
@@ -186,23 +189,14 @@ export function FiltersPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const anyActive = filtersActive(filters)
 
-  const onSort = (col: RankingSortKey) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortBy(col)
-      setSortDir(initialSortDir(col))
-    }
-  }
-
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
 
   // Which columns to show — shared with the Dashboard and Watchlist, and used
   // by both the wide table and the card list below `lg`.
   const columns = useRankingColumns()
   const sortOptions = useMemo(
-    () => sortOptionsFrom(columns.renderColumns, sortBy, t),
-    [columns.renderColumns, sortBy, t],
+    () => sortOptionsFrom(columns.renderColumns, sort, t),
+    [columns.renderColumns, sort, t],
   )
 
   const applyPreset = (preset: FilterPreset) => {
@@ -552,16 +546,17 @@ export function FiltersPage() {
         </div>
       ) : (
         <>
-          {/* Results toolbar: column picker, plus a sort menu for the card
-              list below `lg` (which has no headers to tap). */}
+          {/* Results toolbar: column picker plus the sort menu. The menu is
+              shown on every screen — the wide table also sorts by its headers
+              (shift-click adds a further level), but that gesture is
+              invisible, so the menu is the discoverable way in. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <SortMenu
-              className="lg:hidden"
               options={sortOptions}
-              sortBy={sortBy}
-              sortDir={sortDir}
+              sort={sort}
               onSort={onSort}
-              onSortDirChange={setSortDir}
+              onSortDirChange={onSortDirChange}
+              onRemoveLevel={onRemoveLevel}
             />
             <ColumnPicker
               value={columns.stored}
@@ -575,14 +570,14 @@ export function FiltersPage() {
           </div>
 
           <SessionNote rows={rows} enabled={market === ALL_MARKETS} />
+          <LiveNote rows={rows} />
 
           <RankingTable
             columns={columns.renderColumns}
             rows={rows}
             onOpen={openTicker}
             pooled={market === ALL_MARKETS}
-            sortBy={sortBy}
-            sortDir={sortDir}
+            sort={sort}
             onSort={onSort}
             minWidth={tableMinWidth(columns.renderColumns)}
           />

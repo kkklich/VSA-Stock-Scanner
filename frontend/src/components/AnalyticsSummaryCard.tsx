@@ -52,9 +52,9 @@ function SourceRow({ s }: { s: ApiOpinionSource }) {
   const { t } = useTranslation()
   return (
     <li className="flex items-center justify-between gap-2 py-1.5" title={s.detail}>
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="flex shrink-0 items-center gap-2">
         <span className={'h-2 w-2 shrink-0 rounded-full ' + DOT[s.stance]} />
-        <span className="truncate text-xs text-slate-300">{s.label}</span>
+        <span className="whitespace-nowrap text-xs text-slate-300">{s.label}</span>
         {s.firedRecently && (
           <span className="shrink-0 rounded bg-emerald-500/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
             {t('chart.summary.fired')}
@@ -63,7 +63,7 @@ function SourceRow({ s }: { s: ApiOpinionSource }) {
       </span>
       <span
         className={
-          'shrink-0 text-xs tabular-nums ' +
+          'min-w-0 truncate text-right text-xs tabular-nums ' +
           (s.stance === 'unavailable' ? 'text-slate-600' : 'text-slate-400')
         }
       >

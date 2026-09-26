@@ -3,12 +3,28 @@
 // so no absolute URL is needed. In production set VITE_API_URL to the
 // backend origin (e.g. https://api.stockpilot.pl).
 
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../lib/authToken'
+
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+/** Our own options on top of fetch's.
+ *
+ *  `skipAuth` is for the sign-in calls themselves: sending a stale (or
+ *  expired) bearer token to /api/auth/login would be pointless, and sending it
+ *  to /api/auth/refresh would make a 401 there look like an expired session
+ *  rather than a bad refresh token. */
+export interface ApiRequestInit extends RequestInit {
+  skipAuth?: boolean
+}
 
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Stable machine-readable cause, when the endpoint sends one (the
+     *  /api/auth/* endpoints do, so the sign-in screen can show the message in
+     *  the visitor's own language instead of the API's English). */
+    public readonly code?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -40,15 +56,73 @@ function isRetryableRequest(init?: RequestInit): boolean {
   return method === 'GET' || method === 'HEAD'
 }
 
+/** The signed-in visitor's bearer token, when there is one. */
+function authHeaders(init?: ApiRequestInit): Record<string, string> {
+  if (init?.skipAuth) return {}
+  const token = getAccessToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+/** In-flight refresh, shared by every request that hits a 401 at once.
+ *
+ *  Without this, a page that fires six requests on load would send six refresh
+ *  calls the moment the access token expires — and five of them would race to
+ *  overwrite the stored tokens. */
+let refreshInFlight: Promise<boolean> | null = null
+
+/** Exchange the refresh token for a new access token. True when it worked.
+ *
+ *  Done with a plain fetch rather than through `apiFetch` on purpose: this
+ *  module is what `authApi` is built on, so calling back into it would be a
+ *  circular import — and a refresh must never itself try to refresh. */
+async function refreshAccessToken(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        })
+        if (!response.ok) {
+          // The refresh token is expired or was invalidated by a password
+          // change: this session is genuinely over.
+          if (response.status === 401 || response.status === 403) clearTokens()
+          return false
+        }
+        const body = (await response.json()) as {
+          accessToken?: string
+          refreshToken?: string
+        }
+        if (!body.accessToken) return false
+        setTokens(body.accessToken, body.refreshToken)
+        return true
+      } catch {
+        // Network failure — keep the tokens; the next attempt may succeed.
+        return false
+      } finally {
+        refreshInFlight = null
+      }
+    })()
+  }
+  return refreshInFlight
+}
+
 async function requestOnce<T>(
   path: string,
-  init?: RequestInit,
+  init?: ApiRequestInit,
 ): Promise<{ data: T; headers: Headers }> {
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(init),
+        ...init?.headers,
+      },
     })
   } catch (err) {
     // fetch() rejects (TypeError "Failed to fetch") when no server answered.
@@ -64,13 +138,24 @@ async function requestOnce<T>(
 
   if (!response.ok) {
     let message = `HTTP ${response.status}`
+    let code: string | undefined
     try {
       const body = await response.json()
-      message = body?.detail ?? body?.message ?? message
+      const detail = body?.detail
+      if (detail && typeof detail === 'object') {
+        // FastAPI allows a structured `detail`. The sign-in endpoints use
+        // { code, message }; /health uses { status, db }. Taking `message`
+        // when there is one keeps a rendered error from becoming
+        // "[object Object]".
+        code = typeof detail.code === 'string' ? detail.code : undefined
+        message = detail.message ?? body?.message ?? message
+      } else {
+        message = detail ?? body?.message ?? message
+      }
     } catch {
       // non-JSON error body — keep the default
     }
-    throw new ApiError(response.status, message)
+    throw new ApiError(response.status, message, code)
   }
 
   const data = (await response.json()) as T
@@ -86,15 +171,30 @@ async function requestOnce<T>(
  *  would otherwise have to reload by hand. */
 export async function apiFetchWithHeaders<T>(
   path: string,
-  init?: RequestInit,
+  init?: ApiRequestInit,
 ): Promise<{ data: T; headers: Headers }> {
   const retryable = isRetryableRequest(init)
+  // One silent re-authentication per request: the access token lives 30
+  // minutes, so an open tab WILL meet an expired one. Refreshing and replaying
+  // the call is what keeps "stay signed in" from meaning "be logged out
+  // mid-click". Only once — if the replay is refused too, the session is over
+  // and the error belongs to the caller.
+  let mayRefresh = !init?.skipAuth && Boolean(getAccessToken())
 
   for (let attempt = 0; ; attempt++) {
     try {
       return await requestOnce<T>(path, init)
     } catch (err) {
       const isApiError = err instanceof ApiError
+
+      if (isApiError && err.status === 401 && mayRefresh) {
+        mayRefresh = false
+        if (await refreshAccessToken()) {
+          attempt -= 1 // the refresh is not one of the backoff attempts
+          continue
+        }
+      }
+
       const canRetry =
         retryable &&
         attempt < RETRY_DELAYS_MS.length &&
@@ -112,7 +212,7 @@ export async function apiFetchWithHeaders<T>(
   }
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const { data } = await apiFetchWithHeaders<T>(path, init)
   return data
 }

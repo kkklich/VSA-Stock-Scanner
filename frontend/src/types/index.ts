@@ -160,3 +160,58 @@ export interface EffectivenessRow {
   /** Historical sample size the stats are computed from. */
   trades: number
 }
+
+/** One reported trade in a company's shares by an insider (MAR Art. 19 / Form 4). */
+export interface InsiderTransactionItem {
+  id: number | null
+  tradeDate: string | null
+  publicationDate: string
+  insiderName: string | null
+  role: string | null
+  transactionType: 'buy' | 'sell' | 'grant' | 'option' | 'gift' | 'buyback' | 'other' | string
+  isOpenMarket: boolean
+  shares: number | null
+  price: number | null
+  currency: string | null
+  value: number | null
+  source: string
+  sourceUrl: string | null
+  notes: string | null
+}
+
+/** Daily aggregated insider marker plotted on the candlestick chart. */
+export interface InsiderChartMarker {
+  date: string
+  type: 'Bullish' | 'Bearish' | 'Watch'
+  label: string
+  shares: number | null
+  value: number | null
+  currency: string | null
+  transactionCount: number
+  roles: string[]
+}
+
+/** Aggregate statistics for a stock's insider trading activity. */
+export interface InsiderSummary {
+  totalPurchasesCount: number
+  totalSalesCount: number
+  totalPurchasesShares: number
+  totalSalesShares: number
+  totalPurchasesValue: number
+  totalSalesValue: number
+  netShares: number
+  netValue: number
+  currency: string | null
+}
+
+/** Response payload for GET /api/stocks/{ticker}/insider-transactions. */
+export interface InsiderTransactionsResponse {
+  ticker: string
+  name: string | null
+  market: string | null
+  currency: string | null
+  summary: InsiderSummary
+  transactions: InsiderTransactionItem[]
+  chartMarkers: InsiderChartMarker[]
+}
+

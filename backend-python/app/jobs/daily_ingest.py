@@ -34,6 +34,8 @@ from app.markets import MARKETS, RefreshRun, get_market, market_of
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.exceptions import StooqAccessError
+from app.services.live_prices import JOB_ID as LIVE_JOB_ID
+from app.services.live_prices import LivePriceService, cron_minutes
 from app.services.market_cache import invalidate_markets
 from app.services.stooq_client import StooqClient
 from app.services.yahoo_finance_client import YahooFinanceClient
@@ -623,18 +625,76 @@ class IngestService:
                 # Capital expenditure (the /capex screen). Older data sources
                 # (StooqClient) have no cash-flow support at all, so the call
                 # is optional rather than assumed.
-                if not hasattr(self._stooq, "get_cashflow_periods"):
-                    return
-                try:
-                    periods = await self._stooq.get_cashflow_periods(company.ticker)
-                    if periods:
-                        await self._repo.upsert_cashflow(company.ticker, periods)
-                except Exception:
-                    logger.debug(
-                        "Could not update cash-flow data for %s.", company.ticker
-                    )
+                if hasattr(self._stooq, "get_cashflow_periods"):
+                    try:
+                        periods = await self._stooq.get_cashflow_periods(company.ticker)
+                        if periods:
+                            await self._repo.upsert_cashflow(company.ticker, periods)
+                    except Exception:
+                        logger.debug(
+                            "Could not update cash-flow data for %s.", company.ticker
+                        )
+
+                # Insider transactions (Yahoo Finance for US/UK, GPW ESPI for Poland).
+                await self._fetch_company_insiders(company)
 
         await asyncio.gather(*(fetch_one(c) for c in companies))
+
+    async def _fetch_company_insiders(self, company: GpwCompany) -> int:
+        """Fetch and persist insider transactions for one company; returns rows fetched."""
+        if not hasattr(self._repo, "upsert_insider_transactions"):
+            return 0
+        try:
+            mkt = market_of(company.ticker)
+            if mkt.id == "gpw":
+                from app.services.espi_client import EspiClient
+
+                espi_items = await EspiClient().get_company_insider_transactions(
+                    company_name=company.name or company.ticker,
+                    ticker=company.ticker,
+                )
+                if espi_items:
+                    await self._repo.upsert_insider_transactions(
+                        company.ticker, espi_items
+                    )
+                    return len(espi_items)
+            elif hasattr(self._stooq, "get_insider_transactions"):
+                yf_items = await self._stooq.get_insider_transactions(company.ticker)
+                if yf_items:
+                    await self._repo.upsert_insider_transactions(
+                        company.ticker, yf_items
+                    )
+                    return len(yf_items)
+        except Exception:
+            logger.debug(
+                "Could not update insider transactions for %s.",
+                company.ticker,
+            )
+        return 0
+
+    async def run_insider_refresh(self) -> dict[str, int]:
+        """Daily 12:00 job: download insider transactions for all tracked companies."""
+        semaphore = asyncio.Semaphore(self._max_concurrent)
+        companies_checked = 0
+        rows_fetched = 0
+
+        async def _one(company: GpwCompany) -> None:
+            nonlocal companies_checked, rows_fetched
+            async with semaphore:
+                count = await self._fetch_company_insiders(company)
+                companies_checked += 1
+                rows_fetched += count
+
+        await asyncio.gather(*(_one(c) for c in self._companies))
+        self._history_cache.invalidate(
+            lambda k: k.startswith("insider-checked:") or k.startswith("insider-miss:")
+        )
+        logger.info(
+            "Daily 12:00 insider refresh finished: %d companies checked, %d transactions persisted.",
+            companies_checked,
+            rows_fetched,
+        )
+        return {"companies": companies_checked, "transactions": rows_fetched}
 
     async def bootstrap_plan(self, now: datetime | None = None) -> BootstrapPlan:
         """Which markets need downloading at startup, and how much.
@@ -674,19 +734,41 @@ class IngestService:
         return (await self.bootstrap_plan()).needed
 
 
+INSIDER_JOB_ID = "insider_refresh"
+INSIDER_REFRESH_HOUR = 12
+INSIDER_REFRESH_MINUTE = 0
+
+
 def build_scheduler(
     refresh_service,  # RefreshService (duck-typed to avoid a circular import)
     hour: int = 18,
     minute: int = 0,
     runs: Sequence[RefreshRun] | None = None,
+    live: LivePriceService | None = None,
+    live_interval_minutes: int = 60,
+    insider_hour: int = INSIDER_REFRESH_HOUR,
+    insider_minute: int = INSIDER_REFRESH_MINUTE,
 ) -> AsyncIOScheduler:
-    """Create (but don't start) the nightly refresh scheduler.
+    """Create (but don't start) the refresh scheduler.
 
-    One job per run (``app.markets.refresh_runs``), each firing the *daily*
-    refresh pipeline (incremental Yahoo ingest → ranking recompute → rating
-    snapshots) for its own markets, on its own clock. Without ``runs`` there is
-    the single original job at ``hour:minute`` Warsaw time covering every
-    market. The start-up download is handled separately in the app lifespan.
+    One job per nightly run (``app.markets.refresh_runs``), each firing the
+    *daily* refresh pipeline (incremental Yahoo ingest → ranking recompute →
+    rating snapshots) for its own markets, on its own clock. Without ``runs``
+    there is the single original job at ``hour:minute`` Warsaw time covering
+    every market. The start-up download is handled separately in the app
+    lifespan.
+
+    In addition, schedules a daily 12:00 (Europe/Warsaw) insider-transactions
+    refresh job (`insider_refresh`) when `refresh_service` provides
+    `run_insider_refresh`.
+
+    With ``live``, one more job downloads today's live prices every
+    ``live_interval_minutes`` on the clock (hourly: at every full hour). It
+    fires around the clock and every weekday alike; each run itself picks the
+    markets trading at that moment, so the schedule never has to know the
+    opening hours, the time zones or daylight saving. Fired on UTC minutes,
+    which are the same minutes on every tracked exchange's clock (all sit a
+    whole number of hours from UTC).
     """
     if runs is None:
         runs = [RefreshRun("europe", hour, minute, "Europe/Warsaw", ())]
@@ -704,5 +786,33 @@ def build_scheduler(
             replace_existing=True,
             # If the server was down at trigger time, run the missed job within 1 h.
             misfire_grace_time=3_600,
+        )
+    if hasattr(refresh_service, "run_insider_refresh"):
+        scheduler.add_job(
+            refresh_service.run_insider_refresh,
+            trigger=CronTrigger(
+                hour=insider_hour,
+                minute=insider_minute,
+                timezone="Europe/Warsaw",
+            ),
+            id=INSIDER_JOB_ID,
+            name="Daily 12:00 insider transactions refresh (ESPI MAR Art. 19 + Yahoo Finance)",
+            replace_existing=True,
+            misfire_grace_time=3_600,
+            coalesce=True,
+            max_instances=1,
+        )
+    if live is not None:
+        scheduler.add_job(
+            live.run_scheduled,
+            trigger=CronTrigger(minute=cron_minutes(live_interval_minutes), timezone="UTC"),
+            id=LIVE_JOB_ID,
+            name="Live prices for the markets trading right now",
+            replace_existing=True,
+            # A run missed by more than a few minutes is not worth catching up:
+            # the next one is due within the hour and reads the same session.
+            misfire_grace_time=5 * 60,
+            coalesce=True,
+            max_instances=1,
         )
     return scheduler

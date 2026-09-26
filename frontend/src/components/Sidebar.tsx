@@ -10,6 +10,7 @@ import {
   Filter,
   LayoutDashboard,
   LayoutGrid,
+  Library,
   LineChart,
   Settings,
   Star,
@@ -157,6 +158,14 @@ export function Sidebar({
           >
             <BookOpen size={18} />
             {t('nav.help')}
+          </Link>
+          <Link
+            to="/vsa-kompendium"
+            onClick={onClose}
+            className={linkClass(pathname.startsWith('/vsa-kompendium'))}
+          >
+            <Library size={18} />
+            {t('nav.vsaKompendium')}
           </Link>
           <Link
             to="/settings"

@@ -20,7 +20,9 @@ import { FiltersPage } from './pages/FiltersPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SystemPage } from './pages/SystemPage'
 import { HelpPage } from './pages/HelpPage'
+import { VsaKompendiumPage } from './pages/VsaKompendiumPage'
 import { LegalPage } from './pages/LegalPage'
+import { LoginPage } from './pages/LoginPage'
 import { usePageSeo } from './lib/seo'
 
 /** Translation key (under `pageTitles`) for the top-bar title of the current path. */
@@ -36,7 +38,9 @@ function titleKeyForPath(pathname: string): string {
   if (pathname.startsWith('/settings')) return 'pageTitles.settings'
   if (pathname.startsWith('/system')) return 'pageTitles.system'
   if (pathname.startsWith('/help')) return 'pageTitles.help'
+  if (pathname.startsWith('/vsa-kompendium')) return 'pageTitles.vsaKompendium'
   if (pathname.startsWith('/legal')) return 'pageTitles.legal'
+  if (pathname.startsWith('/login')) return 'pageTitles.login'
   return 'pageTitles.app'
 }
 
@@ -86,7 +90,11 @@ export default function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="system" element={<SystemPage />} />
         <Route path="help" element={<HelpPage />} />
+        <Route path="vsa-kompendium" element={<VsaKompendiumPage />} />
         <Route path="legal" element={<LegalPage />} />
+        {/* Sign in / create an account. Optional: every other page works
+            signed out, so this is a normal page, not a gate. */}
+        <Route path="login" element={<LoginPage />} />
         {/* Unknown paths fall back to the home page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

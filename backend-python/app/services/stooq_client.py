@@ -29,7 +29,8 @@ from app.services.exceptions import StooqAccessError
 logger = logging.getLogger(__name__)
 
 # Safety cap on proof-of-work iterations (difficulty 4 averages ~65k).
-_MAX_PROOF_OF_WORK_ITERATIONS = 100_000_000
+_MAX_PROOF_OF_WORK_ITERATIONS = 2_000_000
+_MAX_ALLOWED_DIFFICULTY = 5
 
 # Markers that indicate stooq.pl refused the request rather than returning CSV data.
 _DENIAL_MARKERS = (
@@ -88,6 +89,10 @@ class StooqClient:
 
             c = challenge.group("c")
             difficulty = int(challenge.group("d"))
+            if difficulty > _MAX_ALLOWED_DIFFICULTY:
+                raise StooqAccessError(
+                    f"stooq.pl anti-bot challenge difficulty too high ({difficulty})."
+                )
             # Offload CPU-bound POW to a thread so the event loop stays free.
             n = await asyncio.to_thread(_solve_proof_of_work, c, difficulty)
 

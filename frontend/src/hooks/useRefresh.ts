@@ -16,6 +16,7 @@ import {
   triggerRefresh,
   type ApiRefreshStatus,
 } from '../api/stocksApi'
+import { noteRefreshStatus } from './useDataVersion'
 
 const POLL_INTERVAL_MS = 2_500
 
@@ -56,6 +57,9 @@ export function useRefresh(onDone?: () => void): UseRefreshResult {
         const s = await fetchRefreshStatus()
         if (!mountedRef.current) return
         setStatus(s)
+        // This hook reloads the page itself when the run ends (`onDone`), so
+        // the app-wide data watcher must not reload it a second time.
+        noteRefreshStatus(s, { bump: false })
         if (s.state === 'running') {
           poll()
         } else {
@@ -78,6 +82,7 @@ export function useRefresh(onDone?: () => void): UseRefreshResult {
       .then((s) => {
         if (!mountedRef.current) return
         setStatus(s)
+        noteRefreshStatus(s, { bump: false })
         if (s.state === 'running') {
           setRefreshing(true)
           poll()

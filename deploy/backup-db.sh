@@ -29,11 +29,13 @@ DB_USER="${POSTGRES_USER:-stockpilot}"
 DB_NAME="${POSTGRES_DB:-stockpilot}"
 
 mkdir -p backups
+chmod 0700 backups
 OUT="backups/stockpilot-$(date +%F).sql.gz"
 
 echo "Dumping database '$DB_NAME' → $OUT"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
   pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$OUT"
+chmod 0600 "$OUT"
 
 echo "Wrote $(du -h "$OUT" | cut -f1)"
 

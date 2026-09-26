@@ -58,8 +58,7 @@ describe('foreign stocks', () => {
           makeRow(),
         ]}
         onOpen={() => {}}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={() => {}}
         minWidth={900}
       />,
@@ -84,8 +83,7 @@ describe('RankingTable', () => {
         columns={columns}
         rows={[makeRow(), makeRow({ ticker: 'PKN', name: 'Orlen' })]}
         onOpen={() => {}}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={() => {}}
         minWidth={900}
       />,
@@ -102,8 +100,7 @@ describe('RankingTable', () => {
         columns={columnsFor({ signal: false })}
         rows={[makeRow()]}
         onOpen={() => {}}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={() => {}}
         minWidth={900}
       />,
@@ -117,8 +114,7 @@ describe('RankingTable', () => {
         columns={columnsFor({ sector: true })}
         rows={[makeRow()]}
         onOpen={() => {}}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={() => {}}
         minWidth={900}
       />,
@@ -134,14 +130,14 @@ describe('RankingTable', () => {
         columns={columnsFor({ volume: true })}
         rows={[makeRow()]}
         onOpen={() => {}}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={onSort}
         minWidth={900}
       />,
     )
     await user.click(screen.getByRole('button', { name: /Sort by Volume/i }))
-    expect(onSort).toHaveBeenCalledWith('volume')
+    // Second argument: the shift-click flag ("add a further sort level").
+    expect(onSort).toHaveBeenCalledWith('volume', false)
   })
 
   it('opens the row on click', async () => {
@@ -152,8 +148,7 @@ describe('RankingTable', () => {
         columns={columnsFor()}
         rows={[makeRow()]}
         onOpen={onOpen}
-        sortBy="currentRating"
-        sortDir="desc"
+        sort={[{ key: 'currentRating', dir: 'desc' }]}
         onSort={() => {}}
         minWidth={900}
       />,

@@ -9,6 +9,12 @@ import {
   type RankingQuery,
 } from '../api/stocksApi'
 import { settingsQueryValue } from '../lib/vsaSettings'
+import { useDataVersion } from './useDataVersion'
+
+/** The ranking endpoint's own page size when a query names none. */
+const DEFAULT_PAGE_SIZE = 50
+/** The most rows one ranking request may ask for. */
+const MAX_PAGE_SIZE = 500
 
 export interface UseRankingResult {
   data: ApiRankingItem[] | null
@@ -37,6 +43,12 @@ export function useRanking(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
+  // Moves when the server's data changes (hourly live prices, the evening
+  // refresh) — the page then reloads what it shows without being asked.
+  const version = useDataVersion()
+  // What the last load asked for. When only `version` moved since, the reload
+  // is quiet: no loading state, and a failure keeps what is on screen.
+  const loaded = useRef<{ key: string; tick: number } | null>(null)
 
   // Serialise the params so the effect only re-runs when a value actually
   // changes (a fresh object literal every render would otherwise loop).
@@ -45,8 +57,12 @@ export function useRanking(
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    const quiet = loaded.current?.key === key && loaded.current.tick === tick
+    loaded.current = { key, tick }
+    if (!quiet) {
+      setLoading(true)
+      setError(null)
+    }
 
     const query: RankingQuery = { ...params, settings: settingsQueryValue() }
     fetchRanking(query)
@@ -58,7 +74,7 @@ export function useRanking(
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
+        if (!cancelled && !quiet) {
           setError(err instanceof Error ? err.message : 'Unknown error')
           setLoading(false)
         }
@@ -68,7 +84,7 @@ export function useRanking(
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, tick, enabled])
+  }, [key, tick, enabled, version])
 
   return { data, total, loading, error, refetch: () => setTick((t) => t + 1) }
 }
@@ -165,6 +181,46 @@ export function useInfiniteRanking(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, page, tick, enabled])
+
+  // The data changed on the server (an hourly live-price run, the evening
+  // refresh): reload every row already on screen in ONE request and keep the
+  // list as long as it is — going back to the first page would throw away the
+  // reader's place. Skipped while a page is loading (that load is fresh anyway)
+  // and past the endpoint's 500-row cap, where the Refresh button remains.
+  const version = useDataVersion()
+  const seenVersion = useRef(version)
+  const latest = useRef({ key, params, page, items })
+  latest.current = { key, params, page, items }
+
+  useEffect(() => {
+    if (version === seenVersion.current) return
+    seenVersion.current = version
+    const current = latest.current
+    if (!enabled || current.items === null || inFlight.current) return
+    const rows = current.page * (current.params.pageSize ?? DEFAULT_PAGE_SIZE)
+    if (rows > MAX_PAGE_SIZE) return
+    let cancelled = false
+    fetchRanking({
+      ...current.params,
+      page: 1,
+      pageSize: rows,
+      settings: settingsQueryValue(),
+    })
+      .then(({ items: fresh, total: t }) => {
+        // Drop the answer if the query changed or another page was appended
+        // meanwhile: it would no longer line up with what is on screen.
+        const now = latest.current
+        if (cancelled || now.key !== current.key || now.page !== current.page) return
+        setItems(fresh)
+        setTotal(t)
+      })
+      .catch(() => {
+        // Quiet: a failed reload keeps what is on screen.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [version, enabled])
 
   const loadMore = useCallback(() => {
     if (inFlight.current) return

@@ -25,6 +25,8 @@ import { useSingleMarket } from '../hooks/useMarkets'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { useCapex } from '../hooks/useCapex'
 import { useCompanies } from '../hooks/useCompanies'
+import { SortMenu, type SortOption } from '../components/SortMenu'
+import { useTableSort } from '../hooks/useTableSort'
 import type { ApiCapexItem, CapexSortKey, SortDir } from '../api/stocksApi'
 import { deltaTone, fmtCompactPln, fmtPct, majorCurrency } from '../lib/format'
 
@@ -32,6 +34,20 @@ const PAGE_SIZE = 25
 
 /** Columns that read naturally A→Z on the first click. */
 const TEXT_COLUMNS: CapexSortKey[] = ['ticker', 'name', 'sector']
+
+const initialSortDir = (col: CapexSortKey): SortDir =>
+  TEXT_COLUMNS.includes(col) ? 'asc' : 'desc'
+
+/** The sortable columns, labelled as their table headers are. */
+const SORT_OPTIONS: SortOption<CapexSortKey>[] = [
+  { key: 'ticker', label: 'Company' },
+  { key: 'sector', label: 'Sector' },
+  { key: 'capex', label: 'Invested' },
+  { key: 'capexGrowthYoyPct', label: 'vs last year' },
+  { key: 'capexToRevenuePct', label: '% of revenue' },
+  { key: 'capexToOcfPct', label: '% of cash flow' },
+  { key: 'operatingCashFlow', label: 'Cash flow' },
+]
 
 /** Money in the statement's own currency — never assume PLN. */
 function fmtMoney(value: number | null, currency: string | null): string {
@@ -72,9 +88,15 @@ export function CapexPage() {
   // market's own; 'all' lifts the filter.
   const [currency, setCurrency] = useState<'market' | 'all'>('market')
   const [withData, setWithData] = useState(true)
-  const [sortBy, setSortBy] = useState<CapexSortKey>('capex')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
+  // Changing the ordering starts a fresh list: the pages accumulate, so page 2
+  // of the old order can't be appended under the new one.
+  const backToFirstPage = useCallback(() => setPage(1), [])
+  const { sort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<CapexSortKey>(
+    { key: 'capex', dir: 'desc' },
+    initialSortDir,
+    backToFirstPage,
+  )
 
   // Debounce the search box so typing doesn't fire a request per keystroke.
   useEffect(() => {
@@ -100,8 +122,7 @@ export function CapexPage() {
     withData,
     page,
     pageSize: PAGE_SIZE,
-    sortBy,
-    sortDir,
+    sort,
   }, { enabled: market !== null })
 
   // A different market is a different list — start again from its first page.
@@ -131,16 +152,6 @@ export function CapexPage() {
     io.observe(el)
     return () => io.disconnect()
   }, [loadMore])
-
-  const onSort = (col: CapexSortKey) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortBy(col)
-      setSortDir(TEXT_COLUMNS.includes(col) ? 'asc' : 'desc')
-    }
-    setPage(1)
-  }
 
   const noDataAtAll = meta !== null && meta.withDataCount === 0
 
@@ -266,6 +277,19 @@ export function CapexPage() {
         </div>
       ) : (
         <>
+          {/* Sort. Shown on every screen: the wide table also sorts by its
+              column headers (shift-click there adds a further level), but that
+              gesture is invisible — this names the levels outright. */}
+          <div className="flex justify-end">
+            <SortMenu
+              options={SORT_OPTIONS}
+              sort={sort}
+              onSort={onSort}
+              onSortDirChange={onSortDirChange}
+              onRemoveLevel={onRemoveLevel}
+            />
+          </div>
+
           {/* ── Desktop table (lg+) ─────────────────────────────────────────
               min-width (not an overflow wrapper) so the sticky header can pin to
               the page as you scroll; the table stays inside the card and the
@@ -279,23 +303,20 @@ export function CapexPage() {
                   <SortHeader
                     label="Company"
                     col="ticker"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                   />
                   <SortHeader
                     label="Sector"
                     col="sector"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     className="hidden lg:table-cell"
                   />
                   <SortHeader
                     label="Invested"
                     col="capex"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Money spent on property, plant, equipment and software over the last four reported quarters (or the latest full year when quarterly data is missing — marked FY). Shown in the company's own reporting currency, which is not always PLN."
@@ -304,8 +325,7 @@ export function CapexPage() {
                   <SortHeader
                     label="vs last year"
                     col="capexGrowthYoyPct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Change in yearly investment: the latest full year against the year before it. Rising capex usually means expansion, falling capex belt-tightening — neither is automatically good or bad."
@@ -314,8 +334,7 @@ export function CapexPage() {
                   <SortHeader
                     label="% of revenue"
                     col="capexToRevenuePct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Capex as a share of revenue — capital intensity. This is the fair way to compare a small heavy investor with a large light one. Heavy industry and utilities run high; software and retail run low."
@@ -324,8 +343,7 @@ export function CapexPage() {
                   <SortHeader
                     label="% of cash flow"
                     col="capexToOcfPct"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Capex as a share of the cash the business itself generated. Above 100% the company is investing more than it earned in cash, so the difference comes from reserves or debt."
@@ -334,8 +352,7 @@ export function CapexPage() {
                   <SortHeader
                     label="Cash flow"
                     col="operatingCashFlow"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
+                    sort={sort}
                     onSort={onSort}
                     align="right"
                     info="Operating cash flow over the same period: the cash the business generated before investing."

@@ -22,11 +22,7 @@ import {
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useMarkets, useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
-import {
-  fetchRanking,
-  type RankingSortKey,
-  type SortDir,
-} from '../api/stocksApi'
+import { fetchRanking, type RankingSortKey } from '../api/stocksApi'
 import type { SignalVerdict, StockRankingItem } from '../types'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
 import { settingsQueryValue } from '../lib/vsaSettings'
@@ -36,9 +32,11 @@ import { RefreshButton } from '../components/RefreshButton'
 import { ColumnPicker } from '../components/ColumnPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
 import { SessionNote } from '../components/SessionNote'
+import { LiveNote } from '../components/LivePrice'
 import { SortMenu } from '../components/SortMenu'
 import { useDropdownPosition } from '../hooks/useDropdownPosition'
 import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
+import { useTableSort } from '../hooks/useTableSort'
 import { initialSortDir, tableMinWidth } from '../lib/rankingColumns'
 
 /** Full-page loading skeleton for the ranking table. */
@@ -92,9 +90,12 @@ export function WatchlistPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [exporting, setExporting] = useState(false)
 
-  // Sort state — every column header drives these, sent to the backend.
-  const [sortBy, setSortBy] = useState<RankingSortKey>('currentRating')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  // Sort state — every column header drives it, sent to the backend. It is a
+  // list of levels: shift-clicking a second header adds a tie-break inside the
+  // first column's order (see `lib/sorting.ts`). Text columns read best
+  // ascending, metrics best descending — that is `initialSortDir`.
+  const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
+    useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir)
 
   // Starred tickers, persisted across sessions in localStorage.
   const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
@@ -142,8 +143,7 @@ export function WatchlistPage() {
     () => ({
       page: currentPage,
       pageSize: PAGE_SIZE,
-      sortBy,
-      sortDir,
+      sort,
       q: debouncedSearch || undefined,
       minRating: minRating || undefined,
       signal: signalFilter,
@@ -153,8 +153,7 @@ export function WatchlistPage() {
     [
       marketParam,
       currentPage,
-      sortBy,
-      sortDir,
+      sort,
       debouncedSearch,
       minRating,
       signalFilter,
@@ -180,26 +179,23 @@ export function WatchlistPage() {
   // Reset to the first page whenever the query shape changes.
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearch, favoritesOnly, minRating, signalFilter, sortBy, sortDir, marketParam])
+  }, [
+    debouncedSearch,
+    favoritesOnly,
+    minRating,
+    signalFilter,
+    sortStateKey,
+    marketParam,
+  ])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-
-  const onSort = (col: RankingSortKey) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortBy(col)
-      // Text columns read best ascending; metrics best descending.
-      setSortDir(initialSortDir(col))
-    }
-  }
 
   // Which columns to show — shared with the Dashboard and Filters pages, and
   // used by both the wide table and the card list below `lg`.
   const columns = useRankingColumns()
   const sortOptions = useMemo(
-    () => sortOptionsFrom(columns.renderColumns, sortBy, t),
-    [columns.renderColumns, sortBy, t],
+    () => sortOptionsFrom(columns.renderColumns, sort, t),
+    [columns.renderColumns, sort, t],
   )
 
   const clearFilters = () => {
@@ -216,8 +212,7 @@ export function WatchlistPage() {
       // matching row is in, so large exports aren't silently truncated.
       const baseQuery = {
         pageSize: 500,
-        sortBy,
-        sortDir,
+        sort,
         q: debouncedSearch || undefined,
         minRating: minRating || undefined,
         signal: signalFilter,
@@ -424,14 +419,15 @@ export function WatchlistPage() {
             visibleCount={columns.count}
           />
 
-          {/* Sort — phones/tablets only; the wide table sorts by its headers. */}
+          {/* Sort. Shown on every screen: the wide table can also be sorted
+              by its headers (shift-click adds a further level), but that
+              gesture is invisible — this names the levels outright. */}
           <SortMenu
-            className="lg:hidden"
             options={sortOptions}
-            sortBy={sortBy}
-            sortDir={sortDir}
+            sort={sort}
             onSort={onSort}
-            onSortDirChange={setSortDir}
+            onSortDirChange={onSortDirChange}
+            onRemoveLevel={onRemoveLevel}
           />
 
           <RefreshButton onRefreshed={refetch} />
@@ -463,6 +459,7 @@ export function WatchlistPage() {
       {!loading && !error && rows.length > 0 && (
         <>
           <SessionNote rows={rows} enabled={pooled} />
+          <LiveNote rows={rows} />
 
           <RankingTable
             columns={columns.renderColumns}
@@ -470,8 +467,7 @@ export function WatchlistPage() {
             onOpen={openTicker}
             onToggleStar={toggleStar}
             pooled={pooled}
-            sortBy={sortBy}
-            sortDir={sortDir}
+            sort={sort}
             onSort={onSort}
             minWidth={tableMinWidth(columns.renderColumns)}
             footer={

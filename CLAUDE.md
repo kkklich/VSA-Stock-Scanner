@@ -6,7 +6,7 @@
 
 ## What this project is
 
-**StockPilot** is a Volume Spread Analysis (VSA) stock scanner for the **Warsaw Stock Exchange (GPW)**. It ranks GPW-listed stocks by a computed **VSA Rating (0–100)**, shows interactive candlestick charts with VSA signal overlays (Spring, Upthrust, Test, SOS, SOW, No Demand), and surfaces tactical metrics per stock. Data refreshes once daily after the GPW end-of-day close. **Since 2026-09-17 it can also track foreign index members** — USA (S&P 500 ∪ NASDAQ-100), Germany (DAX), France (CAC 40), the Netherlands (AEX) and the UK (FTSE 100) — switched on per deployment with `STOCKPILOT_MARKETS` (backend default: GPW only; the production compose file defaults to `all` since 2026-09-22); see "Markets" in the API contract and `agent/MULTI-MARKET-PLAN.md`.
+**StockPilot** is a Volume Spread Analysis (VSA) stock scanner for the **Warsaw Stock Exchange (GPW)**. It ranks GPW-listed stocks by a computed **VSA Rating (0–100)**, shows interactive candlestick charts with VSA signal overlays (Spring, Upthrust, Test, SOS, SOW, No Demand), and surfaces tactical metrics per stock. Data refreshes once daily after the GPW end-of-day close; **since 2026-09-25, while an exchange is open, its prices (not its ratings) are also refreshed every hour** (see "Live prices" in the API contract). **Since 2026-09-17 it can also track foreign index members** — USA (S&P 500 ∪ NASDAQ-100), Germany (DAX), France (CAC 40), the Netherlands (AEX) and the UK (FTSE 100) — switched on per deployment with `STOCKPILOT_MARKETS` (backend default: GPW only; the production compose file defaults to `all` since 2026-09-22); see "Markets" in the API contract and `agent/MULTI-MARKET-PLAN.md`.
 
 The owner (Krzysztof) is **not a coder** — explain decisions in plain language, avoid unnecessary jargon, and don't assume prior knowledge of the toolchain. When something needs a manual step (installing software, registering a domain, setting a secret), spell it out clearly.
 
@@ -26,7 +26,9 @@ frontend/         React + TypeScript (Vite) → src/{api,components,hooks,types}
                   + Dockerfile, nginx.conf (production image)
 backend-python/   Python + FastAPI Web API  → app/{routers,models,services,analysis,db,jobs,data},
                   app/markets.py (market registry), app/data/markets/<id>.json
-                  (foreign company lists), scripts/ (build_market_universe.py),
+                  (foreign company lists), app/ml/ (AI research bench — never
+                  imported by the running app), scripts/ (build_market_universe.py,
+                  ml_*.py),
                   alembic/, tests/ + Dockerfile
 deploy/           VPS deployment: vps-setup.sh, deploy.sh, backup-db.sh, nginx/stockpilot.conf
 docker-compose.prod.yml + .env.prod.example   Production stack (db + api + web)
@@ -37,6 +39,10 @@ agent/      ALL project documentation & reference material lives here:
               - DOCUMENTATION.md   Full project specification
               - DEPLOYMENT.md      Step-by-step publish-to-the-internet guide
               - MULTI-MARKET-PLAN.md  Foreign markets: plan, decisions, measurements
+              - AI-ALGORITHMS-PLAN.md AI / machine-learning layer: research + plan
+                                      (roadmap #31 — Phase 0 test bench built)
+              - ml/                   the AI bench's design choices, reports,
+                                      research log and trial register
               - Blueprint (.docx), VSA source text (.pdf), reference images
             (gitignored — do not commit)
 ```
@@ -46,10 +52,12 @@ agent/      ALL project documentation & reference material lives here:
 ## API contract (do not change without updating DOCUMENTATION.md)
 
 - **Markets (added 2026-09-17).** A deployment serves the markets named in `STOCKPILOT_MARKETS` (comma-separated ids `gpw`, `us`, `de`, `fr`, `nl`, `uk`, or `all`; default `gpw`; the GPW is always served). **Tickers:** a GPW ticker stays a bare code (`kgh`) — every existing link, favorite and stored bar keeps working — and a foreign one carries a market suffix: `aapl.us`, `brk-b.us`, `sap.de`, `mc.pa`, `asml.as`, `hsba.l` (Yahoo symbols `AAPL`, `BRK-B`, `SAP.DE`, `MC.PA`, `ASML.AS`, `HSBA.L`; `KGH.WA` is also accepted and means `kgh`). A malformed ticker is a 400; a foreign ticker that is not a tracked company on a served market is a 404 **before** anything is downloaded. **`GET /api/stocks/markets`** lists the served markets in display order: `{ id, name, shortName, country, region, exchange, currency, majorCurrency, timezone, tickerSuffix, refreshRun, companyCount, indices[{id, name}] }` (`currency` is the market's usual quote currency — `GBp`, pence, for London; `majorCurrency` the one whole amounts are stated in). **`market` query parameter** on `GET /api/stocks` (company list), `ranking`, `volume-surge`, `scanner/stats`, `heatmap`, `capex` and `methods/{id}/backtest`: absent = `gpw` (an older client gets exactly the old answer); `all` is accepted by the company list, ranking, volume surge (both assembled from the per-market results) and scanner stats (one pooled back-test under its own cache key) and is a 400 on heatmap, capex and the back-test, which compare money or rank stocks against each other and therefore always work within one market; a market the deployment does not serve is a 400 naming the valid ones. Cache keys carry the market. **Unequal sessions (added 2026-09-17).** Every ranking row carries `lastSession` — the date of the bar its figures describe. Exchanges settle hours apart (GPW 17:20 Warsaw, Xetra/Euronext/London ~17:55, the US only at ~22:15 Warsaw, after which the US ingest runs at 23:15), so for roughly five hours each weekday evening a pooled list legitimately holds today's European rows beside yesterday's American ones — and the Dashboard opens sorted by `priceChangePct`, which then compares two different days. Nothing is wrong with the data; the field exists so the UI can say so (`SessionNote`, shown only when the loaded rows disagree). **New payload fields:** ranking/heatmap/volume-surge rows and the company list carry `market` and `currency` (the stock's **own** quote currency — London quotes most lines in pence but Compass and IHG in USD and Metlen in EUR); the company list, `/{ticker}/signals` and `/{ticker}/fundamentals` also carry `exchange`; `fundamentals.metrics.financialCurrency` is the currency the company *reports* in (HSBC: quoted in pence, reports in USD; stored in `company_fundamentals.financial_currency`, alembic `005`); `rating-history` carries `currency`. **Floors** (below) are defined in złoty and applied through each stock's own quote currency with fixed approximate rates (`PLN_PER_UNIT` in `app/markets.py`: USD 3.8, EUR 4.35, GBP 5.1, a penny 0.051). **Money in a pooled list (added 2026-09-17).** Within one market almost every price is in one currency (London's exceptions — Compass and IHG in USD, Metlen in EUR — are converted to pence for the `lastPrice` sort and the price bounds, `price_unit` in `_sort_value` / `_query_ranking`, fixed 2026-09-21); pool several (`market=all`) and they stop being comparable, because London quotes most lines in *pence*. Sorting the raw figures then ranks by the size of the currency's unit rather than by money — 17,760 GBp (≈906 PLN) landed above 6,242.23 USD (≈23,720 PLN), the most expensive stock in the list, at position 12. So **only when markets are pooled**: the `lastPrice` sort key, the `volume` sort key (share count × last close — a share is a consistent unit but a 15-pound line and a 5-złoty line trade wildly different counts for the same money) and the `minPrice`/`maxPrice` bounds are all put on a common złoty scale through the same `PLN_PER_UNIT` rates (`_sort_value(..., pooled=True)` and `_query_ranking(..., pooled=...)` in `app/routers/stocks.py`; the non-raising `to_pln_or_none` in `app/markets.py`, so one row with an unexpected currency sorts last instead of failing the listing). The **published figures are never converted** — a London row still reports `7600.0` / `"GBp"` — only the ordering changes, and the frontend prints an "≈ N PLN" second line under the money columns so the order is legible. With a single market every other key keeps its original, unconverted meaning and a row already in the market's currency keeps its exact figure, so a GPW-only deployment is byte-identical to before. The same rule covers volume-surge's `lastPrice` / `recentAvgVolume` / `baselineAvgVolume`. Heatmap, capex and the back-test are still a 400 on `all` — they compare money in ways a fixed-rate approximation should not paper over. **Unfinished sessions:** a daily bar dated today is dropped until that exchange has closed plus 15 minutes (`Market.session_is_final`) — for the GPW that means no bar for today before 17:20 Warsaw.
-- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence, weeklyRating, combinedScore; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (in the market's own quote currency — PLN for the GPW, pence for London, whose few lines quoted in dollars or euros are converted to it — and **in złoty when markets are pooled**, see "Money in a pooled list" below), `minVolume` (20-session median volume, shares — *not* converted, because a share is the same unit on every market), `maxDistFrom52wHighPct`/`maxDistFrom52wLowPct` (within N% of the 52-week high/low), `new52wHigh`/`new52wLow` (booleans — the latest session set a fresh 52-week extreme), `weeklyConfirms` (boolean — only rows whose weekly VSA verdict agrees with their daily one), `tickers` (comma-separated allow-list, e.g. favorites), `methods` (comma-separated trading-method ids that fold into the combined cross-method score and the `combinedScore` sort — unknown ids ignored; empty/absent = all methods). Each row also carries the **pluggable trading-method results** (added 2026-09-01): `methodResults` — a map keyed by method id (`vsa`, `minervini`, …), each `{ methodId, score (0–100), daysSince (999 = not recently), fired, detail, available }` — plus `combinedScore` (mean of the *selected* methods' scores, `null` when the row can evaluate none of them; computed per-request from `methods`). The methods self-register in `app/analysis/methods/` (see `GET /api/stocks/methods`); adding one is writing one class. Note (2026-09-03): the ranking path now feeds each method a universe-wide **relative-strength percentile**, so Minervini's `score`/`detail` on this endpoint reflect its RS rule 8 (scored `/8`, e.g. `"8/8 rules"`) — higher than the standalone `/{ticker}` paths, which have no universe and fall back to the 7 structural rules. Each row also carries the **52-week context**: `distFrom52wHighPct` (≤ 0), `distFrom52wLowPct` (≥ 0), `isNew52wHigh`, `isNew52wLow` — window anchored to the stock's last session, at most 52 weeks of stored history. The two percentages are `null` and both flags `false` when the stored bars do **not** span ~52 weeks (< 330 days between the oldest bar in the window and the last session — a recent listing, a shallow DB, a gappy series): a three-month high must never be reported as a "new 52-week high". Each row also carries the **multi-timeframe (weekly) confirmation** (added 2026-09-04): `weeklyRating` (0–100), `weeklySignal` (the weekly verdict) and `weeklyAgreement` — `"confirms"` when the weekly verdict leans the same non-neutral way as the daily one, `"conflicts"` when it leans the opposite way, `"neutral"` when either side is Hold. `app/analysis/weekly.py` resamples the stock’s own daily bars into weekly candles (ISO weeks) and runs the SAME VSA engine with the SAME `settings` over them — no new data source and no extra fetch, it reads the ~380-day window the ranking already pulls, and the daily rating/verdict/signals are untouched. All three are `null` when the stored history yields fewer than ~30 weekly bars (`_MIN_WEEKLY_BARS`), so a shaky read from a handful of weekly candles is never published. All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
+- **Live prices while an exchange is open (added 2026-09-25).** Every full hour (`STOCKPILOT_LIVE_PRICES_INTERVAL_MINUTES`, default 60, must divide an hour; `STOCKPILOT_LIVE_PRICES_ENABLED`, default on; scheduled only with a database, like the nightly jobs) each served market **trading at that moment** (`Market.session_in_progress`: weekday, after `open_time` — GPW/Xetra/Euronext 09:00, London 08:00, US 09:30 local — until close + 15 min) gets every tracked stock's **session so far** downloaded (`app/services/live_prices.py`, `YahooFinanceClient.get_session_quote`) and kept **in memory only**. The owner chose **"live prices, ratings at the close"**: ranking rows, heatmap tiles and `/{ticker}/signals` carry `live` = `{ sessionDate, price, open, high, low, volume, previousClose, changePct, asOf, fetchedAt }` (volume `0` = not traded yet today, shown at the previous close, 0%), and while it is attached **`lastPrice`/`priceChangePct` (and the last sparkline point, and a tile's four changes) are today's** — but `lastSession`, the rating, the signal, every method score, `history[]` and every marker stay the last **finished** session's, and nothing unfinished is ever stored or analysed. Attached only while `live.sessionDate > lastSession` on the exchange's current day (the evening run's final bar supersedes it) and on `/signals` only without `toDate`; laid over **before** filters/sorts, per request, never cached. `GET/POST /api/stocks/refresh[/status]` gained `livePricesAt` and `liveMarkets` (`{market: ISO}`), which open pages poll to reload themselves. The Refresh button ends its pipeline with the same step; a restart mid-session downloads at once. Each run is a `job.live` action-log entry (failed = nothing priced or > 10% failed). A market's three largest stocks are asked first — no bar for today from any = holiday/not yet, the rest skipped. Details: `agent/DOCUMENTATION.md` Endpoint 17.
+- `GET /api/stocks/ranking` — dashboard feed. Returns ranked `StockRankingItem[]`. Supports `page`, `pageSize` (≤ 500), `settings`, plus server-side sorting/filtering: `sortBy` (one of ticker, name, lastPrice, priceChangePct, currentRating, ratingChange, lastSignal, daysSinceSignal, volume, sector, aiConfidence, weeklyRating, combinedScore; default `currentRating`), `sortDir` (`asc`|`desc`, default `desc`) — **both are comma-separated lists since 2026-09-23** (see "Multi-column sorting" below), `q` (search ticker/name), `minRating`/`maxRating` (0–100 rating band), `signal` (verdict filter), `sector` (exact sector name, case-insensitive), `maxDaysSinceSignal` (0–999; last signal at most this many sessions ago — also drops stocks with no signal, whose sentinel is 999), `minPrice`/`maxPrice` (in the market's own quote currency — PLN for the GPW, pence for London, whose few lines quoted in dollars or euros are converted to it — and **in złoty when markets are pooled**, see "Money in a pooled list" below), `minVolume` (20-session median volume, shares — *not* converted, because a share is the same unit on every market), `maxDistFrom52wHighPct`/`maxDistFrom52wLowPct` (within N% of the 52-week high/low), `new52wHigh`/`new52wLow` (booleans — the latest session set a fresh 52-week extreme), `weeklyConfirms` (boolean — only rows whose weekly VSA verdict agrees with their daily one), `tickers` (comma-separated allow-list, e.g. favorites), `methods` (comma-separated trading-method ids that fold into the combined cross-method score and the `combinedScore` sort — unknown ids ignored; empty/absent = all methods). Each row also carries the **pluggable trading-method results** (added 2026-09-01): `methodResults` — a map keyed by method id (`vsa`, `minervini`, …), each `{ methodId, score (0–100), daysSince (999 = not recently), fired, detail, available }` — plus `combinedScore` (mean of the *selected* methods' scores, `null` when the row can evaluate none of them; computed per-request from `methods`). The methods self-register in `app/analysis/methods/` (see `GET /api/stocks/methods`); adding one is writing one class. Note (2026-09-03): the ranking path now feeds each method a universe-wide **relative-strength percentile**, so Minervini's `score`/`detail` on this endpoint reflect its RS rule 8 (scored `/8`, e.g. `"8/8 rules"`) — higher than the standalone `/{ticker}` paths, which have no universe and fall back to the 7 structural rules. Each row also carries the **52-week context**: `distFrom52wHighPct` (≤ 0), `distFrom52wLowPct` (≥ 0), `isNew52wHigh`, `isNew52wLow` — window anchored to the stock's last session, at most 52 weeks of stored history. The two percentages are `null` and both flags `false` when the stored bars do **not** span ~52 weeks (< 330 days between the oldest bar in the window and the last session — a recent listing, a shallow DB, a gappy series): a three-month high must never be reported as a "new 52-week high". Each row also carries the **multi-timeframe (weekly) confirmation** (added 2026-09-04): `weeklyRating` (0–100), `weeklySignal` (the weekly verdict) and `weeklyAgreement` — `"confirms"` when the weekly verdict leans the same non-neutral way as the daily one, `"conflicts"` when it leans the opposite way, `"neutral"` when either side is Hold. `app/analysis/weekly.py` resamples the stock’s own daily bars into weekly candles (ISO weeks) and runs the SAME VSA engine with the SAME `settings` over them — no new data source and no extra fetch, it reads the ~380-day window the ranking already pulls, and the daily rating/verdict/signals are untouched. All three are `null` when the stored history yields fewer than ~30 weekly bars (`_MIN_WEEKLY_BARS`), so a shaky read from a handful of weekly candles is never published. All filters are cheap in-memory passes over the cached ranking (used by the `/filters` screener page). The count of all matching rows before pagination is returned in the `X-Total-Count` response header (exposed via CORS). Cached in-process per settings hash, recomputed after daily ingestion.
+- **Multi-column sorting (added 2026-09-23).** On `ranking`, `volume-surge` and `capex`, `sortBy` and `sortDir` are **comma-separated lists** — at most `MAX_SORT_LEVELS` (3) columns, each with its own direction — so a table sorts by one column and then by another: `sortBy=sector,currentRating&sortDir=asc,desc` is "sector A→Z, best rating first inside each sector". The first column is the visible order; the rest only break its ties. **One value in each is exactly the old behaviour**, so every older client and every bookmarked URL is unaffected. A direction is optional per level and falls back to the endpoint's default. A repeated column is kept once at its first position (the lists are positional, so dropping the echo never shifts a later column onto the duplicate's direction). Each of these is a `400` naming what was wrong: an unknown column, a direction other than `asc`/`desc`, more directions than columns, more than three columns — **note that an invalid `sortDir` now answers `400` instead of FastAPI's `422`**, because it can no longer be declared as a `Literal`. `_parse_sort_levels` + `_apply_sort` in `app/routers/stocks.py`; the ordering is one stable sort per level applied least-significant first, which is what lets every level keep its own direction.
 - `GET /api/stocks/methods` — **trading-method catalogue** (added 2026-09-01) for the dashboard's method selector. Returns `TradingMethodInfo[]` in display order (VSA first): `{ id, name, description, source, sourceUrl, direction }`. Every registered method (`app/analysis/methods/`) appears here automatically; the selector reads it to know which per-method columns it can show.
 - `GET /api/stocks/methods/{method_id}/backtest` — **the GPW back-test gate** (added 2026-09-02) for one trading method: proves the method on stored GPW history before its score is trusted with money. Every *long* firing of the method across the tracked universe (from its `signals()`) is judged — forward return over the next `forwardSessions` (3–30, default 10) sessions versus the stock's **own median forward move** (baseline) — and folded into `{ methodId, name, asOf, forwardSessions, scannedCount, signalCount, evaluatedCount, winCount, winRatePct, avgForwardReturnPct, baselineReturnPct, avgExcessReturnPct, rewardRisk, passes, grade, summary, engine }`. The gate `passes` when the setup beat the stock's own baseline **more than 50%** of the time (`winRatePct`) **and** the average edge (`avgExcessReturnPct`) is positive; `grade` is `strong` (winRate ≥ 55% with avg edge ≥ 1.0 pp and `rewardRisk` ≥ 1.2, or `rewardRisk` `null`), `pass`, `fail`, or `insufficient` (< 30 judged firings across the universe — then `passes` is `null`). `rewardRisk` is avg winner magnitude ÷ avg loser magnitude in the baseline-excess frame (`null` when undefined). This is the roadmap's planned **GPW back-test gate**, but **informational only** for now — the ranking does not yet enforce `passes`. Generic — it drives off `TradingMethod.signals`, so it judges every method with no per-method code; 404 on an unknown id. Supports `settings`. Heavy (fetches ~4 years/ticker into its own `backtest-history:` cache); cached per (method, horizon, settings) with a lock + generation guard, so the first call is slow and the rest instant until the next refresh.
-- `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[], methodSignals[], interval, intraday, historyStart, weeklyRating, weeklySignal, weeklyAgreement }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`, and **`interval`** — the chart's bar size (added 2026-09-05): `30m`, `1h`, `4h`, `1d` (default) or `1w`; an unknown value is a 400 listing the valid ones. VSA is timeframe-agnostic, so the unchanged engine runs over whichever series is picked with the same `settings`. `1d` is the stored EOD bars (exactly as before); `1w` aggregates those into ISO-week candles (`resample_weekly`); `30m`/`1h` are fetched live from Yahoo and **not stored** (the provider caps history at ~60 days and ~730 days respectively); `4h` is aggregated from the `1h` bars, since Yahoo has no 4-hour interval. Grouping never spans the overnight gap, so a GPW session yields two 4h bars with the 17:00 closing auction folded into the afternoon. **The timeframe changes only the chart.** `currentRating`, `ratingChange`, `lastPrice` and `priceChangePct` stay the app's daily read — on a non-daily chart they are computed from a standard ~1-year daily window, because an intraday range is short by nature (five days of 30-minute candles is five daily bars, under the engine's lookback) and would otherwise collapse the page's rating to a neutral 50 on a timeframe switch. `methodSignals` comes back **empty** on any non-daily interval: Minervini's 200-*day* MA and the breakout's 50-*day* base silently become a 2-week MA and a two-day "base" on 30-minute bars — a different rule wearing the method's name. `interval`/`intraday`/`historyStart` report what was actually served (an intraday request beyond the provider's cap is trimmed, and `historyStart` says so). **Bar times:** daily/weekly bars keep the plain `"2026-09-04"` form, so the existing payload is unchanged; intraday bars are moments and carry a full exchange-local timestamp, `"2026-09-04T13:00:00+02:00"` (`vsaSignals[].date` follows the same rule). Intraday is the one chart timeframe that reaches out to Yahoo — one ticker at a time, only when selected, cached per (ticker, interval, window) for 5 minutes (not the 24h end-of-day TTL, which would freeze a 30-minute chart for a whole session). Aggregation + the interval table: `app/analysis/timeframe.py`. **`weeklyRating` / `weeklySignal` / `weeklyAgreement` (added 2026-09-09)** are the same multi-timeframe read the ranking rows carry, from the same `app/analysis/weekly.py` over the same capped 52-week window (so the stock page and the dashboard's "1W" chip can never disagree), computed out of the wide daily window this endpoint already fetches — no extra request. Like the rating, they are a **daily** read and do NOT follow `interval`; the agreement is measured against this endpoint's own daily verdict, and all three are `null` below ~30 weekly bars. **`methodSignals` (added 2026-09-01)** carries the **per-method chart overlays** for every registered trading method *other than* VSA (whose markers are `vsaSignals`): a list of `{ methodId, name, direction, signals[{date, label, type}] }`, one group per method (empty `signals` = did not fire in the window). These power the stock chart's toggleable per-method marker layers (`ChartMethodLegend` chooser; VSA arrows + one coloured-circle layer per other method; selection persisted in localStorage). **`type` is `"Bullish"`, `"Bearish"` or `"Watch"` (added 2026-09-22).** The first two are firings — the setup was taken. A **`"Watch"` is not a trade**: it marks a bar the method assessed and *refused*, its `label` carrying the reason (`"Hammer + Shakeout · no sequence, R/R 2.6:1"`), and only VSA V3 emits them today. The chart draws a Watch as a muted **square** below the bar instead of a solid circle, and the **back-test judges only `"Bullish"` markers** (`method_backtest_service`), so a refused pattern can never enter a statistic. The overlays are evaluated on a window extended ~400 days **before** `fromDate` (so trend-following methods like Minervini's 200-day MA have enough run-up) and clipped to the displayed range — `history`, `vsaSignals` and the rating are unaffected and stay exactly the requested window. Each `TradingMethod` supplies its overlay via a new `signals(bars, config)` method (`app/analysis/methods/base.py`; default empty).
+- `GET /api/stocks/{ticker}/signals` — chart feed. Returns `{ ticker, history[], vsaSignals[], methodSignals[], interval, intraday, historyStart, weeklyRating, weeklySignal, weeklyAgreement }`. Supports `fromDate`, `toDate` (default last 12 months), `settings`, and **`interval`** — the chart's bar size (added 2026-09-05): `30m`, `1h`, `4h`, `1d` (default) or `1w`; an unknown value is a 400 listing the valid ones. VSA is timeframe-agnostic, so the unchanged engine runs over whichever series is picked with the same `settings`. `1d` is the stored EOD bars (exactly as before); `1w` aggregates those into ISO-week candles (`resample_weekly`); `30m`/`1h` are fetched live from Yahoo and **not stored** (the provider caps history at ~60 days and ~730 days respectively); `4h` is aggregated from the `1h` bars, since Yahoo has no 4-hour interval. Grouping never spans the overnight gap, so a GPW session yields two 4h bars with the 17:00 closing auction folded into the afternoon. **The timeframe changes only the chart.** `currentRating`, `ratingChange`, `lastPrice` and `priceChangePct` stay the app's daily read — on a non-daily chart they are computed from a standard ~1-year daily window, because an intraday range is short by nature (five days of 30-minute candles is five daily bars, under the engine's lookback) and would otherwise collapse the page's rating to a neutral 50 on a timeframe switch. `methodSignals` comes back **empty** on any non-daily interval: Minervini's 200-*day* MA and the breakout's 50-*day* base silently become a 2-week MA and a two-day "base" on 30-minute bars — a different rule wearing the method's name. `interval`/`intraday`/`historyStart` report what was actually served (an intraday request beyond the provider's cap is trimmed, and `historyStart` says so). **Bar times:** daily/weekly bars keep the plain `"2026-09-04"` form, so the existing payload is unchanged; intraday bars are moments and carry a full exchange-local timestamp, `"2026-09-04T13:00:00+02:00"` (`vsaSignals[].date` follows the same rule). Intraday is the one chart timeframe that reaches out to Yahoo — one ticker at a time, only when selected, cached per (ticker, interval, window) for 5 minutes (not the 24h end-of-day TTL, which would freeze a 30-minute chart for a whole session). Aggregation + the interval table: `app/analysis/timeframe.py`. **`weeklyRating` / `weeklySignal` / `weeklyAgreement` (added 2026-09-09)** are the same multi-timeframe read the ranking rows carry, from the same `app/analysis/weekly.py` over the same capped 52-week window (so the stock page and the dashboard's "1W" chip can never disagree), computed out of the wide daily window this endpoint already fetches — no extra request. Like the rating, they are a **daily** read and do NOT follow `interval`; the agreement is measured against this endpoint's own daily verdict, and all three are `null` below ~30 weekly bars. **`methodSignals` (added 2026-09-01)** carries the **per-method chart overlays** for every registered trading method *other than* VSA (whose markers are `vsaSignals`): a list of `{ methodId, name, direction, signals[{date, label, type}] }`, one group per method (empty `signals` = did not fire in the window). These power the stock chart's toggleable per-method marker layers (`ChartMethodLegend` chooser; VSA arrows + one layer per other method — a dot in the method's own fixed colour, its label green / red / grey by direction, see "Chart signal colours" in the status below; selection persisted in localStorage). **`type` is `"Bullish"`, `"Bearish"` or `"Watch"` (added 2026-09-22).** The first two are firings — the setup was taken. A **`"Watch"` is not a trade**: it marks a bar the method assessed and *refused*, its `label` carrying the reason (`"Hammer + Shakeout · no sequence, R/R 2.6:1"`), and only VSA V3 emits them today. The chart draws a Watch as a muted **square** in the method's colour, with a grey label, below the bar instead of a solid dot, and the **back-test judges only `"Bullish"` markers** (`method_backtest_service`), so a refused pattern can never enter a statistic. The overlays are evaluated on a window extended ~400 days **before** `fromDate` (so trend-following methods like Minervini's 200-day MA have enough run-up) and clipped to the displayed range — `history`, `vsaSignals` and the rating are unaffected and stay exactly the requested window. Each `TradingMethod` supplies its overlay via a new `signals(bars, config)` method (`app/analysis/methods/base.py`; default empty).
 - `GET /api/stocks/scanner/stats` — back-test effectiveness per signal type ("success" = beating the stock's own median forward move; winner/loser magnitudes use the same baseline-excess frame). `rewardRisk` is `null` when undefined (wins with no losses, or nothing judged) — the Scanner page renders that as an emerald "—" (best case) and sorts it first. Supports `settings`.
 - `GET /api/stocks/{ticker}/fundamentals` — company description + financial ratios + quarterly reports, plus **investment spending** (`capex`, added 2026-07-22 — the same `CapexSummary` object a `/capex` row carries, so the stock page and the screen can never disagree; `null` when Yahoo has no cash-flow statement. A single ticker is cheap enough to fetch live, so a stock page shows capex before the weekly fundamentals pass has run, and persists what it fetched; a company Yahoo has no statement for persists nothing, so that "nothing to find" answer is remembered in the history cache for a day instead of re-fetching on every page view), plus **returns & income** (added 2026-07-21): `priceReturns` (`ytdPct`, `y1Pct`, `y3Pct`, `y5Pct`, `maxPct`, `maxFromDate`) computed from the stored EOD bars by `app/analysis/returns.py` — a horizon is `null` when stored history doesn't reach back that far, and a baseline bar may be at most 2× the horizon old; `ttmRevenue`/`ttmNetIncome` (last four reported quarters summed, `null` unless all four are present); and `metrics.returnOnEquity`/`returnOnAssets` (fractions from Yahoo, 0.184 = 18.4%). Price returns exclude dividends. Requesting this endpoint fetches ~5 years of bars via `_get_quotes`, which **backfills and persists** any history the DB lacks for that ticker. `metrics.dividendYield` is already a **percent** (0.51 = 0.51%) — never rescale it.
 - `GET /api/stocks/{ticker}/ai-analysis` — AI insight: second opinion on the rule-detected signals, computed **locally** by the built-in expert-system engine (`app/analysis/ai_insight.py`) — no external AI services or API keys. Returns `{ ticker, asOf, verdict, confidence, summary, signalAssessments[], keyObservations[], engine }`. Supports `settings`.
@@ -58,13 +66,48 @@ agent/      ALL project documentation & reference material lives here:
 - `POST /api/stocks/refresh` — starts the **data-refresh pipeline** in the background (Yahoo ingest → ranking recompute with DEFAULT settings → daily rating snapshots saved to DB) for **every served market**; returns 202 + status. This and the nightly runs are the ONLY triggers that pull fresh data from Yahoo for the whole universe. **Nightly runs (since 2026-09-17):** one per group of served markets (`app/markets.py` → `refresh_runs()`): `daily_ingest` — GPW + Europe at `STOCKPILOT_INGEST_HOUR:MINUTE` **Warsaw** time (default 18:00) — and, when the US is served, `daily_ingest_us` at `STOCKPILOT_US_INGEST_HOUR:MINUTE` **New York** time (default 17:15, ≈ 23:15 Warsaw). Each run ingests, re-ranks, snapshots and clears the caches of **its own markets only** (`app/services/market_cache.py`). The weekly fundamentals pass (Mondays, a full download, or an empty table) runs inside each run for its markets; a market downloaded in full for the first time gets its fundamentals without re-fetching the others'. **Start-up check** (`IngestService.bootstrap_plan`): a market where under half the tickers have any stored bar gets the full ~400-day download, one where under 90% carry its newest *finished* session gets a top-up, a current one is left alone (a restart no longer re-downloads everything before 18:00). `GET /api/stocks/refresh/status` — same payload `{ state, lastStartedAt, lastRefreshAt, lastError, stocksRanked, dbEnabled }` for polling.
 - `GET /api/stocks/{ticker}/rating-history` — stored daily rating snapshots `{ ticker, points[{date, rating, verdict, close}], source }` (the "attractiveness over time" chart). Supports `fromDate`, `toDate` (default last 12 months). Snapshots always use DEFAULT engine settings; when none exist yet the history is computed on the fly (`source: "computed"`).
 - `GET /api/stocks/heatmap` — Sector heatmap feed (`/heatmap` page, Finviz-style treemap). Returns `{ asOf, items[] }`; each item: `ticker, name, sector, marketCap, lastPrice, currentRating, lastSignal, change1D, change1M, change1Y, changeMax` (percent changes, `null` when stored history is too short or too gappy — a 1M/1Y baseline may be at most 2× the horizon old; MAX = full stored history). Items also carry `market` and `currency`. Same pre-filters as the ranking, evaluated on the same 120-day window (stale/suspended stocks are excluded); rating computed on that window too. Since 2026-09-17 the heatmap reads the ranking's cached per-ticker window (`CONTEXT_HISTORY_DAYS`) instead of holding five years per stock, and takes MAX's baseline — the oldest stored close — from one database query (`get_first_closes`; without a database, the oldest bar of the window). Always one market (`market`, `all` is a 400). Supports `settings`; cached per settings hash with a per-key lock (concurrent cold requests share one computation) and a generation guard (a result computed while the nightly refresh cleared the cache is served but not cached).
-- `GET /api/stocks/volume-surge` — **unusual-volume scanner** (`/volume-surge` page). Finds stocks whose average volume over the last `recentDays` sessions (1–10, default 3) is at least `minRatio` (1–10, default 1.5) times their own average over the `baselineDays` sessions (10–60, default 20) immediately before — multi-day **relative volume (RVOL)**; the baseline excludes the recent window so a surge can't inflate its own reference. Server-side sorting + pagination: `sortBy` (one of ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal; default `volumeRatio`), `sortDir` (`asc`|`desc`, default `desc`), `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, recentDays, baselineDays, minRatio, scannedCount, totalCount, items[] }` (`totalCount` = matching rows before pagination); each item: `ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal`. Same pre-filters and 120-day window as the ranking (shares its per-ticker history cache). Supports `settings`; the full scan is cached per (screen params, settings hash) with a per-key lock and generation guard like the heatmap — sorting/pagination is a cheap per-request pass. Computed by `app/services/volume_surge_service.py`.
+- `GET /api/stocks/market-overview` — **market breadth + biggest rating movers** (added 2026-09-25, roadmap #5) for the Dashboard's top cards. One pass over the cached ranking rows (nothing new downloaded or stored; reads each row's `ratingChange`, verdict, price change and 52-week flags). Params `market` (an id or `all`), `limit` (1–25, default 5), `settings`. Returns `{ asOf, market, breadth{ total, strongBuy, buy, hold, sell, strongSell, bullishPct, bearishPct, averageRating, advancers, decliners, unchanged, ratingUp, ratingDown, new52wHighs, new52wLows }, moversUp[], moversDown[] }`; a mover is `{ ticker, name, market, currency, lastSession, lastPrice, priceChangePct, previousRating, currentRating, ratingChange, lastSignal }`, only stocks that actually moved are listed. Counts only — no single "market score". Live prices move only the price-based counts. Not cached. `app/services/market_overview.py`; details: `agent/DOCUMENTATION.md` Endpoint 18.
+- `GET /api/stocks/volume-surge` — **unusual-volume scanner** (`/volume-surge` page). Finds stocks whose average volume over the last `recentDays` sessions (1–10, default 3) is at least `minRatio` (1–10, default 1.5) times their own average over the `baselineDays` sessions (10–60, default 20) immediately before — multi-day **relative volume (RVOL)**; the baseline excludes the recent window so a surge can't inflate its own reference. Server-side sorting + pagination: `sortBy` (one of ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal; default `volumeRatio`), `sortDir` (`asc`|`desc`, default `desc`; both accept up to three comma-separated columns — see "Multi-column sorting"), `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, recentDays, baselineDays, minRatio, scannedCount, totalCount, items[] }` (`totalCount` = matching rows before pagination); each item: `ticker, name, sector, lastPrice, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, currentRating, lastSignal`. Same pre-filters and 120-day window as the ranking (shares its per-ticker history cache). Supports `settings`; the full scan is cached per (screen params, settings hash) with a per-key lock and generation guard like the heatmap — sorting/pagination is a cheap per-request pass. Computed by `app/services/volume_surge_service.py`.
 - `GET /api/stocks/{ticker}/volume` — **single-stock volume (RVOL) reading** (added 2026-09-02) for the stock-detail page's "Volume (RVOL)" card. The one-ticker form of `/volume-surge`: the same multi-day relative volume computed with the shared `compute_surge_metrics` helper, so the card and the scanner never disagree. Params `recentDays` (1–10, default 3), `baselineDays` (10–60, default 20). Returns `{ ticker, asOf, recentDays, baselineDays, available, recentAvgVolume, baselineAvgVolume, volumeRatio, lastDayRatio, daysAboveBaseline, priceChangePct, lastVolume }`; `available` is `false` and every figure `null` when the stored history is shorter than `recentDays + baselineDays`. No `settings` (volume is VSA-independent). Fetches the same ~365-day window as the other per-ticker endpoints (shared history cache). Frontend: `VolumeCard` + `useTickerVolume`.
-- `GET /api/stocks/capex` — **investment-spending screen** (`/capex` page). How much money each tracked company spends on investing in its own business (capital expenditure — plants, machines, buildings, software). Reads the **database only** (`company_cashflow`, filled by the ingest's weekly fundamentals pass) — never a live fetch, because the screen covers all companies at once. Filters: `market` (one market, default `gpw`), `q` (search ticker/name), `sector`, `currency` (reporting currency, **default: the market's major currency** — PLN for the GPW, USD for the US, EUR for DE/FR/NL, GBP for the UK — `all` to lift it; amounts in different currencies are not comparable), `withData` (default `true`; `false` also returns companies with no reported capex). Sorting/pagination: `sortBy` (one of ticker, name, sector, capex, capexTtm, capexAnnual, capexGrowthYoyPct, capexToRevenuePct, capexToOcfPct, operatingCashFlow; default `capex`), `sortDir`, `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, totalCount, withDataCount, scannedCount, items[] }`; each item: `ticker, name, sector, market, currency, basis, capex, capexTtm, capexAnnual, annualPeriodEnd, capexPrevAnnual, capexGrowthYoyPct, capexToRevenuePct, capexToOcfPct, operatingCashFlow`. `capex` is **positive money spent** (Yahoo reports it negative) and `basis` says whether it covers the last four quarters (`"ttm"`) or the latest full year (`"annual"`) — both ratios use that same basis. A TTM sum needs all four quarters; a ratio is `null` when its denominator is missing or non-positive. Missing figures are `null`, never `0`. Computed by `app/services/capex_service.py`; the whole screen is cached per market under `capex:{market}:full` with a lock + generation guard, and filter/sort/page is a cheap per-request pass. A **failed DB read answers 503 and is never cached** (an empty screen would otherwise be remembered as "this app has no capex data" for the whole TTL); "no database configured" is a stable state and stays cached. No `settings` parameter (fundamentals, not VSA).
+- `GET /api/stocks/{ticker}/trade-simulation` — **VSA V4 trade simulation** (added 2026-09-24): the owner's own VSA program (vendored, behaviour unchanged, in `app/analysis/vsa4/`) and **its own single-position simulator** replayed over the stock's ~5-year window (the fundamentals endpoint's fetch — same cache key). Each confirmed strength → No Supply/Test → confirmation sequence is entered at the next open with a structural stop and a 3R target, 1% of the account at risk, one position at a time, stop first when stop and target share a bar. Params: `sides` (`long` default — short setups dropped, the app is long-only — or `both`), `commissionBps` / `slippageBps` (0–200, defaults **20 / 5**: stock-like, because the program's 1 bp defaults are for futures). `sides=both&commissionBps=1&slippageBps=1` is the program exactly as shipped. Returns `{ ticker, methodId, currency, fromDate, asOf, barCount, sides, initialCapital, riskPct, rewardRisk, commissionPct, slippagePct, finalEquity, totalReturnPct, maxDrawdownPct, closedTrades, openTrades, wins, losses, winRatePct, profitFactor, avgR, skippedEntries, longSetups, shortSetups, buyHoldReturnPct, trades[{status, direction, signalDate, entryDate, exitDate, setup, entryPrice, stopLoss, takeProfit, exitPrice, exitReason, quantity, netPnl, netR, returnPct}], equity[{date, equity, drawdownPct}], engine }` — `profitFactor` `null` with no loss, the equity curve thinned to ~300 points. `400` bad ticker, `404` no history, `422` bad parameter. `app/services/trade_simulation_service.py`; frontend `TradeSimulationCard` + `useTradeSimulation`.
+- `GET /api/stocks/capex` — **investment-spending screen** (`/capex` page). How much money each tracked company spends on investing in its own business (capital expenditure — plants, machines, buildings, software). Reads the **database only** (`company_cashflow`, filled by the ingest's weekly fundamentals pass) — never a live fetch, because the screen covers all companies at once. Filters: `market` (one market, default `gpw`), `q` (search ticker/name), `sector`, `currency` (reporting currency, **default: the market's major currency** — PLN for the GPW, USD for the US, EUR for DE/FR/NL, GBP for the UK — `all` to lift it; amounts in different currencies are not comparable), `withData` (default `true`; `false` also returns companies with no reported capex). Sorting/pagination: `sortBy` (one of ticker, name, sector, capex, capexTtm, capexAnnual, capexGrowthYoyPct, capexToRevenuePct, capexToOcfPct, operatingCashFlow; default `capex`), `sortDir` (both accept up to three comma-separated columns — see "Multi-column sorting"), `page`, `pageSize` (≤ 500, default 25). Returns `{ asOf, totalCount, withDataCount, scannedCount, items[] }`; each item: `ticker, name, sector, market, currency, basis, capex, capexTtm, capexAnnual, annualPeriodEnd, capexPrevAnnual, capexGrowthYoyPct, capexToRevenuePct, capexToOcfPct, operatingCashFlow`. `capex` is **positive money spent** (Yahoo reports it negative) and `basis` says whether it covers the last four quarters (`"ttm"`) or the latest full year (`"annual"`) — both ratios use that same basis. A TTM sum needs all four quarters; a ratio is `null` when its denominator is missing or non-positive. Missing figures are `null`, never `0`. Computed by `app/services/capex_service.py`; the whole screen is cached per market under `capex:{market}:full` with a lock + generation guard, and filter/sort/page is a cheap per-request pass. A **failed DB read answers 503 and is never cached** (an empty screen would otherwise be remembered as "this app has no capex data" for the whole TTL); "no database configured" is a stable state and stays cached. No `settings` parameter (fundamentals, not VSA).
 - `GET /api/admin/logs` — **action log / audit trail** (added 2026-09-08). The recorded API calls and background jobs, newest first. Filters: `kind` (`request`|`job`), `action` (case-insensitive substring of the route template or job name), `outcome` (`ok`|`client_error`|`server_error`|`started`|`finished`|`failed`|`skipped`), `fromDate`/`toDate` (a value without a timezone is read as UTC), `page`, `pageSize` (≤ 500, default 50). Returns `{ source, totalCount, page, pageSize, items[] }`, each item `{ timestamp, timestampLocal, requestId, kind, action, outcome, durationMs, method, path, query, statusCode, responseBytes, clientIp, userAgent, detail }`; the pre-pagination count is also in `X-Total-Count`. `action` is the **route template** (`/api/stocks/{ticker}/signals`) so every ticker's calls group together; `path` keeps the concrete one. `source` is `"database"` when the rows came from the `action_logs` table and `"memory"` when they came from the in-process ring buffer (no DB configured — the app is designed to run stateless, so the audit trail must work in that mode too).
 - `GET /api/admin/logs/summary` — action-log health + **the latest outcome of every background job** (added 2026-09-08). Param `hours` (1–720, default 24). Returns `{ asOf, source, enabled, filePath, dbActive, retentionDays, recordedCount, dbWrittenCount, droppedCount, windowHours, totalInWindow, byAction, byOutcome, lastJobs[] }`. `lastJobs` is the operational read — the newest entry per job name (`job.refresh`, `job.ingest`, `job.startup`), which is where a silently failing nightly ingest shows up. `job.ingest` reports `failed` only when **nothing was fetched at all** or when **more than 10% of the tracked universe errored** (`refresh_service.ingest_outcome`) — one flaky Yahoo response out of ~290 is an ordinary night, and shouting about it here would train the reader to ignore the one screen meant to surface a genuinely broken run; the counters ride in `detail` either way.
 - `GET /api/admin/errors` — **error tracking** (added 2026-09-09). Recent failures, **grouped by what went wrong** — an ingest where 290 tickers fail is one group with `count: 290`, not 290 rows. Params `hours` (1–720, default 24), `limit` (1–200, default 50). Returns `{ asOf, source, windowHours, totalCount, groupCount, trackedSince, items[] }`, each item `{ fingerprint, errorType, message, lastMessage, where, source, count, firstSeen, lastSeen, lastSeenLocal, traceback, context }`. Errors are collected by an `ErrorTrackingHandler` on the **root logger**, so every `logger.error`/`logger.exception` already in the app becomes a tracked error with no call-site change — including failures that never reach an HTTP response. The fingerprint is error type + app source line + message *template* (digits collapsed), which is what does the grouping. Each group is mirrored into the action log as a `kind="error"` entry (throttled to one per group per minute, carrying an `occurrences` count), so it inherits the file, the `action_logs` table and the 30-day prune — **no new table, no migration**. `source` is `"database"` (rebuilt from stored entries, survives restarts) or `"memory"` (this process only). `app/services/error_tracker.py`.
 - `GET /api/admin/health` — **system health** (added 2026-09-09): did the refresh run, is the data current, what is failing. Returns `{ asOf, asOfLocal, status, version, uptimeSeconds, protected, ingest, data, errors, log }`. `ingest.status` is `ok`|`running`|`stale`|`failed`|`never` measured against the scheduled 18:00 Europe/Warsaw run — **`stale` = the run came due and nothing happened** (90-minute grace) — with the last run's outcome, trigger, duration and the ingest counters (`fetched`, `skipped`, `failed`, `barsWritten`), `expectedAt`, `ranSinceExpected` and `nextRunAt` (read from the scheduler itself). `data` is read from the **database rather than from what the job claimed**: `latestBarDate`, `tickersCurrent`/`tickersTracked`, `coveragePct`, `barCount`, status `ok`|`updating`|`stale`|`empty`|`disabled`|`error` — a session older than **4 weekdays** or coverage under 90% is `stale`, *unless a refresh is running*, when partial coverage is `updating` (at 18:00 the ingest is legitimately mid-universe). The session age is counted Mon–Fri, not in calendar days: the GPW is shut all weekend, so Friday's bar read on Monday is three calendar days old with nothing wrong, and a Friday-plus-Monday holiday pair (1/3 May, the Corpus Christi bridge) or the 24–26 December cluster used to false-alarm. **Per run and per market (2026-09-17):** `ingest.runs[]` holds one such verdict per nightly run (`runId`, `markets`, each judged against its own schedule and time zone) and the headline `ingest` is the worst of them; `data.markets[]` is `{ market, status, latestBarDate, sessionAgeDays, tickersTracked, tickersWithData, tickersCurrent, coveragePct }` per served market, each measured against its own newest finished session (a US stock without today's bar at 20:00 Warsaw is not behind). With one market the payload is as before: `ingest.runs` stays empty (there is only the one run) and `data.markets` has a single row. `errors` is the 24 h window with the loudest three groups inline; errors only ever raise the overall status to `warn`. `log` reports whether the audit trail itself is recording. `app/services/system_health.py` + `app/db/health_repository.py`.
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`,
+  `GET /api/auth/me`, `POST /api/auth/change-password`, `GET /api/auth/config`
+  — **optional user accounts** (added 2026-09-22). The site stays public:
+  **nothing under `/api/stocks` requires a token** and every page works signed
+  out. **Anyone may register** (`STOCKPILOT_REGISTRATION_OPEN`, default true).
+  Register/login/refresh return `{ accessToken, refreshToken, tokenType,
+  expiresIn, user{ id, email, displayName, role, emailVerified, createdAt,
+  lastLoginAt } }`; no password or hash is ever in a response. **Two HS256
+  JWTs signed locally** (`app/services/auth.py`): an access token (30 min,
+  `Authorization: Bearer …`) and a refresh token (30 days, accepted only by
+  `/refresh`) — the `typ` claim is checked on decode, so a refresh token can
+  never be replayed as a bearer credential, and both carry `ver` =
+  `users.token_version`, which a password change bumps to invalidate every
+  earlier token without a server-side store. Passwords are bcrypt, ≥ 8
+  characters and ≤ 72 **bytes** (bcrypt ignores the rest, so a longer one is
+  refused rather than silently truncated). `GET /config` →
+  `{ enabled, registrationOpen, persistentSessions }` tells the UI whether
+  accounts work here at all (`enabled: false` with no database → every other
+  route answers 503) and whether a restart will sign everyone out
+  (`persistentSessions: false` when `STOCKPILOT_JWT_SECRET` is unset).
+  **Errors carry a code**: `detail` is `{ code, message }` — `bad_credentials`,
+  `email_taken`, `weak_password`, `invalid_email`, `too_many_attempts`,
+  `registration_closed`, `accounts_unavailable`, `wrong_current_password`,
+  `session_expired`, `not_signed_in`, `account_not_found` — so the frontend
+  can show the visitor's own language (`lib/authErrors.ts`) and fall back to
+  the English message. "No such account" and "wrong password" answer
+  identically, so the form cannot be used to find out who is registered.
+  Failed sign-ins are throttled per address **and** per caller IP (10 per 15
+  min → 429 + `Retry-After`). Roles are `user`/`admin`, set only from
+  `STOCKPILOT_ADMIN_EMAILS` at registration and informational for now
+  (`/api/admin/*` still uses its own token). **No e-mail is sent** — no
+  address verification, no password reset (`agent/ROADMAP.md` #30).
+  Storage: `users`, alembic `006`.
 - **`/api/admin/*` access:** when `STOCKPILOT_ADMIN_TOKEN` is set, every admin endpoint requires a matching `X-Admin-Token` header (`secrets.compare_digest`) and answers `401` otherwise; empty leaves them open (right for a laptop, wrong for a public deployment), and `health` reports `protected: false` so the UI can warn. **Set it on the VPS** — these endpoints expose stack traces, file paths and visitor IP addresses.
 - `settings` (optional, on the analysis endpoints: ranking, signals, scanner/stats, ai-analysis, trust-score, opinion-summary, heatmap, volume-surge) — URL-encoded JSON with the user's per-signal VSA thresholds/toggles from the Scanner page (see `agent/CODEBASE-OVERVIEW.md` §3.1).
 
@@ -105,9 +148,10 @@ details.** Summary (2026-07-03):
   `ASML.AS`, `HSBA.L` for the foreign markets) is the primary source, stooq.pl
   the GPW fallback. PostgreSQL stores EOD bars + daily rating snapshots (optional —
   app runs stateless without it). Every list and scan page is served from
-  DB/cache. Only three things ever go out to Yahoo: the nightly refreshes
-  (18:00 Warsaw; plus 17:15 New York when the US is served),
-  the UI Refresh button (both `RefreshService`,
+  DB/cache. Only four things ever go out to Yahoo: the nightly refreshes
+  (18:00 Warsaw; plus 17:15 New York when the US is served), the hourly
+  live prices while an exchange is open (`app/services/live_prices.py`, kept
+  in memory, never stored), the UI Refresh button (both `RefreshService`,
   `app/services/refresh_service.py`) and — for **one stock at a time** —
   opening a stock page, where `GET /api/stocks/{ticker}/fundamentals` fills in
   what the database is missing for that company: up to ~5 years of price bars
@@ -169,6 +213,22 @@ details.** Summary (2026-07-03):
   default and configurable in code (`VsaConfig.use_trend_context`).
   REMAINING LIMITATION: the background read is a single 30-bar-MA proxy, not
   full Wyckoff accumulation/distribution phase analysis (see `agent/ROADMAP.md`).
+- **Background/phase analysis built, shipped OFF (2026-09-23, roadmap #15a):**
+  `app/analysis/phase.py` reads each bar's background as a Wyckoff phase
+  (accumulation / mark-up / distribution / mark-down / neutral) from
+  **volume** evidence sourced to *Master the Markets*, not from a moving
+  average — the book defines distribution as "high volume on up-bars near a
+  market top", which a price MA cannot see. It scales a signal's `strength`
+  and never removes one. **`VsaConfig.use_phase_analysis` defaults to
+  `False`**: measured over 291 GPW tickers and 4 years of bars it did not
+  reliably improve the rating (slightly better at 5/10/20 sessions, worse at
+  60, +13% CPU), so it is not worth moving every rating in the app for. The
+  default config still hashes as default, so existing caches are untouched.
+  **Separately, that measurement found the VSA rating is inverted on GPW
+  history** — the 0–29 bucket beat the 70–100 bucket at every horizon (win
+  rate 53.6% vs 45.1% at 60 sessions), which is pre-existing and consistent
+  with the VSA method already failing its own back-test gate at 44.4%.
+  Numbers, caveats and the open decision: **`agent/VSA-PHASE-ANALYSIS.md`**.
 - **Volume-scanner verification (2026-07-20):** the RVOL method was checked
   against three independent sources (public scanner references, the VSA
   source text, a first-principles code review) — method confirmed sound.
@@ -286,32 +346,8 @@ details.** Summary (2026-07-03):
   Outside Bar, Hammer, Inside Bar breakout) and all three of the course's
   disqualifiers (out of phase / outside the zone / unconfirmed by volume) as
   hard gates, so it fires only on a complete setup; needs just 70 bars, so it
-  covers newer listings than Minervini. A fourth, **VSA 2** (`vsa2.py`, id
-  `vsa2`, shown as "VSA V2"; added 2026-09-10), is the same author's much longer
-  **30-lesson** *Investing Masters* course (plus his 2018 XTB webinar series)
-  mechanised as the one complete trade setup those lessons build towards —
-  lesson 29's "SCENARIUSZ 5 (long)", the only place in either course where the
-  entry conditions are written as text and reward-to-risk gets a number. It buys
-  a pullback only when six conditions hold at once: a **measured place** (a
-  38.2 / 41.4 / 50 / 61.8 retracement of the last impulse up, or a bullish
-  **WFO** — a lower price low on a lower volume low), **no supply at the peak**
-  it fell from, **corrective volume** (drying up, or ended by a shakeout), a
-  bullish **candle formation** (Hammer, Piercing Line, Morning Star, Bullish
-  Engulfing, Inside Bar break) **confirmed by a VSA signal of strength** (Test,
-  No Supply, Selling Climax, Stopping Volume, Shakeout, Bag Holding, Two Bar
-  Reversal — the slide's word is *potwierdzona*, so both are required), and a
-  potential **R/R of at least 3:1** to that peak with the stop under the
-  formation. Two parts of the slide are deliberately NOT implemented rather than
-  guessed: the "end of an ABC correction" route to a place (the course never
-  defines an ABC correction) and the signal *sequence* (the course never says
-  which of its fourteen signals belong to which of its three categories) — see
-  `agent/CODEBASE-OVERVIEW.md` §3.3a. Measured on stored GPW history after the
-  2026-09-14 source-fidelity pass: **0.20 firings per ticker-year** (>10× rarer
-  than V1), 59 of 292 tickers, and the **only shipped method that passes the
-  app's own back-test gate** — +5.27 pp of edge over each stock's own baseline
-  at a 30-session horizon (55.6% hit rate over 63 judged firings, the gate's top
-  `strong` grade); at the gate's default 10 sessions the trade has not yet
-  reached its target and it fails, so judge it over weeks, not days. The
+  covers newer listings than Minervini. (A fourth method, **VSA 2** / `vsa2`,
+  added 2026-09-10, was removed on 2026-09-24). The
   ranking computes every method's result per stock (baked into
   the cache), exposes them as `methodResults` + a `combinedScore`, and the
   Dashboard now shows a **method selector (multi-select)**, one **column per
@@ -358,6 +394,85 @@ details.** Summary (2026-07-03):
   **Combined** column now averages six methods instead of five; the only
   frontend work was teaching the chart to draw the new `"Watch"` marker.
   Details and the measured funnel: `agent/CODEBASE-OVERVIEW.md` §3.3a.
+- **Weinstein Stage 2 (added 2026-09-23, roadmap #28):** a sixth trading
+  method, `weinstein.py` (id `weinstein`, shown as "Weinstein Stage 2", order
+  70) — Stan Weinstein's stage analysis (*Secrets for Profiting in Bull and
+  Bear Markets*, 1988) and **the first method that runs on weekly bars**. His
+  stages, his 30-week moving average and his 2× volume test are all defined
+  weekly, so the weekly candles are aggregated from the stored daily ones
+  (`app/analysis/weekly.py` — no new data source, nothing extra downloaded)
+  and the **forming week is dropped**, because he buys a weekly *close* and a
+  part-built week carries a fifth of a week's volume. It buys the moment
+  **Stage 1 turns into Stage 2**: six hard gates — a tight 20-week base, a
+  close above its top and above the 30-week MA, that MA having **stopped
+  falling** but **not risen more than 10%** over ten weeks, and weekly volume
+  at least twice the prior ten weeks'. The rise cap is the method's whole
+  point: without it the same rules also fire on a flat base sitting on top of
+  a steep advance — a stock already deep in Stage 2, which is Bulkowski's
+  late-Stage-2 buy (+4.1%, 57% winners) rather than the transition (+13.2%,
+  69%). Measured over the whole stored GPW history: **0.32 firings per
+  ticker-year**, 174 firings on 69 of 292 tickers, with the rise cap alone
+  refusing 4,467 candidate weeks. **On the app's own back-test gate it passes
+  at the default 10 sessions** (51.0% hit rate, +0.64 pp edge, R/R 1.27 over
+  98 judged firings) — which no shipped method except VSA 2 manages at any
+  horizon — and at 30 sessions it earns its biggest edge, **+2.07 pp with R/R
+  1.96**, while *failing*, because the gate tests a >50% hit rate and this
+  profile wins 45.9% of the time with winners twice the size of losers. The
+  same measurement **settles the roadmap's open hypothesis**: like-for-like,
+  Minervini scores **−0.38 / −0.57 pp** at 10/30 sessions because its template
+  fires while a stock is already *inside* Stage 2, and buying the transition
+  instead turns that negative edge positive. The roadmap's verified Dom
+  Development example is pinned on 138 real weekly bars
+  (`tests/data_dom_2022.py`): the week of 2022-12-19 fires at the recorded
+  6.9× volume, and the July 2023 *continuation* breakout — recorded as a much
+  worse trade — is refused by the rise cap. **No frontend change was needed**;
+  the sixth non-VSA method also exactly fills the six-colour chart-overlay
+  palette. Details: `agent/CODEBASE-OVERVIEW.md` §3.3a.
+- **VSA V4 — the owner's own VSA program (added 2026-09-24):** Krzysztof
+  supplied "VSA - kompendium i program Python" — a new compendium of the
+  Glinicki course (30 lessons + the 2018 webinars, rules marked [K]/[M]/[F]/[L])
+  and a standard-library Python program formalising it, with its own 14 tests
+  and 8 independent checks — and asked for it as a new trading method and for
+  the script to be integrated. **The program is vendored, not rewritten**:
+  `backend-python/app/analysis/vsa4/` holds `engine.py`, `backtest.py` and
+  `cli.py` byte-identical to the package apart from imports and a few
+  `[StockPilot]` lines that only *report* the sequence state; Ruff leaves them
+  in their original style. It is proven equal to the original on all 1,014
+  stored companies (430,602 bars, zero differences), its own 22 tests run
+  against the copy, and the package's demo result is reproduced to the last
+  digit. It is wired in three ways: (1) the **`vsa4` trading method**
+  (`methods/vsa4.py`, "VSA V4", order 65) — fires on the program's lesson 21/23
+  sequence (strength → No Supply/Test → an up bar confirming it), scores where
+  that sequence stands (100 confirmed today … 65 test awaiting confirmation …
+  50 strength awaiting a test … 35 nothing … lower when the weakness mirror is
+  in play), and draws Bullish / Bearish / Watch chart markers; (2) the
+  **trade-simulation card** on the stock page, running the program's own
+  simulator (see the API contract); (3) **`scripts/vsa4_run.py <ticker>`**,
+  which runs the program's CLI on a stored ticker and writes its four audit
+  files. The method needed no frontend change except a **seventh chart-overlay
+  colour** (blue — Weinstein moved to it). **Measured on GPW history:** 2.3 long
+  setups per ticker-year on 241 of 292 tickers, and **the back-test gate passes
+  at both 10 sessions (+1.09 pp, 51.5%, R/R 1.44, n 1,109) and 30 sessions
+  (+2.19 pp, 52.5%, R/R 1.53, n 1,073)** — the only method that passes at both,
+  on thresholds never fitted to GPW data. The program's own simulator, long
+  only, 0.20% + 0.05% costs: 1,027 trades, 32.4% winners, +0.20 R a trade,
+  profit factor 1.29; the short side takes that to ≈ 0. Cost: ~15 ms a stock
+  in a ranking build, because `evaluate` analyses only the last 160 sessions
+  (the engine is ~85 ms per 1,000 bars; the first 120 of the slice are
+  warm-up, measured to converge by bar 70 on 4,064 real slices). Source
+  material: `agent/vsa4-source/`. Details: `agent/CODEBASE-OVERVIEW.md` §3.3a
+  and `agent/DOCUMENTATION.md` §5 Endpoint 16.
+- **VSA Kompendium page (added 2026-09-25):** Krzysztof asked to see
+  `kompendium_VSA.html` — the VSA compendium behind VSA V4 — on the website
+  itself, not only in `agent/`. New public page `/vsa-kompendium` ("Kompendium
+  VSA" in the sidebar under Help): the full compendium (15 sections + Appendix A,
+  ~580 lines) rendered from `frontend/src/content/vsaKompendium.md`, with a
+  table of contents, the two reference diagrams, a "Download PDF" link and the
+  usual not-investment-advice note. **The article stays Polish** whatever the
+  UI language (chosen by the owner; the page says so); only the page chrome is
+  PL/EN. Frontend only — no API change. Adds `react-markdown`, `remark-gfm`,
+  `rehype-slug`, `github-slugger`. Static files live in `frontend/public/vsa/`
+  (these ship; `agent/` does not). Details: `agent/CODEBASE-OVERVIEW.md` §4.1.
 - **Trading methods on the stock chart (added 2026-09-01):** the stock-detail
   chart now overlays each trading method's firing history as markers and lets
   the user choose which methods are visible. VSA keeps its arrow markers; every
@@ -371,6 +486,22 @@ details.** Summary (2026-07-03):
   Overlays are computed on a window extended ~400 days before the display range
   and clipped to it, so a short (3M/6M) chart still shows Minervini markers
   without changing the candles/VSA/rating.
+- **Chart signal colours (2026-09-25):** every chart marker now answers two
+  questions with two colours, at Krzysztof's request ("I don't know which ones
+  are positive or negative", then "each type of trading should have its own
+  colour"). **Good or bad news:** VSA's arrows and every method's *label* are
+  green (positive), red (negative) or grey (a "watch" — seen, not taken).
+  **Which method:** the *dot* beside a label is in that method's own colour —
+  Minervini amber, Volume Breakout indigo, V1 fuchsia, V3 purple, V4 orange,
+  Weinstein blue; VSA is the arrows. A Lightweight Charts marker has one
+  colour, so each method signal is two stacked markers: the dot, then a size-0
+  marker the library draws as text alone. Colours are **fixed per method id**
+  (`methodColors` + `methodColorsFor` in `lib/chartTheme.ts`, spares for a new
+  method) — they used to be handed out by position, so removing VSA 2 had
+  silently recoloured every method after it — and none is green, red or grey.
+  The legend's chips show each method's dot (VSA an arrow), and a key row
+  under them spells out the three label colours. Frontend only; the API is
+  unchanged. Details: `agent/CODEBASE-OVERVIEW.md` §4.12.
 - **Consolidated analytics summary (added 2026-09-02, roadmap #24):** the
   stock-detail page now leads its right column with an **"Analytics summary"**
   card — the *bottom line* that pulls the app's separate opinions together
@@ -443,7 +574,38 @@ details.** Summary (2026-07-03):
   `YahooFinanceClient.get_intraday_history` + the `interval` parameter on
   `GET /{ticker}/signals`; frontend: `INTERVAL_OPTIONS`/`INTERVAL_RANGES` in
   `ChartsPage` and `toChartTime` in `src/lib/chartTime.ts`.
-- **Tests:** backend `pytest` — **989 passing** (measured 2026-09-22; 32 of them
+- **Tests:** backend `pytest` — **1177 passing, whole suite** (measured
+  2026-09-24 after the VSA V4 work; 57 of them are that work —
+  `tests/test_vsa4_program.py`, the owner's own 14 tests + 8 independent
+  checks run against the vendored copy, and `tests/test_vsa4.py`, 35 cases:
+  the adapter's repairs and tick sizing, the package's demo result reproduced,
+  every rung of the score ladder on the program's own sample, the Bullish /
+  Bearish / Watch markers, slice-vs-full-history equality and `evaluate` /
+  `signals` agreement on every prefix, and the endpoint. The rest of the gap
+  over 1106 is other sessions' work in the same tree). **1106 passing** was the
+  count measured 2026-09-23 after the Weinstein work. 27 of them are that work
+  (`tests/test_weinstein.py` — the complete setup, one fixture per rule, the
+  weekly mechanics including that a forming week and a two-day surge cannot
+  fire, the overlay, `evaluate`/`signals` agreement under truncation, the
+  guards, and both halves of the real Dom Development example); the rest of
+  the gap over the previous count is another session's phase-analysis work in
+  the same tree, so this total is not simply 1075 + 27. **1075 passing** was
+  the count before
+  (measured 2026-09-23 after the
+  multi-column sorting work; 20 of them are that work — 16 in
+  `tests/test_sorting.py` (parsing `sortBy`/`sortDir` as lists, a single column
+  still meaning exactly what it did, a repeated column keeping its own
+  direction, every rejection, and that a second level really breaks the first's
+  ties while each level keeps its own direction) plus four endpoint cases in
+  `test_api.py`, `test_volume_surge.py` and `test_capex.py`. **1074** was the
+  count before it (measured 2026-09-22 after the sign-in work; 50 of them `tests/test_auth.py`: bcrypt hashing and the password
+  rules, e-mail normalisation, the JWT round trip and the three ways a token is
+  refused (wrong key, expired, wrong `typ`), the sign-in throttle, and every
+  endpoint — including that "no such account" and "wrong password" answer
+  identically, that a password change invalidates the older tokens, that every
+  failure names a stable code, that the market data still needs no token, and
+  that the password never reaches the action log). **989** before that
+  (measured 2026-09-22; 32 of them
   VSA V3, `tests/test_vsa3.py`: the complete setup, one fixture per layer it can
   fail on, the weekly block rule, the WFO's condition 6, the ABC's quiet C wave,
   the sequence order rules, the signal detectors, the guards, and the owner's
@@ -509,7 +671,14 @@ details.** Summary (2026-07-03):
   2026-09-05 chart timeframes add 28 in `tests/test_timeframe.py` — bar
   aggregation, the interval table and the endpoint, including the invariant
   that rating and price never move with the chart's bar size. Frontend
-  `npm run build` passes and `vitest` is green (**155 cases** on 2026-09-21 —
+  `vitest` is green (**199 cases** on 2026-09-24 — 6 of them the VSA V4
+  trade-simulation card, `components/TradeSimulationCard.test.tsx`; the Vite
+  build passes, and `tsc -b` then failed only on an unused import in
+  `api/client.ts` that another session's sign-in work had in progress;
+  **193 cases** on 2026-09-23 —
+  23 of them the multi-column sorting work: the click grammar in
+  `lib/sorting.test.ts`, the rebuilt `components/SortMenu.test.tsx` and two
+  Dashboard cases; **155** on 2026-09-21 —
   13 of them the "All markets" audit: złoty conversion in `lib/markets.test.ts`,
   the session check in `lib/sessions.test.ts`, `fmtApproxPln` in
   `lib/format.test.ts`; **142** on 2026-09-17 —
@@ -707,17 +876,310 @@ details.** Summary (2026-07-03):
   each other. Verified clean: no duplicate tickers, one sector taxonomy across
   all markets, and `market=all` correctly refused on heatmap/capex/back-test.
   Details and the measured tables: `agent/MULTI-MARKET-PLAN.md` phase 8.
+- **Sign in / user accounts (added 2026-09-22):** visitors can create an
+  account and stay signed in, and the control lives in the **main window's top
+  bar** — "Sign in" when signed out, the person's initials plus a small menu
+  (Account settings / Sign out) when signed in. **Anyone can create an
+  account**; the site itself is unchanged and entirely public, since no page
+  and no `/api/stocks` endpoint requires one. `/login` is one screen with both
+  Sign in and Create account, inside the normal app shell rather than as a
+  gate, and `noindex`. Settings gained an **Account** section (who is signed
+  in, change password, sign out). Backend: `app/services/auth.py` (bcrypt +
+  two HS256 JWTs — a 30-minute access token and a 30-day refresh token, a
+  per-address/per-IP sign-in throttle), `app/routers/auth.py`,
+  `app/db/user_repository.py`, the `users` table (alembic `006`, created
+  automatically on startup). The browser renews the short token by itself:
+  `api/client.ts` answers one 401 by refreshing **once** and replaying the
+  request, sharing a single refresh across concurrent calls, so a 30-minute
+  token never signs anyone out mid-click. **`STOCKPILOT_JWT_SECRET` is
+  deliberately left unset** (Krzysztof, 2026-09-23: "it is not a problem, it
+  can sign out everyone") — the app then signs tokens with a key generated per
+  start, which is just as strong but ends every session when the process does,
+  so a deploy or a reboot asks people to sign in again. This is a supported
+  mode, **not** a to-do: the sign-in page says only what it means for a visitor
+  ("You may be asked to sign in again after a site update", `auth.sessionsMayEnd`,
+  in muted grey rather than an amber warning), and the backend notes it at INFO
+  once per start. It would become **required** if the API ever ran with more
+  than one worker or replica — each process would invent its own key and logins
+  would fail at random rather than only after a restart; production runs a
+  single Uvicorn worker on purpose, so that does not apply today.
+  **No e-mail is sent, by request**: no address confirmation and no password
+  reset, which the sign-in screen states out loud; a signed-in visitor can
+  change their own password. Building it is roadmap #30.
+- **Multi-column sorting (added 2026-09-23):** every sortable table can now be
+  sorted by **one column and then by another** — "sector A→Z, best rating first
+  inside each sector", "signal first, biggest volume surge within it". A sort is
+  an ordered list of up to **three levels**: the first is the order you see, the
+  rest only break its ties. The way in is a **Sort menu in every list page's
+  toolbar, on every screen size** — the active levels at the top (numbered,
+  each with its own ↑/↓ and a remove ×) above a "Then by" list of the remaining
+  columns, and a trigger reading e.g. "Signal +1". On a wide table the headers
+  work too: a plain click sorts by one column (and is always the way back to a
+  simple ordering), **shift-click** adds a column as the next level, flips it,
+  and on a third shift-click removes it again; each sorted header shows its
+  position (1, 2, 3). The menu was originally phones-only with shift-click as
+  the desktop path, and that **read as broken** (2026-09-23): nothing advertises
+  the gesture, and a tie-break often reorders nothing visible — the Dashboard
+  opens sorted by Change %, where 25 rows held 4 ties, so a correctly-added
+  second level moved nothing on screen. Showing the menu everywhere states the
+  ordering outright instead. Volume surge and Investment gained the menu, which
+  they had never had. **The menu offers only the columns that are switched on**,
+  so sorting by Sector means showing the Sector column first.
+  All five list pages (Dashboard, Watchlist, Filters, Volume surge, Investment)
+  share the rules (`frontend/src/lib/sorting.ts`) and the state
+  (`hooks/useTableSort.ts`), so they behave identically. On the wire it is the
+  same two parameters as comma-separated lists, and a single level is
+  byte-identical to what the app sent before, so nothing that already worked
+  changed. Details: `agent/CODEBASE-OVERVIEW.md` §4.11.
+- **Market overview on the Dashboard (added 2026-09-25, roadmap #5):** three
+  cards above the ranking — **Market breadth** (a five-segment Strong Buy →
+  Strong Sell bar with every count as text, bullish / bearish share, price
+  up/down, rating up/down, new 52-week highs/lows, average rating) and the five
+  stocks whose VSA rating **rose** / **fell** the most since the previous
+  session. It needed no new data: every ranking row already carries
+  `ratingChange`, so `GET /api/stocks/market-overview` is a pass over the cached
+  ranking (the roadmap had assumed it needed `rating_snapshots`). It describes
+  the whole market (search/filters below do not change it), follows the top
+  bar's market including "All markets", and steps aside silently if its request
+  fails. Counts only, by design. On real GPW data rating rises are tiny most
+  days (biggest riser +1, biggest faller −24 on 2026-09-25 — the rating is a
+  decayed score); a minimum-move threshold is the obvious follow-up. Details:
+  `agent/CODEBASE-OVERVIEW.md` §4.14.
+- **Live prices every hour while an exchange is open (added 2026-09-25):**
+  Krzysztof asked for the data to be downloaded every hour while the market
+  is open. Asked whether that should move the ratings too, he chose **live
+  prices, ratings at the close** — an unfinished day carries part of its volume
+  and VSA reads low volume as a signal, so the analysis keeps running on
+  finished sessions only and **do not feed the partial bar to the engine**. At
+  every full hour each served market that is trading gets every tracked stock's
+  session so far downloaded (`app/services/live_prices.py`; 288 GPW stocks in
+  ~18 s, 518 US in ~31 s, 3 at a time so visitors keep two Yahoo slots) and held
+  in memory; the ranking, heatmap and stock page show today's price and change
+  with a blue dot / "Today 14:44" chip, a note saying the ratings are from the
+  last finished session, today's candle drawn hollow on the daily chart with a
+  grey partial-volume bar, and the top bar's "Last sync" at the hourly time.
+  Open pages reload themselves quietly within ~5 minutes of new data
+  (`frontend/src/hooks/useDataVersion.ts`). Only runs with a database (a
+  backend without PostgreSQL shows no live prices), and holidays are detected
+  by asking a market's three largest stocks first. Details:
+  `agent/CODEBASE-OVERVIEW.md` §3.6c and §4.13.
+- **AI / machine-learning layer — Phase 0 (test bench) BUILT, no model yet
+  (2026-09-25, roadmap #31, absorbs #29):** Krzysztof asked for a plan to make
+  the trading methods more precise with AI, then asked for it to be
+  implemented. **Phase 0 is built:** `backend-python/app/ml/` (point-in-time
+  features, labels, walk-forward validation, the random-filter benchmark,
+  overfitting statistics, dataset assembly, the back-fill logic, the trial
+  register) plus `scripts/ml_report.py`, `ml_build_dataset.py` and
+  `ml_backfill_history.py`. **The running app never imports `app.ml`**
+  (`tests/test_ml_isolation.py`), so nothing a visitor sees changed. The rules
+  were frozen before any result in `agent/ml/DESIGN-CHOICES.md`; reports go to
+  `agent/ml/reports/`. The back-fill script is **not to be run until the owner
+  approves decision D2**. The plan uses
+  **meta-labeling**: a locally trained model (logistic regression baseline,
+  then LightGBM) scores each VSA V4 / Weinstein firing. Low-odds firings
+  become the existing "Watch" markers, and the whole thing ships as one
+  registered method, `ai_odds`. It puts an honest test bench first
+  (walk-forward with purge and embargo, locked holdout, trial register,
+  Deflated Sharpe / PBO, random-filter benchmark) and ~3 months of shadow mode
+  before anything is shown. Blocked on owner decisions, chiefly a one-time
+  10+ year history back-fill for training.
+
+  **It must always be possible to switch it off**, as the owner asked
+  (plan §14): it ships `off`, and there are five kinds of switch — a master
+  switch `STOCKPILOT_ML_MODE` (the ceiling), an instant System-page switch, a
+  switch per part, an automatic pause, and a per-visitor Settings switch.
+  "Off" must stay byte-identical to the app without the ML package; a
+  snapshot test enforces it, and the ML libraries are imported lazily. **Read
+  `agent/AI-ALGORITHMS-PLAN.md` before building any of it** — Part II
+  (§14–§28) is the build specification. Summary in
+  `agent/DOCUMENTATION.md` §13.
 - **Known gaps:** the Settings page has only the Appearance (theme) section
   (the action log is API-only — no UI screen yet);
-  favorites & filter presets are localStorage-only; frontend unit coverage is
-  still thin (component/lib tests only, 155 cases); the foreign markets are
+  accounts exist but hold nothing yet — favorites, filter presets and column
+  choices are still localStorage-only, so they do not follow a person to
+  another device, and the app sends **no e-mail**, so there is no password
+  reset (roadmap #30); frontend unit coverage is
+  still thin (component/lib tests only, 193 cases); the foreign markets are
   built and verified locally but **not yet switched on in production**
   (`STOCKPILOT_MARKETS` on the VPS); see `agent/ROADMAP.md`.
 - **Feature checklist:** `agent/FEATURE-CHECKLIST.md` — done/not-done list of
   all features, incl. planned "popular scanner" additions (2026-07-09).
 
 ---
-*Last updated: 2026-09-22 (**VSA V3.** Krzysztof supplied *Kompendium VSA*,
+*Last updated: 2026-09-25 (**Market overview on the Dashboard — roadmap #5.** The next unbuilt item that needed nothing from the owner: market breadth and the biggest rating movers, as three cards above the Dashboard ranking (see the status entry above). New `GET /api/stocks/market-overview` + `app/services/market_overview.py`, `MarketOverview` / `useMarketOverview` and `overview.*` translations; no new table, no migration, no new download. Verified live on real GPW data (26.1% bullish / 37.3% bearish over 134 stocks; the movers match the ranking's own `ratingChange`), dark and light theme, phone width with no horizontal scroll, no console errors. Backend `pytest` **1249 green, whole suite** (16 new in `tests/test_market_overview.py`), Ruff clean on the new files; frontend `vitest` **243 green** (6 new), ESLint clean, and `tsc -b` still fails only on the unused `getRefreshToken` import in `api/client.ts` that another session has in progress. Previously 2026-09-25: **Live prices every hour while an exchange is open.** Krzysztof asked for the stock data to be downloaded every hour while the market is open. The app deliberately refuses a session still trading (its partial volume reads as a VSA signal), so the request had two readings; asked, he chose **live prices, ratings at the close**. New `app/services/live_prices.py` downloads, at every full hour, each tracked stock's session so far for the served markets that are trading (`Market.open_time` / `session_in_progress`; one small request per stock via `YahooFinanceClient.get_session_quote`, which keeps today's bar apart from the finished ones), holds it in memory and lays it over ranking rows, heatmap tiles and `/signals` as `live` plus today's `lastPrice`/`priceChangePct` — ratings, signals, methods and markers untouched, nothing unfinished stored. The Refresh button ends with the same step, a restart mid-session downloads at once, each run is a `job.live` log entry, and a market's three largest stocks are asked first so a holiday costs three requests. Frontend: a blue dot beside live prices, a note above the lists and the heatmap, a "Today 14:44" chip, today's candle drawn hollow with a grey partial-volume bar, "Last sync" at the hourly time, and pages that reload themselves quietly within ~5 minutes (`hooks/useDataVersion.ts`); the status endpoint those pages poll joined `/health` on the action log's exclusion list, and the two settings are in `docker-compose.prod.yml`, `env.prod.example` and `backend-python/.env.example`. Verified live on 2026-09-25 against the local PostgreSQL with all six markets (the database was off and had to be started — a backend without one schedules nothing, so shows no live prices): 518 US stocks in 31.2 s with no failure, Apple 339.64 USD +1.11% as of 19:20 beside its unchanged finished-session rating, on the Dashboard, the stock page (chip, hollow candle, note), the heatmap, both themes and 375 px; 288 GPW stocks took 18.3 s in the same pass the day before. The **scheduled** 20:00 run then fired by itself (518 US stocks, 36.8 s, no failure), and with a temporary 5-minute cadence an open Dashboard moved from the 21:20 to the 21:25 prices in place (same page, no spinner). That check caught one flaw, fixed: a page opened in a background tab skipped its first status read, so it would have taken a later state as its baseline and missed a run in between — the first read now always happens. Backend `pytest` **1223 green, whole suite** (59 new in `tests/test_live_prices.py`; the rest of the gap over 1177 is other sessions' work in the tree), Ruff clean on everything new; frontend `vitest` **243 green** (27 new; the rest is another session's work in the tree), ESLint clean, `vite build` passes, and `tsc -b` still fails only on the unused import in `api/client.ts` that another session has in progress. Previously 2026-09-25: **Chart signal colours.** Krzysztof could not
+tell positive chart signals from negative ones — marker colour named the
+method, never the direction — and then asked to keep a colour per method too.
+Now the dot says which method (fixed colour per method id) and the label says
+good or bad (green / red / grey), with a key under the chart's method chooser;
+see the status entry above. Also fixed: method colours were assigned by list
+position, so removing VSA 2 had silently recoloured V3, V4 and Weinstein.
+Frontend `vitest` 233 green (whole suite; 8 new cases here and 4 updated);
+ESLint clean; `tsc -b` still fails only on the unused import in
+`api/client.ts` from the sign-in work. Verified live on PKO in both themes and
+at 375 px. Previously 2026-09-24: **VSA V4 — the owner's own VSA program, integrated.**
+Krzysztof supplied a folder with a new VSA compendium and a Python program, and
+asked for a new trading method from the compendium and for the script to be
+integrated. The program *is* the compendium's formalisation, so the two became
+one piece of work: the program vendored unchanged in `app/analysis/vsa4/`
+(proven identical to the original on every stored company), wrapped as the
+`vsa4` trading method, its own simulator exposed as the stock page's "Trade
+simulation · VSA V4" card, and its CLI runnable on stored tickers via
+`scripts/vsa4_run.py`. It passes the GPW back-test gate at both 10 and 30
+sessions on ~1,100 firings. See the VSA V4 status entry above. Backend
+`pytest` 1177 green (57 new), Ruff clean on everything new; frontend `vitest`
+199 green (6 new), Vite build passes. Verified live on PKO in both themes, both
+languages and at 375 px. Previously 2026-09-23: **Weinstein Stage 2 — the next trading method from
+the to-do list (roadmap #28).** Krzysztof asked to build the next method on the
+list; it was Stan Weinstein's Stage 1→2 breakout, the best candidate from the
+2026-09-21 research run. One class,
+`backend-python/app/analysis/methods/weinstein.py`, and the framework wired up
+the rest: **no frontend change at all** — the picker, dashboard column,
+combined score, chart overlay layer and analytics-summary row all picked it up
+from the registry, and as the sixth non-VSA method it exactly fills the
+six-colour overlay palette. It is **the first method that runs on weekly
+bars**, because Weinstein's stages, his 30-week moving average and his 2×
+volume test are all defined weekly; the candles are aggregated from the stored
+daily ones, so nothing new is downloaded, and the **forming week is dropped**
+(he buys a weekly close, and a part-built week carries a fifth of a week's
+volume — the same reason `compute_weekly_view` drops it).
+
+**What it buys, and the one number that is not Weinstein's own.** Six hard
+gates: a tight 20-week base, a close above its top and above the 30-week MA,
+that MA having **stopped falling** but **not risen more than 10%** over ten
+weeks, and weekly volume at least twice the prior ten weeks'. That last cap is
+the method's whole point — rules 1–4 alone also fire on a flat base sitting on
+top of a steep advance, i.e. a stock already deep in Stage 2, which is
+Bulkowski's late-Stage-2 buy (+4.1%, 57% winners over 116 real trades) rather
+than the transition (+13.2%, 69% over 127). On GPW history the cap alone
+refuses 4,467 candidate weeks, 37% of everything with a non-falling MA. The
+prior decline is deliberately *not* gated: a stock may have based for a year or
+more, putting the decline outside the window the app holds.
+
+**Measured** over the whole stored GPW history (292 tickers, ~541
+ticker-years): **0.32 firings per ticker-year**, 174 firings on 69 tickers —
+selective like VSA 2 (0.20), not near-silent like V3. **On the app's own
+back-test gate it passes at the default 10 sessions** (51.0% hit rate, +0.64 pp
+edge, R/R 1.27, 98 judged firings), which no shipped method except VSA 2
+manages at any horizon; at 30 sessions it earns its biggest edge, **+2.07 pp
+with R/R 1.96**, and still *fails*, because the gate tests a >50% hit rate and
+this profile wins 45.9% of the time with winners twice the size of losers.
+
+**It also settled an open question.** The roadmap had recorded, as an untested
+hypothesis, that Minervini fails on GPW because its template fires while a
+stock is *already* in Stage 2 rather than at the transition. Measured
+like-for-like on the same universe and engine at 10/30 sessions: Weinstein
++0.64/+2.07 pp, VSA 2 +0.68/+6.69, VSA V1 +0.21/+1.20, VSA rating +0.03/+1.06,
+Volume Breakout +0.20/+0.49, Minervini **−0.38/−0.57**. Buying the transition
+instead of the established trend turns a negative edge into a positive one at
+both horizons.
+
+**Two documentation defects found and fixed while measuring**, both about the
+gate rather than the new method: `CODEBASE-OVERVIEW.md` and `ROADMAP.md` 23a
+both claimed the gate is "positive expectancy, not a >50% hit rate" — the code
+has always been `win_rate > 50% and avg_excess > 0`, as the API contract above
+says, and VSA 2 at 10 sessions and Weinstein at 30 are now two worked examples
+of the profile that claim promised would not be failed; and the "live GPW
+verdicts" both files carried were from 2026-09-02 and no longer hold (Volume
+Breakout and VSA were listed as passing; neither does now). Both are corrected,
+with the re-measured table, and whether the pass condition *should* become
+expectancy-based is left as the open decision it is.
+
+Verified live against the local PostgreSQL with the backend and frontend
+running: the method catalogue, 130 GPW ranking rows all carrying it, the
+dashboard column with LPP's amber "▲ 5d" chip at score 100, the analytics
+summary row, two chart markers on LPP (2025-12-12 and 2026-09-18), the
+back-test endpoint, and both themes — the overlay's sixth colour is `#4D7C0F`
+on light, 5.4:1 contrast. The roadmap's verified Dom Development example is
+pinned on 138 real weekly bars (`tests/data_dom_2022.py`): the week of
+2022-12-19 fires at the recorded 6.9× volume and the July 2023 continuation
+breakout is refused. Backend `pytest` **1106 green, whole suite** (27 new
+here; the tree also carries another session's phase-analysis work, so the
+total is not simply 1075 + 27) and Ruff clean. Frontend untouched.
+Previously 2026-09-23: **Multi-column sorting on every table.** Krzysztof
+asked whether a table could be sorted by one column and then by another, and
+for it everywhere if so. It can, and now is. A sort became an ordered list of
+up to three **levels** — the first is the visible order, the rest break its
+ties — shared by all five list pages through one set of pure rules
+(`frontend/src/lib/sorting.ts`) and one hook (`hooks/useTableSort.ts`), which
+replaced the `sortBy` + `sortDir` pair and the click handler each page had been
+re-implementing. Desktop: plain click sorts by one column as before, shift-click
+adds a level, flips it, then removes it; a sorted header shows its position when
+there is more than one. The Sort menu was rebuilt into the active levels
+(numbered, each with ↑/↓ and a remove ×) above a "Then by" list, and Volume
+surge and Investment gained that menu, which they had never had. Backend:
+`sortBy`/`sortDir` became comma-separated lists on `ranking`, `volume-surge`
+and `capex`, parsed by `_parse_sort_levels` and applied by `_apply_sort` — one
+stable sort per level, least-significant first, which is what lets each level
+keep its own direction. **A single level is byte-identical to the old request**,
+so older clients and bookmarked URLs are untouched; the one contract change is
+that an invalid `sortDir` answers `400` instead of `422`, since it can no longer
+be a `Literal`. Verified live against the local PostgreSQL on all five pages:
+sector+rating and signal+rating two-level sorts returning genuinely regrouped
+rows, the full add→flip→remove cycle, the phone menu at 375 px, and the light
+theme (the level badge measures 7.7:1 on white).
+
+**Follow-up the same day: "it doesn't work".** It did — the request went out
+as `sortBy=priceChangePct,currentRating`, the level badges appeared, no console
+errors — but nothing on screen changed, and that is the only thing a user can
+judge it by. Two causes compounded. The menu was `lg:hidden`, so on a desktop
+the *only* way in was a shift-click that nothing advertises; and the Dashboard
+opens sorted by Change %, where the 25 loaded rows held just 4 ties, so even a
+correctly-added second level reordered almost nothing. Whether you never found
+the gesture or found it and used it on a column with no ties, you saw the same
+blank result. Fixed by dropping `lg:hidden` from the `SortMenu` on all five
+pages: the control now sits in every toolbar at every width, naming the primary
+column, carrying a "+1" when there is a tie-break, and listing the levels and
+the "Then by" columns when opened. Verified live at 1440 px: Signal + Rating
+grouped every Strong Buy with ratings descending 96, 95, 94, 93, 91, 87, 86, 86
+— a list that visibly moved — with the trigger reading "Sygnał +1". Headers and
+shift-click are unchanged; nothing about the sort *logic* moved, only its
+visibility. One limit worth knowing: the menu lists the columns that are
+switched on, so sorting by a hidden column means showing it first. Backend `pytest` **1075 green,
+whole suite** — 20 of them new here: 16 in `tests/test_sorting.py` plus four
+endpoint cases across `test_api.py`, `test_volume_surge.py` and `test_capex.py`
+(the working tree also carries another session's in-progress `test_phase.py`,
+so this total is not 1074 + 20) — and Ruff clean;
+frontend `vitest` 170 → **193 green** (23 new across `lib/sorting.test.ts`, a
+rewritten `components/SortMenu.test.tsx` and `pages/DashboardPage.test.tsx`),
+`tsc -b`, ESLint and `npm run build` pass. Previously 2026-09-22: **Sign in — optional user accounts.** Krzysztof
+asked for a login on the site, in the main window, with JWT tokens, everyone
+able to create an account, and **no e-mails for now** — sending them goes on
+the TODO list. Backend: `app/services/auth.py` (bcrypt hashing; two HS256
+JWTs — a 30-minute access token and a 30-day refresh token, separated by a
+`typ` claim so the long one can never be used as a credential; a `ver` claim =
+`users.token_version` so a password change invalidates every earlier token
+with no server-side store; a per-address and per-IP sign-in throttle),
+`app/routers/auth.py` (6 routes), `app/db/user_repository.py`, the `users`
+table (alembic `006`, created automatically at start-up). Frontend: a session
+provider, the two tokens in localStorage, a **top-bar control** (Sign in →
+initials + menu), a `/login` page carrying both Sign in and Create account
+inside the normal app shell, and an **Account** section on Settings with the
+only way a password changes today. Errors return `{ code, message }` so the
+sign-in screen speaks Polish; "no such account" and "wrong password" answer
+identically so the form cannot enumerate who is registered. `api/client.ts`
+now attaches the bearer token and silently refreshes once on a 401, sharing
+one refresh across concurrent calls. Verified live against the local
+PostgreSQL: registered through the UI, avatar and menu, wrong password
+(Polish message), sign out, sign in again, password change, the session
+surviving a reload, both themes, both languages, and 375 px; the verification
+accounts were deleted afterwards, leaving the table empty. Found and fixed
+while verifying: the top bar had no stacking order, so the page toolbars
+painted over the account menu (`relative z-30`), and the avatar initials read
+the whole address, turning `ola.nowak@example.com` into "OC". Follow-up
+2026-09-23: this shipped saying "set `STOCKPILOT_JWT_SECRET` on the VPS", and
+Krzysztof answered that being signed out is not a problem — so **the secret
+stays unset by choice** and the guides stopped calling it a required step
+(`agent/DEPLOYMENT.md` is back to three lines to fill in). The public sign-in
+page no longer shows an amber warning about a server setting a visitor cannot
+act on; it says what it means for them instead, and the backend logs the fact
+at INFO. The one caveat is written down where it matters: the secret becomes
+required if the API ever runs more than one worker. Backend `pytest` 1024 → **1074 green** (50 new in
+`tests/test_auth.py`), Ruff clean. Frontend: **13 new cases** —
+`components/UserMenu.test.tsx` (the initials, the token store including
+storage being blocked, the signed-out and no-accounts states) and six in
+`api/client.test.ts` (the bearer header, the silent refresh and its replay,
+giving up when the refresh is refused, and the structured error detail) —
+green, as are `tsc -b`, ESLint and `npm run build` for this change. Previously 2026-09-22: **VSA V3.** Krzysztof supplied *Kompendium VSA*,
 a transcript-based synthesis of all 34 recordings of the Glinicki course, and
 asked for it as a new trading method. New `backend-python/app/analysis/methods/
 vsa3.py` runs the course's seven-layer decision loop around Scenario 5, every

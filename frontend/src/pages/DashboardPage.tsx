@@ -20,12 +20,15 @@ import { useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
-import type { RankingSortKey, SortDir } from '../api/stocksApi'
+import { useTableSort } from '../hooks/useTableSort'
+import type { RankingSortKey } from '../api/stocksApi'
 import { RefreshButton } from '../components/RefreshButton'
 import { ColumnPicker } from '../components/ColumnPicker'
+import { MarketOverview } from '../components/MarketOverview'
 import { MethodPicker } from '../components/MethodPicker'
 import { RankingCardList, RankingTable } from '../components/RankingTable'
 import { SessionNote } from '../components/SessionNote'
+import { LiveNote } from '../components/LivePrice'
 import { SortMenu } from '../components/SortMenu'
 import { CombinedScoreCell, MethodScoreCell } from '../components/MethodCells'
 import { loadFavorites, saveFavorites } from '../lib/favorites'
@@ -68,8 +71,12 @@ export function DashboardPage() {
   }, [query])
 
   // Opens on the latest session's movers: price change, biggest gain first.
-  const [sortBy, setSortBy] = useState<RankingSortKey>('priceChangePct')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  // A sort is a list of levels — shift-clicking a second header adds a
+  // tie-break ("biggest movers, then best rating") — but it starts as one.
+  const { sort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<RankingSortKey>(
+    { key: 'priceChangePct', dir: 'desc' },
+    initialSortDir,
+  )
 
   // "Favorites only": narrows the ranking to the starred tickers. The stars
   // live in localStorage, so the allow-list is sent to the backend as
@@ -134,8 +141,7 @@ export function DashboardPage() {
   const rankingParams = useMemo<InfiniteRankingParams>(
     () => ({
       pageSize: PAGE_SIZE,
-      sortBy,
-      sortDir,
+      sort,
       q: debouncedSearch || undefined,
       minRating: minRating || undefined,
       signal: signalFilter,
@@ -153,8 +159,7 @@ export function DashboardPage() {
     }),
     [
       market,
-      sortBy,
-      sortDir,
+      sort,
       debouncedSearch,
       minRating,
       signalFilter,
@@ -179,15 +184,6 @@ export function DashboardPage() {
     setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
 
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
-
-  const onSort = (col: RankingSortKey) => {
-    if (col === sortBy) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortBy(col)
-      setSortDir(initialSortDir(col))
-    }
-  }
 
   // Which columns to show — shared with the Watchlist and Filters pages.
   const columns = useRankingColumns()
@@ -248,8 +244,8 @@ export function DashboardPage() {
   // The card list below `lg` has no headers to tap, so its sort menu offers
   // whatever the table headers would have — the columns the user kept.
   const sortOptions = useMemo(
-    () => sortOptionsFrom(tableColumns, sortBy, t),
-    [tableColumns, sortBy, t],
+    () => sortOptionsFrom(tableColumns, sort, t),
+    [tableColumns, sort, t],
   )
 
   const clearFilters = () => {
@@ -363,15 +359,16 @@ export function DashboardPage() {
             visibleCount={columns.count}
           />
 
-          {/* Sort — phones/tablets only; the wide-screen table sorts by its
-              column headers instead. */}
+          {/* Sort. Shown on every screen: the wide table can also be sorted
+              by clicking its headers (shift-click adds a further level), but
+              that gesture is invisible — this names the levels, their
+              direction and offers the "then by" columns outright. */}
           <SortMenu
-            className="lg:hidden"
             options={sortOptions}
-            sortBy={sortBy}
-            sortDir={sortDir}
+            sort={sort}
             onSort={onSort}
-            onSortDirChange={setSortDir}
+            onSortDirChange={onSortDirChange}
+            onRemoveLevel={onRemoveLevel}
           />
 
           {/* Filter dropdown */}
@@ -462,6 +459,10 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Top-down read: breadth and the biggest rating movers. Always about the
+          whole market, so the search/filter/favorites below do not change it. */}
+      <MarketOverview market={market} />
+
       {/* States */}
       {loading && (
         <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-400">
@@ -491,6 +492,7 @@ export function DashboardPage() {
       {!loading && !error && rows.length > 0 && (
         <>
           <SessionNote rows={rows} enabled={pooled} />
+          <LiveNote rows={rows} />
 
           <RankingTable
             columns={tableColumns}
@@ -499,8 +501,7 @@ export function DashboardPage() {
             onToggleStar={toggleStar}
             showRank
             pooled={pooled}
-            sortBy={sortBy}
-            sortDir={sortDir}
+            sort={sort}
             onSort={onSort}
             minWidth={tableMinWidth(tableColumns, RANK_COLUMN_WIDTH)}
           />

@@ -30,7 +30,7 @@ from app import __version__
 from app.config import settings
 from app.db.action_log_repository import ActionLogRepository
 from app.db.health_repository import DataHealthRepository, StoredDataStats
-from app.db.models import ActionLogRow
+from app.db.models import ActionLogRow, UserRow
 from app.dependencies import (
     APP_STARTED_AT,
     get_action_log,
@@ -51,6 +51,7 @@ from app.models import (
     LogHealth,
     SystemHealthResponse,
 )
+from app.routers.auth import get_optional_user
 from app.services.action_log import KIND_ERROR, KIND_JOB, ActionLogEntry, ActionLogService
 from app.services.error_tracker import ErrorGroup, ErrorTracker
 from app.services.gpw_company_service import GpwCompanyService
@@ -69,8 +70,13 @@ logger = logging.getLogger(__name__)
 
 async def require_admin(
     x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+    user: Annotated[UserRow | None, Depends(get_optional_user)] = None,
 ) -> None:
-    """Gate every admin endpoint behind the configured token, if there is one.
+    """Gate every admin endpoint behind an admin user or the configured token.
+
+    Users signed in with role == "admin" are granted access.
+    Otherwise, if ``STOCKPILOT_ADMIN_TOKEN`` is configured, a matching
+    ``X-Admin-Token`` header is required.
 
     No token configured means open access — the local default, where the API
     is only reachable from the same machine. Set ``STOCKPILOT_ADMIN_TOKEN`` in
@@ -80,6 +86,9 @@ async def require_admin(
     as a right one, which is what stops the check from leaking the token one
     character at a time.
     """
+    if user is not None and user.is_active and user.role == "admin":
+        return
+
     expected = settings.admin_token
     if not expected:
         return

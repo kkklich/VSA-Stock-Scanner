@@ -26,6 +26,7 @@ import {
   WeeklyBadge,
 } from '../components/ui'
 import { Range52wCell } from '../components/Range52wCell'
+import { LiveDot } from '../components/LivePrice'
 import { deltaTone, fmtApproxPln, fmtCompactPln, fmtMoney, fmtPct } from './format'
 import { displayTicker, plnHint, toPln } from './markets'
 
@@ -238,6 +239,8 @@ export const RANKING_COLUMNS: RankingColumn[] = [
     mobile: 'price',
     cell: (s, ctx) => (
       <span className="whitespace-nowrap font-medium tabular-nums text-slate-200">
+        {/* A blue dot: today's price so far, while the exchange trades. */}
+        {s.live && <LiveDot live={s.live} className="mr-1.5" />}
         {fmtMoney(s.lastPrice, s.currency)}
         {plnLine(s.lastPrice, s.currency, ctx.pooled)}
       </span>

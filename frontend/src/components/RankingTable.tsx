@@ -14,7 +14,8 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InfoTip, SortHeader } from './ui'
 import type { CellContext, RenderColumn } from '../lib/rankingColumns'
-import type { ApiRankingItem, RankingSortKey, SortDir } from '../api/stocksApi'
+import type { SortLevel } from '../lib/sorting'
+import type { ApiRankingItem, RankingSortKey } from '../api/stocksApi'
 
 /** A ranking row plus the client-only favorite flag the pages overlay on it. */
 export type RankingRow = ApiRankingItem & { starred?: boolean }
@@ -47,17 +48,17 @@ export function RankingTable({
   rankOffset = 1,
   pooled = false,
   minWidth,
-  sortBy,
-  sortDir,
+  sort,
   onSort,
   footer,
   className = '',
 }: SharedProps & {
   /** Table min-width in px — computed from the visible columns by the page. */
   minWidth: number
-  sortBy: RankingSortKey
-  sortDir: SortDir
-  onSort: (col: RankingSortKey) => void
+  /** The whole sort, outermost level first (see `lib/sorting.ts`). */
+  sort: SortLevel<RankingSortKey>[]
+  /** `additive` is the shift-click gesture: add a level, don't replace. */
+  onSort: (col: RankingSortKey, additive: boolean) => void
   /** Rendered inside the table's card, under the table (e.g. a pager). */
   footer?: ReactNode
   className?: string
@@ -89,8 +90,7 @@ export function RankingTable({
                   key={col.key}
                   label={col.label}
                   col={col.sortKey}
-                  sortBy={sortBy}
-                  sortDir={sortDir}
+                  sort={sort}
                   onSort={onSort}
                   align={col.align}
                   info={col.info}

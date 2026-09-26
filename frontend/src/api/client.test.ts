@@ -12,6 +12,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiFetch, apiFetchWithHeaders, ApiError } from './client'
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+} from '../lib/authToken'
 
 /** A minimal stand-in for the parts of Response the wrapper reads. */
 function response(status: number, body: unknown): Response {
@@ -111,5 +117,101 @@ describe('apiFetch retry policy', () => {
 
     const { headers } = await apiFetchWithHeaders('/api/stocks/ranking')
     expect(headers.get('X-Total-Count')).toBe('7')
+  })
+})
+
+// ── Signed-in requests (added 2026-09-22) ─────────────────────────────────────
+//
+// The access token lives 30 minutes, so an open tab WILL meet an expired one.
+// The wrapper answers a 401 by refreshing once and replaying the request; the
+// alternative is logging someone out in the middle of a click.
+
+describe('bearer token and silent refresh', () => {
+  beforeEach(() => clearTokens())
+  afterEach(() => clearTokens())
+
+  it('sends the access token when there is one', async () => {
+    setTokens('access-1', 'refresh-1')
+    fetchMock.mockResolvedValue(response(200, { ok: true }))
+
+    await apiFetch('/api/stocks/ranking')
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      'Bearer access-1',
+    )
+  })
+
+  it('sends nothing when signed out', async () => {
+    fetchMock.mockResolvedValue(response(200, { ok: true }))
+
+    await apiFetch('/api/stocks/ranking')
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
+  })
+
+  it('refreshes once on a 401 and replays the request', async () => {
+    setTokens('stale-access', 'refresh-1')
+    fetchMock
+      .mockResolvedValueOnce(response(401, { detail: { code: 'session_expired' } }))
+      .mockResolvedValueOnce(
+        response(200, { accessToken: 'fresh-access', refreshToken: 'refresh-2' }),
+      )
+      .mockResolvedValueOnce(response(200, { ok: true }))
+
+    await expect(apiFetch<{ ok: boolean }>('/api/auth/me')).resolves.toEqual({
+      ok: true,
+    })
+    // original → refresh → replay, and the replay carries the NEW token.
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls[1][0]).toContain('/api/auth/refresh')
+    const [, replayInit] = fetchMock.mock.calls[2]
+    expect((replayInit.headers as Record<string, string>).Authorization).toBe(
+      'Bearer fresh-access',
+    )
+    expect(getAccessToken()).toBe('fresh-access')
+  })
+
+  it('gives up and forgets the session when the refresh is refused', async () => {
+    setTokens('stale-access', 'dead-refresh')
+    fetchMock
+      .mockResolvedValueOnce(response(401, { detail: { code: 'session_expired' } }))
+      .mockResolvedValueOnce(response(401, { detail: { code: 'session_expired' } }))
+
+    await expect(apiFetch('/api/auth/me')).rejects.toMatchObject({ status: 401 })
+    // Not replayed a second time, and the dead tokens are gone — otherwise
+    // every later request would pay two round trips to fail.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(getAccessToken()).toBe('')
+    expect(getRefreshToken()).toBe('')
+  })
+
+  it('does not try to refresh the sign-in calls themselves', async () => {
+    setTokens('stale-access', 'refresh-1')
+    fetchMock.mockResolvedValue(
+      response(401, { detail: { code: 'bad_credentials', message: 'nope' } }),
+    )
+
+    await expect(
+      apiFetch('/api/auth/login', { method: 'POST', skipAuth: true }),
+    ).rejects.toMatchObject({ status: 401, code: 'bad_credentials' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads the structured error detail the auth endpoints send', async () => {
+    fetchMock.mockResolvedValue(
+      response(409, {
+        detail: { code: 'email_taken', message: 'That address already has an account.' },
+      }),
+    )
+
+    await expect(
+      apiFetch('/api/auth/register', { method: 'POST', skipAuth: true }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'email_taken',
+      message: 'That address already has an account.',
+    })
   })
 })

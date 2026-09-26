@@ -7,7 +7,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { InfoTip, MarketBadge } from '../components/ui'
+import { LiveNote } from '../components/LivePrice'
 import { MarketTabs } from '../components/MarketTabs'
 import { useHeatmap } from '../hooks/useHeatmap'
 import { useSingleMarket } from '../hooks/useMarkets'
@@ -15,6 +17,7 @@ import { usePersistentState } from '../hooks/usePersistentState'
 import type { ApiHeatmapItem } from '../api/stocksApi'
 import { fmtCompactPln, fmtMoney, fmtPct, majorCurrency } from '../lib/format'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { fmtLiveTime } from '../lib/live'
 import { useChartPalette, type ChartPalette } from '../lib/chartTheme'
 
 /* ── Color modes ────────────────────────────────────────────────────────── */
@@ -241,6 +244,7 @@ function HeatmapTooltip({
   containerW: number
   containerH: number
 }) {
+  const { t } = useTranslation()
   const width = 230
   const height = 190 // approximate rendered height, used only for clamping
   const left = Math.min(Math.max(tip.x + 14, 4), Math.max(4, containerW - width - 4))
@@ -285,6 +289,13 @@ function HeatmapTooltip({
           </div>
         ))}
       </dl>
+      {/* The price and the changes are today's so far; the rating is not. */}
+      {tip.item.live && (
+        <p className="mt-1.5 flex items-center gap-1.5 text-[10px] text-sky-400">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+          {t('live.chip', { time: fmtLiveTime(tip.item.live.asOf) })}
+        </p>
+      )}
     </div>
   )
 }
@@ -336,6 +347,11 @@ export function SectorHeatmapPage() {
   }, [data])
 
   const items = useMemo(() => data?.items ?? [], [data])
+  // The tiles' finished session is the map's `asOf`; the live note names it.
+  const liveRows = useMemo(
+    () => items.map((i) => ({ ...i, lastSession: data?.asOf ?? null })),
+    [items, data],
+  )
 
   // Tiles without a known market cap get the smallest known cap so they stay
   // visible (drawn at minimum size) instead of disappearing from the map.
@@ -421,6 +437,9 @@ export function SectorHeatmapPage() {
           </div>
         </div>
       </div>
+
+      {/* While the exchange trades, prices and changes are today's so far. */}
+      <LiveNote rows={liveRows} className="mb-3" />
 
       {/* Treemap */}
       <div

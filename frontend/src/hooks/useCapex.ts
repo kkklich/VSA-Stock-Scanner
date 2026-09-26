@@ -11,6 +11,7 @@ import {
   type ApiCapexResponse,
   type CapexQuery,
 } from '../api/stocksApi'
+import { sortKey } from '../lib/sorting'
 
 export interface UseCapexResult {
   /** All rows loaded so far (page 1 … current page). */
@@ -39,7 +40,10 @@ export function useCapex(
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  const { q, sector, currency, withData, page, pageSize, sortBy, sortDir, market } = query
+  const { q, sector, currency, withData, page, pageSize, sort, market } = query
+  // The sort is an array of objects, so a fresh render would look like a
+  // change to the effect below — depend on its stable string form instead.
+  const sortDeps = sort ? sortKey(sort) : ''
 
   useEffect(() => {
     if (!enabled) return
@@ -49,7 +53,7 @@ export function useCapex(
     else setLoadingMore(true)
     setError(null)
 
-    fetchCapex({ q, sector, currency, withData, page, pageSize, sortBy, sortDir, market })
+    fetchCapex({ q, sector, currency, withData, page, pageSize, sort, market })
       .then((resp) => {
         if (cancelled) return
         setMeta(resp)
@@ -74,7 +78,8 @@ export function useCapex(
     return () => {
       cancelled = true
     }
-  }, [q, sector, currency, withData, page, pageSize, sortBy, sortDir, market, tick, enabled])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, sector, currency, withData, page, pageSize, sortDeps, market, tick, enabled])
 
   const hasMore = meta !== null && items.length < meta.totalCount
 

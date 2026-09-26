@@ -13,11 +13,12 @@ import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 import pandas as pd
 
+from app.analysis import phase as phase_analysis
 from app.models import StooqDailyQuote, VsaSettings
 
 
@@ -162,6 +163,23 @@ class VsaConfig:
     # for this yet, so in practice it is always True — it exists so the gate can
     # be turned off in code/tests and so the default hashes as "default".
     use_trend_context: bool = True
+    # Read each signal against the Wyckoff background phase as well
+    # (app/analysis/phase.py, roadmap #15a). The trend gate above asks only
+    # "which way has price been going"; this asks "is professional money
+    # accumulating or distributing", which is the question Master the Markets
+    # actually poses — the two differ most at a top, where price is rising AND
+    # the background is weakening. A signal the phase confirms keeps its full
+    # strength; one it merely permits, or contradicts, is weighted down.
+    #
+    # OFF BY DEFAULT, on the evidence. Measured over 291 GPW tickers and four
+    # years of stored bars (agent/VSA-PHASE-ANALYSIS.md), it does not reliably
+    # make the rating more predictive: the rating's top-minus-bottom bucket
+    # spread improved slightly at 5/10/20 sessions and got *worse* at 60, for
+    # ~13% more CPU per scan. That is not enough to move every rating in the
+    # app. The classifier itself is sound and tested — what is missing is a
+    # demonstrated use for it, so it ships switched off rather than
+    # switched on and hoped for.
+    use_phase_analysis: bool = False
 
     @classmethod
     def default(cls) -> VsaConfig:
@@ -171,8 +189,12 @@ class VsaConfig:
         return self.params.get(name, DEFAULT_SIGNAL_PARAMS[name])
 
     def is_default(self) -> bool:
-        return self.use_trend_context is True and all(
-            self.for_signal(name) == DEFAULT_SIGNAL_PARAMS[name] for name in SignalName
+        return (
+            self.use_trend_context is True
+            and self.use_phase_analysis is False
+            and all(
+                self.for_signal(name) == DEFAULT_SIGNAL_PARAMS[name] for name in SignalName
+            )
         )
 
     def cache_suffix(self) -> str:
@@ -189,6 +211,7 @@ class VsaConfig:
         canonical = json.dumps(
             {
                 "use_trend_context": self.use_trend_context,
+                "use_phase_analysis": self.use_phase_analysis,
                 "params": {
                     name.value: [
                         p.enabled, p.spread_mult, p.vol_mult, p.close_pos, p.lookback,
@@ -346,6 +369,16 @@ def detect_signals(
     def trend_available(row: pd.Series) -> bool:
         """Whether a usable background reading exists for this bar."""
         return use_trend and not pd.isna(row["trend_ma"]) and row["trend_ma"] > 0
+
+    # Wyckoff background phase (roadmap #15a). The columns are rolling and
+    # shifted like everything else above, so a bar's phase is read from bars
+    # strictly before it. The phase itself is classified lazily — only on the
+    # bars where a rule actually matched — because that is a handful of bars
+    # per series and the classification is a per-row Python call, while this
+    # function runs over the whole tracked universe on every ranking.
+    use_phase = cfg.use_phase_analysis
+    if use_phase:
+        phase_analysis.add_phase_columns(df)
 
     def ctx(row: pd.Series, lb: int) -> tuple[float, float, float, float] | None:
         """Rolling context for one lookback, or None when not yet available.
@@ -633,6 +666,23 @@ def detect_signals(
                         date=d, signal_name=SignalName.NO_DEMAND,
                         type=SignalType.BEARISH, strength=0.6,
                     )
+
+        # Read the matched pattern against its background phase. Master the
+        # Markets, of two tests: "Taken in isolation the actions at (c) & (d)
+        # mean little, but because you have seen absorption volume in the
+        # background, they now become strong buy signals."
+        #
+        # This scales the signal's WEIGHT; it never removes it. The pattern is
+        # on the chart either way and the reader can see it — what changes is
+        # how much it moves the rating. Deleting contradicted signals was tried
+        # and measured on GPW history: it removed the better-performing half of
+        # the bullish ones, so the engine got worse, not better.
+        if matched is not None and use_phase:
+            bullish = matched.type == SignalType.BULLISH
+            ph = phase_analysis.classify_row(row)
+            mult = phase_analysis.strength_multiplier(ph, bullish)
+            if mult != 1.0:
+                matched = replace(matched, strength=matched.strength * mult)
 
         if matched is not None:
             signals.append(matched)

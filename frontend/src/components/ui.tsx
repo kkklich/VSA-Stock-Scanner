@@ -12,6 +12,7 @@ import {
   Info,
 } from 'lucide-react'
 import type { SignalVerdict, WeeklyAgreement } from '../types'
+import type { SortLevel } from '../lib/sorting'
 import { ratingTone } from '../lib/format'
 import { GPW_MARKET, MARKET_CODES } from '../lib/markets'
 
@@ -247,12 +248,18 @@ export function SignalBadge({ verdict }: { verdict: SignalVerdict }) {
  * A clickable table header that drives sorting for one column. Generic over
  * the column-key type so both server-side (Watchlist) and client-side
  * (Dashboard) sortable tables can share it.
+ *
+ * The table's sort is a list of levels (see `lib/sorting.ts`), so a header can
+ * be the primary order or a tie-break inside it. A plain click sorts by this
+ * column alone; **shift-click** adds it as the next level (and cycles it back
+ * off), which is what makes "sector A→Z, then best rating" possible. When more
+ * than one level is active each sorted header carries its position — 1, 2, 3 —
+ * so the ordering is readable off the table rather than remembered.
  */
 export function SortHeader<T extends string>({
   label,
   col,
-  sortBy,
-  sortDir,
+  sort,
   onSort,
   align = 'left',
   info,
@@ -261,9 +268,10 @@ export function SortHeader<T extends string>({
 }: {
   label: string
   col: T
-  sortBy: T
-  sortDir: 'asc' | 'desc'
-  onSort: (col: T) => void
+  /** The whole sort, outermost level first. */
+  sort: SortLevel<T>[]
+  /** `additive` is the shift-click gesture: add a level instead of replacing. */
+  onSort: (col: T, additive: boolean) => void
   align?: 'left' | 'right'
   info?: string
   subLabel?: string
@@ -271,8 +279,14 @@ export function SortHeader<T extends string>({
   className?: string
 }) {
   const { t } = useTranslation()
-  const active = sortBy === col
-  const Icon = !active ? ArrowDownUp : sortDir === 'asc' ? ArrowUp : ArrowDown
+  const at = sort.findIndex((l) => l.key === col)
+  const active = at >= 0
+  const dir = active ? sort[at].dir : null
+  const Icon = !active ? ArrowDownUp : dir === 'asc' ? ArrowUp : ArrowDown
+  // Only the primary column gets aria-sort: ARIA expects one sorted column per
+  // table, so the tie-breaks announce their position through the label instead.
+  const ariaSort =
+    at === 0 ? (dir === 'asc' ? 'ascending' : 'descending') : undefined
   return (
     <th
       // Sticky header: stays pinned to the top of the scroll area as the table
@@ -283,7 +297,7 @@ export function SortHeader<T extends string>({
         'sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] ' +
         className
       }
-      aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+      aria-sort={ariaSort}
     >
       <span
         className={
@@ -293,10 +307,20 @@ export function SortHeader<T extends string>({
       >
         <button
           type="button"
-          onClick={() => onSort(col)}
-          aria-label={t('common.sortBy', { label })}
+          // Shift-click selects text in a table by default, which would leave
+          // the row highlighted blue on every added sort level.
+          onMouseDown={(e) => {
+            if (e.shiftKey) e.preventDefault()
+          }}
+          onClick={(e) => onSort(col, e.shiftKey)}
+          aria-label={
+            active && sort.length > 1
+              ? t('common.sortByLevel', { label, level: at + 1 })
+              : t('common.sortBy', { label })
+          }
+          title={t('common.sortAddHint')}
           className={
-            'inline-flex items-center gap-1 transition-colors hover:text-slate-200 ' +
+            'inline-flex select-none items-center gap-1 transition-colors hover:text-slate-200 ' +
             (active ? 'text-slate-200' : '')
           }
         >
@@ -305,6 +329,14 @@ export function SortHeader<T extends string>({
             size={12}
             className={active ? 'text-emerald-400' : 'text-slate-600'}
           />
+          {active && sort.length > 1 && (
+            <span
+              aria-hidden="true"
+              className="rounded bg-emerald-500/15 px-1 text-[9px] font-semibold leading-tight text-emerald-300"
+            >
+              {at + 1}
+            </span>
+          )}
         </button>
         {info && <InfoTip text={info} />}
       </span>

@@ -28,6 +28,7 @@ import {
 } from '../lib/rankingColumns'
 import type { TFunction } from 'i18next'
 import type { RankingSortKey } from '../api/stocksApi'
+import type { SortLevel } from '../lib/sorting'
 import type { SortOption } from '../components/SortMenu'
 
 export function useRankingColumns() {
@@ -89,22 +90,26 @@ export function useRankingColumns() {
  * to offer whatever the table's headers would have. Unsortable columns (the
  * sparkline) drop out.
  *
- * `activeSortBy` is kept in the list even when its column is hidden: hiding a
- * column does not change the ordering, and a menu that couldn't name the
- * current sort would leave the list looking arbitrarily ordered.
+ * Columns the sort is currently USING are kept in the list even when hidden:
+ * hiding a column does not change the ordering, and a menu that couldn't name
+ * a level would leave the list looking arbitrarily ordered — and, with several
+ * levels, would offer no way to remove the hidden one.
  */
 export function sortOptionsFrom(
   columns: RenderColumn[],
-  activeSortBy?: RankingSortKey,
+  activeSort?: SortLevel<RankingSortKey>[],
   t?: TFunction,
 ): SortOption<RankingSortKey>[] {
   const options = columns
     .filter((c): c is RenderColumn & { sortKey: RankingSortKey } => c.sortKey !== null)
     .map((c) => ({ key: c.sortKey, label: c.label }))
 
-  if (activeSortBy && t && !options.some((o) => o.key === activeSortBy)) {
-    const hidden = RANKING_COLUMNS.find((c) => c.sortKey === activeSortBy)
-    if (hidden) options.push({ key: activeSortBy, label: columnLabel(hidden, t) })
+  if (activeSort && t) {
+    for (const level of activeSort) {
+      if (options.some((o) => o.key === level.key)) continue
+      const hidden = RANKING_COLUMNS.find((c) => c.sortKey === level.key)
+      if (hidden) options.push({ key: level.key, label: columnLabel(hidden, t) })
+    }
   }
   return options
 }

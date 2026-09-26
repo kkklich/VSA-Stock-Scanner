@@ -28,6 +28,7 @@ from app.db.models import (
     CompanyQuarterlyRow,
     CompanyRow,
     DailyQuoteRow,
+    InsiderTransactionRow,
     RatingSnapshotRow,
 )
 from app.models import (
@@ -35,6 +36,7 @@ from app.models import (
     CompanyFundamentalsResponse,
     FinancialMetrics,
     GpwCompany,
+    InsiderTransactionItem,
     QuarterlyReport,
     RatingPoint,
     StooqDailyQuote,
@@ -167,6 +169,19 @@ class QuoteRepository(Protocol):
         ...
 
 
+    async def upsert_insider_transactions(
+        self, ticker: str, transactions: list[InsiderTransactionItem], market: str = "gpw"
+    ) -> int:
+        """Insert insider transactions for a ticker, skipping duplicates. Returns count inserted."""
+        ...
+
+    async def get_insider_transactions(
+        self, ticker: str, from_date: date | None = None, open_market_only: bool = False
+    ) -> list[InsiderTransactionItem]:
+        """Return insider transactions for a ticker, newest publication date first."""
+        ...
+
+
 # ── Shared row → model mapping ────────────────────────────────────────────────
 
 def _cashflow_period(row: CompanyCashflowRow) -> CashflowPeriod:
@@ -178,6 +193,26 @@ def _cashflow_period(row: CompanyCashflowRow) -> CashflowPeriod:
         operating_cash_flow=row.operating_cash_flow,
         free_cash_flow=row.free_cash_flow,
         currency=row.currency,
+    )
+
+
+def _insider_item(row: InsiderTransactionRow) -> InsiderTransactionItem:
+    """Map one stored insider transaction row to its API model."""
+    return InsiderTransactionItem(
+        id=row.id,
+        trade_date=row.trade_date,
+        publication_date=row.publication_date,
+        insider_name=row.insider_name,
+        role=row.role,
+        transaction_type=row.transaction_type,
+        is_open_market=row.is_open_market,
+        shares=row.shares,
+        price=float(row.price) if row.price is not None else None,
+        currency=row.currency,
+        value=float(row.value) if row.value is not None else None,
+        source=row.source,
+        source_url=row.source_url,
+        notes=row.notes,
     )
 
 
@@ -558,6 +593,66 @@ class PostgresQuoteRepository:
             quarterly_reports=quarterly,
         )
 
+    async def upsert_insider_transactions(
+        self, ticker: str, transactions: list[InsiderTransactionItem], market: str = "gpw"
+    ) -> int:
+        if not transactions:
+            return 0
+        norm_ticker = ticker.strip().casefold()
+        now = datetime.now(tz=UTC)
+        inserted = 0
+        async with self._sf() as session:
+            for t in transactions:
+                query = select(InsiderTransactionRow.id).where(
+                    InsiderTransactionRow.ticker == norm_ticker,
+                    InsiderTransactionRow.publication_date == t.publication_date,
+                    InsiderTransactionRow.transaction_type == t.transaction_type,
+                    InsiderTransactionRow.shares == t.shares,
+                )
+                if t.insider_name:
+                    query = query.where(InsiderTransactionRow.insider_name == t.insider_name)
+                exists = (await session.execute(query.limit(1))).scalar() is not None
+                if not exists:
+                    row = InsiderTransactionRow(
+                        ticker=norm_ticker,
+                        market=market,
+                        trade_date=t.trade_date,
+                        publication_date=t.publication_date,
+                        insider_name=t.insider_name,
+                        role=t.role,
+                        transaction_type=t.transaction_type,
+                        is_open_market=t.is_open_market,
+                        shares=t.shares,
+                        price=Decimal(str(t.price)) if t.price is not None else None,
+                        currency=t.currency,
+                        value=Decimal(str(t.value)) if t.value is not None else None,
+                        source=t.source,
+                        source_url=t.source_url,
+                        notes=t.notes,
+                        created_at=now,
+                    )
+                    session.add(row)
+                    inserted += 1
+            await session.commit()
+        return inserted
+
+    async def get_insider_transactions(
+        self, ticker: str, from_date: date | None = None, open_market_only: bool = False
+    ) -> list[InsiderTransactionItem]:
+        norm_ticker = ticker.strip().casefold()
+        stmt = (
+            select(InsiderTransactionRow)
+            .where(InsiderTransactionRow.ticker == norm_ticker)
+            .order_by(InsiderTransactionRow.publication_date.desc(), InsiderTransactionRow.id.desc())
+        )
+        if from_date is not None:
+            stmt = stmt.where(InsiderTransactionRow.publication_date >= from_date)
+        if open_market_only:
+            stmt = stmt.where(InsiderTransactionRow.is_open_market.is_(True))
+        async with self._sf() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+        return [_insider_item(r) for r in rows]
+
 
 # ── In-memory implementation (used in tests) ─────────────────────────────────
 
@@ -571,6 +666,7 @@ class InMemoryQuoteRepository:
         self._quarterly: dict[str, list[QuarterlyReport]] = {}
         self._cashflow: dict[str, list[CashflowPeriod]] = {}
         self._ratings: dict[str, dict[date, RatingPoint]] = {}
+        self._insider_transactions: dict[str, list[InsiderTransactionItem]] = {}
 
     async def upsert_companies(self, companies: list[GpwCompany]) -> None:
         by_ticker = {c.ticker: c for c in self._companies}
@@ -690,3 +786,34 @@ class InMemoryQuoteRepository:
             metrics=metrics,
             quarterly_reports=quarterly,
         )
+
+    async def upsert_insider_transactions(
+        self, ticker: str, transactions: list[InsiderTransactionItem], market: str = "gpw"
+    ) -> int:
+        norm_ticker = ticker.strip().casefold()
+        current = self._insider_transactions.setdefault(norm_ticker, [])
+        inserted = 0
+        for t in transactions:
+            if not any(
+                c.publication_date == t.publication_date
+                and c.transaction_type == t.transaction_type
+                and c.shares == t.shares
+                and (c.insider_name == t.insider_name or not t.insider_name)
+                for c in current
+            ):
+                current.append(t)
+                inserted += 1
+        current.sort(key=lambda x: x.publication_date, reverse=True)
+        return inserted
+
+    async def get_insider_transactions(
+        self, ticker: str, from_date: date | None = None, open_market_only: bool = False
+    ) -> list[InsiderTransactionItem]:
+        norm_ticker = ticker.strip().casefold()
+        items = list(self._insider_transactions.get(norm_ticker, []))
+        if from_date is not None:
+            items = [i for i in items if i.publication_date >= from_date]
+        if open_market_only:
+            items = [i for i in items if i.is_open_market]
+        return items
+

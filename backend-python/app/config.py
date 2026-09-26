@@ -52,6 +52,17 @@ class Settings(BaseSettings):
     us_ingest_hour: int = 17
     us_ingest_minute: int = 15
 
+    # Live prices while an exchange is open (app/services/live_prices.py):
+    # every tracked stock's session so far — today's price, change and volume —
+    # is downloaded on this cadence, on the clock (60 = at every full hour),
+    # for each served market that is trading at that moment. Shown beside the
+    # finished-session analysis; never written to the database and never fed
+    # into a rating. Must divide an hour (5, 10, 15, 20, 30 or 60); anything
+    # else falls back to 60. Scheduled only when a database is configured,
+    # like the nightly runs.
+    live_prices_enabled: bool = True
+    live_prices_interval_minutes: int = 60
+
     # Which stock markets this deployment serves, comma-separated: any of
     # gpw, us, de, fr, nl, uk — or "all". The GPW is always on. Markets can be
     # switched on one at a time (see app/markets.py and
@@ -93,8 +104,13 @@ class Settings(BaseSettings):
     action_log_memory_entries: int = 2000
 
     # Paths that are NOT recorded. /health is polled every 30s by the Docker
-    # healthcheck; logging it would bury the real actions in noise.
-    action_log_exclude_paths: list[str] = ["/health"]
+    # healthcheck; logging it would bury the real actions in noise. The refresh
+    # status is the same kind of heartbeat: every open page reads it every few
+    # minutes to learn whether the data changed (hourly live prices), and the
+    # Refresh button polls it every 2.5 s while a run lasts. What it reports is
+    # recorded anyway — the POST that starts a refresh and the job.refresh /
+    # job.live entries of every run.
+    action_log_exclude_paths: list[str] = ["/health", "/api/stocks/refresh/status"]
 
     # ── Error tracking + admin access ─────────────────────────────────────────
 
@@ -114,6 +130,36 @@ class Settings(BaseSettings):
     # carry stack traces and caller IP addresses. GET /api/admin/health reports
     # `protected: false` when this is unset so the UI can warn about it.
     admin_token: str = ""
+
+    # ── User accounts (JWT) ───────────────────────────────────────────────────
+    # Visitors can register an account and sign in; see app/services/auth.py.
+    # Accounts need a database — without STOCKPILOT_DATABASE_URL there is
+    # nowhere to keep them, and the sign-in endpoints answer 503.
+
+    # The key every login token is signed with. MUST be set on a real
+    # deployment (a long random string — the deployment guide shows how to
+    # generate one). Left empty, the app signs with a key generated for this
+    # process, so everyone is signed out whenever the backend restarts.
+    jwt_secret: str = ""
+
+    # How long an access token stays valid. Short on purpose: the browser
+    # silently exchanges its refresh token for a new one, so the visitor never
+    # notices, and a leaked access token is only useful for this long.
+    jwt_access_minutes: int = 30
+
+    # How long a refresh token stays valid — i.e. how long "stay signed in"
+    # actually lasts before the password is asked for again.
+    jwt_refresh_days: int = 30
+
+    # Whether anyone may create an account. True: a public Register form
+    # (what the site runs today). False: sign-in only, for a deployment that
+    # wants a closed list of people.
+    registration_open: bool = True
+
+    # Comma-separated e-mail addresses that get the "admin" role when they
+    # register. Informational for now — /api/admin/* still uses its own
+    # STOCKPILOT_ADMIN_TOKEN — but stored from the start.
+    admin_emails: str = ""
 
     @property
     def action_log_path(self) -> Path:

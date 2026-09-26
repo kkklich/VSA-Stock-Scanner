@@ -21,8 +21,9 @@ from __future__ import annotations
 import logging
 import math
 from collections import OrderedDict
+from collections.abc import Callable, Iterable
 from datetime import date, datetime, timedelta
-from typing import Annotated, Literal
+from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import ValidationError
@@ -48,12 +49,18 @@ from app.analysis.vsa import (
     detect_signals,
     verdict_from_signals,
 )
+from app.analysis.vsa4.adapter import (
+    DEFAULT_COMMISSION_BPS,
+    DEFAULT_SLIPPAGE_BPS,
+    Sides,
+)
 from app.analysis.weekly import compute_weekly_view, resample_weekly, weekly_agreement
 from app.config import settings
-from app.db.repository import QuoteRepository
+from app.db.repository import InMemoryQuoteRepository, QuoteRepository
 from app.dependencies import (
     get_gpw_company_service,
     get_history_cache,
+    get_live_prices,
     get_quote_repository,
     get_ranking_cache,
     get_refresh_service,
@@ -80,8 +87,11 @@ from app.models import (
     CompanyFundamentalsResponse,
     GpwCompany,
     HeatmapResponse,
+    InsiderTransactionItem,
+    InsiderTransactionsResponse,
     MarketIndexInfo,
     MarketInfo,
+    MarketOverviewResponse,
     MethodBacktestResponse,
     MethodSignalGroup,
     MethodSignalItem,
@@ -94,6 +104,7 @@ from app.models import (
     StockSignalsResponse,
     StooqDailyQuote,
     TickerVolumeResponse,
+    TradeSimulationResponse,
     TradingMethodInfo,
     TrustScoreResponse,
     VolumeSurgeResponse,
@@ -102,9 +113,13 @@ from app.models import (
 )
 from app.services.cache import LockRegistry, TTLCache
 from app.services.capex_service import build_capex_screen, sum_ttm, summarize_capex
+from app.services.espi_client import EspiClient
 from app.services.exceptions import NoIntradayDataError, StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.heatmap_service import compute_heatmap
+from app.services.insider_service import build_insider_response
+from app.services.live_prices import LivePriceService
+from app.services.market_overview import DEFAULT_MOVERS, build_market_overview
 from app.services.method_backtest_service import (
     DEFAULT_FORWARD_SESSIONS,
     compute_method_backtest,
@@ -113,6 +128,7 @@ from app.services.ranking_service import compute_ranking, ranking_cache_key
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
+from app.services.trade_simulation_service import build_trade_simulation
 from app.services.volume_surge_service import (
     DEFAULT_BASELINE_DAYS,
     DEFAULT_MIN_RATIO,
@@ -311,6 +327,114 @@ def _sort_value(
     return value
 
 
+_SortRow = TypeVar("_SortRow")
+
+# How many columns one request may sort by. Two covers the common "group by
+# sector, best rating first"; three leaves room for a tie-break inside that.
+# Deeper than that nobody can read off a table, and each level costs one more
+# pass over the rows.
+MAX_SORT_LEVELS = 3
+
+
+def _parse_sort_levels(
+    sort_by: str,
+    sort_dir: str,
+    allowed: dict[str, str],
+    *,
+    default_dir: str = "desc",
+) -> list[tuple[str, bool]]:
+    """Parse ``sortBy``/``sortDir`` into ordered ``(attribute, reverse)`` levels.
+
+    Both parameters are comma-separated lists, so "sector first, then rating"
+    is ``sortBy=sector,currentRating&sortDir=asc,desc``. A single value in each
+    is exactly what it always was, which is what every older client sends.
+
+    A direction is optional per level and falls back to ``default_dir`` — the
+    endpoint's own default — so ``sortBy=sector,currentRating`` alone is valid.
+    A repeated column is kept once, at its first position (mentioning a column
+    again could never change the order). Everything else is a 400 naming what
+    was wrong: an unknown column, a direction that is not asc/desc, more
+    directions than columns, or more than ``MAX_SORT_LEVELS`` columns.
+    """
+    keys = [k.strip() for k in sort_by.split(",") if k.strip()]
+    for key in keys:
+        if key not in allowed:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Invalid 'sortBy' value '{key}'. "
+                    f"Allowed: {', '.join(allowed)}."
+                ),
+            )
+    if not keys:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "'sortBy' must name at least one column. "
+                f"Allowed: {', '.join(allowed)}."
+            ),
+        )
+
+    dirs: list[str] = []
+    for raw in sort_dir.split(","):
+        value = raw.strip().casefold()
+        if not value:
+            continue
+        if value not in ("asc", "desc"):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid 'sortDir' value '{value}'. Allowed: asc, desc.",
+            )
+        dirs.append(value)
+    # Checked against the columns AS SENT, before duplicates are dropped below:
+    # the two lists are positional, so the client's own pairing is what has to
+    # line up.
+    if len(dirs) > len(keys):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"'sortDir' has {len(dirs)} values but 'sortBy' names "
+                f"{len(keys)} column(s)."
+            ),
+        )
+
+    levels: list[tuple[str, bool]] = []
+    seen: set[str] = set()
+    for i, key in enumerate(keys):
+        if key in seen:
+            continue
+        seen.add(key)
+        direction = dirs[i] if i < len(dirs) else default_dir
+        levels.append((allowed[key], direction != "asc"))
+    if len(levels) > MAX_SORT_LEVELS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"'sortBy' accepts at most {MAX_SORT_LEVELS} columns, "
+                f"got {len(levels)}."
+            ),
+        )
+    return levels
+
+
+def _apply_sort(
+    rows: Iterable[_SortRow],
+    levels: list[tuple[str, bool]],
+    key_fn: Callable[[_SortRow, str], object],
+) -> list[_SortRow]:
+    """Order ``rows`` by several columns at once (level 1 is the outer order).
+
+    Python's sort is stable, so sorting by the LEAST significant level first and
+    working backwards leaves each level breaking only the ties of the one before
+    it. Doing it in passes is also what lets every level keep its own direction,
+    which one tuple key under a single ``reverse`` flag cannot express.
+    """
+    ordered = list(rows)
+    for attr, reverse in reversed(levels):
+        ordered.sort(key=lambda row, a=attr: key_fn(row, a), reverse=reverse)
+    return ordered
+
+
 def _with_combined_score(
     row: StockRankingItem, selected_methods: list[str] | None
 ) -> StockRankingItem:
@@ -348,8 +472,7 @@ def _query_ranking(
     weekly_confirms: bool = False,
     tickers: set[str] | None,
     selected_methods: list[str] | None = None,
-    sort_by: str,
-    sort_dir: str,
+    sort: list[tuple[str, bool]],
     pooled: bool = False,
     price_unit: str | None = None,
 ) -> list[StockRankingItem]:
@@ -359,7 +482,9 @@ def _query_ranking(
     and so the expensive ranking computation stays fully cached: only this cheap
     in-memory pass runs per request. ``selected_methods`` chooses which
     per-method scores fold into each row's combined score (default: all methods
-    present on the row).
+    present on the row). ``sort`` is the ordered list of ``(attribute,
+    reverse)`` levels from ``_parse_sort_levels``: the first one is the visible
+    order and the rest only break its ties.
 
     ``pooled`` says the rows come from more than one market (``market=all``),
     so money is denominated in several currencies: the price bounds are then
@@ -449,12 +574,10 @@ def _query_ranking(
     # instead of up-front avoids copying rows that were just filtered out.
     rows = [_with_combined_score(r, selected_methods) for r in rows]
 
-    attr = _RANKING_SORT_KEYS.get(sort_by, "current_rating")
-    reverse = sort_dir.casefold() != "asc"
-    return sorted(
+    return _apply_sort(
         rows,
-        key=lambda r: _sort_value(r, attr, pooled=pooled, price_unit=price_unit),
-        reverse=reverse,
+        sort,
+        lambda r, attr: _sort_value(r, attr, pooled=pooled, price_unit=price_unit),
     )
 
 
@@ -889,8 +1012,8 @@ async def get_ranking(
     response: Response,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
-    sort_by: Annotated[str, Query(alias="sortBy")] = "currentRating",
-    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    sort_by: Annotated[str, Query(alias="sortBy", max_length=128)] = "currentRating",
+    sort_dir: Annotated[str, Query(alias="sortDir", max_length=32)] = "desc",
     q: Annotated[str | None, Query(max_length=64)] = None,
     min_rating: Annotated[int, Query(alias="minRating", ge=0, le=100)] = 0,
     max_rating: Annotated[int, Query(alias="maxRating", ge=0, le=100)] = 100,
@@ -920,15 +1043,9 @@ async def get_ranking(
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+    live: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
 ) -> list[StockRankingItem]:
-    if sort_by not in _RANKING_SORT_KEYS:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Invalid 'sortBy' value '{sort_by}'. "
-                f"Allowed: {', '.join(_RANKING_SORT_KEYS)}."
-            ),
-        )
+    sort = _parse_sort_levels(sort_by, sort_dir, _RANKING_SORT_KEYS)
 
     markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
@@ -942,6 +1059,13 @@ async def get_ranking(
                 scope, config, companies, stooq, cache, history_cache, repo
             )
         )
+
+    # Today's prices, for the stocks whose exchange is trading (live_prices.py):
+    # laid over the cached rows BEFORE the filters and the sort, so the price
+    # bounds and a sort by price or by change read the same figures the rows
+    # show. The ratings underneath stay the finished session's.
+    if live is not None:
+        full_ranking = live.overlay_rows(full_ranking)
 
     # Optional allow-list of tickers (used by the "favorites only" view).
     ticker_set: set[str] | None = None
@@ -975,8 +1099,7 @@ async def get_ranking(
         weekly_confirms=weekly_confirms,
         tickers=ticker_set,
         selected_methods=selected_methods,
-        sort_by=sort_by,
-        sort_dir=sort_dir,
+        sort=sort,
         pooled=len(markets) > 1,
         price_unit=markets[0].currency if len(markets) == 1 else None,
     )
@@ -1024,7 +1147,7 @@ async def _market_ranking(
         # don't store it, or the dashboard would show yesterday's ranking as
         # today's for the whole TTL.
         if not cache.set_if_generation(
-            cache_key, full_ranking, settings.history_cache_seconds, generation
+            cache_key, full_ranking, settings.history_cache_seconds, generation, pinned=config.is_default()
         ):
             logger.info("Ranking cache invalidated during computation — not cached.")
         logger.info(
@@ -1033,6 +1156,47 @@ async def _market_ranking(
             len(full_ranking),
         )
         return full_ranking
+
+
+@router.get(
+    "/market-overview",
+    response_model=MarketOverviewResponse,
+    response_model_by_alias=True,
+    summary="Market breadth and the biggest rating movers",
+)
+async def get_market_overview(
+    limit: Annotated[int, Query(ge=1, le=25)] = DEFAULT_MOVERS,
+    vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
+    market: MarketParam = None,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)] = ...,
+    cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
+    history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+    live: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
+) -> MarketOverviewResponse:
+    """The Dashboard's top-down read: how the market leans and who moved most.
+
+    A tally over the same cached ranking rows the list shows (nothing extra is
+    downloaded or stored): the verdict split, how many stocks rose or fell, how
+    many set a new 52-week extreme, and the ``limit`` stocks whose VSA rating
+    rose / fell the most since the previous session. ``market=all`` tallies the
+    served markets together — a rating has no unit, so they can share a count.
+    """
+    markets = _resolve_markets(market, allow_all=True)
+    config = _parse_vsa_settings(vsa_settings)
+    rows: list[StockRankingItem] = []
+    for scope in markets:
+        rows.extend(
+            await _market_ranking(
+                scope, config, companies, stooq, cache, history_cache, repo
+            )
+        )
+    # Today's price moves while an exchange trades; the ratings underneath (and
+    # so the verdict split and the rating movers) stay the finished session's.
+    if live is not None:
+        rows = live.overlay_rows(rows)
+    return build_market_overview(rows, market=_scope_id(markets), limit=limit)
 
 
 # ── Endpoints: manual data refresh ────────────────────────────────────────────
@@ -1048,6 +1212,7 @@ async def _market_ranking(
 async def trigger_refresh(
     request: Request,
     refresh: Annotated[RefreshService | None, Depends(get_refresh_service)],
+    live: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
 ) -> RefreshStatusResponse:
     """Kick off the refresh pipeline in the background and return its status.
 
@@ -1056,6 +1221,20 @@ async def trigger_refresh(
     market. If a refresh is already running, the in-flight run is kept and its
     status is returned — pressing the button twice never starts two downloads.
     """
+    # Prevent cross-site request forgery via simple cross-site requests
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site and fetch_site.strip().lower() == "cross-site":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Cross-site triggering of data refresh is forbidden.",
+        )
+    content_type = request.headers.get("content-type", "").lower()
+    if "form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="HTML form submissions are not supported for data refresh.",
+        )
+
     if refresh is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1068,7 +1247,27 @@ async def trigger_refresh(
         logger.info("Manual refresh triggered via POST /api/stocks/refresh.")
     else:
         logger.info("Manual refresh requested but one is already running.")
-    return refresh.status()
+    return _status_with_live(refresh.status(), live)
+
+
+def _status_with_live(
+    status_: RefreshStatusResponse, live: LivePriceService | None
+) -> RefreshStatusResponse:
+    """The refresh status plus when today's live prices last changed.
+
+    A page left open polls this one endpoint to learn that there is something
+    new to show — the evening refresh or an hourly live-price run alike.
+    """
+    if live is None:
+        return status_
+    return status_.model_copy(
+        update={
+            "live_prices_at": (
+                live.last_update_at.isoformat() if live.last_update_at else None
+            ),
+            "live_markets": {m: at.isoformat() for m, at in live.market_times().items()},
+        }
+    )
 
 
 @router.get(
@@ -1079,13 +1278,14 @@ async def trigger_refresh(
 )
 async def get_refresh_status(
     refresh: Annotated[RefreshService | None, Depends(get_refresh_service)],
+    live: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
 ) -> RefreshStatusResponse:
     if refresh is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Refresh service not initialised yet — try again in a moment.",
         )
-    return refresh.status()
+    return _status_with_live(refresh.status(), live)
 
 
 # ── Endpoint 3: scanner back-test statistics ─────────────────────────────────
@@ -1150,7 +1350,7 @@ async def get_scanner_stats(
         # Built from pre-refresh data if the nightly ingest cleared the cache
         # meanwhile — serve it, but don't remember it as current.
         if not cache.set_if_generation(
-            cache_key, result, settings.history_cache_seconds, generation
+            cache_key, result, settings.history_cache_seconds, generation, pinned=config.is_default()
         ):
             logger.info(
                 "Scanner stats cache invalidated during computation — not cached."
@@ -1183,12 +1383,15 @@ async def get_heatmap(
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
     history_cache: Annotated[TTLCache, Depends(get_history_cache)] = ...,
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = ...,
+    live: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
 ) -> HeatmapResponse:
     """Data behind the Sector heatmap page (Finviz-style treemap).
 
     One tile per stock that passes the ranking pre-filters: tile size comes
     from the market cap, tile colour from the VSA rating or from the price
     change over the selected horizon (1D / 1M / 1Y / MAX of stored history).
+    While the market trades, the price and the changes are measured from
+    today's live price; the rating stays the finished session's.
     """
     # One market: tiles are sized by market cap, and caps in different
     # currencies cannot share one treemap.
@@ -1197,14 +1400,14 @@ async def get_heatmap(
     cache_key = f"heatmap:{scope.id}{config.cache_suffix()}"
     cached: HeatmapResponse | None = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return _with_live_tiles(cached, live)
 
     lock = _heatmap_locks.get(cache_key)
     async with lock:
         # A concurrent request may have finished computing while we waited.
         cached = cache.get(cache_key)
         if cached is not None:
-            return cached
+            return _with_live_tiles(cached, live)
 
         generation = cache.generation
         logger.info("Heatmap cache cold — computing.")
@@ -1220,11 +1423,24 @@ async def get_heatmap(
         # this result was built from pre-refresh data — serve it to this
         # caller but don't cache it, or it would look fresh for hours.
         if not cache.set_if_generation(
-            cache_key, result, settings.history_cache_seconds, generation
+            cache_key, result, settings.history_cache_seconds, generation, pinned=config.is_default()
         ):
             logger.info("Heatmap cache invalidated during computation — not cached.")
         logger.info("Heatmap ready: %d tiles.", len(result.items))
+        return _with_live_tiles(result, live)
+
+
+def _with_live_tiles(
+    result: HeatmapResponse, live: LivePriceService | None
+) -> HeatmapResponse:
+    """The heatmap with today's prices laid over its tiles.
+
+    The cached response is shared by every request, so the overlay builds a
+    new one and leaves the cached tiles as they were computed.
+    """
+    if live is None:
         return result
+    return result.model_copy(update={"items": live.overlay_tiles(result.items)})
 
 
 # ── Endpoint: volume-surge scanner ────────────────────────────────────────────
@@ -1271,8 +1487,8 @@ async def get_volume_surge(
     ),
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
-    sort_by: Annotated[str, Query(alias="sortBy")] = "volumeRatio",
-    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    sort_by: Annotated[str, Query(alias="sortBy", max_length=128)] = "volumeRatio",
+    sort_dir: Annotated[str, Query(alias="sortDir", max_length=32)] = "desc",
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -1290,15 +1506,12 @@ async def get_volume_surge(
     (the price move alone is only a rough effort-vs-result cue; the verdict
     carries the bar-level reading). Server-side sorted (default: strongest
     surge first) and paginated; ``totalCount`` carries the matching-row total.
+
+    ``sortBy``/``sortDir`` accept up to ``MAX_SORT_LEVELS`` comma-separated
+    columns, each with its own direction, so "sector A→Z, biggest surge first"
+    is ``sortBy=sector,volumeRatio&sortDir=asc,desc``.
     """
-    if sort_by not in _SURGE_SORT_KEYS:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Invalid 'sortBy' value '{sort_by}'. "
-                f"Allowed: {', '.join(_SURGE_SORT_KEYS)}."
-            ),
-        )
+    sort = _parse_sort_levels(sort_by, sort_dir, _SURGE_SORT_KEYS)
 
     markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
@@ -1333,16 +1546,12 @@ async def get_volume_surge(
     # Cheap per-request pass over the cached full scan — same split as the
     # ranking: the expensive computation stays fully cached, only this
     # in-memory sort + slice runs per request.
-    attr = _SURGE_SORT_KEYS[sort_by]
-    ordered = sorted(
+    pooled = len(markets) > 1
+    price_unit = markets[0].currency if len(markets) == 1 else None
+    ordered = _apply_sort(
         full.items,
-        key=lambda i: _sort_value(
-            i,
-            attr,
-            pooled=len(markets) > 1,
-            price_unit=markets[0].currency if len(markets) == 1 else None,
-        ),
-        reverse=sort_dir != "asc",
+        sort,
+        lambda i, attr: _sort_value(i, attr, pooled=pooled, price_unit=price_unit),
     )
     start = (page - 1) * page_size
     return full.model_copy(update={"items": ordered[start : start + page_size]})
@@ -1439,8 +1648,8 @@ async def get_capex(
     with_data: Annotated[bool, Query(alias="withData")] = True,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
-    sort_by: Annotated[str, Query(alias="sortBy")] = "capex",
-    sort_dir: Annotated[Literal["asc", "desc"], Query(alias="sortDir")] = "desc",
+    sort_by: Annotated[str, Query(alias="sortBy", max_length=128)] = "capex",
+    sort_dir: Annotated[str, Query(alias="sortDir", max_length=32)] = "desc",
     market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
     cache: Annotated[TTLCache, Depends(get_ranking_cache)] = ...,
@@ -1463,19 +1672,14 @@ async def get_capex(
     ``withData=false`` keeps companies Yahoo has no capex for; they carry null
     figures rather than zeros, because "not reported" is not "invested
     nothing". Server-side sorted (default: biggest investor first) and
-    paginated; ``totalCount`` carries the matching-row total.
+    paginated; ``totalCount`` carries the matching-row total. ``sortBy`` and
+    ``sortDir`` accept up to ``MAX_SORT_LEVELS`` comma-separated columns, each
+    with its own direction, so later columns break the first one's ties.
 
     A failed database read answers 503 rather than an empty screen, so a
     momentary outage is never remembered as "this app has no capex data".
     """
-    if sort_by not in _CAPEX_SORT_KEYS:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Invalid 'sortBy' value '{sort_by}'. "
-                f"Allowed: {', '.join(_CAPEX_SORT_KEYS)}."
-            ),
-        )
+    sort = _parse_sort_levels(sort_by, sort_dir, _CAPEX_SORT_KEYS)
 
     [scope] = _resolve_markets(market, allow_all=False)
     cache_key = f"capex:{scope.id}:full"
@@ -1530,8 +1734,7 @@ async def get_capex(
     if wanted_sector and wanted_sector != "all":
         rows = [r for r in rows if (r.sector or "").casefold() == wanted_sector]
 
-    attr = _CAPEX_SORT_KEYS[sort_by]
-    ordered = sorted(rows, key=lambda r: _sort_value(r, attr), reverse=sort_dir != "asc")
+    ordered = _apply_sort(rows, sort, _sort_value)
     start = (page - 1) * page_size
     return full.model_copy(
         update={
@@ -1754,6 +1957,7 @@ async def get_signals(
     to_date: Annotated[date | None, Query(alias="toDate")] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     interval: Annotated[str | None, Query(alias="interval")] = None,
+    live_prices: Annotated[LivePriceService | None, Depends(get_live_prices)] = None,
 ) -> StockSignalsResponse:
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
@@ -1849,6 +2053,23 @@ async def get_signals(
     price_change_pct = (
         round((last_close - prev_close) / prev_close * 100, 2) if prev_close else 0.0
     )
+
+    # Today's price while the exchange trades — the header's price and change,
+    # and the chart's forming candle. Only on a chart that reaches today: a
+    # window ending in the past is a look at that past, and today's price has
+    # no place in it. The rating above stays the finished session's.
+    live = live_prices.get(normalized) if live_prices is not None else None
+    if (
+        live is None
+        or to_date is not None
+        or not rating_quotes
+        or live.session_date <= rating_quotes[-1].date
+    ):
+        live = None
+    else:
+        last_close = live.price
+        if live.change_pct is not None:
+            price_change_pct = live.change_pct
 
     # ── Chart series ─────────────────────────────────────────────────────────
     # Everything above is the DAILY read of the stock and stays daily whatever
@@ -1952,6 +2173,7 @@ async def get_signals(
         weekly_rating=weekly.rating,
         weekly_signal=weekly.verdict,
         weekly_agreement=weekly_agree,  # type: ignore[arg-type]
+        live=live,
     )
 
 
@@ -2485,3 +2707,206 @@ async def _load_ticker_capex(
     if not periods:
         return None
     return summarize_capex(periods, ttm_revenue)
+
+
+# ── Endpoint: VSA V4 trade simulation (the owner's program) ──────────────────
+
+
+@router.get(
+    "/{ticker}/trade-simulation",
+    response_model=TradeSimulationResponse,
+    response_model_by_alias=True,
+    summary="The owner's VSA program (VSA V4) and its own trade simulator on this stock",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+        status.HTTP_404_NOT_FOUND: {"description": "No price history for this ticker"},
+        status.HTTP_502_BAD_GATEWAY: {"description": "Data provider unavailable"},
+    },
+)
+async def get_trade_simulation(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    sides: Annotated[Sides, Query()] = "long",
+    commission_bps: Annotated[
+        float, Query(alias="commissionBps", ge=0, le=200)
+    ] = DEFAULT_COMMISSION_BPS,
+    slippage_bps: Annotated[
+        float, Query(alias="slippageBps", ge=0, le=200)
+    ] = DEFAULT_SLIPPAGE_BPS,
+) -> TradeSimulationResponse:
+    """Replay the VSA V4 program over this stock's stored history.
+
+    Runs the owner's program (``app/analysis/vsa4``) exactly as it ships —
+    its sequence detection and its own simulator: entry at the open after a
+    confirmed setup, a structural stop, a target 3x the stop distance, one
+    position at a time, 1% of the account at risk per trade. ``sides=long``
+    (the default) ignores the program's short setups; ``both`` is the program
+    unmodified. Costs default to stock-like 0.20% commission + 0.05% slippage
+    per side (the program's own 0.01% defaults are for futures).
+
+    Reads the same ~5-year window the fundamentals card does, so the two share
+    one fetch (and its one-off backfill). Deterministic, no external services.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = _resolve_ticker(ticker, companies)
+    quotes = await _get_quotes(
+        normalized,
+        from_date=date.today() - timedelta(days=_RETURNS_HISTORY_DAYS),
+        to_date=None,
+        cache=cache,
+        cache_ttl=settings.history_cache_seconds,
+        repo=repo,
+        stooq=stooq,
+    )
+    company = companies.find(normalized)
+    result = (
+        build_trade_simulation(
+            normalized,
+            quotes,
+            currency=_stock_identity(normalized, company)["currency"],
+            sides=sides,
+            commission_bps=commission_bps,
+            slippage_bps=slippage_bps,
+        )
+        if quotes
+        else None
+    )
+    if result is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"No price history available for '{normalized}'.",
+        )
+    return result
+
+
+# ── Endpoint: Insider transactions (Yahoo Finance + GPW ESPI MAR Art. 19) ────
+
+_INSIDER_MISS_TTL_SECONDS = 24 * 60 * 60
+_espi_client = EspiClient()
+
+
+@router.get(
+    "/{ticker}/insider-transactions",
+    response_model=InsiderTransactionsResponse,
+    response_model_by_alias=True,
+    summary="Reported insider purchases and sales for this company",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid ticker"},
+    },
+)
+async def get_insider_transactions(
+    ticker: str,
+    companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)],
+    stooq: Annotated[StooqClient, Depends(get_stooq_client)],
+    cache: Annotated[TTLCache, Depends(get_history_cache)],
+    repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
+    include_all: Annotated[bool, Query(alias="includeAll")] = False,
+    from_date: Annotated[date | None, Query(alias="fromDate")] = None,
+) -> InsiderTransactionsResponse:
+    """Return insider trades, summary statistics, and daily chart markers.
+
+    Data source depends on market:
+    - US & UK listings: Yahoo Finance (`yfinance.Ticker.insider_transactions`)
+    - GPW (Polish) listings: Official GPW ESPI reports under MAR Art. 19
+
+    By default (`includeAll=false`), only open-market purchases and sales are
+    returned; share grants, option exercises, gifts, and share buybacks are
+    excluded unless `includeAll=true`.
+    """
+    if not ticker.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
+
+    normalized = _resolve_ticker(ticker, companies)
+    company = companies.find(normalized)
+    identity = _stock_identity(normalized, company)
+
+    transactions = await _load_ticker_insider_transactions(
+        normalized,
+        company=company,
+        market=identity["market"],
+        currency=identity["currency"],
+        repo=repo,
+        stooq=stooq,
+        cache=cache,
+        from_date=from_date,
+    )
+
+    return build_insider_response(
+        normalized.upper(),
+        name=company.name if company else None,
+        market=identity["market"],
+        currency=identity["currency"],
+        transactions=transactions,
+        include_all=include_all,
+    )
+
+
+async def _load_ticker_insider_transactions(
+    ticker: str,
+    *,
+    company: GpwCompany | None,
+    market: str,
+    currency: str,
+    repo: QuoteRepository | None,
+    stooq: StooqClient,
+    cache: TTLCache,
+    from_date: date | None = None,
+) -> list[InsiderTransactionItem]:
+    """Load stored insider transactions from DB first, falling back to live fetch."""
+    stored: list[InsiderTransactionItem] = []
+    if repo is not None:
+        try:
+            stored = await repo.get_insider_transactions(
+                ticker,
+                from_date=from_date,
+                open_market_only=False,
+            )
+        except Exception:
+            logger.exception("DB insider transaction lookup failed for %s.", ticker)
+
+    checked_key = f"insider-checked:{ticker}"
+    needs_live_check = cache.get(checked_key) is None and (
+        not stored or not isinstance(repo, InMemoryQuoteRepository)
+    )
+    if needs_live_check:
+        fetched: list[InsiderTransactionItem] = []
+        try:
+            if market == GPW_ID:
+                fetched = await _espi_client.get_company_insider_transactions(
+                    company_name=company.name if (company and company.name) else ticker,
+                    ticker=ticker,
+                )
+            elif isinstance(stooq, YahooFinanceClient):
+                fetched = await stooq.get_insider_transactions(ticker)
+        except Exception:
+            logger.exception("Live insider transactions fetch failed for %s.", ticker)
+
+        cache.set(checked_key, True, _INSIDER_MISS_TTL_SECONDS)
+        if fetched:
+            if repo is not None:
+                try:
+                    await repo.upsert_insider_transactions(ticker, fetched)
+                    stored = await repo.get_insider_transactions(
+                        ticker,
+                        from_date=from_date,
+                        open_market_only=False,
+                    )
+                except Exception:
+                    logger.exception(
+                        "DB insider transaction upsert failed for %s.", ticker
+                    )
+                    stored = fetched
+            else:
+                stored = fetched
+
+    if from_date is not None:
+        stored = [
+            tx for tx in stored if tx.publication_date >= from_date
+        ]
+    return stored
+

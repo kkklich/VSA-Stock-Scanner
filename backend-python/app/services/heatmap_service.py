@@ -63,6 +63,35 @@ _MAX_CONCURRENT = 4
 _MAX_SESSION_LAG_DAYS = 10
 
 
+def change_baselines(
+    quotes: list[StooqDailyQuote],
+    first_close: float | None = None,
+) -> tuple[float | None, float | None, float | None, float | None]:
+    """The (1D, 1M, 1Y, MAX) reference closes for a chronological bar list.
+
+    What each change in ``compute_changes`` is measured against. Kept apart so
+    a tile can carry them: the live overlay restates the changes from today's
+    price against the same references (``app/services/live_prices.py``).
+    """
+    if len(quotes) < 2:
+        return None, None, None, None
+
+    last = quotes[-1]
+    baseline_1d = float(quotes[-2].close)
+
+    # A baseline bar may be at most twice the horizon old (tolerance for
+    # holidays and short listing gaps); anything older yields None rather
+    # than a change mislabelled as "1M"/"1Y".
+    baseline_1m = _baseline_close(
+        quotes[:-1], last.date - timedelta(days=30), last.date - timedelta(days=60)
+    )
+    baseline_1y = _baseline_close(
+        quotes[:-1], last.date - timedelta(days=365), last.date - timedelta(days=730)
+    )
+    baseline_max = first_close if first_close else float(quotes[0].close)
+    return baseline_1d, baseline_1m, baseline_1y, baseline_max
+
+
 def compute_changes(
     quotes: list[StooqDailyQuote],
     first_close: float | None = None,
@@ -76,29 +105,20 @@ def compute_changes(
     if len(quotes) < 2:
         return None, None, None, None
 
-    last = quotes[-1]
-    last_close = float(last.close)
-
-    change_1d = _pct_change(last_close, float(quotes[-2].close))
-
-    # A baseline bar may be at most twice the horizon old (tolerance for
-    # holidays and short listing gaps); anything older yields None rather
-    # than a change mislabelled as "1M"/"1Y".
-    baseline_1m = _baseline_close(
-        quotes[:-1], last.date - timedelta(days=30), last.date - timedelta(days=60)
-    )
-    change_1m = _pct_change(last_close, baseline_1m) if baseline_1m else None
-
-    baseline_1y = _baseline_close(
-        quotes[:-1], last.date - timedelta(days=365), last.date - timedelta(days=730)
-    )
-    change_1y = _pct_change(last_close, baseline_1y) if baseline_1y else None
-
-    change_max = _pct_change(
-        last_close, first_close if first_close else float(quotes[0].close)
+    last_close = float(quotes[-1].close)
+    baseline_1d, baseline_1m, baseline_1y, baseline_max = change_baselines(
+        quotes, first_close
     )
 
-    return change_1d, change_1m, change_1y, change_max
+    def change(baseline: float | None) -> float | None:
+        return _pct_change(last_close, baseline) if baseline else None
+
+    return (
+        _pct_change(last_close, baseline_1d) if baseline_1d is not None else None,
+        change(baseline_1m),
+        change(baseline_1y),
+        _pct_change(last_close, baseline_max) if baseline_max is not None else None,
+    )
 
 
 async def compute_heatmap(
@@ -214,8 +234,12 @@ async def compute_heatmap(
             rating = compute_rating(signals, as_of)
             verdict, _ = verdict_from_signals(signals, as_of)
 
+            first_close = first_closes.get(company.ticker)
             change_1d, change_1m, change_1y, change_max = compute_changes(
-                quotes, first_closes.get(company.ticker)
+                quotes, first_close
+            )
+            _, baseline_1m, baseline_1y, baseline_max = change_baselines(
+                quotes, first_close
             )
 
             item = HeatmapItem(
@@ -232,6 +256,11 @@ async def compute_heatmap(
                 change_1m=change_1m,
                 change_1y=change_1y,
                 change_max=change_max,
+                # Never serialised: what a live price is laid over with.
+                last_session=quotes[-1].date,
+                baseline_1m=baseline_1m,
+                baseline_1y=baseline_1y,
+                baseline_max=baseline_max,
             )
             return item, quotes[-1].date
         except Exception:  # noqa: BLE001

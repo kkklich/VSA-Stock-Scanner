@@ -12,7 +12,13 @@ import {
   MoreHorizontal,
   RotateCcw,
 } from 'lucide-react'
-import { StockChart, type MethodOverlay, type VisibleSpan } from '../components/StockChart'
+import {
+  StockChart,
+  type FormingCandle,
+  type MethodOverlay,
+  type VisibleSpan,
+} from '../components/StockChart'
+import { LiveChip } from '../components/LivePrice'
 import {
   ChartMethodLegend,
   type ChartMethodLegendItem,
@@ -21,10 +27,12 @@ import { CompanyPicker } from '../components/CompanyPicker'
 import { FavoriteButton } from '../components/FavoriteButton'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
 import { TrustScoreCard } from '../components/TrustScoreCard'
+import { TradeSimulationCard } from '../components/TradeSimulationCard'
 import { AnalyticsSummaryCard } from '../components/AnalyticsSummaryCard'
 import { RatingHistoryCard } from '../components/RatingHistoryCard'
 import { VolumeCard } from '../components/VolumeCard'
 import { InvestmentCard } from '../components/InvestmentCard'
+import { InsiderActivityCard } from '../components/InsiderActivityCard'
 import {
   Card,
   CardTitle,
@@ -39,6 +47,7 @@ import { useMethods } from '../hooks/useMethods'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { useFundamentals } from '../hooks/useFundamentals'
 import { useTickerVolume } from '../hooks/useTickerVolume'
+import { useInsiderTransactions } from '../hooks/useInsiderTransactions'
 import type {
   ApiFundamentals,
   ChartInterval,
@@ -56,8 +65,9 @@ import {
   ratingTone,
   safeHttpUrl,
 } from '../lib/format'
-import { useChartPalette } from '../lib/chartTheme'
+import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { fmtLiveTime, notTradedYet } from '../lib/live'
 
 // ── Signal filtering (driven by the detection-settings panel) ─────────────────
 
@@ -68,11 +78,15 @@ const DEFAULT_CONTEXT_WINDOW = 120
 
 /** Method id whose overlay is the built-in VSA arrows (from `vsaSignals`). */
 const VSA_METHOD_ID = 'vsa'
+/** Layer id for reported insider buys and sells on the chart. */
+const INSIDER_METHOD_ID = 'insider'
 /*
- * VSA's marker/legend colour is the palette's bullish emerald; the OTHER
- * methods get `methodColors`, assigned in backend display order. Both come
- * from `lib/chartTheme` so they follow the light/dark theme — the light theme
- * uses darker shades that still read on white candlesticks.
+ * Two colour channels on one chart. WHICH method: VSA draws arrows, and every
+ * other method draws dots in its own fixed colour (`methodColorsFor`, keyed by
+ * method id). GOOD OR BAD news: VSA's arrows and every method's label are
+ * green (positive), red (negative) or grey (a pattern seen, not taken) —
+ * `markerColor`. Both come from `lib/chartTheme`, so they follow the
+ * light/dark theme.
  */
 
 /** localStorage key for which methods are drawn on the stock chart. */
@@ -795,6 +809,11 @@ export function ChartsPage() {
   const { data: fundamentals, loading: fundamentalsLoading } =
     useFundamentals(ticker)
   const { data: volume, loading: volumeLoading } = useTickerVolume(ticker)
+  const [includeAllInsider, setIncludeAllInsider] = useState(false)
+  const { data: insiderData, loading: insiderLoading } = useInsiderTransactions(
+    ticker,
+    includeAllInsider,
+  )
 
   // Detection-settings state — drives which signals are shown on the chart
   // and in the strength/weakness checklist.
@@ -896,19 +915,32 @@ export function ChartsPage() {
     [chartMethods],
   )
 
-  // Non-VSA overlay groups on this chart, each given a stable colour by its
-  // backend display order (so the legend swatch and the markers always match).
-  const methodGroups = useMemo(
-    () =>
-      (data?.methodSignals ?? []).map((g, i) => ({
-        ...g,
-        color: palette.methodColors[i % palette.methodColors.length],
-      })),
-    [data, palette],
-  )
+  // Non-VSA overlay groups on this chart, each in its method's own colour (so
+  // the legend swatch and the dots always match, and a method keeps its colour
+  // when another is added or removed).
+  const methodGroups = useMemo(() => {
+    const groups = data?.methodSignals ?? []
+    const colors = methodColorsFor(
+      groups.map((g) => g.methodId),
+      palette,
+    )
+    return groups.map((g) => ({ ...g, color: colors[g.methodId] }))
+  }, [data, palette])
+
+  const visibleInsiderMarkers = useMemo(() => {
+    if (!data || data.intraday || !insiderData?.chartMarkers) return []
+    const firstDate = data.history[0]?.time ?? ''
+    return insiderData.chartMarkers.filter(
+      (m) => !firstDate || m.date >= firstDate,
+    )
+  }, [data, insiderData])
 
   const allChartMethodIds = useMemo(
-    () => [VSA_METHOD_ID, ...methodGroups.map((g) => g.methodId)],
+    () => [
+      VSA_METHOD_ID,
+      ...methodGroups.map((g) => g.methodId),
+      INSIDER_METHOD_ID,
+    ],
     [methodGroups],
   )
 
@@ -921,14 +953,29 @@ export function ChartsPage() {
     [allChartMethodIds, setChartMethods],
   )
 
-  // Overlays actually drawn: the selected non-VSA methods.
-  const overlays = useMemo<MethodOverlay[]>(
-    () =>
-      methodGroups
-        .filter((g) => isMethodShown(g.methodId))
-        .map((g) => ({ methodId: g.methodId, color: g.color, signals: g.signals })),
-    [methodGroups, isMethodShown],
-  )
+  // Overlays actually drawn: the selected non-VSA methods + Insider layer.
+  const overlays = useMemo<MethodOverlay[]>(() => {
+    const list: MethodOverlay[] = methodGroups
+      .filter((g) => isMethodShown(g.methodId))
+      .map((g) => ({
+        methodId: g.methodId,
+        color: g.color,
+        signals: g.signals,
+      }))
+    if (isMethodShown(INSIDER_METHOD_ID) && visibleInsiderMarkers.length > 0) {
+      list.push({
+        methodId: INSIDER_METHOD_ID,
+        color: palette.bull,
+        directionalColor: true,
+        signals: visibleInsiderMarkers.map((m) => ({
+          date: m.date,
+          label: m.label,
+          type: m.type,
+        })),
+      })
+    }
+    return list
+  }, [methodGroups, isMethodShown, visibleInsiderMarkers, palette.bull])
 
   // VSA arrows show only when VSA is selected (still filtered by the
   // detection-sensitivity panel, which stays a VSA-only control).
@@ -937,7 +984,24 @@ export function ChartsPage() {
     [isMethodShown, visibleSignals],
   )
 
-  // Legend / chooser rows: VSA first, then each overlay method.
+  // Today's session so far (live prices), drawn after the finished candles on
+  // the DAILY chart only: a weekly candle is a whole week, and an intraday
+  // chart already shows today's bars. Not drawn before the stock's first trade
+  // of the day — it would be a flat line at yesterday's close.
+  const formingCandle = useMemo<FormingCandle | null>(() => {
+    const live = data?.live
+    if (!live || data.interval !== '1d' || data.intraday || notTradedYet(live)) return null
+    return {
+      time: live.sessionDate,
+      open: live.open,
+      high: live.high,
+      low: live.low,
+      close: live.price,
+      volume: live.volume,
+    }
+  }, [data])
+
+  // Legend / chooser rows: VSA first, then each overlay method, then Insiders.
   const legendItems = useMemo<ChartMethodLegendItem[]>(() => {
     if (!data) return []
     const vsaName = catalogue.find((m) => m.id === VSA_METHOD_ID)?.name ?? 'VSA'
@@ -945,6 +1009,7 @@ export function ChartsPage() {
       {
         id: VSA_METHOD_ID,
         name: vsaName,
+        shape: 'arrow' as const,
         color: palette.bull,
         count: visibleSignals.length,
         selected: isMethodShown(VSA_METHOD_ID),
@@ -952,12 +1017,34 @@ export function ChartsPage() {
       ...methodGroups.map((g) => ({
         id: g.methodId,
         name: g.name,
+        shape: 'circle' as const,
         color: g.color,
         count: g.signals.length,
         selected: isMethodShown(g.methodId),
       })),
+      ...(!data.intraday
+        ? [
+            {
+              id: INSIDER_METHOD_ID,
+              name: t('insider.legendLabel'),
+              shape: 'circle' as const,
+              color: palette.bull,
+              count: visibleInsiderMarkers.length,
+              selected: isMethodShown(INSIDER_METHOD_ID),
+            },
+          ]
+        : []),
     ]
-  }, [data, catalogue, methodGroups, visibleSignals.length, isMethodShown, palette])
+  }, [
+    data,
+    catalogue,
+    methodGroups,
+    visibleSignals.length,
+    visibleInsiderMarkers.length,
+    isMethodShown,
+    palette,
+    t,
+  ])
 
   if (loading && !data) return <LoadingState />
   // "This company has no intraday history" is information, not a failure, so it
@@ -994,6 +1081,9 @@ export function ChartsPage() {
         <span className={'text-sm font-medium ' + deltaTone(data.priceChangePct)}>
           {fmtPct(data.priceChangePct)}
         </span>
+        {/* Today's price so far while the exchange trades; the rating beside
+            it stays the last finished session's. */}
+        {data.live && <LiveChip live={data.live} />}
         <span
           className={
             'ml-auto rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ring-inset ' +
@@ -1112,6 +1202,13 @@ export function ChartsPage() {
                 })}
               </p>
             )}
+            {/* The hollow last candle is today's session so far: say so, and
+                that the analysis has not looked at it. */}
+            {formingCandle && data.live && !noDataForInterval && (
+              <p className="mb-2 px-1 text-xs text-slate-500">
+                {t('live.chartNote', { time: fmtLiveTime(data.live.asOf) })}
+              </p>
+            )}
             {noDataForInterval ? (
               // Stand in for the chart rather than for the page: the bar-size
               // buttons above stay on screen, so getting back to 1D is one
@@ -1128,6 +1225,7 @@ export function ChartsPage() {
                     candles={data.history}
                     signals={vsaChartSignals}
                     overlays={overlays}
+                    forming={formingCandle}
                     onSpanSettled={handleSpanSettled}
                     preserveViewRef={preserveViewRef}
                   />
@@ -1135,7 +1233,14 @@ export function ChartsPage() {
               </>
             )}
           </Card>
+          <InsiderActivityCard
+            data={insiderData}
+            loading={insiderLoading}
+            includeAll={includeAllInsider}
+            onToggleIncludeAll={setIncludeAllInsider}
+          />
           <RatingHistoryCard ticker={ticker} />
+          <TradeSimulationCard ticker={ticker} />
         </div>
 
         {/* Right: consolidated summary, volume, fundamentals / investment /

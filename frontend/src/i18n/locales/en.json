@@ -8,10 +8,17 @@
     "dash": "—",
     "moreInfo": "More information",
     "sortBy": "Sort by {{label}}",
+    "sortByLevel": "Sort by {{label}} (level {{level}})",
+    "sortAddHint": "Click to sort by this column. Shift-click to add it as a further sort level.",
     "sort": "Sort",
     "sortHeading": "Sort by",
     "sortAsc": "Ascending",
     "sortDesc": "Descending",
+    "sortThenBy": "Then by",
+    "sortReplaceLast": "Then by (max {{max}} — replaces the last)",
+    "sortLevelAsc": "{{label}} ascending",
+    "sortLevelDesc": "{{label}} descending",
+    "sortRemoveLevel": "Remove {{label}} from the sort",
     "openTickerDetails": "Open {{ticker}} details",
     "prevPage": "Previous page",
     "nextPage": "Next page",
@@ -42,6 +49,7 @@
     "filters": "Filters",
     "charts": "Charts",
     "help": "Help",
+    "vsaKompendium": "VSA Kompendium",
     "settings": "Settings",
     "closeMenu": "Close menu",
     "openMenu": "Open menu"
@@ -65,7 +73,9 @@
     "help": "How to use StockPilot",
     "app": "StockPilot",
     "legal": "Legal information",
-    "system": "System status"
+    "vsaKompendium": "VSA Kompendium",
+    "system": "System status",
+    "login": "Sign in"
   },
   "dashboard": {
     "heading": "Best stocks today",
@@ -100,6 +110,26 @@
     "favoritesTooltip": "Show only the companies you starred",
     "showAll": "Show all companies",
     "emptyNoFavorites": "You have not starred any company yet. Click the star next to a company to add it here."
+  },
+  "overview": {
+    "heading": "Market overview",
+    "breadth": "Market breadth",
+    "breadthInfo": "How the ranked stocks split by verdict, plus simple counts: stocks that rose or fell in the latest session, stocks whose VSA rating rose or fell since the previous session, and new 52-week highs and lows. These are counts, not a forecast — they say how many stocks lean each way, not whether the move is early or late.",
+    "splitAria": "{{bullish}}% of stocks are Buy or Strong Buy, {{bearish}}% are Sell or Strong Sell.",
+    "bullish": "{{pct}}% bullish",
+    "bearish": "{{pct}}% bearish",
+    "advancers": "Price up",
+    "decliners": "Price down",
+    "ratingUp": "Rating up",
+    "ratingDown": "Rating down",
+    "newHighs": "New 52w highs",
+    "newLows": "New 52w lows",
+    "averageRating": "Average VSA rating:",
+    "risers": "Rating risers",
+    "risersInfo": "The stocks whose VSA rating rose the most in the latest session (rating before → after). A rising rating means the latest bar changed the volume-and-spread reading in the stock's favour; it is not a price target.",
+    "fallers": "Rating fallers",
+    "fallersInfo": "The stocks whose VSA rating fell the most in the latest session (rating before → after).",
+    "noMovers": "No stock changed its rating in the latest session."
   },
   "columns": {
     "button": "Columns",
@@ -136,7 +166,7 @@
       "trend": "Trend (sparkline)"
     },
     "info": {
-      "priceChangePct": "The latest session’s price change, percent.",
+      "priceChangePct": "The latest session’s price change, percent. While the exchange is open it is today’s change so far (the price then carries a blue dot).",
       "dist52wHigh": "How far below the 52-week high the last close sits. 0% means it closed at the high; a “NEW” chip marks a session that set a fresh 52-week high.",
       "dist52wLow": "How far above the 52-week low the last close sits. A “NEW” chip marks a session that set a fresh 52-week low.",
       "rating": "VSA score with time decay: recent bullish signals push it above 50, bearish ones below. Green above 70 (strong accumulation), red below 30 (distribution).",
@@ -253,7 +283,16 @@
     },
     "methods": {
       "legend": "Show on chart:",
-      "toggle": "Show or hide {{name}} markers on the chart"
+      "toggle": "Show or hide {{name}} markers on the chart",
+      "key": "Colours:",
+      "positive": "Positive (strength)",
+      "negative": "Negative (weakness)",
+      "watch": "Watch (not taken)",
+      "dotIsMethod": "dot colour = method",
+      "positiveHint": "A green label or arrow is a bullish signal: the method reads strength on this bar.",
+      "negativeHint": "A red label or arrow is a bearish signal: the method reads weakness on this bar — a warning.",
+      "watchHint": "A grey label beside a small square is a pattern the method looked at and refused; the label says why. Neither a buy nor a sell.",
+      "dotIsMethodHint": "The dot (or square) beside each label is in the colour of the method that drew it — the chips above show which colour is which. VSA draws arrows instead."
     },
     "volume": {
       "title": "Volume (RVOL)",
@@ -284,6 +323,51 @@
         "neutral": "Neutral",
         "mixed": "Mixed"
       }
+    },
+    "simulation": {
+      "title": "Trade simulation · VSA V4",
+      "info": "Your VSA program (method VSA V4) replayed over this stock's stored history with its own trade simulator. Each time its sequence completes — a signal of strength, then a quiet test (No Supply or Test), then an up bar confirming that test — the simulated account buys at the next session's open, puts a stop under the sequence and a target three stop-distances away, and risks 1% of the account on the trade. One position at a time. Costs: 0.20% commission and 0.05% slippage each way. It shows how the rules would have played out here — not a forecast and not investment advice.",
+      "longOnly": "Long only",
+      "longShort": "Long + short",
+      "sidesLabel": "Which setups the simulated account takes",
+      "loading": "Replaying the program…",
+      "error": "Simulation unavailable: {{error}}",
+      "trades": "Trades",
+      "openCount": "open: {{count}}",
+      "winRate": "Win rate",
+      "winRateSub": "won {{wins}} · lost {{losses}}",
+      "avgR": "Avg result",
+      "avgRSub": "per trade, in R",
+      "profitFactor": "Profit factor",
+      "profitFactorSub": "won ÷ lost",
+      "account": "Account",
+      "accountSub": "max drawdown {{dd}}",
+      "buyHold": "Buy & hold",
+      "buyHoldSub": "the stock itself",
+      "setups": "Setups confirmed: {{long}} long, {{short}} short",
+      "skipped": "entries skipped: {{count}}",
+      "skippedInfo": "A confirmed setup is skipped when a position is already open (one at a time) or when the next open gaps through its stop.",
+      "noSetups": "The program's sequence never completed on this stock's stored history, so there is nothing to simulate.",
+      "noTrades": "None of the confirmed setups could be entered — a position was already open, or the next open gapped through the stop.",
+      "tradeList": "Trades, newest first",
+      "showAll": "Show all ({{count}})",
+      "showLess": "Show fewer",
+      "levels": "stop {{stop}} · target {{target}}",
+      "equityAria": "Simulated account value from {{from}} to {{to}}",
+      "startLine": "start",
+      "long": "Long",
+      "short": "Short",
+      "exit": {
+        "take_profit": "Target",
+        "take_profit_gap_open": "Target (gap)",
+        "stop": "Stop",
+        "stop_gap_open": "Stop (gap)",
+        "stop_same_bar_both_hit": "Stop (same bar)",
+        "end_of_data_close": "Closed at end",
+        "open_at_end": "Open"
+      },
+      "assumptions": "{{risk}} of the account at risk per trade · target {{rr}}R · costs {{commission}} + {{slippage}} slippage each way · entry at the next open · {{from}} – {{to}} ({{bars}} sessions)",
+      "note": "An educational replay of your program on past prices. R is a trade's result in units of its planned risk: −1R is a full stop, +3R the target. The account moves little because only 1% is risked per trade and it waits in cash between trades — compare the R figures, not the account with buy & hold."
     }
   },
   "methods": {
@@ -300,8 +384,17 @@
     "failed": "Refresh failed",
     "updated": "Updated {{time}}",
     "today": "today",
-    "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after each exchange's close (18:00 Warsaw time for the GPW and Europe, 17:15 New York time for the US).",
+    "title": "Download fresh data from Yahoo Finance and recalculate all VSA ratings. Data updates automatically once a day after each exchange's close (18:00 Warsaw time for the GPW and Europe, 17:15 New York time for the US); while an exchange is open, its prices are also refreshed every hour.",
     "titleFailed": "Refresh failed: {{error}}"
+  },
+  "live": {
+    "title": "Today's price so far, as of {{time}} — downloaded every hour while the exchange is open (quotes may be delayed by about 15 minutes). The rating and the signals are from the last finished session.",
+    "titleNoTrade": "No trade yet today — the price is the last close ({{time}}), and today's change is 0%.",
+    "chip": "Today {{time}}",
+    "chipNoTrade": "No trade today yet",
+    "noteOne": "Prices are from today's session so far, as of {{time}} — downloaded every hour while the exchange is open (quotes may be delayed by about 15 minutes). Ratings, signals and method scores are from the last finished session ({{session}}).",
+    "noteMany": "Prices are from today's sessions so far: {{markets}} — downloaded every hour while an exchange is open (quotes may be delayed by about 15 minutes). Ratings, signals and method scores are from the last finished session ({{session}}).",
+    "chartNote": "The hollow candle at the end is today's session so far ({{time}}). It is not analysed until the session closes, and its grey volume bar is only part of the day's volume."
   },
   "legal": {
     "pageTitle": "Legal information",
@@ -428,6 +521,18 @@
         "body": "The site may link to external pages, for example to data sources or to material describing the analysis methods. The publisher is not responsible for the content or the privacy practices of those pages."
       }
     }
+  },
+  "vsaKompendium": {
+    "title": "VSA Kompendium",
+    "subtitle": "Price and volume analysis: definitions, signals, sequences, risk and the code formalisation — the full material behind the VSA V4 trading method.",
+    "languageNote": "The article below stays in its source language (Polish), regardless of the interface language.",
+    "sourceLabel": "Source:",
+    "downloadPdf": "Download PDF",
+    "diagramsToggle": "See the bar and WFO diagrams",
+    "diagramAnatomyAlt": "A candle: spread is high minus low; VSA direction depends on the previous close",
+    "diagramWfoAlt": "A bullish WFO: a second, lower low; volume V1 greater than V2, and V2 greater than the volume in between",
+    "diagramsNote": "The publisher's own educational diagrams. They do not show market data or a forecast.",
+    "tocHeading": "Contents"
   },
   "system": {
     "title": "System status",
@@ -564,5 +669,84 @@
     "sessionMismatch": "These rows come from two different sessions: {{newest}} and {{oldest}}. {{behind}} companies have no bar from the newest one yet — exchanges close at different times (Europe in the afternoon, the US at 22:15 Warsaw time). Price changes are therefore not comparable row for row.",
     "pricePln": "PLN, converted",
     "sortedInPln": "With every market pooled, the money columns are ordered by their value in złoty — otherwise 17,760 pence (~906 zł) would outrank 6,242 dollars (~23,720 zł). The displayed price stays in its own currency, with the approximate złoty value beneath it."
+  },
+  "auth": {
+    "account": "Account",
+    "accountMenu": "Account menu",
+    "accountSettings": "Account settings",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "createAccount": "Create account",
+    "signInTitle": "Sign in to StockPilot",
+    "signUpTitle": "Create your StockPilot account",
+    "optionalHint": "An account is optional — every page works without one. Signing in lets the app remember what is yours.",
+    "email": "E-mail",
+    "password": "Password",
+    "displayName": "Display name",
+    "optional": "(optional)",
+    "passwordRule": "At least 8 characters.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. You stay signed in on this device; other devices have to sign in again.",
+    "signedOutHint": "You are not signed in. An account is optional — everything on this site is readable without one.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "unavailable": "Accounts are not available on this deployment: the backend is running without a database, so there is nowhere to keep them.",
+    "noEmailsNote": "This site sends no e-mail yet: there is no address confirmation and no password reset by e-mail. Keep your password safe — while signed in you can change it in Settings.",
+    "sessionsMayEnd": "You may be asked to sign in again after a site update.",
+    "privacyNote": "We store only your e-mail address, your display name and a hashed password.",
+    "privacyLink": "Privacy policy",
+    "errors": {
+      "bad_credentials": "E-mail or password is incorrect.",
+      "email_taken": "That e-mail address already has an account. Sign in instead.",
+      "weak_password": "The password must be at least 8 characters long.",
+      "invalid_email": "That does not look like an e-mail address.",
+      "too_many_attempts": "Too many attempts. Please wait a few minutes and try again.",
+      "registration_closed": "New accounts are closed on this site.",
+      "accounts_unavailable": "Accounts are not available on this deployment.",
+      "wrong_current_password": "Your current password is incorrect.",
+      "session_expired": "Your session has ended. Please sign in again.",
+      "not_signed_in": "Please sign in first.",
+      "admin_token_required": "Registering an administrator account requires the administrator token.",
+      "account_not_found": "This account no longer exists.",
+      "offline": "Cannot reach the server. Check your connection and try again."
+    }
+  },
+  "insider": {
+    "legendLabel": "Insiders",
+    "title": "Insider Buying & Selling",
+    "info": "Reported share transactions by executives, board directors, and closely associated persons (GPW ESPI MAR Art. 19 filings for Poland; SEC Form 4 / Yahoo Finance for US & UK). Plotted on the chart on the filing publication date (green marker below the bar = buy, red marker above the bar = sell).",
+    "includeAllToggle": "Include stock awards, options & gifts",
+    "asymmetryNote": "Signal asymmetry: insiders sell shares for many reasons (taxes, diversification, personal expenses), but buy on the open market with their own money for one reason — they expect the stock to rise.",
+    "purchases": "Open-Market Purchases",
+    "sales": "Open-Market Sales",
+    "netBalance": "Net Balance",
+    "netBuying": "Net Buying",
+    "netSelling": "Net Selling",
+    "netNeutral": "Balanced",
+    "sharesUnit": "sh.",
+    "tradesAndShares": "{{count}} trades · {{shares}} shares",
+    "netSharesLabel": "Net shares: {{shares}}",
+    "colDate": "Published",
+    "colRole": "Role / Insider",
+    "colType": "Type",
+    "colShares": "Shares",
+    "colPrice": "Price",
+    "colValue": "Value",
+    "colSource": "Source",
+    "defaultRole": "Person discharging managerial responsibilities",
+    "showAll": "Show all ({{count}})",
+    "showLess": "Show fewer",
+    "loading": "Loading insider transaction filings…",
+    "empty": "No open-market insider purchases or sales reported during this period.",
+    "type": {
+      "buy": "Buy",
+      "sell": "Sell",
+      "grant": "Grant / Award",
+      "option": "Option Exercise",
+      "gift": "Gift",
+      "buyback": "Buyback",
+      "other": "Other"
+    }
   }
 }

@@ -28,7 +28,9 @@ stock across them.
 **Time.** Each market knows its exchange time zone and closing time, so a bar
 for a session that is still trading can be recognised and refused. Such a bar
 carries a fraction of a normal day's volume, and unusually low volume is
-exactly what VSA reads as a signal (No Demand, the Test).
+exactly what VSA reads as a signal (No Demand, the Test). It also knows its
+opening time, so the hourly live prices (``app/services/live_prices.py``) know
+when a session is running — they show that bar's price, and never analyse it.
 
 **Which markets are live** is a setting (``STOCKPILOT_MARKETS``, default
 ``gpw``), so markets can be switched on one at a time. The GPW is always on:
@@ -102,6 +104,10 @@ class Market:
     currency: str
     #: The exchange's own time zone (IANA name).
     timezone: str
+    #: Local time continuous trading starts — from here until the day's bar is
+    #: final, the session is in progress and its prices change (see
+    #: ``session_in_progress``).
+    open_time: time
     #: Local time after which the day's bar is complete — the end of the
     #: closing auction, not of continuous trading.
     close_time: time
@@ -149,6 +155,27 @@ class Market:
             day -= timedelta(days=1)
         return day
 
+    def local_date(self, now: datetime | None = None) -> date:
+        """Today's date on the exchange's own calendar."""
+        return (now or datetime.now(tz=UTC)).astimezone(self.tz).date()
+
+    def session_in_progress(self, now: datetime | None = None) -> bool:
+        """Is today's session trading — its daily bar still changing — right now?
+
+        True on a weekday from the opening bell (exclusive: at 09:00:00 nothing
+        has printed yet) until the day's bar is final, ``close_time`` plus
+        ``SESSION_SETTLE``. That is exactly the window in which Yahoo serves a
+        bar for today that ``session_is_final`` refuses, so it is when the
+        hourly live prices (``app/services/live_prices.py``) have something to
+        add. Public holidays are not known here; a download on one simply finds
+        no bar for today.
+        """
+        current = (now or datetime.now(tz=UTC)).astimezone(self.tz)
+        if current.weekday() >= 5:
+            return False
+        opens = datetime.combine(current.date(), self.open_time, tzinfo=self.tz)
+        return current > opens and not self.session_is_final(current.date(), current)
+
 
 GPW = Market(
     id=GPW_ID,
@@ -161,7 +188,8 @@ GPW = Market(
     yahoo_suffix=".WA",
     currency="PLN",
     timezone="Europe/Warsaw",
-    # Continuous trading ends 16:50; the closing auction is done by 17:05.
+    # Continuous trading runs 09:00–16:50; the closing auction is done by 17:05.
+    open_time=time(9, 0),
     close_time=time(17, 5),
 )
 
@@ -176,7 +204,8 @@ US = Market(
     yahoo_suffix="",
     currency="USD",
     timezone="America/New_York",
-    # The closing cross prints at 16:00.
+    # The regular session opens at 09:30; the closing cross prints at 16:00.
+    open_time=time(9, 30),
     close_time=time(16, 0),
     refresh_run="us",
     indices=("sp500", "ndx"),
@@ -193,7 +222,8 @@ GERMANY = Market(
     yahoo_suffix=".DE",
     currency="EUR",
     timezone="Europe/Berlin",
-    # Continuous trading ends 17:30; the closing auction ends by ~17:35.
+    # Continuous trading runs 09:00–17:30; the closing auction ends by ~17:35.
+    open_time=time(9, 0),
     close_time=time(17, 40),
     indices=("dax",),
 )
@@ -209,6 +239,7 @@ FRANCE = Market(
     yahoo_suffix=".PA",
     currency="EUR",
     timezone="Europe/Paris",
+    open_time=time(9, 0),
     close_time=time(17, 40),
     indices=("cac40",),
 )
@@ -224,6 +255,7 @@ NETHERLANDS = Market(
     yahoo_suffix=".AS",
     currency="EUR",
     timezone="Europe/Amsterdam",
+    open_time=time(9, 0),
     close_time=time(17, 40),
     indices=("aex",),
 )
@@ -239,7 +271,8 @@ UNITED_KINGDOM = Market(
     yahoo_suffix=".L",
     currency="GBp",
     timezone="Europe/London",
-    # Continuous trading ends 16:30; the closing auction ends by ~16:35.
+    # Continuous trading runs 08:00–16:30; the closing auction ends by ~16:35.
+    open_time=time(8, 0),
     close_time=time(16, 40),
     indices=("ftse100",),
 )

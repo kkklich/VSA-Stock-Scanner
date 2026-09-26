@@ -23,3 +23,11 @@
 #                         folder into the api container as /app/logs
 backend-python/logs/
 /logs/
+
+# Audit files written by backend-python/scripts/vsa4_run.py (the owner's VSA
+# program run on a stored ticker). Local results, never committed.
+backend-python/vsa4_results/
+
+# AI layer (roadmap #31): training datasets and back-fill progress written by
+# backend-python/scripts/ml_*.py. Local, large, rebuilt from the database.
+backend-python/ml_data/

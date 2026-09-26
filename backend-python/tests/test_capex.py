@@ -382,6 +382,17 @@ class TestCapexEndpoint:
         # totalCount reflects all matching rows, not the page.
         assert body["totalCount"] == 2
 
+    def test_second_sort_column_breaks_the_firsts_ties(self) -> None:
+        """Sector A→Z, biggest investor first inside each sector."""
+        with _client(_seed_repo()) as client:
+            body = client.get(
+                "/api/stocks/capex"
+                "?withData=false&sortBy=sector,capex&sortDir=asc,desc"
+            ).json()
+        # Banks first (AAA), then the two Energy rows with the reported figure
+        # ahead of the company that has none.
+        assert [i["ticker"] for i in body["items"]] == ["AAA", "BBB", "CCC"]
+
     def test_unknown_sort_column_is_rejected(self) -> None:
         with _client(_seed_repo()) as client:
             resp = client.get("/api/stocks/capex?sortBy=__class__")

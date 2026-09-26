@@ -56,6 +56,7 @@ class TTLCache(Generic[T]):
         # An OrderedDict keeps insertion/access order, which is what turns
         # "drop the least recently used entry" into a single popitem() call.
         self._store: OrderedDict[str, tuple[float, T]] = OrderedDict()
+        self._pinned: set[str] = set()
         self._lock = threading.Lock()
         self._generation = 0
 
@@ -69,15 +70,18 @@ class TTLCache(Generic[T]):
             if time.monotonic() >= expires_at:
                 # Lazily evict the stale entry.
                 del self._store[key]
+                self._pinned.discard(key)
                 return None
             # A read counts as "recently used", so this entry now outranks the
             # ones nobody has asked for.
             self._store.move_to_end(key)
             return value
 
-    def set(self, key: str, value: T, ttl_seconds: float) -> None:
+    def set(self, key: str, value: T, ttl_seconds: float, *, pinned: bool = False) -> None:
         """Cache ``value`` under ``key`` for ``ttl_seconds`` seconds."""
         with self._lock:
+            if pinned:
+                self._pinned.add(key)
             self._admit(key, value, ttl_seconds)
 
     @property
@@ -92,7 +96,7 @@ class TTLCache(Generic[T]):
             return self._generation
 
     def set_if_generation(
-        self, key: str, value: T, ttl_seconds: float, generation: int
+        self, key: str, value: T, ttl_seconds: float, generation: int, *, pinned: bool = False
     ) -> bool:
         """Cache ``value`` only if nothing was invalidated since ``generation``.
 
@@ -102,6 +106,8 @@ class TTLCache(Generic[T]):
         with self._lock:
             if self._generation != generation:
                 return False
+            if pinned:
+                self._pinned.add(key)
             self._admit(key, value, ttl_seconds)
             return True
 
@@ -109,6 +115,7 @@ class TTLCache(Generic[T]):
         """Drop every cached entry (used after the daily ingestion refresh, or in tests)."""
         with self._lock:
             self._store.clear()
+            self._pinned.clear()
             self._generation += 1
 
     def invalidate(self, predicate: Callable[[str], bool]) -> int:
@@ -123,6 +130,7 @@ class TTLCache(Generic[T]):
             doomed = [key for key in self._store if predicate(key)]
             for key in doomed:
                 del self._store[key]
+                self._pinned.discard(key)
             self._generation += 1
             return len(doomed)
 
@@ -150,11 +158,17 @@ class TTLCache(Generic[T]):
         ]:
             if stale != key:
                 del self._store[stale]
+                self._pinned.discard(stale)
 
-        # Still over? Then the cache really is full of live entries and the
-        # least recently used one has to go (it is at the front of the order).
+        # Still over? Evict unpinned least-recently-used entries first so
+        # pre-warmed baseline entries survive variant churn.
         while len(self._store) > self._max_entries:
-            self._store.popitem(last=False)
+            unpinned_key = next((k for k in self._store if k not in self._pinned), None)
+            if unpinned_key is not None:
+                del self._store[unpinned_key]
+            else:
+                k, _ = self._store.popitem(last=False)
+                self._pinned.discard(k)
 
 
 # Default ceiling on remembered locks per registry. A lock costs almost

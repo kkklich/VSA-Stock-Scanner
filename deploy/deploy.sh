@@ -18,7 +18,7 @@ ENV_FILE=".env.prod"
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 die() { printf '\n\033[1;31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
 
-[[ -f "$ENV_FILE" ]] || die "$ENV_FILE is missing. Copy it from .env.prod.example and fill in DOMAIN + POSTGRES_PASSWORD."
+[[ -f "$ENV_FILE" ]] || die "$ENV_FILE is missing. Copy it from .env.prod.example and fill in DOMAIN, POSTGRES_PASSWORD, and STOCKPILOT_ADMIN_TOKEN."
 
 compose() { docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
 
@@ -42,8 +42,8 @@ if chown 10001:10001 logs 2>/dev/null || sudo -n chown 10001:10001 logs 2>/dev/n
   chmod 0755 logs
   echo "logs/ is owned by the API container's user."
 else
-  chmod 0777 logs
-  echo "Could not change the owner of logs/ (needs root) — made it writable instead."
+  chmod 1777 logs
+  echo "Could not change the owner of logs/ (needs root) — set sticky bit (1777) so other users cannot tamper with files."
 fi
 
 say "Building images (first run downloads a lot — expect several minutes)"

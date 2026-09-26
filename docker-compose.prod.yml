@@ -61,14 +61,28 @@ services:
       # The US market's nightly run (America/New_York time).
       STOCKPILOT_US_INGEST_HOUR: ${STOCKPILOT_US_INGEST_HOUR:-17}
       STOCKPILOT_US_INGEST_MINUTE: ${STOCKPILOT_US_INGEST_MINUTE:-15}
+      # Live prices while an exchange is open: today's prices downloaded on
+      # this cadence (60 = at every full hour), shown beside the ratings and
+      # never fed into them. Must divide an hour.
+      STOCKPILOT_LIVE_PRICES_ENABLED: ${STOCKPILOT_LIVE_PRICES_ENABLED:-true}
+      STOCKPILOT_LIVE_PRICES_INTERVAL_MINUTES: ${STOCKPILOT_LIVE_PRICES_INTERVAL_MINUTES:-60}
       TZ: Europe/Warsaw
       # Action log (audit trail). Rows also go to the action_logs table; this
       # is the file half.
       STOCKPILOT_ACTION_LOG_RETENTION_DAYS: ${STOCKPILOT_ACTION_LOG_RETENTION_DAYS:-30}
       # Shared secret for /api/admin/* (the System page: health, errors, logs).
-      # Empty leaves those endpoints open — set it in .env.prod on a public
-      # deployment, because they expose tracebacks and visitor IP addresses.
-      STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:-}
+      # Set this in .env.prod: these endpoints expose tracebacks and visitor IPs.
+      STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:?STOCKPILOT_ADMIN_TOKEN must be set in .env.prod}
+      # Sign-in (optional visitor accounts). JWT_SECRET is the key every
+      # login token is signed with; left empty (the owner's choice) the app
+      # invents one per start, so a restart signs everyone out — fine here,
+      # but it would have to be set if this API ever ran more than one worker.
+      # Registration is open by default.
+      STOCKPILOT_JWT_SECRET: ${STOCKPILOT_JWT_SECRET:-}
+      STOCKPILOT_JWT_ACCESS_MINUTES: ${STOCKPILOT_JWT_ACCESS_MINUTES:-30}
+      STOCKPILOT_JWT_REFRESH_DAYS: ${STOCKPILOT_JWT_REFRESH_DAYS:-30}
+      STOCKPILOT_REGISTRATION_OPEN: ${STOCKPILOT_REGISTRATION_OPEN:-true}
+      STOCKPILOT_ADMIN_EMAILS: ${STOCKPILOT_ADMIN_EMAILS:-}
     volumes:
       # The rotating JSON-lines action log, bind-mounted to a REAL FOLDER ON
       # THE SERVER (./logs next to this file, i.e. ~/stockpilot/logs). A named

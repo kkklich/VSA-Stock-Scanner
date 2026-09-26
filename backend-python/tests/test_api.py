@@ -438,12 +438,45 @@ class TestGetRanking:
         assert resp.status_code == 400
 
     def test_invalid_sort_dir_rejected(self) -> None:
+        # 400, not FastAPI's 422: since sortDir became a comma-separated list
+        # (one direction per sort level) it can no longer be a Literal, so it
+        # is validated in the handler alongside sortBy — and answers like it.
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()
         )
         with TestClient(app) as client:
             resp = client.get("/api/stocks/ranking", params={"sortDir": "sideways"})
-        assert resp.status_code == 422
+        assert resp.status_code == 400
+
+    def test_second_sort_column_breaks_the_firsts_ties(self) -> None:
+        """Sort by one column, then by another — the tables' "then by"."""
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            body = client.get(
+                "/api/stocks/ranking",
+                params={
+                    "sortBy": "currentRating,ticker",
+                    "sortDir": "desc,asc",
+                    "pageSize": 500,
+                },
+            ).json()
+        # Every company gets identical canned bars here, so the rating column
+        # is one big tie and the second level decides the whole order.
+        pairs = [(-item["currentRating"], item["ticker"]) for item in body]
+        assert pairs == sorted(pairs)
+
+    def test_too_many_sort_columns_rejected(self) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
+            quotes=_rich_quotes()
+        )
+        with TestClient(app) as client:
+            resp = client.get(
+                "/api/stocks/ranking",
+                params={"sortBy": "ticker,name,sector,lastPrice"},
+            )
+        assert resp.status_code == 400
 
     def test_camel_case_fields_in_response(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(

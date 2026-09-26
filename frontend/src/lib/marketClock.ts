@@ -107,10 +107,16 @@ export function isMarketOpen(market: string, now: Date = new Date()): boolean {
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /**
- * When the market's data was last refreshed on schedule, as
- * "YYYY-MM-DD HH:MM" in Warsaw time — the latest weekday run at or before now.
+ * When the market's data was last refreshed, as "YYYY-MM-DD HH:MM" in Warsaw
+ * time: the latest weekday evening run at or before now — or, when it is
+ * later, `liveAt` (ISO), the market's last hourly live-price download today.
+ * While an exchange trades, that is the one the top bar shows.
  */
-export function lastSyncLabel(market: string, now: Date = new Date()): string {
+export function lastSyncLabel(
+  market: string,
+  now: Date = new Date(),
+  liveAt?: string | null,
+): string {
   const run = RUNS[session(market).run]
   const local = zonedParts(now, run.timezone)
   // Walk back from today (in the run's own zone) to the latest weekday whose
@@ -128,7 +134,12 @@ export function lastSyncLabel(market: string, now: Date = new Date()): string {
     run.minutes,
     run.timezone,
   )
-  const shown = zonedParts(instant, DISPLAY_TIMEZONE)
+  const live = liveAt ? new Date(liveAt) : null
+  const latest =
+    live && !Number.isNaN(live.getTime()) && live.getTime() > instant.getTime()
+      ? live
+      : instant
+  const shown = zonedParts(latest, DISPLAY_TIMEZONE)
   return (
     `${shown.year}-${pad(shown.month)}-${pad(shown.day)} ` +
     `${pad(Math.floor(shown.minutes / 60))}:${pad(shown.minutes % 60)}`
