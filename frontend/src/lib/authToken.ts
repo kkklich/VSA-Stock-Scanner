@@ -52,6 +52,10 @@ export function getRefreshToken(): string {
   return ''
 }
 
+/** Store the access token. The refresh token travels only in an HttpOnly
+ *  cookie now, so the second argument — what the server returned, which
+ *  callers still pass — is accepted and deliberately ignored. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function setTokens(accessToken: string, _refreshToken?: string): void {
   write(ACCESS_KEY, accessToken)
   try {

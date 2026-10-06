@@ -629,6 +629,28 @@ class TestEdgeCasesAndBoosters:
         formation = v3._Formation("Hammer", 49, 100.0, 100.0)
         assert eng.confirming_signal(formation, 49, 101.0) is None
 
+    @pytest.mark.parametrize(
+        ("volume", "label"), [(300_000, "high volume"), (100_000, "low volume")]
+    )
+    def test_hammer_without_a_signal_is_named_by_its_volume(
+        self, volume: int, label: str
+    ) -> None:
+        """A Hammer no detector confirmed is never reported as a Shakeout or a Test.
+
+        The bar below is a hammer shape on a flat, 200k-volume series: nowhere
+        near the Shakeout's 10-bar low break or wide spread, and not a Test
+        (no confirming up bar after it). The accepted-on-its-own-volume
+        fallback must say what it actually saw.
+        """
+        bars = [_bar(i, 100.0, 100.5, 99.5, 100.0) for i in range(49)]
+        bars.append(_bar(49, 100.0, 100.1, 99.0, 100.05, volume))
+        eng = v3._Engine(bars)
+        assert eng.strength(49) is None  # no detector fires on it
+        formation = v3._Formation("Hammer", 49, 99.0, 100.05)
+        sig = eng.confirming_signal(formation, 49, 101.0)
+        assert sig is not None
+        assert sig.label == label
+
     def test_approach_with_occasional_zero_volume_bar_handled(self) -> None:
         """In a pullback, an occasional zero-volume session does not raise ZeroDivisionError."""
         bars = list(_scenario())

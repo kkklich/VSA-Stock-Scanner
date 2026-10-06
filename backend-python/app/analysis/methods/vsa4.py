@@ -25,8 +25,9 @@ part is the stock page's trade simulation (``adapter.simulate``).
 
 How V4 differs from V2/V3, which read the same course: V2 and V3 mechanise
 lesson 29's Scenario 5 (a pullback to a measured place, a candle formation,
-R/R ≥ 3 to the prior peak) and are rare by construction (V3 completes ~4 times
-in the whole stored history). V4 is the sequence from lessons 21/23 without
+R/R ≥ 3 to the prior peak) and are rare by construction (V3 completes ~390
+times in the whole stored history of ~1,000 companies since its 2026-09-24
+relaxation; 4 times before it). V4 is the sequence from lessons 21/23 without
 the Scenario-5 layers — the program says so itself ("nie implementuje całego
 scenariusza nr 5") — so it fires far more often: 2.3 times per ticker-year on
 GPW history. It is also **two-sided**: the program detects the weakness

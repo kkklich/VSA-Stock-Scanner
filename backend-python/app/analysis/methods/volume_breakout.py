@@ -25,8 +25,10 @@ breakout **fires** on a bar when all of these hold:
        tight consolidation (depth within O'Neil's ~12-33% base range), not a
        news gap or a stock already running vertically with no base underneath.
 
-``fired`` is a breakout on the latest bar; ``days_since`` is how many calendar
-days ago the most recent breakout fired. The ``score`` (0-100) is a softer read of how
+``fired`` is a breakout starting on the latest bar; ``days_since`` is how many
+calendar days ago the most recent breakout started — the bar its chart marker
+sits on (the second day of a run is not a new breakout, on the chart or here).
+The ``score`` (0-100) is a softer read of how
 good the breakout *posture* is right now — a five-part checklist (uptrend, the
 50-day above the 150-day, price near its 52-week high, a coiling/volume-dry-up
 base, and a fresh breakout) — so a stock tightening just under new highs scores
@@ -235,12 +237,18 @@ class VolumeBreakout(TradingMethod):
         last_idx = len(bars) - 1
         last_date = bars[last_idx].date
 
-        # Recency: the most recent bar a breakout fired on. days_since == 0 (a
-        # breakout on the last bar) is exactly ``fired``.
+        # Recency: the most recent bar a breakout STARTED on — the bar its chart
+        # marker sits on (``signals`` marks only the first bar of a run). A
+        # strong thrust can print several breakout bars in a row (~10% of all
+        # breakout bars on GPW history); counting those too made the Dashboard
+        # say "fired today" on a bar the chart left unmarked. days_since == 0
+        # (a breakout starting on the last bar) is exactly ``fired``.
         days_since = NEVER_FIRED
         floor = max(_MIN_BARS - 1, last_idx - _RECENCY_SCAN)
         for i in range(last_idx, floor - 1, -1):
-            if _breakout_fired(closes, highs, lows, volumes, i):
+            if _breakout_fired(closes, highs, lows, volumes, i) and not _breakout_fired(
+                closes, highs, lows, volumes, i - 1
+            ):
                 days_since = (last_date - bars[i].date).days
                 break
 
@@ -286,7 +294,11 @@ class VolumeBreakout(TradingMethod):
         volumes = [float(q.volume) for q in bars]
 
         out: list[MethodSignal] = []
-        prev = False
+        # Seed the prior state from the bar before the first one scanned, as
+        # the Minervini overlay does: a breakout needs only _LOOKBACK bars, so
+        # one can already be running at the scan's left edge, and without the
+        # seed its continuation there would be marked as a fresh breakout.
+        prev = _breakout_fired(closes, highs, lows, volumes, _MIN_BARS - 2)
         for i in range(_MIN_BARS - 1, len(bars)):
             fired = _breakout_fired(closes, highs, lows, volumes, i)
             if fired and not prev:

@@ -17,6 +17,12 @@ from app.ml import AGENT_ML_DIR
 
 TRIALS_FILE = AGENT_ML_DIR / "trials.csv"
 
+#: Trials already run before the register moved to the server (decision D6,
+#: 2026-09-26): the Phase-1 pilot's 14, run on the owner's PC. Shipped with the
+#: code so the server's register starts from them — a trial run elsewhere still
+#: counts against every later result.
+BASELINE_FILE = Path(__file__).with_name("trials_baseline.csv")
+
 TRIAL_FIELDS: tuple[str, ...] = (
     "trial_id",
     "recorded_at",
@@ -39,11 +45,20 @@ TRIAL_FIELDS: tuple[str, ...] = (
 
 
 def ensure_register(path: Path = TRIALS_FILE) -> Path:
-    """Create the register with its header if it does not exist yet."""
+    """Create the register if it does not exist yet.
+
+    The **default** register (``TRIALS_FILE`` — on the server, the one in
+    ``STOCKPILOT_ML_DIR``) starts from ``BASELINE_FILE``, so the trials run
+    before it existed keep counting. Any other path (a test's temporary file)
+    starts empty.
+    """
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8", newline="") as handle:
-            csv.DictWriter(handle, fieldnames=TRIAL_FIELDS).writeheader()
+        if path == TRIALS_FILE and BASELINE_FILE.exists():
+            path.write_text(BASELINE_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+        else:
+            with path.open("w", encoding="utf-8", newline="") as handle:
+                csv.DictWriter(handle, fieldnames=TRIAL_FIELDS).writeheader()
     return path
 
 

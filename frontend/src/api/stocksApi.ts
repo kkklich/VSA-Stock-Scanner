@@ -445,19 +445,44 @@ export interface ApiVolumeSurgeItem {
   lastPrice: number
   /** Average daily volume over the recent window (shares). */
   recentAvgVolume: number
-  /** Average daily volume over the baseline window before it (shares). */
+  /**
+   * Typical daily volume over the baseline window before it — the median
+   * session since 2026-09-26, so one exceptional day cannot distort it
+   * (shares). The name predates the change.
+   */
   baselineAvgVolume: number
-  /** Recent avg ÷ baseline avg — the multi-day relative volume (RVOL). */
+  /** Recent avg ÷ baseline — the multi-day relative volume (RVOL). */
   volumeRatio: number
-  /** Latest single session's volume ÷ baseline avg (classic RVOL). */
+  /** Latest single session's volume ÷ baseline (classic RVOL). */
   lastDayRatio: number
-  /** Recent sessions whose volume individually beat the baseline average. */
+  /** Recent sessions whose volume individually beat the baseline. */
   daysAboveBaseline: number
   /** Price change across the recent window, % (the "result" of the effort). */
   priceChangePct: number
   /** VSA rating 0–100 (same window/settings as the ranking). */
   currentRating: number
   lastSignal: string
+  /** Calendar days since the latest VSA signal; 999 = none. */
+  daysSinceSignal: number
+  /** A VSA signal falls inside the surge window (so the verdict speaks to it). */
+  signalInWindow: boolean
+  /** First session of the surge window (ISO date). */
+  surgeStart: string
+  /** The session in the window that traded the most shares (ISO date). */
+  peakDate: string
+  /** Its volume ÷ the baseline. */
+  peakVolumeRatio: number
+  /** Its close vs the close before it, % — an up bar or a down bar. */
+  peakChangePct: number
+  /** Its spread ÷ the baseline's average spread; null without a reference. */
+  peakSpreadRatio: number | null
+  /** Where it closed in its range: 0 = the low, 1 = the high; null = no range. */
+  peakClosePosition: number | null
+  /** The window traded above the baseline's highest high / below its lowest low. */
+  breaksHigh: boolean
+  breaksLow: boolean
+  /** A company report dated in the window or the session before it (ISO). */
+  reportDate: string | null
 }
 
 export interface ApiVolumeSurgeResponse {
@@ -486,6 +511,7 @@ export type VolumeSurgeSortKey =
   | 'volumeRatio'
   | 'lastDayRatio'
   | 'daysAboveBaseline'
+  | 'peakVolumeRatio'
   | 'priceChangePct'
   | 'currentRating'
   | 'lastSignal'
@@ -1055,12 +1081,13 @@ export interface ApiTickerVolume {
   baselineDays: number
   available: boolean
   recentAvgVolume: number | null
+  /** Typical (median) daily volume of the baseline window. */
   baselineAvgVolume: number | null
-  /** recent avg ÷ baseline avg — multi-day RVOL (1.0 = normal activity). */
+  /** recent avg ÷ baseline — multi-day RVOL (1.0 = a typical session). */
   volumeRatio: number | null
-  /** Latest single session's volume ÷ baseline avg (classic RVOL). */
+  /** Latest single session's volume ÷ baseline (classic RVOL). */
   lastDayRatio: number | null
-  /** Recent sessions whose volume individually beat the baseline average. */
+  /** Recent sessions whose volume individually beat the baseline. */
   daysAboveBaseline: number | null
   /** Close-to-close price change across the recent window, percent. */
   priceChangePct: number | null

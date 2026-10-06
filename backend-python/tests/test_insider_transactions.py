@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
@@ -119,7 +120,7 @@ def test_parse_espi_list_and_report_html() -> None:
         <p>Zawiadomienie w trybie art. 69 ustawy o ofercie publicznej</p>
       </li>
     </ul>
-    """
+    """  # noqa: E501 — markup copied from the real ESPI list page, kept verbatim
     # parse_espi_list_html automatically filters to MAR Art. 19 stubs only
     stubs = parse_espi_list_html(list_html)
     assert len(stubs) == 1
@@ -139,7 +140,7 @@ def test_parse_espi_list_and_report_html() -> None:
         </div>
       </body>
     </html>
-    """
+    """  # noqa: E501 — markup copied from a real ESPI report page, kept verbatim
     tx = parse_espi_report_html(
         report_html,
         stub=stubs[0],

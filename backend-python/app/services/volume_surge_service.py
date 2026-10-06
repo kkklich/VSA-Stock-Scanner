@@ -10,22 +10,36 @@ single session to an N-day average; averaging the last few sessions is a
 stricter smoothing of it, and the classic single-day ratio is reported too):
 
     volume_ratio = avg(volume, last ``recent_days`` sessions)
-                 / avg(volume, the ``baseline_days`` sessions before those)
+                 / median(volume, the ``baseline_days`` sessions before those)
 
 The baseline window deliberately *excludes* the recent window, so a surge
-cannot inflate its own reference average. A ratio of 1.0 means "normal
-activity"; published screens typically flag ~1.5–2.0 as elevated and ~3–4 as
-extreme. Alongside the multi-day ratio the scan reports the classic
+cannot inflate its own reference. The reference is the **median** — the
+volume of a typical session — not the mean (changed 2026-09-26, roadmap
+#15b). Daily volume is heavily skewed: in the stored GPW history 30% of
+20-session baselines held one day at five times the typical volume or more,
+usually a report day, and that one day lifted the mean for four weeks and hid
+genuine new surges behind it. The median ignores it, and it makes a ratio of
+1.0 mean what it says — a typical session (against the mean, a typical GPW
+session read 0.86). Published screens typically flag ~1.5–2.0 as elevated and
+~3–4 as extreme. Alongside the multi-day ratio the scan reports the classic
 single-day RVOL of the latest session and how many of the recent sessions
-individually beat the baseline average (persistence of the surge).
+individually beat the baseline (persistence of the surge).
 
 Relation to VSA: volume is the raw material of the "effort" side of Volume
 Spread Analysis — a surge marks professional (institutional) activity. Each
 result therefore carries the price change over the surge window (a rough
-proxy for the "result" of that effort — the full VSA reading also needs each
-bar's spread and close position, which is why the row carries the stock's
-current VSA rating and verdict, computed on the same window and with the
-same settings as the ranking page).
+proxy for the "result" of that effort) and the stock's current VSA rating and
+verdict, computed on the same window and with the same settings as the
+ranking page. Since that verdict can rest on a signal weeks older than the
+surge, each row also says how old its latest signal is and whether it fell
+inside the surge window, and it carries the bar-level facts VSA reads —
+spread and close position — for the session that carried the most volume,
+plus whether the surge pushed the price out of its reference-period range
+(``compute_surge_context``). Finally, a row is marked when a company report
+date falls in the surge window or on the session just before it
+(``report_in_window``): earnings are the commonest cause of a multi-day
+surge, and a surge that is simply the market digesting a report reads very
+differently from one that arrived unannounced.
 
 Pre-filters, data-source priority (cache → PostgreSQL → stooq live) and the
 120-day analysis window are identical to the ranking, and the per-ticker
@@ -36,11 +50,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from app.analysis.statistics import median_turnover
+from app.analysis.statistics import close_position, median_turnover, median_volume
 from app.analysis.vsa import (
     VsaConfig,
     compute_rating,
@@ -95,11 +109,123 @@ class VolumeSurgeMetrics:
     """
 
     recent_avg_volume: int
+    # The baseline's MEDIAN volume — a typical session — since 2026-09-26.
+    # The name is kept because it is the API field ``baselineAvgVolume``.
     baseline_avg_volume: int
     volume_ratio: float
     last_day_ratio: float
     days_above_baseline: int
     price_change_pct: float
+
+
+@dataclass(frozen=True)
+class SurgeContext:
+    """Bar-level VSA context for a surge window (unit-testable, no I/O).
+
+    VSA reads every bar by its volume, its spread and where it closed. RVOL
+    covers the first; this covers the other two for the session that carried
+    the surge, plus where the surge left the price relative to its range.
+    """
+
+    # First session of the surge window.
+    surge_start: date
+    # The session in the window with the most volume (the latest, on a tie).
+    peak_date: date
+    # Its volume ÷ the baseline (a typical session).
+    peak_volume_ratio: float
+    # Its close vs the close before it, percent: an up bar or a down bar.
+    peak_change_pct: float
+    # Its spread (high − low) ÷ the baseline's average spread. ``None`` when
+    # the baseline has no range at all (a frozen, suspended stretch).
+    peak_spread_ratio: float | None
+    # Where it closed within its range: 0 = on the low, 1 = on the high.
+    # ``None`` on a zero-range bar.
+    peak_close_position: float | None
+    # The window traded above the baseline's highest high / below its lowest
+    # low — the surge pushed the price out of the range it held before.
+    breaks_high: bool
+    breaks_low: bool
+
+
+@dataclass(frozen=True)
+class _SurgeWindows:
+    """The two windows every surge figure is read from, sliced once.
+
+    ``quotes`` is the whole bar list: the price change and the peak bar's
+    change both need the close from *before* the recent window.
+    """
+
+    quotes: Sequence[StooqDailyQuote]
+    recent: Sequence[StooqDailyQuote]
+    baseline: Sequence[StooqDailyQuote]
+    # The baseline's median volume — the volume of a typical session. > 0.
+    typical_volume: float
+
+
+def _surge_windows(
+    quotes: Sequence[StooqDailyQuote], recent_days: int, baseline_days: int
+) -> _SurgeWindows | None:
+    """The windows, or ``None`` when the stock cannot be scored at all.
+
+    That is when the history is too short for both windows or the baseline's
+    typical volume is zero (e.g. a long trading suspension) — different from
+    "not surging". The one place those rules live, so the metrics and the
+    context can never disagree about which stocks they cover.
+    """
+    if recent_days < 1 or baseline_days < 1:
+        return None
+    if len(quotes) < recent_days + baseline_days:
+        return None
+    baseline = quotes[-(recent_days + baseline_days) : -recent_days]
+    median = median_volume(baseline, lookback=len(baseline))
+    typical = float(median) if median is not None else 0.0
+    if typical <= 0:
+        return None
+    return _SurgeWindows(quotes, quotes[-recent_days:], baseline, typical)
+
+
+def _pct_change(before: StooqDailyQuote, after: StooqDailyQuote) -> float:
+    """Close-to-close change, percent (0.0 when the earlier close is not positive)."""
+    base = float(before.close)
+    return round((float(after.close) - base) / base * 100, 2) if base > 0 else 0.0
+
+
+def _metrics(w: _SurgeWindows) -> VolumeSurgeMetrics:
+    typical = w.typical_volume
+    recent_avg = sum(q.volume for q in w.recent) / len(w.recent)
+    return VolumeSurgeMetrics(
+        recent_avg_volume=int(round(recent_avg)),
+        baseline_avg_volume=int(round(typical)),
+        volume_ratio=recent_avg / typical,
+        last_day_ratio=w.recent[-1].volume / typical,
+        days_above_baseline=sum(1 for q in w.recent if q.volume > typical),
+        # Close just before the surge window → last close: the price "result"
+        # that accompanied the volume "effort" (VSA reads the two together).
+        price_change_pct=_pct_change(w.baseline[-1], w.recent[-1]),
+    )
+
+
+def _context(w: _SurgeWindows) -> SurgeContext:
+    recent, baseline = w.recent, w.baseline
+    # Latest session on a tie: the most recent evidence is the one to read.
+    peak_idx = max(range(len(recent)), key=lambda i: (recent[i].volume, i))
+    peak = recent[peak_idx]
+    before = recent[peak_idx - 1] if peak_idx > 0 else baseline[-1]
+
+    avg_spread = sum(float(q.high - q.low) for q in baseline) / len(baseline)
+    peak_spread = float(peak.high - peak.low)
+    position = close_position(peak)
+
+    return SurgeContext(
+        surge_start=recent[0].date,
+        peak_date=peak.date,
+        peak_volume_ratio=round(peak.volume / w.typical_volume, 2),
+        peak_change_pct=_pct_change(before, peak),
+        peak_spread_ratio=round(peak_spread / avg_spread, 2) if avg_spread > 0 else None,
+        peak_close_position=round(float(position), 2) if position is not None else None,
+        breaks_high=max(q.high for q in recent) > max(q.high for q in baseline),
+        breaks_low=min(q.low for q in recent) < min(q.low for q in baseline),
+    )
 
 
 def compute_surge_metrics(
@@ -109,41 +235,67 @@ def compute_surge_metrics(
 ) -> VolumeSurgeMetrics | None:
     """Multi-day relative-volume metrics for a chronological bar list.
 
-    Returns ``None`` when the history is too short for both windows or the
-    baseline average volume is zero (e.g. a long trading suspension) — such a
-    stock cannot be scored, which is different from "not surging".
+    ``None`` when the stock cannot be scored (see ``_surge_windows``).
     """
-    if recent_days < 1 or baseline_days < 1:
+    w = _surge_windows(quotes, recent_days, baseline_days)
+    return _metrics(w) if w is not None else None
+
+
+def compute_surge_context(
+    quotes: Sequence[StooqDailyQuote],
+    recent_days: int = DEFAULT_RECENT_DAYS,
+    baseline_days: int = DEFAULT_BASELINE_DAYS,
+) -> SurgeContext | None:
+    """Spread, close position and range break around a surge window.
+
+    The same windows and ``None`` cases as ``compute_surge_metrics``. The
+    spread is judged against the baseline's *average* spread because that is
+    the reference the VSA engine uses for "wide" and "narrow" (``vsa.py``:
+    the rolling mean spread), so a bar this calls wide is wide in the
+    engine's own terms.
+    """
+    w = _surge_windows(quotes, recent_days, baseline_days)
+    return _context(w) if w is not None else None
+
+
+async def _report_dates(
+    repo: QuoteRepository | None, tickers: list[str]
+) -> dict[str, list[date]]:
+    """Stored report dates per ticker; empty without a database or on failure.
+
+    The flag is a hint on top of the scan, so a failed read degrades to "no
+    report known" (logged) instead of failing a scan that is otherwise fine.
+    """
+    if repo is None or not tickers:
+        return {}
+    try:
+        return await repo.get_report_dates(tickers)
+    except Exception:  # noqa: BLE001
+        logger.exception("Volume surge: could not read report dates.")
+        return {}
+
+
+def report_in_window(
+    report_dates: Iterable[date | None],
+    quotes: Sequence[StooqDailyQuote],
+    recent_days: int = DEFAULT_RECENT_DAYS,
+) -> date | None:
+    """The latest report date that falls in the surge window, if any.
+
+    The window reaches back to the session *before* the surge: GPW companies
+    mostly publish after the close (Yahoo stamps KGHM's reports 17:05 Warsaw),
+    so a report dated that session is traded — and moves volume — on the
+    first session of the window. A report dated the *last* session counts
+    too, although after the close it has not traded yet: a stored date has no
+    time of day, and many companies (most US ones) publish before the open.
+    A date after the last session cannot explain the surge.
+    """
+    if not quotes or recent_days < 1:
         return None
-    if len(quotes) < recent_days + baseline_days:
-        return None
-
-    recent = quotes[-recent_days:]
-    baseline = quotes[-(recent_days + baseline_days) : -recent_days]
-
-    baseline_avg = sum(q.volume for q in baseline) / len(baseline)
-    if baseline_avg <= 0:
-        return None
-    recent_avg = sum(q.volume for q in recent) / len(recent)
-
-    # Close just before the surge window → last close: the price "result"
-    # that accompanied the volume "effort" (VSA reads the two together).
-    entry_close = float(quotes[-(recent_days + 1)].close)
-    last_close = float(recent[-1].close)
-    price_change_pct = (
-        round((last_close - entry_close) / entry_close * 100, 2)
-        if entry_close > 0
-        else 0.0
-    )
-
-    return VolumeSurgeMetrics(
-        recent_avg_volume=int(round(recent_avg)),
-        baseline_avg_volume=int(round(baseline_avg)),
-        volume_ratio=recent_avg / baseline_avg,
-        last_day_ratio=recent[-1].volume / baseline_avg,
-        days_above_baseline=sum(1 for q in recent if q.volume > baseline_avg),
-        price_change_pct=price_change_pct,
-    )
+    first = quotes[-(recent_days + 1)] if len(quotes) > recent_days else quotes[0]
+    last = quotes[-1]
+    inside = [d for d in report_dates if d is not None and first.date <= d <= last.date]
+    return max(inside, default=None)
 
 
 async def compute_volume_surge(
@@ -233,7 +385,7 @@ async def compute_volume_surge(
 
     async def scan_company(
         company: GpwCompany,
-    ) -> tuple[VolumeSurgeItem, date] | None:
+    ) -> tuple[VolumeSurgeItem, list[StooqDailyQuote]] | None:
         nonlocal scanned
 
         currency = quote_currency(company)
@@ -253,13 +405,15 @@ async def compute_volume_surge(
             if below_liquidity_floor(median_turnover(recent), currency):
                 return None
 
-            metrics = compute_surge_metrics(recent, recent_days, baseline_days)
-            if metrics is None:
+            windows = _surge_windows(recent, recent_days, baseline_days)
+            if windows is None:
                 return None
+            metrics = _metrics(windows)
             scanned += 1
             session_dates.append(recent[-1].date)
             if metrics.volume_ratio < min_ratio:
                 return None
+            context = _context(windows)
 
             # VSA context on the same window/settings as the ranking, so the
             # numbers match across pages. As-of the last session date (not
@@ -267,7 +421,11 @@ async def compute_volume_surge(
             signals = detect_signals(recent, config)
             as_of = recent[-1].date
             rating = compute_rating(signals, as_of)
-            verdict, _ = verdict_from_signals(signals, as_of)
+            verdict, days_since = verdict_from_signals(signals, as_of)
+            # The verdict is a decayed score over months of signals; say
+            # whether any of them is part of the surge, or it reads as if it
+            # described the surge when it predates it.
+            signal_in_window = any(s.date >= context.surge_start for s in signals)
 
             item = VolumeSurgeItem(
                 ticker=company.ticker.upper(),
@@ -284,8 +442,18 @@ async def compute_volume_surge(
                 price_change_pct=metrics.price_change_pct,
                 current_rating=rating,
                 last_signal=verdict,
+                days_since_signal=days_since,
+                signal_in_window=signal_in_window,
+                surge_start=context.surge_start,
+                peak_date=context.peak_date,
+                peak_volume_ratio=context.peak_volume_ratio,
+                peak_change_pct=context.peak_change_pct,
+                peak_spread_ratio=context.peak_spread_ratio,
+                peak_close_position=context.peak_close_position,
+                breaks_high=context.breaks_high,
+                breaks_low=context.breaks_low,
             )
-            return item, recent[-1].date
+            return item, recent
         except Exception:  # noqa: BLE001
             logger.exception("Volume surge: skipping %s: analysis failed.", company.ticker)
             return None
@@ -308,13 +476,30 @@ async def compute_volume_surge(
     # max, not wall-clock, so cached results stay deterministic.
     latest_session = max(session_dates, default=None)
     hits = [
-        (item, last_bar)
-        for item, last_bar in hits
+        (item, bars)
+        for item, bars in hits
         if latest_session is None
-        or (latest_session - last_bar).days <= _MAX_SESSION_LAG_DAYS
+        or (latest_session - bars[-1].date).days <= _MAX_SESSION_LAG_DAYS
     ]
+
+    # Report dates, for the surging stocks only: one query, not one per company.
+    report_dates = await _report_dates(repo, [item.ticker.lower() for item, _ in hits])
+    hits = [
+        (
+            item.model_copy(
+                update={
+                    "report_date": report_in_window(
+                        report_dates.get(item.ticker.lower(), ()), bars, recent_days
+                    )
+                }
+            ),
+            bars,
+        )
+        for item, bars in hits
+    ]
+
     items = sorted((item for item, _ in hits), key=lambda i: -i.volume_ratio)
-    as_of = max((d for _, d in hits), default=None)
+    as_of = max((bars[-1].date for _, bars in hits), default=None)
     return VolumeSurgeResponse(
         as_of=as_of,
         recent_days=recent_days,

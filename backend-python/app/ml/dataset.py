@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -172,23 +172,79 @@ def stock_frame(
         fire = frame[f"fire_{mid}"]
         extra[f"h_prior60_{mid}"] = fire.shift(1).rolling(60, min_periods=1).sum().fillna(0.0)
         extra[f"h_since_{mid}"] = sessions_since(fire.to_numpy() > 0, 250, exclusive=True)
-    return pd.concat([head, frame, pd.DataFrame(extra, index=frame.index)], axis=1)
+    out = pd.concat([head, frame, pd.DataFrame(extra, index=frame.index)], axis=1)
+    # Measurements are kept as 4-byte floats — seven significant digits is far
+    # more than a percentile, a ratio or a z-score needs, and it halves what a
+    # market's history costs in memory on the server. The labels (what the
+    # models learn and are judged on) keep full precision, and so do the
+    # figures ranked across stocks each day.
+    narrow = [
+        c for c in out.columns
+        if out[c].dtype == np.float64
+        and not c.startswith(_FULL_PRECISION_PREFIXES)
+        and c not in _RANKED_COLUMNS
+    ]
+    out[narrow] = out[narrow].astype(np.float32)
+    return out
+
+
+#: Column prefixes kept as 8-byte floats: every label and its inputs.
+_FULL_PRECISION_PREFIXES = ("fwd_r_", "l1_", "l2_", "l3_")
+#: Kept as 8-byte floats too: what ``market_day_tables`` ranks across stocks.
+#: Rounded to four bytes, two stocks a hair apart would tie and share a
+#: percentile (it happened to 3 of 28,410 GPW rows before this rule).
+_RANKED_COLUMNS = frozenset({"turnover_pln", "rs_raw", "mom_12_1_raw"})
 
 
 # ── Across the market ─────────────────────────────────────────────────────────
 
 
-def add_cross_sectional(panel: pd.DataFrame, horizons: Sequence[int] = HORIZONS) -> pd.DataFrame:
-    """Percentiles within a market-day, the market regime, and L1's comparison.
+#: What the cross-sectional half needs from **every** stock-session. The rest of
+#: a row is needed only on the rows the two jobs keep — that split is what lets
+#: ``build_datasets`` hold a market's history in a fraction of the memory.
+_SLIM_COLUMNS = [
+    "ticker",
+    "market",
+    "date",
+    "turnover_pln",
+    "rs_raw",
+    "mom_12_1_raw",
+    "ret1",
+    "above_ma50",
+    "above_ma200",
+    "new_52w_high",
+    "new_52w_low",
+    "ret20",
+    "vsa_bull_today",
+    "vsa_bear_today",
+]
+
+
+def slim_columns(horizons: Sequence[int] = HORIZONS) -> list[str]:
+    return [*_SLIM_COLUMNS, *(f"fwd_r_{n}" for n in horizons)]
+
+
+@dataclass(frozen=True)
+class MarketDayTables:
+    """The cross-sectional facts, keyed so they can be joined onto any rows."""
+
+    percentiles: pd.DataFrame  # ticker, date → turnover / RS / momentum percentile
+    regime: pd.DataFrame  # market, date → the market's mood that day
+    l1: pd.DataFrame  # market, date → each horizon's median return and count
+
+
+def market_day_tables(slim: pd.DataFrame, horizons: Sequence[int] = HORIZONS) -> MarketDayTables:
+    """Percentiles within a market-day, the market regime, and L1's medians.
 
     Everything here compares stocks **on the same day**, so it uses nothing a
     trader at that day's close could not have known.
     """
     keys = ["market", "date"]
-    grouped = panel.groupby(keys, sort=False)
-    panel["turnover_pct"] = grouped["turnover_pln"].rank(pct=True)
-    panel["rs_pct"] = grouped["rs_raw"].rank(pct=True)
-    panel["mom_12_1_pct"] = grouped["mom_12_1_raw"].rank(pct=True)
+    grouped = slim.groupby(keys, sort=False)
+    percentiles = slim[["ticker", "date"]].copy()
+    percentiles["turnover_pct"] = grouped["turnover_pln"].rank(pct=True)
+    percentiles["rs_pct"] = grouped["rs_raw"].rank(pct=True)
+    percentiles["mom_12_1_pct"] = grouped["mom_12_1_raw"].rank(pct=True)
 
     regime = (
         grouped.agg(
@@ -227,19 +283,69 @@ def add_cross_sectional(panel: pd.DataFrame, horizons: Sequence[int] = HORIZONS)
         market["reg_mkt_vol20"] = market["ew_ret"].rolling(20).std()
         parts.append(market)
     regime = pd.concat(parts, ignore_index=True) if parts else regime
-    panel = panel.merge(regime[[*keys, "reg_stocks", *REGIME_COLUMNS]], on=keys, how="left")
 
+    l1 = None
     for n in horizons:
         col = f"fwd_r_{n}"
-        valid = panel[col].notna()
-        counts = panel.loc[valid].groupby(keys)[col].transform("count")
-        medians = panel.loc[valid].groupby(keys)[col].transform("median")
-        enough = counts >= MIN_STOCKS_PER_DAY
-        excess = pd.Series(np.nan, index=panel.index)
-        excess.loc[enough[enough].index] = (panel.loc[valid, col] - medians)[enough]
-        panel[f"l1_excess_{n}"] = excess
-        panel[f"l1_y_{n}"] = np.where(excess.notna(), (excess > 0).astype(float), np.nan)
-    return panel
+        # median and count both skip missing values, so no filtered copy of
+        # every stock-session is needed; a day with none counts 0, which
+        # ``attach_cross_sectional`` treats exactly like a day not listed.
+        stats = (
+            grouped[col]
+            .agg(["median", "count"])
+            .rename(columns={"median": f"_l1_median_{n}", "count": f"_l1_count_{n}"})
+            .reset_index()
+        )
+        l1 = stats if l1 is None else l1.merge(stats, on=keys, how="outer")
+    if l1 is None:
+        l1 = regime[keys].copy()
+    return MarketDayTables(
+        percentiles=percentiles,
+        regime=regime[[*keys, "reg_stocks", *REGIME_COLUMNS]],
+        l1=l1,
+    )
+
+
+def attach_cross_sectional(
+    frame: pd.DataFrame, tables: MarketDayTables, horizons: Sequence[int] = HORIZONS
+) -> pd.DataFrame:
+    """Add the market-day facts to ``frame`` **in place** and compute L1; returns it.
+
+    Looked up by index rather than merged: a merge copies the whole frame once
+    per join, and on the server the frame is most of the memory a build uses.
+    """
+    by_stock_day = pd.MultiIndex.from_arrays([frame["ticker"], frame["date"]])
+    by_market_day = pd.MultiIndex.from_arrays([frame["market"], frame["date"]])
+    percentiles = tables.percentiles.set_index(["ticker", "date"]).reindex(by_stock_day)
+    for col in percentiles.columns:
+        frame[col] = percentiles[col].to_numpy()
+    regime = tables.regime.set_index(["market", "date"]).reindex(by_market_day)
+    for col in regime.columns:
+        frame[col] = regime[col].to_numpy()
+    l1 = tables.l1.set_index(["market", "date"]).reindex(by_market_day)
+    for n in horizons:
+        fwd = frame[f"fwd_r_{n}"].to_numpy(dtype=float)
+        median = (
+            l1[f"_l1_median_{n}"].to_numpy(dtype=float)
+            if f"_l1_median_{n}" in l1
+            else np.full(len(frame), np.nan)
+        )
+        count = (
+            l1[f"_l1_count_{n}"].fillna(0).to_numpy()
+            if f"_l1_count_{n}" in l1
+            else np.zeros(len(frame))
+        )
+        ok = np.isfinite(fwd) & (count >= MIN_STOCKS_PER_DAY)
+        excess = np.where(ok, fwd - median, np.nan)
+        frame[f"l1_excess_{n}"] = excess
+        frame[f"l1_y_{n}"] = np.where(ok, (excess > 0).astype(float), np.nan)
+    return frame
+
+
+def add_cross_sectional(panel: pd.DataFrame, horizons: Sequence[int] = HORIZONS) -> pd.DataFrame:
+    """The whole-panel form: compute the market-day facts and attach them."""
+    tables = market_day_tables(panel[slim_columns(horizons)], horizons)
+    return attach_cross_sectional(panel, tables, horizons)
 
 
 def build_panel(
@@ -262,7 +368,71 @@ def build_panel(
     return add_cross_sectional(panel, horizons)
 
 
+def build_datasets(
+    stocks: Iterable[StockInput],
+    horizons: Sequence[int] = HORIZONS,
+    config: VsaConfig | None = None,
+    progress: Callable[[int, str], None] | None = None,
+    every: int = JOB2_EVERY,
+    offset: int = 0,
+    job1_methods: Sequence[str] = JOB1_METHODS,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(Job-1 rows, Job-2 rows), built **one stock at a time** — the server path.
+
+    ``build_panel`` holds every column of every stock-session at once: 280 MB
+    for today's GPW history, about 1 GB after a ten-year back-fill, on top of
+    the bars themselves. Here each stock's frame lives only while it is being
+    read: every session keeps just the handful of columns the cross-sectional
+    half needs, and only the rows the two jobs keep (every ``every``-th
+    session, plus every firing) keep all of theirs. ``stocks`` can therefore be
+    a generator that loads one stock at a time
+    (``data_access.stream_stock_inputs``). The result is identical to
+    ``job1_rows(build_panel(...))`` / ``job2_rows(build_panel(...))`` —
+    ``tests/test_ml_dataset.py`` pins that.
+    """
+    slim_cols = slim_columns(horizons)
+    slims: list[pd.DataFrame] = []
+    kept: list[pd.DataFrame] = []
+    for i, stock in enumerate(stocks, start=1):
+        frame = stock_frame(stock, horizons, config)
+        if progress is not None:
+            progress(i, stock.ticker)
+        if frame.empty:
+            continue
+        slims.append(frame[slim_cols])
+        fired = np.zeros(len(frame), dtype=bool)
+        for mid in job1_methods:
+            fired |= frame[f"fire_{mid}"].to_numpy() > 0
+        keep = (frame["position"].to_numpy() % every == offset) | fired
+        kept.append(frame.loc[keep])
+    if not kept:
+        return pd.DataFrame(), pd.DataFrame()
+    # Each list is emptied the moment it has been joined, so the per-stock
+    # pieces and the joined frame never sit in memory together while the
+    # next (itself memory-hungry) step runs.
+    slim = pd.concat(slims, ignore_index=True)
+    slims.clear()
+    tables = market_day_tables(slim, horizons)
+    del slim
+    rows = pd.concat(kept, ignore_index=True)
+    kept.clear()
+    attach_cross_sectional(rows, tables, horizons)
+    del tables
+    return job1_rows(rows, job1_methods), job2_rows(rows, horizons, every, offset)
+
+
 # ── The two jobs' rows ────────────────────────────────────────────────────────
+
+
+def _renumbered(frame: pd.DataFrame) -> pd.DataFrame:
+    """``frame`` with a fresh 0…n-1 index, set in place.
+
+    ``reset_index(drop=True)`` would copy every column once more (pandas
+    without copy-on-write), and a market's kept rows are most of what a build
+    holds; setting the index copies nothing.
+    """
+    frame.index = pd.RangeIndex(len(frame))
+    return frame
 
 
 def job2_rows(
@@ -276,7 +446,7 @@ def job2_rows(
     for n in horizons:
         has_label |= panel[f"l1_y_{n}"].notna().to_numpy()
     keep = (panel["position"].to_numpy() % every == offset) & has_label
-    return panel.loc[keep].reset_index(drop=True)
+    return _renumbered(panel.loc[keep])
 
 
 def job1_rows(panel: pd.DataFrame, methods: Sequence[str] = JOB1_METHODS) -> pd.DataFrame:
@@ -302,7 +472,7 @@ def job1_rows(panel: pd.DataFrame, methods: Sequence[str] = JOB1_METHODS) -> pd.
     if not parts:
         return pd.DataFrame()
     joined = pd.concat(parts, ignore_index=True)
-    return joined.sort_values(["date", "ticker", "method"]).reset_index(drop=True)
+    return _renumbered(joined.sort_values(["date", "ticker", "method"]))
 
 
 # ── Saving ────────────────────────────────────────────────────────────────────
@@ -316,8 +486,16 @@ def write_dataset(frame: pd.DataFrame, path: Path, meta: dict | None = None) -> 
     it was trained on.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False, compression="gzip")
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    # Written beside the target and renamed into place: a job stopped mid-write
+    # (by hand, or by the server's memory cap) never leaves a cut-off file for
+    # the next job to trip over.
+    partial = path.with_name(f"{path.name}.partial")
+    frame.to_csv(partial, index=False, compression="gzip")
+    digest = hashlib.sha256()
+    with partial.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    partial.replace(path)
     dates = frame["date"] if "date" in frame and not frame.empty else pd.Series([], dtype=object)
     info = {
         "file": path.name,
@@ -327,11 +505,77 @@ def write_dataset(frame: pd.DataFrame, path: Path, meta: dict | None = None) -> 
         "columns": int(frame.shape[1]),
         "firstDate": str(min(dates)) if len(dates) else None,
         "lastDate": str(max(dates)) if len(dates) else None,
-        "sha256": digest,
+        "sha256": digest.hexdigest(),
         **(meta or {}),
     }
     Path(f"{path}.meta.json").write_text(json.dumps(info, indent=2, default=str), encoding="utf-8")
     return info
+
+
+def read_datasets(
+    directory: Path, markets: Sequence[str], job: int, columns: Iterable[str] | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Read ``job<job>-<market>.csv.gz`` for each market, joined, plus their metadata.
+
+    Raises ``FileNotFoundError`` naming the first missing file — the dataset
+    step (``scripts/ml_build_dataset.py``) has to have run for those markets.
+    ``columns``, when given, keeps only those (a name a file lacks is skipped):
+    a reader that needs a third of a table should not hold all of it.
+    """
+    frames, metas = [], []
+    for market in markets:
+        path = directory / f"job{job}-{market}.csv.gz"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} is missing — build the datasets first.")
+        frames.append(_read_dataset(path, columns))
+        meta_path = Path(f"{path}.meta.json")
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+        metas.append(meta)
+    frames = [f for f in frames if not f.empty]
+    if len(frames) == 1:
+        return frames[0], metas  # ``concat`` would copy it once more for nothing
+    return (pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()), metas
+
+
+#: The columns a dataset file holds as text; every other column is a number.
+_TEXT_COLUMNS = frozenset({"ticker", "market", "sector", "date", LABEL_COLUMN, "method", "setup"})
+_TEXT_PREFIXES = ("fwd_end_", "l3_exit_")
+#: Rows parsed at a time by ``_read_dataset``.
+_READ_ROWS = 20_000
+
+
+def _text_dtypes(columns: Iterable[str]) -> dict[str, str]:
+    return {
+        c: "object" for c in columns if c in _TEXT_COLUMNS or c.startswith(_TEXT_PREFIXES)
+    }
+
+
+def _read_dataset(path: Path, columns: Iterable[str] | None = None) -> pd.DataFrame:
+    """One dataset file, parsed ``_READ_ROWS`` at a time.
+
+    Parsed in one go, a file needed about three times the finished table's
+    memory for a moment (750 MB for a ten-year GPW Job 2 of 216 MB); in pieces
+    it needs about twice. The text columns are named so no piece can guess a
+    column's type differently from the rest.
+    """
+    try:
+        header = pd.read_csv(path, compression="gzip", nrows=0).columns
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()  # a job with no rows for this market
+    if columns is not None:
+        wanted = set(columns)
+        header = pd.Index([c for c in header if c in wanted])
+    with pd.read_csv(
+        path,
+        compression="gzip",
+        usecols=None if columns is None else list(header),
+        dtype=_text_dtypes(header),
+        chunksize=_READ_ROWS,
+    ) as reader:
+        pieces = list(reader)
+    if not pieces:
+        return pd.DataFrame(columns=header)
+    return pieces[0] if len(pieces) == 1 else pd.concat(pieces, ignore_index=True)
 
 
 def as_dates(values: Sequence[object]) -> list[date]:

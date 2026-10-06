@@ -25,6 +25,10 @@ RUN python -m pip install --upgrade pip && \
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
+# Maintenance and AI research scripts. The running API never imports them; the
+# `ml` service in docker-compose.prod.yml runs them from this same image
+# (deploy/ml-run.sh), so the AI jobs always match the code that is deployed.
+COPY scripts ./scripts
 
 # Action log (audit trail) directory. In production docker-compose bind-mounts
 # the server's own ./logs folder over this path (deploy/deploy.sh makes that

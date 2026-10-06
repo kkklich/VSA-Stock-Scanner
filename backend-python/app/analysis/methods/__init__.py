@@ -8,6 +8,7 @@ dropping a module here and importing it below — no other wiring needed.
 from __future__ import annotations
 
 from app.analysis.methods import minervini as _minervini  # noqa: F401
+from app.analysis.methods import pocket_pivot as _pocket_pivot  # noqa: F401
 from app.analysis.methods import volume_breakout as _volume_breakout  # noqa: F401
 from app.analysis.methods import vsa3 as _vsa3  # noqa: F401
 from app.analysis.methods import vsa4 as _vsa4  # noqa: F401

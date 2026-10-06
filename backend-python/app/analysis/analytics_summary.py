@@ -173,7 +173,10 @@ def _compact_method_detail(detail: str | None) -> str | None:
         left, right = head.split(" + ", 1)
         for marker in (" @ ", " today", " "):
             if marker in right and (marker != " " or right.endswith("d ago")):
-                suffix = right[right.index(marker):] if marker != " " else " " + " ".join(right.rsplit(" ", 2)[-2:])
+                if marker != " ":
+                    suffix = right[right.index(marker):]
+                else:
+                    suffix = " " + " ".join(right.rsplit(" ", 2)[-2:])
                 head = f"{left}{suffix}"
                 break
         else:
@@ -407,6 +410,7 @@ def build_analytics_summary(
     quotes: Sequence[StooqDailyQuote],
     signals: Sequence[VsaSignal],
     config: VsaConfig | None = None,
+    method_quotes: Sequence[StooqDailyQuote] | None = None,
 ) -> AnalyticsSummaryResponse:
     """Fuse every per-stock opinion into one consolidated summary.
 
@@ -414,6 +418,14 @@ def build_analytics_summary(
     rule-engine detections for the same window (any ``VsaConfig``). Reuses the
     same built-in engines the individual cards use, so the summary can never
     contradict them.
+
+    ``method_quotes`` is the window the trading methods are evaluated on, and
+    should be the one the ranking gives them (``CONTEXT_HISTORY_DAYS``, ending
+    on the same session as ``quotes``). It is separate because the VSA, AI and
+    trust cards read one year, and one year is ~250 sessions — short of the
+    252 Minervini needs for its 52-week rules, which left that method
+    "unavailable" on every stock page and let Weinstein and Pocket Pivot read
+    differently here than on the Dashboard. Defaults to ``quotes``.
     """
     if not quotes:
         raise ValueError("build_analytics_summary requires at least one quote.")
@@ -439,11 +451,12 @@ def build_analytics_summary(
         _ai_source(ai.verdict, ai.confidence),
     ]
     method_sources: list[_Directional] = []
+    method_window = method_quotes if method_quotes else quotes
     for method in all_methods():
         if method.id == "vsa":
             continue
         try:
-            result = method.evaluate(quotes, config)
+            result = method.evaluate(method_window, config)
         except Exception:  # noqa: BLE001 — one bad method must not sink the summary
             result = MethodResult.unavailable("evaluation failed")
         entry = _method_source(method, result)

@@ -77,8 +77,9 @@ const DARK: ChartPalette = {
     vsa3: '#A855F7', // purple
     vsa4: '#F97316', // orange (was lime — too close to the positive green)
     weinstein: '#3B82F6', // blue
+    pocket_pivot: '#06B6D4', // cyan (the first spare, now fixed to it)
   },
-  spareMethodColors: ['#06B6D4', '#7DD3FC', '#FDE047'], // cyan, sky, light yellow
+  spareMethodColors: ['#7DD3FC', '#FDE047'], // sky, light yellow
   heatmapNegative: [244, 63, 94], // rose-500
   heatmapNeutral: [51, 65, 85], // slate-700
   heatmapPositive: [16, 185, 129], // emerald-500
@@ -109,8 +110,9 @@ const LIGHT: ChartPalette = {
     vsa3: '#7E22CE', // purple-700
     vsa4: '#EA580C', // orange-600
     weinstein: '#1D4ED8', // blue-700
+    pocket_pivot: '#0E7490', // cyan-700 (the first spare, now fixed to it)
   },
-  spareMethodColors: ['#0E7490', '#0369A1', '#B45309'], // cyan-700, sky-700, amber-700
+  spareMethodColors: ['#0369A1', '#B45309'], // sky-700, amber-700
   // Tiles sit on a white page and carry white text, so every step of the ramp
   // — including the neutral middle — stays dark enough to read.
   heatmapNegative: [225, 29, 72], // rose-600

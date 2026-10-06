@@ -52,8 +52,9 @@ source and nothing extra to download. The **forming week is dropped**: a
 part-built weekly bar carries a fraction of a real week's volume (measured on a
 Monday: 0.20x the 20-week average), which would make the 2x volume test
 unanswerable, and Weinstein buys on a weekly *close*. So during the week the
-method reports the last completed week's read, and a breakout that happened on
-Friday shows as "fired" until the next week closes.
+method reports the last completed week's read: a breakout week shows as
+"fired" on its closing session (and over the weekend), and from Monday on as
+"broke out N days ago" — the age is counted from the newest daily bar.
 
 **Not gated: the prior decline.** Weinstein's Stage 1 follows a Stage 4
 decline. That is not a separate condition here, because the stock may have been
@@ -309,11 +310,17 @@ class WeinsteinStageBreakout(TradingMethod):
         # correctly says "broke out 3 days ago" rather than "today".
         last_date = max(b.date for b in bars)
 
+        # The newest week a breakout STARTED on — the week ``signals`` marks. A
+        # run can print two breakout weeks in a row (~10% of breakout weeks on
+        # GPW history); the second is the same move, so it is neither "fired"
+        # nor a fresh date here, just as it carries no marker on the chart.
         days_since = NEVER_FIRED
         fired_idx: int | None = None
         floor = max(_MIN_WEEKS - 1, last_idx - _RECENCY_SCAN_WEEKS)
         for i in range(last_idx, floor - 1, -1):
-            if _breakout_fired(closes, highs, lows, volumes, i):
+            if _breakout_fired(closes, highs, lows, volumes, i) and not _breakout_fired(
+                closes, highs, lows, volumes, i - 1
+            ):
                 days_since = (last_date - weekly[i].date).days
                 fired_idx = i
                 break

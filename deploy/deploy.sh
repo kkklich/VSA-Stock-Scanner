@@ -46,6 +46,19 @@ else
   echo "Could not change the owner of logs/ (needs root) — set sticky bit (1777) so other users cannot tamper with files."
 fi
 
+say "Preparing the AI research folder (./ml)"
+# Where the AI jobs (bash deploy/ml-run.sh) keep their datasets, reports and trial
+# register: ./ml on THIS server, bind-mounted into the `ml` container. Same
+# ownership rule as ./logs above — the container runs as uid 10001.
+mkdir -p ml
+if chown 10001:10001 ml 2>/dev/null || sudo -n chown 10001:10001 ml 2>/dev/null; then
+  chmod 0755 ml
+  echo "ml/ is owned by the containers' user."
+else
+  chmod 1777 ml
+  echo "Could not change the owner of ml/ (needs root) — set sticky bit (1777) instead."
+fi
+
 say "Building images (first run downloads a lot — expect several minutes)"
 compose build
 
@@ -79,6 +92,7 @@ Useful commands (run from this folder):
   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api    # live backend console (lost on restart)
   docker compose -f docker-compose.prod.yml --env-file .env.prod restart api    # restart backend
   docker compose -f docker-compose.prod.yml --env-file .env.prod down           # stop everything (data kept)
+  bash deploy/ml-run.sh status                                                  # AI research jobs (agent/DEPLOYMENT.md §10)
 
 The first start pulls ~400 GPW tickers from Yahoo Finance in the background;
 the dashboard fills in over the following few minutes.

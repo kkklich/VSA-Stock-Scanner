@@ -143,8 +143,14 @@ class TestCompactMethodDetail:
             ("Selling Climax → No Supply, awaiting confirmation", "Selling Climax (pending)"),
             ("Strength: Two Bar Reversal 12d ago, awaiting a test", "Two Bar Reversal 12d ago"),
             ("Weakness: Buying Climax → No Demand confirmed", "Weakness: Buying Climax"),
-            ("Bullish Engulfing + No Supply @ 50% (3-sig seq), R/R 6.7:1", "Bullish Engulfing @ 50%"),
-            ("Bullish Engulfing + No Supply today, not taken: R/R 2.1:1", "Bullish Engulfing today"),
+            (
+                "Bullish Engulfing + No Supply @ 50% (3-sig seq), R/R 6.7:1",
+                "Bullish Engulfing @ 50%",
+            ),
+            (
+                "Bullish Engulfing + No Supply today, not taken: R/R 2.1:1",
+                "Bullish Engulfing today",
+            ),
             ("Bullish Engulfing + No Supply 12d ago", "Bullish Engulfing 12d ago"),
             ("Outside Bar 70d ago", "Outside Bar 70d ago"),
             ("3/6 below 30w MA", "3/6 below 30w MA"),
@@ -203,6 +209,26 @@ class TestBuildSummary:
         assert "SH" in res.headline
         # An unavailable method must not break the payload.
         assert res.stance in ("bullish", "bearish", "neutral", "mixed")
+
+    def test_methods_use_method_quotes_when_given(self) -> None:
+        # The VSA window is too short for Minervini; the method window is not.
+        wide = _series([100.0 + i * 0.5 for i in range(300)])
+        year = wide[-200:]
+        res = build_analytics_summary(
+            ticker="up",
+            name=None,
+            quotes=year,
+            signals=detect_signals(year),
+            method_quotes=wide,
+        )
+        by_key = {s.key: s for s in res.sources}
+        assert by_key["minervini"].stance == "bullish"
+        assert res.as_of == year[-1].date
+        # ...and without it the methods fall back to ``quotes``.
+        res = build_analytics_summary(
+            ticker="up", name=None, quotes=year, signals=detect_signals(year)
+        )
+        assert {s.key: s for s in res.sources}["minervini"].stance == "unavailable"
 
     def test_empty_quotes_raises(self) -> None:
         with pytest.raises(ValueError):

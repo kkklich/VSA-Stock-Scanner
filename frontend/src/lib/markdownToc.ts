@@ -1,6 +1,7 @@
-// Table-of-contents extraction for the VSA compendium page.
+// Table-of-contents extraction for the Education articles (the VSA
+// Kompendium and every article after it).
 //
-// The compendium is rendered from raw Markdown by react-markdown, and
+// Articles are rendered from raw Markdown by react-markdown, and
 // `rehype-slug` assigns each heading (h1-h6, every level, in document order)
 // an id via `github-slugger`. To link to those ids from a sidebar table of
 // contents we need the SAME ids — so this walks the same document with our
@@ -12,18 +13,26 @@
 
 import GithubSlugger from 'github-slugger'
 
-export type VsaTocEntry = {
+export type TocEntry = {
   id: string
   title: string
 }
 
 const HEADING_LINE = /^(#{1,4})\s+(.*)$/
 
-export function extractVsaToc(markdown: string): VsaTocEntry[] {
+export function extractToc(markdown: string): TocEntry[] {
   const slugger = new GithubSlugger()
-  const toc: VsaTocEntry[] = []
+  const toc: TocEntry[] = []
+  let inFence = false
 
   for (const line of markdown.split('\n')) {
+    // A `#` inside a fenced code block is not a heading (rehype-slug never
+    // sees it as one), so skip fenced blocks to keep the ids in step.
+    if (line.startsWith('```')) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
     const match = HEADING_LINE.exec(line)
     if (!match) continue
     const level = match[1].length

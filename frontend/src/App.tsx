@@ -21,6 +21,8 @@ import { SettingsPage } from './pages/SettingsPage'
 import { SystemPage } from './pages/SystemPage'
 import { HelpPage } from './pages/HelpPage'
 import { VsaKompendiumPage } from './pages/VsaKompendiumPage'
+import { EducationPage } from './pages/EducationPage'
+import { EducationArticlePage } from './pages/EducationArticlePage'
 import { LegalPage } from './pages/LegalPage'
 import { LoginPage } from './pages/LoginPage'
 import { usePageSeo } from './lib/seo'
@@ -38,7 +40,7 @@ function titleKeyForPath(pathname: string): string {
   if (pathname.startsWith('/settings')) return 'pageTitles.settings'
   if (pathname.startsWith('/system')) return 'pageTitles.system'
   if (pathname.startsWith('/help')) return 'pageTitles.help'
-  if (pathname.startsWith('/vsa-kompendium')) return 'pageTitles.vsaKompendium'
+  if (pathname.startsWith('/education')) return 'pageTitles.education'
   if (pathname.startsWith('/legal')) return 'pageTitles.legal'
   if (pathname.startsWith('/login')) return 'pageTitles.login'
   return 'pageTitles.app'
@@ -90,7 +92,16 @@ export default function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="system" element={<SystemPage />} />
         <Route path="help" element={<HelpPage />} />
-        <Route path="vsa-kompendium" element={<VsaKompendiumPage />} />
+        {/* Education section (agent/ROADMAP.md #32). The Kompendium used to
+            live at /vsa-kompendium; that address keeps working as a redirect. */}
+        <Route path="education" element={<EducationPage />} />
+        <Route path="education/vsa-kompendium" element={<VsaKompendiumPage />} />
+        <Route path="education/:slug" element={<EducationArticlePage />} />
+        <Route path="education/*" element={<Navigate to="/education" replace />} />
+        <Route
+          path="vsa-kompendium"
+          element={<Navigate to="/education/vsa-kompendium" replace />}
+        />
         <Route path="legal" element={<LegalPage />} />
         {/* Sign in / create an account. Optional: every other page works
             signed out, so this is a normal page, not a gate. */}

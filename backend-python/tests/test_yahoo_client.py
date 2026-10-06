@@ -204,3 +204,86 @@ class TestIntradayClock:
         fake_yahoo.frame = self._utc_hourly(["2026-09-15 07:00"])
         bars = asyncio.run(YahooFinanceClient().get_intraday_history("hsba.l", "30m", 5))
         assert bars[0].date.isoformat() == "2026-09-15T08:00:00+01:00"
+
+
+class TestReportCalendar:
+    """The report dates read out of the ``info`` the fundamentals pass fetches.
+
+    Field values are the ones Yahoo served on 2026-09-26: it is inconsistent
+    about which field is the last report and which the next, so the client
+    pools them and splits by the fetch day.
+    """
+
+    NOW = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+    WARSAW = yahoo_finance_client.market_for_yahoo_symbol("PKO.WA").tz
+    NEW_YORK = yahoo_finance_client.market_for_yahoo_symbol("AAPL").tz
+
+    @staticmethod
+    def _ts(*args: int) -> int:
+        return int(datetime(*args, tzinfo=UTC).timestamp())
+
+    def test_last_and_next(self) -> None:
+        # PKO BP: earningsTimestamp is the August report, Start/End November's.
+        info = {
+            "earningsTimestamp": self._ts(2026, 8, 13, 15, 5),
+            "earningsTimestampStart": self._ts(2026, 11, 5, 15, 5),
+            "earningsTimestampEnd": self._ts(2026, 11, 5, 15, 5),
+        }
+        assert yahoo_finance_client.report_dates_from_info(
+            info, self.WARSAW, self.NOW
+        ) == (date(2026, 8, 13), date(2026, 11, 5))
+
+    def test_only_the_next_one_known(self) -> None:
+        # KGHM: all three fields name the November report.
+        stamp = self._ts(2026, 11, 18, 15, 5)
+        info = {
+            "earningsTimestamp": stamp,
+            "earningsTimestampStart": stamp,
+            "earningsTimestampEnd": stamp,
+        }
+        assert yahoo_finance_client.report_dates_from_info(
+            info, self.WARSAW, self.NOW
+        ) == (None, date(2026, 11, 18))
+
+    def test_dates_are_the_exchanges_own(self) -> None:
+        # 00:30 UTC on the 30th is 20:30 on the 29th in New York.
+        info = {"earningsTimestampStart": self._ts(2026, 10, 30, 0, 30)}
+        assert yahoo_finance_client.report_dates_from_info(
+            info, self.NEW_YORK, self.NOW
+        ) == (None, date(2026, 10, 29))
+
+    def test_a_report_today_is_the_last_one(self) -> None:
+        info = {"earningsTimestamp": self._ts(2026, 9, 26, 15, 5)}
+        assert yahoo_finance_client.report_dates_from_info(
+            info, self.WARSAW, datetime(2026, 9, 26, 16, 0, tzinfo=UTC)
+        ) == (date(2026, 9, 26), None)
+
+    def test_anything_unparseable_is_ignored(self) -> None:
+        info = {
+            "earningsTimestamp": "2026-08-13",
+            "earningsTimestampStart": True,
+            "earningsTimestampEnd": None,
+            "earningsCallTimestampStart": self._ts(2026, 8, 20, 10, 0),
+        }
+        assert yahoo_finance_client.report_dates_from_info(
+            info, self.WARSAW, self.NOW
+        ) == (None, None)
+
+    def test_fundamentals_carry_the_dates(
+        self, fake_yahoo: type[_FakeTicker], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _pin_clock(monkeypatch, self.NOW)
+        monkeypatch.setattr(
+            _FakeTicker,
+            "info",
+            {
+                "marketCap": 1_000_000_000,
+                "earningsTimestamp": self._ts(2026, 8, 13, 15, 5),
+                "earningsTimestampStart": self._ts(2026, 11, 5, 15, 5),
+            },
+            raising=False,
+        )
+        metrics = asyncio.run(YahooFinanceClient().get_fundamentals("pko"))
+        assert metrics.last_report_date == date(2026, 8, 13)
+        assert metrics.next_report_date == date(2026, 11, 5)
+        assert fake_yahoo.requested == ["PKO.WA"]

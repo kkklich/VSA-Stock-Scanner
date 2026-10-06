@@ -347,6 +347,32 @@ class TestWeinsteinSignals:
         sigs = _method().signals(_weekly(rows))
         assert len(sigs) == 1
 
+    def test_a_second_breakout_week_is_not_fired_again(self) -> None:
+        """The Dashboard's "fired" and the chart's marker name the same week.
+
+        The second of two breakout weeks in a row is the same move: the chart
+        leaves it unmarked, so ``evaluate`` must not call it "fired" either —
+        it reports the first week's age instead.
+        """
+        rows = _weinstein_rows()
+        rows.append((107.0, 113.0, 106.5, 112.0, 400_000))  # a second new high
+        bars = _weekly(rows)
+        weekly = W._completed_weeks(bars)
+        cols = (
+            [float(q.close) for q in weekly],
+            [float(q.high) for q in weekly],
+            [float(q.low) for q in weekly],
+            [float(q.volume) for q in weekly],
+        )
+        last = len(weekly) - 1
+        assert W._breakout_fired(*cols, last - 1) and W._breakout_fired(*cols, last)
+
+        r = _method().evaluate(bars)
+        assert r.fired is False
+        assert r.days_since == 7
+        assert _method().evaluate(bars[:-1]).fired is True
+        assert [s.date for s in _method().signals(bars)] == [bars[-2].date]
+
     def test_no_markers_without_the_setup(self) -> None:
         assert _method().signals(_weinstein_bars(breakout_volume=120_000)) == []
 

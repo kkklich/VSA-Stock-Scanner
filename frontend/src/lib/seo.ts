@@ -80,7 +80,55 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
-    test: (p) => p.startsWith('/vsa-kompendium'),
+    test: (p) => p === '/education' || p === '/education/',
+    entry: {
+      title: 'Education — how the trading methods work',
+      description:
+        "StockPilot's knowledge base: what each trading method in the app looks for, where it comes from and how to read its signals — VSA, Minervini, Weinstein, Volume Breakout and more. In Polish and English.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/vsa-rating'),
+    entry: {
+      title: 'The VSA rating — how the 0–100 score works',
+      description:
+        "How StockPilot's VSA rating is calculated: the six volume patterns (Spring, Sign of Strength, Test, Upthrust, Sign of Weakness, No Demand), time decay, the verdict, and how well it has worked.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/minervini'),
+    entry: {
+      title: 'Minervini Trend Template — the eight rules explained',
+      description:
+        "Mark Minervini's Trend Template as StockPilot checks it: moving averages, the 52-week range, relative strength, what the score means and the measured results on the GPW.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/volume-breakout'),
+    entry: {
+      title: 'Volume Breakout — buying a base breakout on volume',
+      description:
+        "The base breakout of William O'Neil (CANSLIM) and Mark Minervini (VCP) as StockPilot checks it: new high, volume surge, a quiet tight base, the readiness score and the measured results.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/weinstein'),
+    entry: {
+      title: 'Weinstein Stage 2 — the Stage 1 to Stage 2 breakout',
+      description:
+        "Stan Weinstein's stage analysis on the weekly chart as StockPilot checks it: the 30-week moving average, the base, the 2x volume test, a real GPW example and the measured results.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/pocket-pivot'),
+    entry: {
+      title: 'Pocket Pivot — an early volume buy inside the base',
+      description:
+        "Gil Morales and Chris Kacher's pocket pivot as StockPilot checks it: up-day volume against the heaviest recent down day, the 10- and 50-day lines, real GPW examples and the measured results.",
+    },
+  },
+  {
+    test: (p) => p.startsWith('/education/vsa-kompendium') || p.startsWith('/vsa-kompendium'),
     entry: {
       title: 'VSA Kompendium — price and volume analysis',
       description:

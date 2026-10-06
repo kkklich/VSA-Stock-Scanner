@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import date, datetime
+from datetime import date
 from urllib.parse import urlencode
 
 import httpx
@@ -72,8 +72,14 @@ _ROLE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         "Członek Rady Nadzorczej",
     ),
     (re.compile(r"prokurent[a-z]*", re.IGNORECASE), "Prokurent"),
-    (re.compile(r"dyrektor[a-z]*\s+zarz[aą]dzaj[aą]c[a-z]*", re.IGNORECASE), "Dyrektor Zarządzający"),
-    (re.compile(r"fundacj[a-z]+\s+rodzinn[a-z]+", re.IGNORECASE), "Fundacja Rodzinna (podmiot powiązany)"),
+    (
+        re.compile(r"dyrektor[a-z]*\s+zarz[aą]dzaj[aą]c[a-z]*", re.IGNORECASE),
+        "Dyrektor Zarządzający",
+    ),
+    (
+        re.compile(r"fundacj[a-z]+\s+rodzinn[a-z]+", re.IGNORECASE),
+        "Fundacja Rodzinna (podmiot powiązany)",
+    ),
     (
         re.compile(r"(?:osob[a-ząćęłńóśźż]+|podmiot[a-z]*)\s+blisko\s+zwi[aą]zan", re.IGNORECASE),
         "Osoba blisko związana",
@@ -332,7 +338,12 @@ class EspiClient:
     ) -> list[InsiderTransactionItem]:
         """Search GPW ESPI reports for a company and return parsed MAR 19 items."""
         # Use the first significant word of the company name as search query
-        clean_name = re.sub(r"\b(?:S\.?A\.?|SPÓŁKA|AKCYJNA|GRUPA|POLSKA)\b", "", company_name, flags=re.IGNORECASE).strip()
+        clean_name = re.sub(
+            r"\b(?:S\.?A\.?|SPÓŁKA|AKCYJNA|GRUPA|POLSKA)\b",
+            "",
+            company_name,
+            flags=re.IGNORECASE,
+        ).strip()
         words = [w for w in re.split(r"[\s\-]+", clean_name) if len(w) >= 3]
         search_query = words[0] if words else ticker.upper()
 

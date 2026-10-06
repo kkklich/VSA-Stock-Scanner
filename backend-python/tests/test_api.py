@@ -760,6 +760,44 @@ class TestGetOpinionSummary:
         assert "firedRecently" in by_key["vsa"]
         assert "fired_recently" not in by_key["vsa"]
 
+    def test_methods_read_the_ranking_window_not_one_year(self) -> None:
+        # A real exchange calendar: weekdays minus holidays, so one year holds
+        # ~250 sessions — under the 252 Minervini's 52-week rules need. The
+        # methods must be given the ranking's longer window; the VSA part
+        # still reads one year.
+        today = date.today()
+        days = [today - timedelta(days=k) for k in range(520, -1, -1)]
+        weekdays = [d for d in days if d.weekday() < 5]
+        sessions = [d for i, d in enumerate(weekdays) if i % 20 != 7 or d == today]
+        year = [d for d in sessions if d >= today - timedelta(days=365)]
+        assert len(year) < 252  # the case that used to break
+        quotes = [
+            _make_quote(
+                d.isoformat(),
+                close=50.0 + i * 0.2,
+                open_=49.9 + i * 0.2,
+                high=50.5 + i * 0.2,
+                low=49.5 + i * 0.2,
+            )
+            for i, d in enumerate(sessions)
+        ]
+
+        class _WindowedClient(_FakeStooqClient):
+            # Honour from_date, as the real provider and the database do —
+            # the canned fake returns everything and would hide the bug.
+            async def get_daily_history(self, ticker, from_date=None, to_date=None):
+                rows = await super().get_daily_history(ticker, from_date, to_date)
+                return [q for q in rows if from_date is None or q.date >= from_date]
+
+        app.dependency_overrides[get_stooq_client] = lambda: _WindowedClient(quotes=quotes)
+        with TestClient(app) as client:
+            resp = client.get("/api/stocks/kgh/opinion-summary")
+
+        assert resp.status_code == 200
+        by_key = {s["key"]: s for s in resp.json()["sources"]}
+        assert by_key["minervini"]["stance"] != "unavailable"
+        assert by_key["minervini"]["firedRecently"] is True
+
     def test_rejects_invalid_ticker(self) -> None:
         with TestClient(app) as client:
             resp = client.get("/api/stocks/" + "a" * 21 + "/opinion-summary")

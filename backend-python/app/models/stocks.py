@@ -478,22 +478,50 @@ class VolumeSurgeItem(_CamelModel):
     last_price: float
     # Average daily volume over the recent window (shares).
     recent_avg_volume: int
-    # Average daily volume over the baseline window before it (shares).
+    # Typical daily volume over the baseline window before it: the MEDIAN
+    # session, since 2026-09-26 (it was the mean). Shares. The name is kept so
+    # existing clients and saved sorts keep working.
     baseline_avg_volume: int
-    # recent avg ÷ baseline avg — the multi-day relative volume. >= minRatio.
+    # recent avg ÷ baseline — the multi-day relative volume. >= minRatio.
     volume_ratio: float
-    # Latest single session's volume ÷ baseline avg (classic RVOL).
+    # Latest single session's volume ÷ baseline (classic RVOL).
     last_day_ratio: float
-    # Recent sessions whose volume individually beat the baseline average.
+    # Recent sessions whose volume individually beat the baseline.
     days_above_baseline: int
     # Close-to-close price change across the recent window, percent — a rough
-    # proxy for the price "result" of the volume "effort" (the full VSA
-    # reading also weighs each bar's spread and close position).
+    # proxy for the price "result" of the volume "effort" (the ``peak_*``
+    # fields below carry the bar-level reading).
     price_change_pct: float
     # Computed VSA rating 0–100 (same window/settings as the ranking).
     current_rating: int
-    # Verdict derived from the most recent VSA signal.
+    # Verdict derived from the time-decayed VSA signals (as the ranking).
     last_signal: str
+    # Calendar days since the most recent VSA signal (999 = none), and whether
+    # any signal falls inside the surge window. A verdict resting on a signal
+    # older than the surge describes the stock, not the surge.
+    days_since_signal: int = 999
+    signal_in_window: bool = False
+    # First session of the surge window.
+    surge_start: date
+    # The session in the window that carried the most volume, and the VSA
+    # facts about it: its volume ÷ the baseline, its close-to-close change
+    # (an up bar or a down bar), its spread ÷ the baseline's average spread
+    # (None when the baseline had no range) and where it closed within its
+    # range (0 = the low, 1 = the high; None on a zero-range bar).
+    peak_date: date
+    peak_volume_ratio: float
+    peak_change_pct: float
+    peak_spread_ratio: float | None = None
+    peak_close_position: float | None = None
+    # The surge window traded above the baseline window's highest high /
+    # below its lowest low — the price left the range it held before.
+    breaks_high: bool = False
+    breaks_low: bool = False
+    # A company report dated inside the surge window or on the session just
+    # before it (reports mostly land after the close), from the stored Yahoo
+    # report calendar. None when there is none — or none known: Yahoo has no
+    # calendar for some companies, and none is stored without a database.
+    report_date: date | None = None
 
 
 class VolumeSurgeResponse(_CamelModel):
@@ -533,14 +561,16 @@ class TickerVolumeResponse(_CamelModel):
     baseline_days: int
     # False when there is too little history to compute the ratio.
     available: bool = True
-    # Average daily volume over the recent / baseline windows (shares).
+    # Average daily volume over the recent window, and the typical (MEDIAN)
+    # daily volume over the baseline window since 2026-09-26 (shares).
     recent_avg_volume: int | None = None
     baseline_avg_volume: int | None = None
-    # recent avg ÷ baseline avg — the multi-day relative volume. 1.0 = normal.
+    # recent avg ÷ baseline — the multi-day relative volume. 1.0 = a typical
+    # session.
     volume_ratio: float | None = None
-    # Latest single session's volume ÷ baseline avg (classic single-day RVOL).
+    # Latest single session's volume ÷ baseline (classic single-day RVOL).
     last_day_ratio: float | None = None
-    # How many of the recent sessions individually beat the baseline average.
+    # How many of the recent sessions individually beat the baseline.
     days_above_baseline: int | None = None
     # Close-to-close price change across the recent window, percent.
     price_change_pct: float | None = None
@@ -788,6 +818,15 @@ class FinancialMetrics(_CamelModel):
     # profit the company earns per zloty of shareholder capital / of assets.
     return_on_equity: float | None = None
     return_on_assets: float | None = None
+    # The company's report calendar as Yahoo knew it when this was fetched,
+    # in the exchange's own dates: the latest report on or before that day,
+    # and the next one after it (``isEarningsDateEstimate`` is not kept — an
+    # estimate is replaced by the confirmed date on the next weekly fetch).
+    # Once the fetch is a few days old the "next" date may already be past;
+    # the volume-surge scan reads both as report dates for exactly that
+    # reason. Added 2026-09-26 (roadmap #15b).
+    last_report_date: date | None = None
+    next_report_date: date | None = None
 
 
 class PriceReturns(_CamelModel):

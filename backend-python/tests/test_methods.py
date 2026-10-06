@@ -283,6 +283,70 @@ class TestVolumeBreakout:
         assert result.available is False
         assert result.fired is False
 
+    def test_signals_do_not_mark_a_continuation_at_the_left_edge(self) -> None:
+        # A breakout on bar 158 continues on bar 159, the first bar signals()
+        # scans. That is one move whose start lies before the scan, so bar 159
+        # must not be marked as a fresh breakout.
+        end = date.today()
+        spec = (
+            [(100.0, 300_000)] * 149      # a long, quiet base
+            + [(100.0, 100_000)] * 9      # volume dries up into the pivot
+            + [(106.0, 600_000)]          # bar 158: the breakout
+            + [(110.0, 600_000)]          # bar 159: its continuation
+            + [(110.0, 200_000)] * 10
+        )
+        n = len(spec)
+        rows = [_quote(end - timedelta(days=n - 1 - i), c, v) for i, (c, v) in enumerate(spec)]
+        from app.analysis.methods.volume_breakout import _breakout_fired
+
+        closes = [float(q.close) for q in rows]
+        highs = [float(q.high) for q in rows]
+        lows = [float(q.low) for q in rows]
+        vols = [float(q.volume) for q in rows]
+        assert _breakout_fired(closes, highs, lows, vols, 158)
+        assert _breakout_fired(closes, highs, lows, vols, 159)
+
+        marked = {s.date for s in get_method("breakout").signals(rows)}
+        assert rows[159].date not in marked
+
+    def test_second_day_of_a_breakout_is_not_fired_again(self) -> None:
+        # The chart marks only the first bar of a breakout run, so the second
+        # bar must not read "fired" on the Dashboard either: it reports the
+        # first bar's age, and evaluate/signals agree on every truncation.
+        end = date.today()
+        spec = (
+            [(100.0, 300_000)] * 199      # a long, quiet base
+            + [(100.0, 100_000)] * 9      # volume dries up into the pivot
+            + [(106.0, 600_000)]          # bar 208: the breakout
+            + [(110.0, 600_000)]          # bar 209: its continuation
+            + [(110.0, 200_000)] * 3
+        )
+        n = len(spec)
+        rows = [_quote(end - timedelta(days=n - 1 - i), c, v) for i, (c, v) in enumerate(spec)]
+        from app.analysis.methods.volume_breakout import _breakout_fired
+
+        cols = (
+            [float(q.close) for q in rows],
+            [float(q.high) for q in rows],
+            [float(q.low) for q in rows],
+            [float(q.volume) for q in rows],
+        )
+        assert _breakout_fired(*cols, 208) and _breakout_fired(*cols, 209)
+
+        method = get_method("breakout")
+        on_first = method.evaluate(rows[:209])
+        on_second = method.evaluate(rows[:210])
+        assert on_first.fired is True
+        assert on_second.fired is False
+        assert on_second.days_since == 1
+        assert on_second.detail == "Broke out 1d ago"
+
+        marked = {s.date for s in method.signals(rows)}
+        fired_live = {
+            rows[i].date for i in range(len(rows)) if method.evaluate(rows[: i + 1]).fired
+        }
+        assert fired_live == marked == {rows[208].date}
+
     def test_signals_mark_the_breakout(self) -> None:
         signals = get_method("breakout").signals(_breakout_series())
         assert len(signals) >= 1

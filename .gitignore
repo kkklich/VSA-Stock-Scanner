@@ -31,3 +31,7 @@ backend-python/vsa4_results/
 # AI layer (roadmap #31): training datasets and back-fill progress written by
 # backend-python/scripts/ml_*.py. Local, large, rebuilt from the database.
 backend-python/ml_data/
+# On the server: the AI jobs' results (bind-mounted into the `ml` container)
+# and deploy/ml-run.sh's console logs.
+/ml/
+/ml-logs/

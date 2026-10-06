@@ -102,6 +102,12 @@ class CompanyFundamentalsRow(Base):
     # table they do not appear via create_all — run `alembic upgrade head`.
     return_on_equity: Mapped[float | None] = mapped_column(Float, nullable=True)
     return_on_assets: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # The company's report calendar from Yahoo (last report on or before the
+    # fetch day, next one after it), added 2026-09-26 for the volume-surge
+    # "report" flag — alembic 008 and _ADDED_COLUMNS in app/main.py. A fetch
+    # that returns no date keeps the stored one (see upsert_fundamentals).
+    last_report_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    next_report_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 class RatingSnapshotRow(Base):

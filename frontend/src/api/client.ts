@@ -3,7 +3,7 @@
 // so no absolute URL is needed. In production set VITE_API_URL to the
 // backend origin (e.g. https://api.stockpilot.pl).
 
-import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../lib/authToken'
+import { clearTokens, getAccessToken, setTokens } from '../lib/authToken'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 

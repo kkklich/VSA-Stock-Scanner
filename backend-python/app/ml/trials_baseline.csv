@@ -1,0 +1,15 @@
+trial_id,recorded_at,phase,job,horizon,label,model,params,feature_set,markets,folds,oos_precision_gain_pp,oos_expectancy_r,auc,brier,keep_rate,notes
+1,2026-09-26T06:30:29+00:00,1,1,10,L1,hand-rule,weekly_agree=+1 & rs_pct>=0.5,v1,gpw,"2023,2024,2025",-0.774,0.1352,0.4989,,0.073,pilot (no back-fill); dataset 74731a17e733
+2,2026-09-26T06:30:29+00:00,1,1,10,L1,logistic,C=0.01,v1,gpw,"2023,2024,2025",0.149,0.146,0.4664,,0.963,pilot (no back-fill); dataset 74731a17e733
+3,2026-09-26T06:30:29+00:00,1,1,10,L1,logistic,C=0.1,v1,gpw,"2023,2024,2025",-0.865,0.1409,0.4565,,0.869,pilot (no back-fill); dataset 74731a17e733
+4,2026-09-26T06:30:29+00:00,1,1,10,L1,logistic,C=1.0,v1,gpw,"2023,2024,2025",-0.673,0.1508,0.4506,,0.853,pilot (no back-fill); dataset 74731a17e733
+5,2026-09-26T06:30:29+00:00,1,1,30,L1,hand-rule,weekly_agree=+1 & rs_pct>=0.5,v1,gpw,"2023,2024,2025",11.347,0.7036,0.5193,,0.083,pilot (no back-fill); dataset 74731a17e733
+6,2026-09-26T06:30:29+00:00,1,1,30,L1,logistic,C=0.01,v1,gpw,"2023,2024,2025",3.243,0.4819,0.5061,,0.403,pilot (no back-fill); dataset 74731a17e733
+7,2026-09-26T06:30:29+00:00,1,1,30,L1,logistic,C=0.1,v1,gpw,"2023,2024,2025",-0.584,0.3602,0.5062,,0.343,pilot (no back-fill); dataset 74731a17e733
+8,2026-09-26T06:30:29+00:00,1,1,30,L1,logistic,C=1.0,v1,gpw,"2023,2024,2025",3.312,0.4401,0.506,,0.291,pilot (no back-fill); dataset 74731a17e733
+9,2026-09-26T06:30:29+00:00,1,2,10,L1,logistic,C=0.01,v1,gpw,"2023,2024,2025",,,0.5256,0.2552,,pilot (no back-fill); dataset d1186ddb2d8e
+10,2026-09-26T06:30:29+00:00,1,2,10,L1,logistic,C=0.1,v1,gpw,"2023,2024,2025",,,0.5246,0.258,,pilot (no back-fill); dataset d1186ddb2d8e
+11,2026-09-26T06:30:29+00:00,1,2,10,L1,logistic,C=1.0,v1,gpw,"2023,2024,2025",,,0.5241,0.2587,,pilot (no back-fill); dataset d1186ddb2d8e
+12,2026-09-26T06:30:29+00:00,1,2,30,L1,logistic,C=0.01,v1,gpw,"2023,2024,2025",,,0.549,0.2556,,pilot (no back-fill); dataset d1186ddb2d8e
+13,2026-09-26T06:30:29+00:00,1,2,30,L1,logistic,C=0.1,v1,gpw,"2023,2024,2025",,,0.5463,0.2609,,pilot (no back-fill); dataset d1186ddb2d8e
+14,2026-09-26T06:30:29+00:00,1,2,30,L1,logistic,C=1.0,v1,gpw,"2023,2024,2025",,,0.5459,0.262,,pilot (no back-fill); dataset d1186ddb2d8e

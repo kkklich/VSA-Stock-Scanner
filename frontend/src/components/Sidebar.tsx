@@ -8,9 +8,9 @@ import {
   BookOpen,
   Factory,
   Filter,
+  GraduationCap,
   LayoutDashboard,
   LayoutGrid,
-  Library,
   LineChart,
   Settings,
   Star,
@@ -160,12 +160,12 @@ export function Sidebar({
             {t('nav.help')}
           </Link>
           <Link
-            to="/vsa-kompendium"
+            to="/education"
             onClick={onClose}
-            className={linkClass(pathname.startsWith('/vsa-kompendium'))}
+            className={linkClass(pathname.startsWith('/education'))}
           >
-            <Library size={18} />
-            {t('nav.vsaKompendium')}
+            <GraduationCap size={18} />
+            {t('nav.education')}
           </Link>
           <Link
             to="/settings"

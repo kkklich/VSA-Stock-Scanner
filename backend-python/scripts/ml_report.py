@@ -1,7 +1,10 @@
 """Phase 0 bench report for the AI layer — plan §6.5 / §6.6 / §20.
 
 Runs the honest test bench on the stored bars (never downloads anything) and
-writes ``agent/ml/reports/<date>-phase0-bench.md``:
+writes ``<reports>/<date>-phase0-bench.md`` (``agent/ml/reports`` on a PC,
+``~/stockpilot/ml/reports`` on the server). It reads the datasets the dataset
+step wrote, and streams the stored bars **one stock at a time** for the rest —
+it never holds a whole market's history, so it fits beside the live site:
 
 1. **Data coverage** — how much history each market really holds.
 2. **Look-ahead check** — features recomputed on histories cut off at random
@@ -11,16 +14,21 @@ writes ``agent/ml/reports/<date>-phase0-bench.md``:
 4. **Unfiltered baselines** — what each method scores on L1 / L2 / L3, per
    year, and how high a *random* filter already scores by chance.
 
-Run from ``backend-python/`` with PostgreSQL running::
+On the server (after ``bash deploy/ml-run.sh dataset``)::
+
+    bash deploy/ml-run.sh bench
+
+On a PC, from ``backend-python/`` with PostgreSQL running (after the dataset
+step)::
 
     .venv/Scripts/python.exe -m scripts.ml_report
-    .venv/Scripts/python.exe -m scripts.ml_report --markets all --leak-samples 80
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import random
 import sys
 import time
 from datetime import date, timedelta
@@ -30,24 +38,18 @@ from app.analysis.vsa4.adapter import tick_size
 from app.config import settings
 from app.db.base import build_engine, build_session_factory
 from app.db.repository import PostgresQuoteRepository
-from app.ml import AGENT_ML_DIR
+from app.ml import AGENT_ML_DIR, ML_DATA_DIR
 from app.ml.bench import (
+    GATE_WINDOW_DAYS,
+    CoverageCounter,
     GateNumbers,
-    coverage,
     leak_check,
     random_filter_bar,
     reproduce_gate,
     summarise_method,
 )
-from app.ml.data_access import load_stock_inputs, parse_markets
-from app.ml.dataset import (
-    HORIZONS,
-    JOB1_METHODS,
-    PRIMARY_METHODS,
-    build_panel,
-    job1_rows,
-    job2_rows,
-)
+from app.ml.data_access import parse_markets, peak_memory_mb, stream_stock_inputs
+from app.ml.dataset import HORIZONS, JOB1_METHODS, PRIMARY_METHODS, read_datasets
 from app.ml.report import fmt_num, fmt_pct, fmt_pp, md_table
 from app.ml.trials import ensure_register, trial_count
 from app.services.cache import TTLCache
@@ -94,6 +96,21 @@ async def _gate_numbers(method_id: str, horizon: int, today: date) -> GateNumber
     )
 
 
+
+#: The only dataset columns this report reads. The rest of a back-filled table
+#: is hundreds of MB the server's memory cap cannot spare.
+_JOB1_READ = [
+    "method",
+    "date",
+    *(
+        f"{name}_{n}"
+        for n in HORIZONS
+        for name in ("l1_y", "l1_excess", "l2_y", "l2_excess", "l3_r")
+    ),
+]
+_JOB2_READ = [f"l1_y_{n}" for n in HORIZONS]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Phase 0 bench report (AI layer).")
     parser.add_argument("--markets", default="gpw", help="gpw (default), a list, or all")
@@ -109,8 +126,16 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     today = date.today()
     markets = parse_markets(args.markets)
-    stocks = asyncio.run(load_stock_inputs(markets))
-    print(f"Loaded {len(stocks)} companies.")
+    try:
+        job1, _ = read_datasets(ML_DATA_DIR, markets, 1, columns=_JOB1_READ)
+        job2, _ = read_datasets(ML_DATA_DIR, markets, 2, columns=_JOB2_READ)
+    except FileNotFoundError as exc:
+        print(f"{exc} (bash deploy/ml-run.sh dataset on the server).", file=sys.stderr)
+        return 1
+    counter = CoverageCounter()
+    for stock in stream_stock_inputs(markets):
+        counter.add(stock)
+    print(f"Counted {len(counter.bar_counts)} companies.", flush=True)
     lines: list[str] = []
     add = lines.append
 
@@ -123,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     add("")
 
     # 1. Coverage ────────────────────────────────────────────────────────────
-    cov = coverage(stocks)
+    cov = counter.result()
     add("## 1. Data coverage")
     add("")
     add(md_table(
@@ -141,8 +166,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # 2. Leak check ─────────────────────────────────────────────────────────
     t0 = time.perf_counter()
+    rng = random.Random(20260925)
+    eligible = sorted(t for t, n in counter.bar_counts.items() if n >= 300)
+    chosen = rng.sample(eligible, min(40, len(eligible)))
+    sample = list(stream_stock_inputs(markets, tickers=chosen))
     checked, counts, examples = leak_check(
-        stocks, args.leak_samples, event_samples=args.event_samples
+        sample, args.leak_samples, event_samples=args.event_samples, event_stocks=len(sample)
     )
     add("## 2. Look-ahead check")
     add("")
@@ -162,15 +191,19 @@ def main(argv: list[str] | None = None) -> int:
     # 3. Gate reproduction ──────────────────────────────────────────────────
     add("## 3. Does the bench reproduce the app's back-test gate?")
     add("")
-    gpw = [s for s in stocks if s.market == "gpw"]
-    if args.skip_gate or not gpw:
+    since = today - timedelta(days=GATE_WINDOW_DAYS)
+
+    def gpw_window():
+        return stream_stock_inputs(["gpw"], since=since)
+
+    if args.skip_gate or "gpw" not in markets:
         add("*Skipped.*")
     else:
         rows = []
         all_ok = True
         bench_last = {}
         for method_id in PRIMARY_METHODS:
-            bench_all = reproduce_gate(gpw, method_id, HORIZONS, today)
+            bench_all = reproduce_gate(gpw_window(), method_id, HORIZONS, today)
             if method_id == "vsa4":
                 bench_last = bench_all
             for n in HORIZONS:
@@ -198,19 +231,18 @@ def main(argv: list[str] | None = None) -> int:
         add("")
 
         # The gate reads VSA V4's whole history with today's price tolerance.
-        since = today - timedelta(days=1460)
-        crossing = sum(
-            1 for s in gpw
-            if len({tick_size(float(b.close)) for b in s.bars if b.date >= since}) > 1
-        )
-        pit = reproduce_gate(gpw, "vsa4", HORIZONS, today, vsa4_tick="point_in_time")
+        crossing = total_gpw = 0
+        for s in gpw_window():
+            total_gpw += 1
+            crossing += len({tick_size(float(b.close)) for b in s.bars}) > 1
+        pit = reproduce_gate(gpw_window(), "vsa4", HORIZONS, today, vsa4_tick="point_in_time")
         add("### VSA V4 read point-in-time")
         add("")
         add("VSA V4 sizes its price tolerance from the **last** close it is given "
             "(0.01 at 10 zł or more, 0.001 from 1 zł, 0.0001 below). The gate reads "
             "four years of history with *today's* tolerance, so for a stock whose "
             "price has since crossed 10 zł or 1 zł the past is read with a figure "
-            f"taken from a later price. **{crossing} of {len(gpw)}** GPW companies "
+            f"taken from a later price. **{crossing} of {total_gpw}** GPW companies "
             "crossed a level in the gate's window. The bench reads each day with that "
             "day's own tolerance (`features.vsa4_rows`), which is what the program "
             "would have said on the day:")
@@ -227,17 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     add("")
 
     # 4. Baselines ──────────────────────────────────────────────────────────
-    t0 = time.perf_counter()
-
-    def progress(i: int, total: int, ticker: str) -> None:
-        if i % 50 == 0 or i == total:
-            print(f"  features {i}/{total}")
-
-    panel = build_panel(stocks, HORIZONS, progress=progress)
-    job1 = job1_rows(panel, JOB1_METHODS)
-    job2 = job2_rows(panel, HORIZONS)
-    print(f"Panel {len(panel):,} rows, job1 {len(job1):,}, job2 {len(job2):,} "
-          f"({time.perf_counter() - t0:.0f} s)")
+    print(f"Datasets: job1 {len(job1):,} rows, job2 {len(job2):,} rows.", flush=True)
 
     add("## 4. The unfiltered methods — the baseline every AI filter must beat")
     add("")
@@ -315,7 +337,9 @@ def main(argv: list[str] | None = None) -> int:
         "**pilot**: most companies hold under two years of bars, so a real gain of a "
         "few points cannot be told from luck (compare section 4's random-filter bar).")
     add("")
-    add(f"*Built in {time.perf_counter() - started:.0f} s.*")
+    peak = peak_memory_mb()
+    add(f"*Built in {time.perf_counter() - started:.0f} s"
+        + (f"; peak memory {peak:.0f} MB.*" if peak else ".*"))
 
     out_dir = AGENT_ML_DIR / "reports"
     out_dir.mkdir(parents=True, exist_ok=True)

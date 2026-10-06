@@ -340,8 +340,9 @@ class TestTrailingWeekIsComplete:
         # A five-session stock that has only printed Mon–Thu. On an ordinary
         # Thursday evening that is exactly right (the week is not over). On the
         # rarer Friday-holiday week it is conservative — one genuinely finished
-        # week is skipped rather than risk analysing a part-built bar — so the
-        # weekly read simply stays a week behind until the next full Friday.
+        # week is held back rather than risk analysing a part-built bar — so the
+        # weekly read picks that week up one session late, as soon as the next
+        # week's first bar arrives and it is no longer the trailing week.
         quotes = _weekday_series(6)[:-1]
         assert quotes[-1].date.weekday() == 3
         assert trailing_week_is_complete(quotes) is False

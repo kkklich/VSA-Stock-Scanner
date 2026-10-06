@@ -418,7 +418,9 @@ def _price_volume(df: pd.DataFrame, out: dict[str, object]) -> None:
         rs = rs + weight * (c / c.shift(off).where(c.shift(off) > 0) - 1.0) * 100.0
     out["rs_raw"] = rs
 
-    # RVOL, as compute_surge_metrics: 3 recent sessions vs the 20 before them.
+    # RVOL, as compute_surge_metrics was when these features were frozen: 3
+    # recent sessions vs the MEAN of the 20 before them. The scanner moved to
+    # a median baseline on 2026-09-26; this stays as frozen (DESIGN-CHOICES).
     base = v.shift(_RVOL_RECENT).rolling(_RVOL_BASELINE).mean()
     out["rvol_3_20"] = _ratio(v.rolling(_RVOL_RECENT).mean(), base)
     out["rvol_last"] = _ratio(v, base)

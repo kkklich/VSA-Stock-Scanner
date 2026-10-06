@@ -12,6 +12,41 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://stocksignal.pl/education</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/vsa-rating</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/minervini</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/volume-breakout</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/weinstein</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/pocket-pivot</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://stocksignal.pl/education/vsa-kompendium</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://stocksignal.pl/legal</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

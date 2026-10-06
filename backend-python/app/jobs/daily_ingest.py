@@ -690,7 +690,8 @@ class IngestService:
             lambda k: k.startswith("insider-checked:") or k.startswith("insider-miss:")
         )
         logger.info(
-            "Daily 12:00 insider refresh finished: %d companies checked, %d transactions persisted.",
+            "Daily 12:00 insider refresh finished: %d companies checked, "
+            "%d transactions persisted.",
             companies_checked,
             rows_fetched,
         )

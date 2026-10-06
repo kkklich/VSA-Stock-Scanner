@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="489" height="235" preserveAspectRatio="xMinYMin meet" viewBox="0 0 489 235" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="489" height="235"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-235)" style="clip-path: url(#clip)">
+		<g transform="">
+			<text x="0" y="216" style="font-family: VSA; font-size: 12px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,432) scale(1,-1)">A VSA bar: range, close and relation to the previous close</text>
+			<path d="M 78,45 L 78,180 Z" style="stroke: rgb(9%,19%,23%); stroke-linecap: butt; stroke-width: 2;"/>
+			<rect x="63" y="112" width="30" height="41" style="stroke: rgb(0%,48%,45%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,48%,45%); fill-rule: evenodd;"/>
+			<path d="M 98,180 L 145,180 Z" style="stroke: rgb(32%,41%,43%); stroke-linecap: butt; stroke-width: 0.7;"/>
+			<text x="153" y="177" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,354) scale(1,-1)">H = 110</text>
+			<path d="M 98,153 L 145,153 Z" style="stroke: rgb(32%,41%,43%); stroke-linecap: butt; stroke-width: 0.7;"/>
+			<text x="153" y="150" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,300) scale(1,-1)">C = 108</text>
+			<path d="M 98,112 L 145,112 Z" style="stroke: rgb(32%,41%,43%); stroke-linecap: butt; stroke-width: 0.7;"/>
+			<text x="153" y="109" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,218) scale(1,-1)">O = 105</text>
+			<path d="M 98,45 L 145,45 Z" style="stroke: rgb(32%,41%,43%); stroke-linecap: butt; stroke-width: 0.7;"/>
+			<text x="153" y="42" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,84) scale(1,-1)">L = 100</text>
+			<text x="276" y="172" style="font-family: VSA; font-size: 11px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,344) scale(1,-1)">Spread = H - L = 10</text>
+			<text x="276" y="147" style="font-family: VSA; font-size: 10px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,294) scale(1,-1)">CP = (C - L) / (H - L) = 0.80</text>
+			<text x="276" y="122" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,244) scale(1,-1)">80% of the range: a high close.</text>
+			<text x="276" y="91" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,182) scale(1,-1)">Previous C = 106: an Up Bar.</text>
+			<text x="276" y="72" style="font-family: VSA; font-size: 9px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,144) scale(1,-1)">Previous C = 109: a Down Bar.</text>
+			<text x="276" y="48" style="font-family: VSA; font-size: 8.5px;fill: rgb(9%,19%,23%); stroke:none;" transform="translate(0,96) scale(1,-1)">The body is green in both cases.</text>
+			<text x="0" y="12" style="font-family: VSA; font-size: 8px;fill: rgb(32%,41%,43%); stroke:none;" transform="translate(0,24) scale(1,-1)">Synthetic example. VSA direction compares two closes, not the close with the open.</text>
+		</g>
+	</g>
+</svg>

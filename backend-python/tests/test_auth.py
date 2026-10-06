@@ -397,7 +397,8 @@ class TestLogin:
         )
         assert wrong.status_code == 429
 
-        # Legitimate user from their own IP entering the correct password can still log in successfully
+        # Legitimate user from their own IP entering the correct password can
+        # still log in successfully
         legit = client.post(
             "/api/auth/login",
             json={"email": "ala@example.com", "password": "tajne-haslo-1"},

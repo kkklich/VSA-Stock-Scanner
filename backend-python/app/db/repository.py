@@ -18,7 +18,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
-from sqlalchemy import func, select, update
+from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -41,6 +41,40 @@ from app.models import (
     RatingPoint,
     StooqDailyQuote,
 )
+
+# ── Report-date merge (shared by both implementations) ────────────────────────
+
+
+def merge_report_dates(
+    stored_last: date | None,
+    stored_next: date | None,
+    new_last: date | None,
+    new_next: date | None,
+    today: date,
+) -> tuple[date | None, date | None]:
+    """(last, next) report dates after a fresh fetch, merged with the stored ones.
+
+    Overwriting would lose exactly the date the volume-surge flag needs. The
+    fetch is weekly, and for some companies Yahoo only ever names the
+    *upcoming* report (KGHM: all three ``earningsTimestamp`` fields are the
+    next one), so the Monday after a Wednesday report returns no "last" and a
+    new "next" — the Wednesday is gone the evening its surge is on screen. So:
+
+    * last = the latest of the new last, the stored last, and the stored next
+      once it has passed (a report that has happened becomes history);
+    * next = the new next, else the stored next while it is still ahead.
+
+    A fetch with no dates at all therefore keeps what is known. The cost: an
+    estimated "next" that the company then moved is kept as a past report
+    date — harmless, it only matters if a surge happens to land on it.
+    """
+    passed = stored_next if stored_next is not None and stored_next <= today else None
+    last = max((d for d in (new_last, stored_last, passed) if d is not None), default=None)
+    upcoming = new_next
+    if upcoming is None and stored_next is not None and stored_next > today:
+        upcoming = stored_next
+    return last, upcoming
+
 
 # ── Abstract interface ────────────────────────────────────────────────────────
 
@@ -119,6 +153,14 @@ class QuoteRepository(Protocol):
 
     async def get_fundamentals(self, ticker: str) -> CompanyFundamentalsResponse | None:
         """Return the stored fundamentals for a ticker, or None if not yet ingested."""
+        ...
+
+    async def get_report_dates(self, tickers: Sequence[str]) -> dict[str, list[date]]:
+        """Return the stored report dates (last and next) per ticker.
+
+        One query for the whole list — the volume-surge scan asks for every
+        surging stock at once. Tickers with no known date are left out.
+        """
         ...
 
     async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
@@ -383,12 +425,27 @@ class PostgresQuoteRepository:
             "financial_currency": metrics.financial_currency,
             "return_on_equity": metrics.return_on_equity,
             "return_on_assets": metrics.return_on_assets,
+            "last_report_date": metrics.last_report_date,
+            "next_report_date": metrics.next_report_date,
         }
         async with self._sf() as session, session.begin():
-            stmt = pg_insert(CompanyFundamentalsRow).values([values]).on_conflict_do_update(
-                index_elements=["ticker"],
-                set_={k: v for k, v in values.items() if k != "ticker"},
+            insert = pg_insert(CompanyFundamentalsRow).values([values])
+            set_ = {k: v for k, v in values.items() if k != "ticker"}
+            # The report dates merge rather than overwrite — merge_report_dates
+            # is the same rule in Python, and says why. GREATEST skips NULLs.
+            today = date.today()
+            stored_last = CompanyFundamentalsRow.last_report_date
+            stored_next = CompanyFundamentalsRow.next_report_date
+            set_["last_report_date"] = func.greatest(
+                insert.excluded.last_report_date,
+                stored_last,
+                case((stored_next <= today, stored_next), else_=None),
             )
+            set_["next_report_date"] = func.coalesce(
+                insert.excluded.next_report_date,
+                case((stored_next > today, stored_next), else_=None),
+            )
+            stmt = insert.on_conflict_do_update(index_elements=["ticker"], set_=set_)
             await session.execute(stmt)
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
@@ -571,6 +628,8 @@ class PostgresQuoteRepository:
                 financial_currency=fund_row.financial_currency,
                 return_on_equity=fund_row.return_on_equity,
                 return_on_assets=fund_row.return_on_assets,
+                last_report_date=fund_row.last_report_date,
+                next_report_date=fund_row.next_report_date,
             )
 
         quarterly = [
@@ -592,6 +651,26 @@ class PostgresQuoteRepository:
             metrics=metrics,
             quarterly_reports=quarterly,
         )
+
+    async def get_report_dates(self, tickers: Sequence[str]) -> dict[str, list[date]]:
+        if not tickers:
+            return {}
+        async with self._sf() as session:
+            rows = (
+                await session.execute(
+                    select(
+                        CompanyFundamentalsRow.ticker,
+                        CompanyFundamentalsRow.last_report_date,
+                        CompanyFundamentalsRow.next_report_date,
+                    ).where(CompanyFundamentalsRow.ticker.in_(list(tickers)))
+                )
+            ).all()
+        out: dict[str, list[date]] = {}
+        for ticker, last, nxt in rows:
+            dates = [d for d in (last, nxt) if d is not None]
+            if dates:
+                out[ticker] = dates
+        return out
 
     async def upsert_insider_transactions(
         self, ticker: str, transactions: list[InsiderTransactionItem], market: str = "gpw"
@@ -643,7 +722,10 @@ class PostgresQuoteRepository:
         stmt = (
             select(InsiderTransactionRow)
             .where(InsiderTransactionRow.ticker == norm_ticker)
-            .order_by(InsiderTransactionRow.publication_date.desc(), InsiderTransactionRow.id.desc())
+            .order_by(
+                InsiderTransactionRow.publication_date.desc(),
+                InsiderTransactionRow.id.desc(),
+            )
         )
         if from_date is not None:
             stmt = stmt.where(InsiderTransactionRow.publication_date >= from_date)
@@ -728,6 +810,18 @@ class InMemoryQuoteRepository:
         return updated
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
+        stored = self._fundamentals.get(ticker)
+        if stored is not None:
+            last, upcoming = merge_report_dates(
+                stored.last_report_date,
+                stored.next_report_date,
+                metrics.last_report_date,
+                metrics.next_report_date,
+                date.today(),
+            )
+            metrics = metrics.model_copy(
+                update={"last_report_date": last, "next_report_date": upcoming}
+            )
         self._fundamentals[ticker] = metrics
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
@@ -786,6 +880,19 @@ class InMemoryQuoteRepository:
             metrics=metrics,
             quarterly_reports=quarterly,
         )
+
+    async def get_report_dates(self, tickers: Sequence[str]) -> dict[str, list[date]]:
+        out: dict[str, list[date]] = {}
+        for ticker in tickers:
+            metrics = self._fundamentals.get(ticker)
+            if metrics is None:
+                continue
+            dates = [
+                d for d in (metrics.last_report_date, metrics.next_report_date) if d
+            ]
+            if dates:
+                out[ticker] = dates
+        return out
 
     async def upsert_insider_transactions(
         self, ticker: str, transactions: list[InsiderTransactionItem], market: str = "gpw"

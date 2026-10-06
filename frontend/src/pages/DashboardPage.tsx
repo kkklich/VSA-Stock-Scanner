@@ -16,6 +16,7 @@ import {
   type InfiniteRankingParams,
 } from '../hooks/useRanking'
 import { useMethods } from '../hooks/useMethods'
+import { methodDescription } from '../lib/methodText'
 import { useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { usePersistentState } from '../hooks/usePersistentState'
@@ -213,7 +214,7 @@ export function DashboardPage() {
           (m): RenderColumn => ({
             key: m.id,
             label: m.name,
-            info: `${m.description}  ·  ${t('dashboard.methodSource')} ${m.source}`,
+            info: `${methodDescription(t, m)}  ·  ${t('dashboard.methodSource')} ${m.source}`,
             // Per-method scores are computed per row, not sorted by the backend.
             sortKey: null,
             align: 'right' as const,

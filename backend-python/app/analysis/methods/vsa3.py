@@ -49,7 +49,9 @@ decision loop (compendium section 15). A bar FIRES when the six core criteria ho
                Two Bar Reversal, or Hammer on volume).
     5. FORMATION + SIGNAL  A bullish candle formation completes at the low AND
                a VSA signal of strength confirms it ("potwierdzona" — together,
-               never either).
+               never either). Exception since the 2026-09-24 relaxation: a
+               Hammer with no signal is accepted on its own volume, and is
+               then labelled "high volume" / "low volume", not as a signal.
     6. R/R     The trade still offers at least 3:1 to the peak, with the stop
                under the whole formation, shadows included.
 
@@ -97,6 +99,13 @@ scale's peak). The course also recommends that a script REPORT rather than
 decide — "niech skrypt liczy ... a decyzje podejmuje czlowiek" — which is what
 the score is for: it says how many of the loop's layers stand today, so a stock
 waiting for its last signal is visible before the setup completes.
+
+MEASURED NOW (2026-09-27, all six markets, 1,010 companies): the relaxed loop
+completes **394 times** in the whole stored history; 75 of them are Hammers
+accepted on their own volume (see layer 5). Everything below this paragraph
+describes the STRICT version as built on 2026-09-22 — the three-signal
+sequence a hard gate, the accent required, the geometry zone 3% — which the
+2026-09-24 relaxation replaced; it is kept as the record of that decision.
 
 MEASURED (2026-09-22, the local database, all six markets: 1,014 companies,
 276,103 judged bars). The loop completes FOUR times in the whole stored history
@@ -1535,7 +1544,14 @@ class _Engine:
 
     def confirming_signal(self, formation: _Formation, i: int, top: float) -> _Signal | None:
         """'FORMACJA SWIECOWA POTWIERDZONA SYGNALEM VSA' [Z]: a signal of
-        strength at the low, on the formation's own bars or just before them."""
+        strength at the low, on the formation's own bars or just before them.
+
+        A Hammer with no such signal is still accepted on its own volume (the
+        2026-09-24 relaxation). It is labelled by that volume — "high volume"
+        or "low volume" — and never as a Shakeout or Test: those detectors
+        have just looked at this bar and said no, so naming one here put a
+        signal on the chart and in the detail that the method had rejected.
+        """
         for j in range(i, max(0, formation.first - _CONFIRM_WINDOW) - 1, -1):
             sig = self.strength(j)
             if sig is not None and sig.low <= top:
@@ -1545,10 +1561,11 @@ class _Engine:
             if ctx is not None:
                 avg_v, _ = ctx
                 rng = self.s.rng(i)
-                if rng > 0 and self.s.volumes[i] >= avg_v:
-                    return _Signal("Shakeout", _ABSORBING, i, i, self.s.lows[i], self.s.volumes[i])
-                elif rng > 0 and self.s.lower_shadow(i) >= _SHADOW * rng and self.s.volumes[i] > 0:
-                    return _Signal("Test", _TESTING, i, i, self.s.lows[i], self.s.volumes[i])
+                vol, low = self.s.volumes[i], self.s.lows[i]
+                if rng > 0 and vol >= avg_v:
+                    return _Signal("high volume", _ABSORBING, i, i, low, vol)
+                elif rng > 0 and self.s.lower_shadow(i) >= _SHADOW * rng and vol > 0:
+                    return _Signal("low volume", _TESTING, i, i, low, vol)
         return None
 
 
@@ -1720,7 +1737,8 @@ class Vsa3(TradingMethod):
         "(WFO) or the end of an ABC correction; the peak it fell from shows no "
         "selling; the pullback ran on fading, lighter volume; a bullish candle formation "
         "completes at the low, confirmed by a VSA signal of strength (Stopping Volume, "
-        "Shakeout, Two Bar Reversal, No Supply, Test); and the trade offers at least 3:1 "
+        "Shakeout, Two Bar Reversal, No Supply, Test) — a Hammer may instead stand on "
+        "its own volume; and the trade offers at least 3:1 "
         "to the old peak with the stop under the formation. A 3-signal sequence or WFO "
         "divergence serves as a high-confidence booster. The score says how many of the "
         "seven steps stand today. Long-only."

@@ -663,9 +663,9 @@ class TestAdminEndpoints:
 
     def test_authenticated_admin_user_can_access_admin_endpoints(self) -> None:
         settings.admin_token = "s3cret"
-        from app.services.auth import create_access_token
-        from app.dependencies import get_user_repository
         from app.db.models import UserRow
+        from app.dependencies import get_user_repository
+        from app.services.auth import create_access_token
 
         class _MockRepo:
             async def get_by_id(self, user_id: int):

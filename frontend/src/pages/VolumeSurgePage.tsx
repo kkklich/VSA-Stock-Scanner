@@ -1,12 +1,15 @@
 // Volume Surge page — companies trading on unusually high volume right now.
 // Method: multi-day relative volume (RVOL) — the average volume of the last
-// few sessions divided by the stock's own baseline average before them.
+// few sessions divided by the stock's typical (median) session before them.
 // Volume is the "effort" side of VSA, so each row also shows the price change
-// over the surge window (the "result") and the stock's VSA rating/verdict.
+// over the surge window (the "result"), the session that carried the surge
+// read the way VSA reads a bar (spread and close), whether the price left its
+// range, a report date when one explains the surge, and the stock's VSA
+// rating/verdict with the age of the signal behind it.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 import {
   Card,
   CompanyLink,
@@ -30,6 +33,14 @@ import type {
 } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
 import { deltaTone, fmtCompactPln, fmtMoney, fmtPct, ratingTone } from '../lib/format'
+import {
+  describePeakBar,
+  fmtSessionDay,
+  peakBarDetail,
+  signalAge,
+  signalAgeLabel,
+  signalAgeText,
+} from '../lib/volumeSurge'
 
 const PAGE_SIZE = 25
 
@@ -46,6 +57,7 @@ const SORT_OPTIONS: SortOption<VolumeSurgeSortKey>[] = [
   { key: 'volumeRatio', label: 'RVOL' },
   { key: 'recentAvgVolume', label: 'Volume now / normal' },
   { key: 'daysAboveBaseline', label: 'Hot days' },
+  { key: 'peakVolumeRatio', label: 'Peak day' },
   { key: 'priceChangePct', label: 'Price move' },
   { key: 'lastPrice', label: 'Price' },
   { key: 'currentRating', label: 'VSA' },
@@ -210,11 +222,11 @@ export function VolumeSurgePage() {
             Stocks whose average volume over the last{' '}
             <span className="text-slate-200">{recentDays}</span> session
             {recentDays > 1 ? 's' : ''} is at least{' '}
-            <span className="text-slate-200">{minRatio}×</span> their own average
-            over the <span className="text-slate-200">{baselineDays}</span>{' '}
+            <span className="text-slate-200">{minRatio}×</span> their typical
+            session over the <span className="text-slate-200">{baselineDays}</span>{' '}
             sessions before that (relative volume, RVOL). In VSA terms a volume
             surge is <em>effort</em> — professional money at work; the price
-            change alongside it is the <em>result</em>.
+            change and the shape of the busiest bar are the <em>result</em>.
           </p>
         </div>
         {meta?.asOf && (
@@ -235,7 +247,7 @@ export function VolumeSurgePage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           Baseline
-          <InfoTip text="The reference period: how many sessions before the surge window define the stock's 'normal' volume." />
+          <InfoTip text="The reference period: how many sessions before the surge window define the stock's normal volume. Normal is the typical (median) session, so one exceptional day in it, such as a report day, does not hide a new surge." />
           <ButtonGroup
             options={BASELINE_OPTIONS}
             value={baselineDays}
@@ -244,7 +256,7 @@ export function VolumeSurgePage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           Min. ratio
-          <InfoTip text="Only stocks whose recent volume is at least this many times the baseline are shown. 1.5× = elevated, 3× or more = a major event." />
+          <InfoTip text="Only stocks whose recent volume is at least this many times a typical session are shown. 1.5× = elevated, 3× or more = a major event." />
           <ButtonGroup
             options={RATIO_OPTIONS}
             value={minRatio}
@@ -301,8 +313,8 @@ export function VolumeSurgePage() {
               page scrolls sideways when the viewport is narrower than it. Below
               lg the table is hidden and the card list (further down) is shown,
               so phones and tablets never scroll sideways. */}
-          <Card className="hidden min-w-[760px] lg:block">
-            <table className="w-full min-w-[760px] text-left text-sm">
+          <Card className="hidden min-w-[800px] lg:block">
+            <table className="w-full min-w-[800px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-slate-500">
                   <SortHeader
@@ -316,7 +328,7 @@ export function VolumeSurgePage() {
                     col="sector"
                     sort={sort}
                     onSort={onSort}
-                    className="hidden lg:table-cell"
+                    className="hidden min-[1500px]:table-cell"
                   />
                   <SortHeader
                     label="RVOL"
@@ -324,7 +336,7 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="Relative volume: average volume of the surge window ÷ the baseline average. 2× = double the normal activity."
+                    info="Relative volume: average volume of the surge window ÷ a typical (median) session of the baseline period. 2× = double the normal activity."
                     className="text-right"
                   />
                   <SortHeader
@@ -333,7 +345,7 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="Average shares traded per session: during the surge window vs the baseline period."
+                    info="Average shares traded per session during the surge window vs a typical session of the baseline period (the median, so one exceptional day does not distort it)."
                     className="hidden text-right md:table-cell"
                   />
                   <SortHeader
@@ -342,8 +354,15 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="How many sessions of the surge window individually beat the baseline average — more days = a sustained surge, not a one-off."
+                    info="How many sessions of the surge window individually beat a typical baseline session — more days = a sustained surge, not a one-off."
                     className="hidden text-right md:table-cell"
+                  />
+                  <SortHeader
+                    label="Peak day"
+                    col="peakVolumeRatio"
+                    sort={sort}
+                    onSort={onSort}
+                    info="The session in the surge window that traded the most shares, read the way VSA reads a bar: its spread (high to low) against the reference period's average (wide = 1.5× or more, narrow = 0.7× or less, the VSA engine's own thresholds) and where it closed in that range. Heavy volume on a wide bar that closes in its direction is effort with result; heavy volume on a narrow bar, or a close against the bar's direction, is effort without result. Worth a look at the chart either way."
                   />
                   <SortHeader
                     label="Price move"
@@ -351,7 +370,7 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="Price change across the surge window. Direction alone doesn't classify a surge in VSA: high volume on a rise can be genuine buying or a buying climax (weakness), and on a fall genuine selling or stopping volume (strength). Read it together with the VSA signal and the chart."
+                    info="Price change across the surge window. Direction alone doesn't classify a surge in VSA: high volume on a rise can be genuine buying or a buying climax (weakness), and on a fall genuine selling or stopping volume (strength). Read it together with the VSA signal and the chart. A range tag means the surge pushed the price above the highest high, or below the lowest low, of the reference period."
                     className="text-right"
                   />
                   <SortHeader
@@ -375,6 +394,7 @@ export function VolumeSurgePage() {
                     col="lastSignal"
                     sort={sort}
                     onSort={onSort}
+                    info="The stock's VSA verdict — a score over its signals of the last four months, not a reading of the surge alone. The line under it says how old the latest signal is and whether it happened during the surge."
                     className="hidden sm:table-cell"
                   />
                 </tr>
@@ -386,6 +406,7 @@ export function VolumeSurgePage() {
                     item={item}
                     pooled={pooled}
                     recentDays={meta?.recentDays ?? recentDays}
+                    baselineDays={meta?.baselineDays ?? baselineDays}
                     onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
                   />
                 ))}
@@ -401,6 +422,7 @@ export function VolumeSurgePage() {
                 item={item}
                 pooled={pooled}
                 recentDays={meta?.recentDays ?? recentDays}
+                baselineDays={meta?.baselineDays ?? baselineDays}
                 onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
               />
             ))}
@@ -445,15 +467,90 @@ export function VolumeSurgePage() {
   )
 }
 
+/* ── Surge context (roadmap #15b) ───────────────────────────────────────── */
+
+/** A company report lines up with the surge — the commonest explanation. */
+function ReportChip({ date }: { date: string }) {
+  return (
+    <span
+      title={`Company report dated ${fmtSessionDay(date)}. Earnings are the most common cause of a multi-day volume surge, so this one may simply be the market digesting the results.`}
+      className="inline-flex shrink-0 items-center gap-0.5 rounded border border-violet-500/30 bg-violet-500/10 px-1 py-px text-[9px] font-semibold leading-none tracking-wide text-violet-400"
+    >
+      <FileText size={9} aria-hidden />
+      REPORT
+    </span>
+  )
+}
+
+/** "↑ 20-session high" when the surge pushed the price out of its range. */
+function RangeBreak({
+  item,
+  baselineDays,
+}: {
+  item: ApiVolumeSurgeItem
+  baselineDays: number
+}) {
+  if (!item.breaksHigh && !item.breaksLow) return null
+  const tag = (arrow: string, word: string) => (
+    <span
+      key={word}
+      title={`During the surge the price traded ${word === 'high' ? 'above the highest high' : 'below the lowest low'} of the ${baselineDays} sessions before it. On heavy volume that can be a breakout — or a climax.`}
+      className="inline-flex items-center whitespace-nowrap rounded border border-slate-700 bg-slate-800/60 px-1 py-px text-[10px] font-medium leading-none text-slate-300"
+    >
+      {arrow} {baselineDays}-session {word}
+    </span>
+  )
+  return (
+    <span className="mt-1 flex flex-wrap justify-end gap-1">
+      {item.breaksHigh && tag('↑', 'high')}
+      {item.breaksLow && tag('↓', 'low')}
+    </span>
+  )
+}
+
+/** The session that carried the surge: its date, volume and VSA shape. */
+function PeakDay({ item, align = 'left' }: { item: ApiVolumeSurgeItem; align?: 'left' | 'right' }) {
+  const arrow = item.peakChangePct > 0 ? '▲' : item.peakChangePct < 0 ? '▼' : '•'
+  return (
+    <div className={align === 'right' ? 'text-right' : ''} title={peakBarDetail(item)}>
+      <div className="whitespace-nowrap text-xs tabular-nums">
+        <span className="text-slate-200">{fmtSessionDay(item.peakDate)}</span>
+        <span className="text-slate-500"> · {item.peakVolumeRatio.toFixed(1)}×</span>
+      </div>
+      <div className="mt-0.5 text-[11px] text-slate-400">
+        <span className={deltaTone(item.peakChangePct)}>{arrow}</span>{' '}
+        {describePeakBar(item)}
+      </div>
+    </div>
+  )
+}
+
+/** How old the signal behind the verdict is, relative to the surge. */
+function SignalAgeLine({ item }: { item: ApiVolumeSurgeItem }) {
+  return (
+    <div
+      title={signalAgeText(item)}
+      className={
+        'mt-1 text-[11px] ' +
+        (signalAge(item).kind === 'inSurge' ? 'text-slate-300' : 'text-slate-500')
+      }
+    >
+      {signalAgeLabel(item)}
+    </div>
+  )
+}
+
 function SurgeRow({
   item,
   pooled,
   recentDays,
+  baselineDays,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
   pooled: boolean
   recentDays: number
+  baselineDays: number
   onOpen: () => void
 }) {
   return (
@@ -472,14 +569,15 @@ function SurgeRow({
             <div className="flex items-center gap-1.5 font-semibold text-slate-100">
               {displayTicker(item.ticker)}
               <MarketBadge market={item.market} />
+              {item.reportDate && <ReportChip date={item.reportDate} />}
             </div>
-            <div className="max-w-[180px] truncate text-xs text-slate-500">
+            <div className="max-w-[150px] truncate text-xs text-slate-500">
               {item.name}
             </div>
           </div>
         </CompanyLink>
       </td>
-      <td className="hidden px-4 py-3 text-xs text-slate-400 lg:table-cell">
+      <td className="hidden px-4 py-3 text-xs text-slate-400 min-[1500px]:table-cell">
         {item.sector ?? '—'}
       </td>
       <td className="px-4 py-3 text-right">
@@ -500,13 +598,16 @@ function SurgeRow({
       <td className="hidden px-4 py-3 text-right text-xs tabular-nums text-slate-300 md:table-cell">
         {item.daysAboveBaseline}/{recentDays}
       </td>
-      <td
-        className={
-          'px-4 py-3 text-right text-sm font-medium tabular-nums ' +
-          deltaTone(item.priceChangePct)
-        }
-      >
-        {fmtPct(item.priceChangePct)}
+      <td className="px-4 py-3">
+        <PeakDay item={item} />
+      </td>
+      <td className="px-4 py-3 text-right">
+        <span
+          className={'text-sm font-medium tabular-nums ' + deltaTone(item.priceChangePct)}
+        >
+          {fmtPct(item.priceChangePct)}
+        </span>
+        <RangeBreak item={item} baselineDays={baselineDays} />
       </td>
       <td className="hidden px-4 py-3 text-right text-sm tabular-nums text-slate-200 sm:table-cell">
         {fmtMoney(item.lastPrice, item.currency)}
@@ -524,6 +625,7 @@ function SurgeRow({
       </td>
       <td className="hidden px-4 py-3 sm:table-cell">
         <SignalBadge verdict={item.lastSignal as SignalVerdict} />
+        <SignalAgeLine item={item} />
       </td>
     </tr>
   )
@@ -534,11 +636,13 @@ function SurgeCard({
   item,
   pooled,
   recentDays,
+  baselineDays,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
   pooled: boolean
   recentDays: number
+  baselineDays: number
   onOpen: () => void
 }) {
   return (
@@ -562,6 +666,7 @@ function SurgeCard({
             <div className="flex items-center gap-1.5 font-semibold text-slate-100">
               {displayTicker(item.ticker)}
               <MarketBadge market={item.market} />
+              {item.reportDate && <ReportChip date={item.reportDate} />}
             </div>
             <div className="truncate text-xs text-slate-500">{item.name}</div>
           </div>
@@ -584,8 +689,11 @@ function SurgeCard({
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-800/60 pt-2 text-xs">
         <div className="flex justify-between gap-2">
           <span className="text-slate-500">Price move</span>
-          <span className={'tabular-nums font-medium ' + deltaTone(item.priceChangePct)}>
-            {fmtPct(item.priceChangePct)}
+          <span className="text-right">
+            <span className={'tabular-nums font-medium ' + deltaTone(item.priceChangePct)}>
+              {fmtPct(item.priceChangePct)}
+            </span>
+            <RangeBreak item={item} baselineDays={baselineDays} />
           </span>
         </div>
         <div className="flex justify-between gap-2">
@@ -612,6 +720,10 @@ function SurgeCard({
             {item.daysAboveBaseline}/{recentDays}
           </span>
         </div>
+        <div className="col-span-2 flex justify-between gap-2">
+          <span className="text-slate-500">Peak day</span>
+          <PeakDay item={item} align="right" />
+        </div>
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-800/60 pt-2">
@@ -623,7 +735,10 @@ function SurgeCard({
         >
           VSA {item.currentRating}
         </span>
-        <SignalBadge verdict={item.lastSignal as SignalVerdict} />
+        <div className="text-right">
+          <SignalBadge verdict={item.lastSignal as SignalVerdict} />
+          <SignalAgeLine item={item} />
+        </div>
       </div>
     </div>
   )

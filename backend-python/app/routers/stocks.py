@@ -124,7 +124,11 @@ from app.services.method_backtest_service import (
     DEFAULT_FORWARD_SESSIONS,
     compute_method_backtest,
 )
-from app.services.ranking_service import compute_ranking, ranking_cache_key
+from app.services.ranking_service import (
+    CONTEXT_HISTORY_DAYS,
+    compute_ranking,
+    ranking_cache_key,
+)
 from app.services.refresh_service import RefreshService, build_rating_points
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
@@ -1147,7 +1151,11 @@ async def _market_ranking(
         # don't store it, or the dashboard would show yesterday's ranking as
         # today's for the whole TTL.
         if not cache.set_if_generation(
-            cache_key, full_ranking, settings.history_cache_seconds, generation, pinned=config.is_default()
+            cache_key,
+            full_ranking,
+            settings.history_cache_seconds,
+            generation,
+            pinned=config.is_default(),
         ):
             logger.info("Ranking cache invalidated during computation — not cached.")
         logger.info(
@@ -1350,7 +1358,11 @@ async def get_scanner_stats(
         # Built from pre-refresh data if the nightly ingest cleared the cache
         # meanwhile — serve it, but don't remember it as current.
         if not cache.set_if_generation(
-            cache_key, result, settings.history_cache_seconds, generation, pinned=config.is_default()
+            cache_key,
+            result,
+            settings.history_cache_seconds,
+            generation,
+            pinned=config.is_default(),
         ):
             logger.info(
                 "Scanner stats cache invalidated during computation — not cached."
@@ -1423,7 +1435,11 @@ async def get_heatmap(
         # this result was built from pre-refresh data — serve it to this
         # caller but don't cache it, or it would look fresh for hours.
         if not cache.set_if_generation(
-            cache_key, result, settings.history_cache_seconds, generation, pinned=config.is_default()
+            cache_key,
+            result,
+            settings.history_cache_seconds,
+            generation,
+            pinned=config.is_default(),
         ):
             logger.info("Heatmap cache invalidated during computation — not cached.")
         logger.info("Heatmap ready: %d tiles.", len(result.items))
@@ -1463,6 +1479,7 @@ _SURGE_SORT_KEYS: dict[str, str] = {
     "volumeRatio": "volume_ratio",
     "lastDayRatio": "last_day_ratio",
     "daysAboveBaseline": "days_above_baseline",
+    "peakVolumeRatio": "peak_volume_ratio",
     "priceChangePct": "price_change_pct",
     "currentRating": "current_rating",
     "lastSignal": "last_signal",
@@ -1500,12 +1517,14 @@ async def get_volume_surge(
     """Companies whose recent trading volume is unusually high.
 
     Multi-day relative volume (RVOL): the average volume of the last
-    ``recentDays`` sessions divided by the average of the ``baselineDays``
-    sessions before them. Stocks at or above ``minRatio`` are returned, each
-    with its VSA rating and verdict so the surge can be read in VSA terms
-    (the price move alone is only a rough effort-vs-result cue; the verdict
-    carries the bar-level reading). Server-side sorted (default: strongest
-    surge first) and paginated; ``totalCount`` carries the matching-row total.
+    ``recentDays`` sessions divided by the typical (median) volume of the
+    ``baselineDays`` sessions before them. Stocks at or above ``minRatio`` are
+    returned, each with its VSA rating and verdict, the age of its latest
+    signal, the spread and close of the session that carried the surge, any
+    break of the reference-period range, and a report date when one falls in
+    the window — so the surge can be read in VSA terms rather than from the
+    price move alone. Server-side sorted (default: strongest surge first) and
+    paginated; ``totalCount`` carries the matching-row total.
 
     ``sortBy``/``sortDir`` accept up to ``MAX_SORT_LEVELS`` comma-separated
     columns, each with its own direction, so "sector A→Z, biggest surge first"
@@ -2422,15 +2441,23 @@ async def get_opinion_summary(
 
     config = _parse_vsa_settings(vsa_settings)
 
-    quotes = await _get_quotes(
+    # Two windows from one fetch. The VSA / AI / trust part reads one year,
+    # like the cards it summarises; the trading methods read the window the
+    # ranking gives them (CONTEXT_HISTORY_DAYS), so each method row agrees with
+    # its Dashboard column. One year alone is ~250 sessions, under the 252
+    # Minervini needs — it read "unavailable" on every stock page.
+    today = date.today()
+    method_quotes = await _get_quotes(
         normalized,
-        from_date=date.today() - timedelta(days=_SIGNALS_DEFAULT_DAYS),
+        from_date=today - timedelta(days=max(CONTEXT_HISTORY_DAYS, _SIGNALS_DEFAULT_DAYS)),
         to_date=None,
         cache=cache,
         cache_ttl=settings.history_cache_seconds,
         repo=repo,
         stooq=stooq,
     )
+    year_from = today - timedelta(days=_SIGNALS_DEFAULT_DAYS)
+    quotes = [q for q in method_quotes if q.date >= year_from]
     if not quotes:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
@@ -2446,6 +2473,7 @@ async def get_opinion_summary(
         quotes=quotes,
         signals=signals,
         config=config,
+        method_quotes=method_quotes,
     )
 
 
@@ -2480,8 +2508,9 @@ async def get_ticker_volume(
 
     The single-ticker form of the volume-surge scanner: the same multi-day
     relative volume (RVOL) — the average volume of the last ``recentDays``
-    sessions divided by the average of the ``baselineDays`` sessions before
-    them — computed with the shared ``compute_surge_metrics`` helper, so a
+    sessions divided by the typical (median) volume of the ``baselineDays``
+    sessions before them — computed with the shared ``compute_surge_metrics``
+    helper, so a
     stock's page and the scanner can never disagree. ``available`` is False
     (and the figures null) when the stored history is shorter than the two
     windows combined.

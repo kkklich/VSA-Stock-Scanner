@@ -4,6 +4,9 @@
 #   db   PostgreSQL 16      — EOD bars, fundamentals, daily rating snapshots
 #   api  FastAPI/Uvicorn    — the Python backend (port 5111, internal only)
 #   web  Nginx + React app  — static site + /api reverse proxy (port 8080 on localhost)
+# plus one that `up` never starts:
+#   ml   AI research jobs   — run one at a time with bash deploy/ml-run.sh <job>,
+#                             capped so they can never slow the site down
 #
 # Start / update:   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 # Logs:             docker compose -f docker-compose.prod.yml logs -f api
@@ -41,6 +44,8 @@ services:
     build:
       context: ./backend-python
       dockerfile: Dockerfile
+    # Named so the `ml` service below can run jobs from this very image.
+    image: stockpilot-api:local
     restart: unless-stopped
     depends_on:
       db:
@@ -97,6 +102,47 @@ services:
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
+
+  # The AI layer's research jobs (roadmap #31, agent/AI-ALGORITHMS-PLAN.md).
+  # NEVER started by `up` — the "ml" profile keeps it out. One job at a time is
+  # started by  bash deploy/ml-run.sh <job>  (agent/DEPLOYMENT.md §10) and the
+  # container is removed when the job ends. It is the API's own image, run as a
+  # separate container with a memory and CPU cap: a heavy job can slow itself
+  # down, or be stopped by the cap, but never takes memory or CPU from the site.
+  ml:
+    image: stockpilot-api:local
+    # Built by the `api` service above; never looked for on Docker Hub.
+    pull_policy: never
+    profiles: ["ml"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      STOCKPILOT_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-stockpilot}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-stockpilot}
+      # Datasets, reports and the trial register all go to this folder, which
+      # is ./ml next to this file on the server (see volumes).
+      STOCKPILOT_ML_DIR: /app/ml
+      # A job is not the API: it writes no action-log file of its own.
+      STOCKPILOT_ACTION_LOG_TO_FILE: "false"
+      TZ: Europe/Warsaw
+    volumes:
+      # ~/stockpilot/ml on the server — survives rebuilds, deploys and `down`.
+      # deploy/deploy.sh makes it writable by the container's user (uid 10001).
+      - ./ml:/app/ml
+    # The cap. Memory equals memory+swap, so the job cannot spill into swap and
+    # slow the whole server down: over the limit, only the job is stopped.
+    mem_limit: ${STOCKPILOT_ML_MEMORY:-1g}
+    memswap_limit: ${STOCKPILOT_ML_MEMORY:-1g}
+    cpus: ${STOCKPILOT_ML_CPUS:-1}
+    # A tiny init process starts the job, so `ml-run.sh stop` reaches it at
+    # once — as the container's first process Python would ignore the request
+    # until Docker force-killed it ten seconds later.
+    init: true
+    restart: "no"
+    command: ["python", "-m", "scripts.ml_build_dataset", "--help"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
   web:
     build:

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { Info, Layers, RotateCcw } from 'lucide-react'
 import { useDropdownPosition } from '../hooks/useDropdownPosition'
 import type { ApiTradingMethod } from '../api/stocksApi'
+import { methodDescription } from '../lib/methodText'
 
 /** Width the panel gets whenever the screen is wide enough for it. */
 const PANEL_WIDTH = 320
@@ -197,7 +198,7 @@ export function MethodPicker({
                           </span>
                         </span>
                       </label>
-                      <MethodInfoTip text={m.description} panelRef={panelRef} />
+                      <MethodInfoTip text={methodDescription(t, m)} panelRef={panelRef} />
                     </div>
                   )
                 })}

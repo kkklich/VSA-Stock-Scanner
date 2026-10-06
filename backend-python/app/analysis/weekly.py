@@ -150,15 +150,26 @@ def trailing_week_is_complete(daily: Sequence[StooqDailyQuote]) -> bool:
 
       * its last session is a **Friday** — the week is over by definition; or
       * it already holds **as many sessions as this stock's typical week** —
-        which covers a Friday holiday (a Monday-to-Thursday week that really is
-        complete) and stocks so thinly traded that their normal week is three
+        which covers stocks so thinly traded that their normal week is three
         sessions long.
 
     Only when *neither* holds is the week still forming. Requiring both (i.e.
     "Friday AND a full session count") would throw away every genuinely complete
-    holiday-shortened week, and the artefact this guards against is a bar that
-    is small *relative to the stock's own weekly norm* — which is exactly what
-    the session-count cue measures.
+    holiday-shortened week that still ends on a Friday, and the artefact this
+    guards against is a bar that is small *relative to the stock's own weekly
+    norm* — which is exactly what the session-count cue measures.
+
+    The one case neither cue can see is a week cut short by a **Friday
+    holiday** (Good Friday every year, a Friday 1 or 3 May, 11 November, …):
+    on its Thursday evening it looks exactly like an ordinary Thursday, four
+    sessions into a five-session week, and there is no holiday calendar to tell
+    the two apart. It is read as forming until the next session arrives — one
+    session late, which is the safe side, since calling an ordinary Thursday
+    complete would publish a part-built week. (Checked 2026-09-28; an earlier
+    version of this note claimed the Friday-holiday week was covered. For the
+    Weinstein method it means a breakout in such a week is never shown as
+    "fired": it first appears already a few days old — "Broke out 4d ago", or
+    5d after Easter Monday — though its chart marker is dated correctly.)
 
     A series with only one week in it has nothing to compare against, so it is
     treated as forming.

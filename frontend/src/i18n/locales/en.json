@@ -49,7 +49,7 @@
     "filters": "Filters",
     "charts": "Charts",
     "help": "Help",
-    "vsaKompendium": "VSA Kompendium",
+    "education": "Education",
     "settings": "Settings",
     "closeMenu": "Close menu",
     "openMenu": "Open menu"
@@ -71,9 +71,9 @@
     "filters": "Filters",
     "settings": "Settings",
     "help": "How to use StockPilot",
+    "education": "Education",
     "app": "StockPilot",
     "legal": "Legal information",
-    "vsaKompendium": "VSA Kompendium",
     "system": "System status",
     "login": "Sign in"
   },
@@ -296,16 +296,16 @@
     },
     "volume": {
       "title": "Volume (RVOL)",
-      "info": "Relative volume: how heavy this stock's recent trading is versus its own normal. It divides the average volume of the last few sessions by the average of the sessions before them. 1.0× = normal activity; ~1.5–2× is elevated and ~3×+ is extreme — a sign of unusual professional interest. Same measure as the Volume surge page.",
+      "info": "Relative volume: how heavy this stock's recent trading is versus its own normal. It divides the average volume of the last few sessions by the typical (median) volume of the sessions before them, so one exceptional day such as a report does not distort the reference. 1.0× = a typical session; ~1.5–2× is elevated and ~3×+ is extreme — a sign of unusual professional interest. Same measure as the Volume surge page.",
       "relativeVolume": "relative volume",
       "window": "Last {{recent}} sessions vs the {{baseline}} before",
       "recentAvg_one": "Avg volume (last {{count}} session)",
       "recentAvg_other": "Avg volume (last {{count}} sessions)",
-      "baselineAvg_one": "Baseline avg (prior {{count}} session)",
-      "baselineAvg_other": "Baseline avg (prior {{count}} sessions)",
+      "baselineAvg_one": "Typical volume (prior {{count}} session)",
+      "baselineAvg_other": "Typical volume (prior {{count}} sessions)",
       "lastSession": "Latest session",
       "lastDayRvol": "Latest-day RVOL",
-      "daysAbove": "Sessions above baseline",
+      "daysAbove": "Sessions above typical",
       "priceMove": "Price move (window)",
       "noData": "Not enough history to measure volume yet."
     },
@@ -525,13 +525,54 @@
   "vsaKompendium": {
     "title": "VSA Kompendium",
     "subtitle": "Price and volume analysis: definitions, signals, sequences, risk and the code formalisation — the full material behind the VSA V4 trading method.",
-    "languageNote": "The article below stays in its source language (Polish), regardless of the interface language.",
+    "languageNote": "Available in Polish and English — switch the interface language to change the article's language.",
     "sourceLabel": "Source:",
-    "downloadPdf": "Download PDF",
+    "downloadPdf": "Download PDF (Polish)",
     "diagramsToggle": "See the bar and WFO diagrams",
     "diagramAnatomyAlt": "A candle: spread is high minus low; VSA direction depends on the previous close",
     "diagramWfoAlt": "A bullish WFO: a second, lower low; volume V1 greater than V2, and V2 greater than the volume in between",
     "diagramsNote": "The publisher's own educational diagrams. They do not show market data or a forecast.",
+    "tocHeading": "Contents"
+  },
+  "education": {
+    "title": "Education",
+    "subtitle": "The knowledge behind every trading method StockPilot uses: what each method looks for, where it comes from and how to read its signals.",
+    "articlesHeading": "Articles",
+    "read": "Read",
+    "methodsHeading": "Trading methods in StockPilot",
+    "methodsIntro": "Every method the app ranks stocks by. Each card links the article that explains it; articles for the remaining methods are being written.",
+    "methodsLoading": "Loading the list of methods…",
+    "methodsError": "The list of methods could not be loaded right now. The articles above are still available.",
+    "source": "Source:",
+    "articleComingSoon": "Article coming soon",
+    "backToEducation": "Education",
+    "articles": {
+      "vsaRating": {
+        "title": "The VSA rating",
+        "summary": "What the 0–100 number next to every company means: the six volume patterns the engine looks for, how they become one rating and a verdict, and how well it has actually worked."
+      },
+      "minervini": {
+        "title": "Minervini Trend Template",
+        "summary": "Mark Minervini's eight-rule checklist for a stock in a strong, established uptrend — the exact rules StockPilot checks, what the score means, and the measured results."
+      },
+      "volumeBreakout": {
+        "title": "Volume Breakout",
+        "summary": "Buying the day a stock leaves a quiet base on a burst of volume, as William O'Neil and Mark Minervini do — the five conditions, the readiness score and the measured results."
+      },
+      "weinstein": {
+        "title": "Weinstein Stage 2",
+        "summary": "Stan Weinstein's four stages on the weekly chart and the breakout from Stage 1 into Stage 2 — the six conditions, a real GPW example and the measured results."
+      },
+      "pocketPivot": {
+        "title": "Pocket Pivot",
+        "summary": "Gil Morales and Chris Kacher's early buy inside the base: an up day whose volume beats every selling day of the last two weeks — the six conditions, real examples that worked and one that failed, and the measured results."
+      },
+      "vsaKompendium": {
+        "title": "VSA Kompendium",
+        "summary": "Volume Spread Analysis from the ground up: the anatomy of a bar, effort versus result, 15 signals of strength and weakness, tests, sequences, the WFO, risk and how the method is written as code. The source of the VSA V1, V3 and V4 methods."
+      }
+    },
+    "languageNote": "Available in Polish and English — switch the interface language to change the article's language.",
     "tocHeading": "Contents"
   },
   "system": {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 
 import numpy as np
@@ -10,14 +11,17 @@ import pandas as pd
 import pytest
 
 from app.analysis.methods.base import MethodSignal
+from app.ml import dataset as dataset_module
 from app.ml import features as feat
 from app.ml.dataset import (
     FEATURE_COLUMNS,
     MIN_STOCKS_PER_DAY,
     StockInput,
+    build_datasets,
     build_panel,
     job1_rows,
     job2_rows,
+    read_datasets,
     write_dataset,
 )
 from tests.ml_synthetic import random_walk_bars
@@ -133,6 +137,41 @@ class TestJobs:
         assert set(rows["l3_exit_10"]) <= {"stop", "target", "time"}
 
 
+class TestLeanBuild:
+    """``build_datasets`` (one stock at a time) equals the whole-panel path."""
+
+    def test_identical_to_the_whole_panel(self, panel):
+        job1, job2 = build_datasets(_stocks(MIN_STOCKS_PER_DAY + 5))
+        pd.testing.assert_frame_equal(job1, job1_rows(panel))
+        pd.testing.assert_frame_equal(job2, job2_rows(panel))
+
+    def test_takes_a_generator_read_once(self):
+        stocks = _stocks(MIN_STOCKS_PER_DAY + 1, bars=240)  # past the 220th firing
+        seen = []
+
+        def one_at_a_time():
+            for stock in stocks:
+                seen.append(stock.ticker)
+                yield stock
+
+        job1, job2 = build_datasets(one_at_a_time())
+        assert seen == [s.ticker for s in stocks]  # a single pass, in order
+        assert not job2.empty and not job1.empty
+
+    def test_nothing_in_gives_nothing_out(self):
+        job1, job2 = build_datasets(iter(()))
+        assert job1.empty and job2.empty
+
+    def test_measurements_narrowed_but_labels_and_ranked_inputs_not(self, panel):
+        # Four-byte floats save memory on the server. What the models learn and
+        # are judged on keeps full precision, and so does what is ranked across
+        # stocks each day: rounded, two stocks a hair apart would tie.
+        for col in ("fwd_r_10", "l1_y_10", "l2_excess_10", "l3_r_10",
+                    "turnover_pln", "rs_raw", "mom_12_1_raw"):
+            assert panel[col].dtype == np.float64, col
+        assert panel["vsa_rating"].dtype == np.float32
+
+
 class TestWrite:
     def test_writes_gzip_csv_and_metadata(self, panel, tmp_path):
         rows = job1_rows(panel)
@@ -145,3 +184,18 @@ class TestWrite:
             back = pd.read_csv(handle)
         assert len(back) == len(rows)
         assert np.allclose(back["vsa_rating"], rows["vsa_rating"])
+        # Renamed into place: no half-written side file is left behind, and
+        # the recorded hash is the finished file's.
+        left = sorted(p.name for p in tmp_path.iterdir())
+        assert left == ["job1.csv.gz", "job1.csv.gz.meta.json"]
+        assert meta["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def test_reads_back_in_pieces_and_skips_an_empty_market(self, panel, tmp_path, monkeypatch):
+        rows = job2_rows(panel)
+        write_dataset(rows, tmp_path / "job2-gpw.csv.gz")
+        write_dataset(pd.DataFrame(), tmp_path / "job2-de.csv.gz")  # a market with no rows
+        monkeypatch.setattr(dataset_module, "_READ_ROWS", 100)  # several pieces
+        back, metas = read_datasets(tmp_path, ["de", "gpw"], 2)
+        whole = pd.read_csv(tmp_path / "job2-gpw.csv.gz", low_memory=False)
+        pd.testing.assert_frame_equal(back, whole)
+        assert len(metas) == 2

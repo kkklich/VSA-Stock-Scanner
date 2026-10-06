@@ -49,7 +49,7 @@
     "filters": "Filtry",
     "charts": "Wykresy",
     "help": "Pomoc",
-    "vsaKompendium": "Kompendium VSA",
+    "education": "Edukacja",
     "settings": "Ustawienia",
     "closeMenu": "Zamknij menu",
     "openMenu": "Otwórz menu"
@@ -71,9 +71,9 @@
     "filters": "Filtry",
     "settings": "Ustawienia",
     "help": "Jak korzystać ze StockPilot",
+    "education": "Edukacja",
     "app": "StockPilot",
     "legal": "Informacje prawne",
-    "vsaKompendium": "Kompendium VSA",
     "system": "Stan systemu",
     "login": "Logowanie"
   },
@@ -300,20 +300,20 @@
     },
     "volume": {
       "title": "Wolumen (RVOL)",
-      "info": "Wolumen względny: jak duży jest ostatni obrót tej spółki w porównaniu z jej własną normą. Dzieli średni wolumen z ostatnich kilku sesji przez średnią z sesji je poprzedzających. 1,0× = normalna aktywność; ~1,5–2× to podwyższona, a ~3×+ ekstremalna — oznaka nietypowego zainteresowania profesjonalistów. Ta sama miara co na stronie Skok wolumenu.",
+      "info": "Wolumen względny: jak duży jest ostatni obrót tej spółki w porównaniu z jej własną normą. Dzieli średni wolumen z ostatnich kilku sesji przez typowy (medianowy) wolumen sesji je poprzedzających, więc jeden wyjątkowy dzień, np. dzień raportu, nie zniekształca punktu odniesienia. 1,0× = typowa sesja; ~1,5–2× to podwyższona, a ~3×+ ekstremalna — oznaka nietypowego zainteresowania profesjonalistów. Ta sama miara co na stronie Skok wolumenu.",
       "relativeVolume": "wolumen względny",
       "window": "Ostatnie {{recent}} sesje vs {{baseline}} wcześniejszych",
       "recentAvg_one": "Śr. wolumen (ostatnia {{count}} sesja)",
       "recentAvg_few": "Śr. wolumen (ostatnie {{count}} sesje)",
       "recentAvg_many": "Śr. wolumen (ostatnich {{count}} sesji)",
       "recentAvg_other": "Śr. wolumen (ostatnich {{count}} sesji)",
-      "baselineAvg_one": "Baza (poprzednia {{count}} sesja)",
-      "baselineAvg_few": "Baza (poprzednie {{count}} sesje)",
-      "baselineAvg_many": "Baza (poprzednich {{count}} sesji)",
-      "baselineAvg_other": "Baza (poprzednich {{count}} sesji)",
+      "baselineAvg_one": "Typowy wolumen (poprzednia {{count}} sesja)",
+      "baselineAvg_few": "Typowy wolumen (poprzednie {{count}} sesje)",
+      "baselineAvg_many": "Typowy wolumen (poprzednich {{count}} sesji)",
+      "baselineAvg_other": "Typowy wolumen (poprzednich {{count}} sesji)",
       "lastSession": "Ostatnia sesja",
       "lastDayRvol": "RVOL ostatniego dnia",
-      "daysAbove": "Sesje powyżej bazy",
+      "daysAbove": "Sesje powyżej typowej",
       "priceMove": "Zmiana ceny (okno)",
       "noData": "Za mało historii, aby zmierzyć wolumen."
     },
@@ -533,13 +533,54 @@
   "vsaKompendium": {
     "title": "Kompendium VSA",
     "subtitle": "Analiza ceny i wolumenu: definicje, sygnały, sekwencje, ryzyko i formalizacja w kodzie — całość materiału, na podstawie którego działa metoda VSA V4.",
-    "languageNote": "Treść poniżej pozostaje w języku źródłowym (polskim), niezależnie od wybranego języka interfejsu.",
+    "languageNote": "Dostępne po polsku i angielsku — zmień język interfejsu, aby zmienić język artykułu.",
     "sourceLabel": "Źródło:",
     "downloadPdf": "Pobierz PDF",
     "diagramsToggle": "Zobacz schemat świecy i WFO",
     "diagramAnatomyAlt": "Świeca: spread to high minus low; kierunek VSA zależy od poprzedniego zamknięcia",
     "diagramWfoAlt": "WFO wzrostowe: drugie niższe minimum; wolumen V1 większy od V2, a V2 większy od wolumenów pomiędzy",
     "diagramsNote": "Schematy własne, edukacyjne. Nie przedstawiają danych rynkowych ani prognozy.",
+    "tocHeading": "Spis treści"
+  },
+  "education": {
+    "title": "Edukacja",
+    "subtitle": "Wiedza stojąca za każdą metodą handlową, z której korzysta StockPilot: czego szuka dana metoda, skąd pochodzi i jak czytać jej sygnały.",
+    "articlesHeading": "Artykuły",
+    "read": "Czytaj",
+    "methodsHeading": "Metody handlowe w StockPilot",
+    "methodsIntro": "Wszystkie metody, według których aplikacja ocenia spółki. Każda karta prowadzi do artykułu, który ją wyjaśnia; artykuły o pozostałych metodach są w przygotowaniu.",
+    "methodsLoading": "Wczytywanie listy metod…",
+    "methodsError": "Nie udało się teraz wczytać listy metod. Artykuły powyżej są nadal dostępne.",
+    "source": "Źródło:",
+    "articleComingSoon": "Artykuł wkrótce",
+    "backToEducation": "Edukacja",
+    "articles": {
+      "vsaRating": {
+        "title": "Rating VSA",
+        "summary": "Co oznacza liczba 0–100 przy każdej spółce: sześć formacji wolumenowych, których szuka silnik, jak powstają z nich rating i werdykt oraz jak to naprawdę działało."
+      },
+      "minervini": {
+        "title": "Minervini Trend Template",
+        "summary": "Lista ośmiu reguł Marka Minerviniego dla spółki w silnym, ugruntowanym trendzie wzrostowym — dokładne reguły sprawdzane przez StockPilot, znaczenie wyniku i zmierzone rezultaty."
+      },
+      "volumeBreakout": {
+        "title": "Volume Breakout",
+        "summary": "Kupno w dniu, w którym spółka opuszcza spokojną bazę przy skoku wolumenu, tak jak robią to William O'Neil i Mark Minervini — pięć warunków, ocena gotowości i zmierzone rezultaty."
+      },
+      "weinstein": {
+        "title": "Weinstein — Faza 2",
+        "summary": "Cztery fazy Stana Weinsteina na wykresie tygodniowym i wybicie z Fazy 1 do Fazy 2 — sześć warunków, prawdziwy przykład z GPW i zmierzone rezultaty."
+      },
+      "pocketPivot": {
+        "title": "Pocket Pivot",
+        "summary": "Wczesne wejście wewnątrz bazy według Gila Moralesa i Chrisa Kachera: dzień wzrostowy, którego wolumen przewyższa każdy dzień spadkowy z ostatnich dwóch tygodni — sześć warunków, prawdziwe przykłady udane i jeden nieudany oraz zmierzone rezultaty."
+      },
+      "vsaKompendium": {
+        "title": "Kompendium VSA",
+        "summary": "Analiza ceny i wolumenu od podstaw: budowa bara, wysiłek a rezultat, 15 sygnałów siły i słabości, testy, sekwencje, WFO, ryzyko i zapis metody w kodzie. Źródło metod VSA V1, V3 i V4."
+      }
+    },
+    "languageNote": "Dostępne po polsku i angielsku — zmień język interfejsu, aby zmienić język artykułu.",
     "tocHeading": "Spis treści"
   },
   "system": {
@@ -756,5 +797,15 @@
       "buyback": "Skup akcji",
       "other": "Inna"
     }
+  },
+  "methodDescriptions": {
+    "vsa": "Volume Spread Analysis odczytuje z każdego bara jego spread, położenie zamknięcia w tym spreadzie i wolumen, aby ocenić, czy profesjonalny kapitał akumuluje (siła), czy dystrybuuje (słabość). Wynik to rating VSA 0–100 z wygasaniem w czasie; „wystąpił niedawno” oznacza, że ostatnio pojawiła się struktura wzrostowa — Spring, Successful Test albo Sign of Strength.",
+    "minervini": "Mechaniczny filtr Marka Minerviniego dla spółki w potwierdzonym trendzie wzrostowym Fazy 2: cena powyżej rosnących średnich z 50/150/200 dni ułożonych we właściwej kolejności, daleko od minimum 52-tygodniowego i blisko maksimum 52-tygodniowego, a do tego (w rankingu) siła względna w górnych 30% rynku. Wynik to liczba spełnionych reguł (pełne dopasowanie, gdy spełnione są wszystkie); „wystąpił niedawno” oznacza, że szablon cenowy był spełniony na jednej z ostatnich sesji. Tylko na wzrosty. (Metoda wciąż wymaga testu wstecznego na GPW, zanim powinna kierować prawdziwymi pieniędzmi.)",
+    "breakout": "Wybicie potwierdzone wolumenem, tak jak kupują je William O'Neil (CANSLIM) i Mark Minervini (VCP): po zbudowaniu spokojnej bazy, w której wolumen wysycha, cena wybija się do nowego ok. 10-tygodniowego maksimum na wolumenie co najmniej 50% wyższym od własnej średniej — wchodzą instytucje — zamykając się mocno i powyżej średniej z 50 dni. Wynik ocenia obecną gotowość do wybicia (trend wzrostowy, blisko maksimum 52-tygodniowego, ciasna, zacieśniająca się baza i świeże wybicie); „wystąpił niedawno” oznacza prawdziwe wybicie na wolumenie w ostatnich dwóch tygodniach. Tylko na wzrosty. (Progi to wartości domyślne z literatury; metoda wciąż wymaga testu wstecznego na GPW, zanim powinna kierować prawdziwymi pieniędzmi.)",
+    "glinicki": "Kupująca połowa kursu VSA Rafała Glinickiego, stosowana od początku do końca tak, jak on jej uczy. Szuka zakupu tylko tam, gdzie kurs na to pozwala — w akumulacji po wyprzedaży albo na cofnięciu w trendzie wzrostowym — i tylko na wsparciu wyznaczonym przez wcześniejsze bary. Tam czeka na jedną z jego sześciu formacji wzrostowych (Młot, Przenikanie, Gwiazda Poranna, Objęcie Hossy, wzrostowy Outside Bar albo wybicie z Inside Bara), a każda musi być potwierdzona wolumenem względem średniej z 20 dni: cała metoda opiera się na relacji wysiłku do rezultatu. Wynik ocenia, na ile obecny układ spełnia te pięć kroków; „wystąpił niedawno” oznacza, że ostatnio zakończyła się pełna formacja. Tylko na wzrosty, więc lustrzane formacje sprzedaży z kursu są pominięte. (Wierna progom ze źródła; wciąż wymaga testu wstecznego na GPW, zanim powinna kierować prawdziwymi pieniędzmi.)",
+    "vsa3": "Kurs VSA Rafała Glinickiego odczytany z transkrypcji wszystkich 34 nagrań i uruchomiony jako własna, siedmiokrokowa pętla decyzyjna kursu dla jego jedynego kompletnego układu na wzrosty („Scenariusz 5”). Kupuje cofnięcie tylko wtedy, gdy wszystko się zgadza: wykres tygodniowy jest w trendzie wzrostowym (ostatni kwartał dał wyższe maksimum i wyższe minimum niż poprzedni); wolumen dzienny nie jest niedźwiedzi (fale wzrostowe mają co najmniej taki obrót jak spadkowe); cofnięcie zatrzymało się w wyznaczonym miejscu — na zniesieniu 38,2 / 41,4 / 50 / 61,8, przy dywergencji wolumenu na dołku (WFO) albo na końcu korekty ABC; szczyt, z którego spadło, nie pokazuje sprzedaży; cofnięcie szło na słabnącym, mniejszym wolumenie; na dołku kończy się wzrostowa formacja świecowa potwierdzona sygnałem siły VSA (Stopping Volume, Shakeout, Two Bar Reversal, No Supply, Test) — Młot może zamiast tego obronić się własnym wolumenem; a transakcja daje co najmniej 3:1 do starego szczytu przy stopie pod formacją. Sekwencja 3 sygnałów albo dywergencja WFO działa jako wzmocnienie pewności. Wynik mówi, ile z siedmiu kroków jest dziś spełnionych. Tylko na wzrosty.",
+    "vsa4": "Kurs VSA Rafała Glinickiego sformalizowany we własnym programie Python właściciela aplikacji (pakiet „VSA - kompendium”): sekwencja „test jako proces” z lekcji 21 i 23. Włącza się, gdy po sygnale siły (Bag Holding, Selling Climax, Stopping Volume, Shakeout, Two Bar Reversal albo wzrostowe WFO) w ciągu 30 sesji przychodzi spokojny retest — No Supply albo Test strefy siły na niskim wolumenie — a w ciągu trzech sesji od testu bar wzrostowy zamyka się powyżej maksimum testu na większym wolumenie. Sygnał słabości albo zejście poniżej minimum siły go anuluje. Wynik mówi, na jakim etapie jest dziś ta sekwencja: 50 = siła czeka na test, 65 = test czeka na potwierdzenie, 100 = potwierdzenie dziś, 35 = nic w toku, a mniej, gdy w grze jest lustrzana sekwencja słabości. Symulacja transakcji na stronie spółki uruchamia własny tester tego samego programu: wejście na otwarciu następnej sesji, stop pod sekwencją, cel 3:1. Wejścia tylko na wzrosty; lustrzana sekwencja słabości jest pokazywana jako tło spadkowe.",
+    "weinstein": "Analiza faz Stana Weinsteina na wykresie tygodniowym: po spadku spółka miesiącami porusza się w bok, a jej 30-tygodniowa średnia krocząca się wypłaszcza (Faza 1), potem wybija się z tej bazy i rośnie (Faza 2). Układ włącza się w tygodniu, który zamyka się powyżej szczytu bazy i powyżej 30-tygodniowej średniej, na co najmniej dwukrotności wolumenu z poprzednich dziesięciu tygodni — i tylko wtedy, gdy ta średnia jest jeszcze płaska, więc łapie przejście, a nie spółkę już głęboko we wzroście. Wynik mówi, na ile ten obraz jest teraz kompletny. Tylko na wzrosty. (Według 440 transakcji Bulkowskiego zakupy na wybiciu dały +13,2% i 69% zyskownych wobec +4,1% i 57% przy zakupach późno w Fazie 2; metoda wciąż wymaga testu wstecznego na GPW, zanim powinna kierować prawdziwymi pieniędzmi.)",
+    "pocket_pivot": "Pocket pivot Gila Moralesa i Chrisa Kachera — wczesny zakup wewnątrz bazy zamiast na wybiciu: dzień wzrostowy, którego wolumen jest co najmniej równy wolumenowi największego dnia sprzedaży z poprzednich dziesięciu sesji, gdy spółka jest powyżej średnich z 50 i 200 dni i odbija od średniej z 10 lub 50 dni albo przez nią przechodzi, po kilku spokojnych dniach bez klina w górę. Wynik mówi, na ile ten obraz jest teraz kompletny. Tylko na wzrosty. (Zweryfikowane wyniki autorów pochodzą sprzed tej reguły, a Kacher mówi, że mniej więcej połowa pocket pivotów zawodzi; reguła nie ma niezależnego testu i powinna wykazać się w pomiarach tej aplikacji, zanim pokieruje prawdziwymi pieniędzmi.)"
   }
 }

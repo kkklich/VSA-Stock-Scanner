@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import random
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
@@ -42,7 +42,7 @@ class GateNumbers:
 
 
 def reproduce_gate(
-    stocks: Sequence[StockInput],
+    stocks: Iterable[StockInput],
     method_id: str,
     horizons: Sequence[int],
     today: date,
@@ -181,28 +181,55 @@ class MarketCoverage:
     first_full_day: date | None  # first such day
 
 
-def coverage(stocks: Sequence[StockInput]) -> list[MarketCoverage]:
-    """How much history each market really has — the plan's §3.3 question."""
-    out = []
-    by_market: dict[str, list[StockInput]] = {}
-    for s in stocks:
-        by_market.setdefault(s.market, []).append(s)
-    for market, items in by_market.items():
-        firsts = sorted(min(b.date for b in s.bars) for s in items if s.bars)
-        per_day: Counter[date] = Counter(b.date for s in items for b in s.bars)
-        full = sorted(d for d, k in per_day.items() if k >= MIN_STOCKS_PER_DAY)
-        out.append(
-            MarketCoverage(
-                market=market,
-                companies=len(items),
-                bars=sum(len(s.bars) for s in items),
-                first_date=firsts[0] if firsts else None,
-                median_first_date=firsts[len(firsts) // 2] if firsts else None,
-                days_with_market=len(full),
-                first_full_day=full[0] if full else None,
+class CoverageCounter:
+    """Accumulates ``coverage`` one stock at a time, keeping no bars.
+
+    ``bar_counts`` (ticker → stored bars) is kept too, so a caller streaming
+    the market once can then pick look-ahead samples without a second pass.
+    """
+
+    def __init__(self) -> None:
+        self._firsts: dict[str, list[date]] = {}
+        self._bars: Counter[str] = Counter()
+        self._companies: Counter[str] = Counter()
+        self._per_day: dict[str, Counter[date]] = {}
+        self.bar_counts: dict[str, int] = {}
+
+    def add(self, stock: StockInput) -> None:
+        if not stock.bars:
+            return
+        market = stock.market
+        self._companies[market] += 1
+        self._bars[market] += len(stock.bars)
+        self._firsts.setdefault(market, []).append(min(b.date for b in stock.bars))
+        self._per_day.setdefault(market, Counter()).update(b.date for b in stock.bars)
+        self.bar_counts[stock.ticker] = len(stock.bars)
+
+    def result(self) -> list[MarketCoverage]:
+        out = []
+        for market, count in self._companies.items():
+            firsts = sorted(self._firsts[market])
+            full = sorted(d for d, k in self._per_day[market].items() if k >= MIN_STOCKS_PER_DAY)
+            out.append(
+                MarketCoverage(
+                    market=market,
+                    companies=count,
+                    bars=self._bars[market],
+                    first_date=firsts[0],
+                    median_first_date=firsts[len(firsts) // 2],
+                    days_with_market=len(full),
+                    first_full_day=full[0] if full else None,
+                )
             )
-        )
-    return out
+        return out
+
+
+def coverage(stocks: Iterable[StockInput]) -> list[MarketCoverage]:
+    """How much history each market really has — the plan's §3.3 question."""
+    counter = CoverageCounter()
+    for stock in stocks:
+        counter.add(stock)
+    return counter.result()
 
 
 #: Columns whose non-zero rows are "events" — signals, firings, markers.

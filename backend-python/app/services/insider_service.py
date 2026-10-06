@@ -100,7 +100,8 @@ def build_insider_response(
         currency=summary_currency,
     )
 
-    # Group by publication_date for chart markers (prevents lookahead bias and merges same-day filings)
+    # Group by publication_date for chart markers (prevents lookahead bias
+    # and merges same-day filings)
     by_day: dict[str, list[InsiderTransactionItem]] = defaultdict(list)
     for tx in visible:
         day_str = tx.publication_date.isoformat()

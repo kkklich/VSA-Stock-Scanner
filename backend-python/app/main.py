@@ -91,6 +91,9 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("company_fundamentals", "return_on_assets", "DOUBLE PRECISION"),
     # 2026-09-17, alembic 005 — reporting currency, for the non-GPW markets.
     ("company_fundamentals", "financial_currency", "VARCHAR(8)"),
+    # 2026-09-26, alembic 008 — report calendar, for the volume-surge flag.
+    ("company_fundamentals", "last_report_date", "DATE"),
+    ("company_fundamentals", "next_report_date", "DATE"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is

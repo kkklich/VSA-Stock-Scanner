@@ -15,12 +15,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import re as _re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
+from zoneinfo import ZoneInfo
 
 from app.analysis.timeframe import IntradayBar
 from app.markets import market_for_yahoo_symbol, yahoo_symbol
@@ -562,6 +564,10 @@ class YahooFinanceClient:
             val = info.get(key)
             return val if val not in (None, "None", "", "N/A") else None
 
+        last_report, next_report = report_dates_from_info(
+            info, market_for_yahoo_symbol(yf_ticker).tz, _utcnow()
+        )
+
         return FinancialMetrics(
             market_cap=_safe("marketCap"),
             pe_ratio=_safe("trailingPE"),
@@ -575,6 +581,8 @@ class YahooFinanceClient:
             # Yahoo reports these as fractions (0.184 = 18.4% return).
             return_on_equity=_safe("returnOnEquity"),
             return_on_assets=_safe("returnOnAssets"),
+            last_report_date=last_report,
+            next_report_date=next_report,
         )
 
     async def get_quarterly_reports(self, ticker: str) -> list[QuarterlyReport]:
@@ -702,6 +710,46 @@ class YahooFinanceClient:
         return _parse_insider_frame(frame, yf_ticker)
 
 
+# ── Report calendar (module level: pure, unit-testable) ───────────────────────
+
+# The quote-summary fields that carry a report moment, as epoch seconds.
+# Yahoo is not consistent about which is which: ``earningsTimestamp`` is the
+# latest report for PKO BP (2026-08-13) but the next one for KGHM
+# (2026-11-18), and ``…Start``/``…End`` span an estimate window for some US
+# companies. So they are pooled and split by the fetch day instead. The
+# earnings-*call* fields are left out: a call can follow its report by a day,
+# which would add a date on which nothing was published.
+_REPORT_TIMESTAMP_KEYS = (
+    "earningsTimestamp",
+    "earningsTimestampStart",
+    "earningsTimestampEnd",
+)
+
+
+def report_dates_from_info(
+    info: dict, tz: ZoneInfo, now: datetime
+) -> tuple[date | None, date | None]:
+    """(last report on or before today, next report after it) from ``info``.
+
+    Dates are on the exchange's own calendar (``tz``): KGHM's 15:05 UTC is
+    17:05 Warsaw, the same day, but a US company's 00:30 UTC release belongs
+    to the previous New York day. Anything unparseable is ignored.
+    """
+    today = now.astimezone(tz).date()
+    days: set[date] = set()
+    for key in _REPORT_TIMESTAMP_KEYS:
+        value = info.get(key)
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            continue
+        try:
+            days.add(datetime.fromtimestamp(value, tz=UTC).astimezone(tz).date())
+        except (OverflowError, OSError, ValueError):
+            continue
+    last = max((d for d in days if d <= today), default=None)
+    upcoming = min((d for d in days if d > today), default=None)
+    return last, upcoming
+
+
 # ── Cash-flow frame parsing (module level: pure, unit-testable) ───────────────
 
 def _frame_value(frame, column, row_names: tuple[str, ...], labels: dict) -> int | None:
@@ -769,8 +817,6 @@ def _periods_from_frame(
         )
     return periods
 
-
-import re as _re
 
 _PRICE_RE = _re.compile(r"price\s+([\d.]+)(?:\s*-\s*([\d.]+))?", _re.IGNORECASE)
 
