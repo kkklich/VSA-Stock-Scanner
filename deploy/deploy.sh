@@ -18,7 +18,7 @@ ENV_FILE=".env.prod"
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 die() { printf '\n\033[1;31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
 
-[[ -f "$ENV_FILE" ]] || die "$ENV_FILE is missing. Copy it from .env.prod.example and fill in DOMAIN, POSTGRES_PASSWORD, and STOCKPILOT_ADMIN_TOKEN."
+[[ -f "$ENV_FILE" ]] || die "$ENV_FILE is missing. Copy it from .env.prod.example and fill in DOMAIN + POSTGRES_PASSWORD."
 
 compose() { docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
 

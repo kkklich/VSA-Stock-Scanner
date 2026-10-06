@@ -76,8 +76,8 @@ services:
       # is the file half.
       STOCKPILOT_ACTION_LOG_RETENTION_DAYS: ${STOCKPILOT_ACTION_LOG_RETENTION_DAYS:-30}
       # Shared secret for /api/admin/* (the System page: health, errors, logs).
-      # Set this in .env.prod: these endpoints expose tracebacks and visitor IPs.
-      STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:?STOCKPILOT_ADMIN_TOKEN must be set in .env.prod}
+      # Optional: empty leaves those endpoints open.
+      STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:-}
       # Sign-in (optional visitor accounts). JWT_SECRET is the key every
       # login token is signed with; left empty (the owner's choice) the app
       # invents one per start, so a restart signs everyone out — fine here,
