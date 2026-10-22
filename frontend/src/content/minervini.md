@@ -6,6 +6,13 @@ Szablon to **filtr, a nie sygnał wejścia**. Minervini używa go, aby zdecydowa
 
 Metoda jest **tylko na wzrosty** (szuka rosnących cen) i **średnioterminowa**: opisywany trend trwa od tygodni do miesięcy.
 
+![Rosnąca cena ponad średnimi z 50, 150 i 200 sesji, ułożonymi od najszybszej do najwolniejszej.](/education/images/minervini.png "Układ trendu: cena jest ponad MA 50, ta ponad MA 150, a MA 150 ponad rosnącą MA 200. Ilustracja pokazuje filtr trendu; warunki zakresu 52 tygodni i siły względnej opisano niżej. Przykład schematyczny, nie dane rynkowe. Kliknij ilustrację, aby ją powiększyć.")
+
+
+<!-- definition-diagrams:example-trend-stack -->
+![Łączne odczytywanie warstw trendu](/education/definitions/example-trend-stack.pl.svg "Cena ponad trzema uporządkowanymi średnimi ilustruje strukturę trendu. Nachylenie, zakres roczny i siła względna pozostają osobnymi warunkami. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Skąd pochodzi
 
 Mark Minervini, *Trade Like a Stock Market Wizard* (2013). Minervini dwukrotnie wygrał U.S. Investing Championship — konkurs inwestycyjny na prawdziwych pieniądzach — co jest niezależnie sprawdzalnym wynikiem i dlatego ta metoda trafiła do aplikacji. Pojęcie trendu wzrostowego w „Fazie 2” pochodzi z analizy faz Stana Weinsteina (zobacz artykuł o Weinsteinie).
@@ -13,6 +20,13 @@ Mark Minervini, *Trade Like a Stock Market Wizard* (2013). Minervini dwukrotnie 
 ## Osiem reguł, które sprawdza StockPilot
 
 Średnia krocząca (MA) to średnia cena zamknięcia z ostatnich N sesji; „MA 200” to średnia z ostatnich 200 zamknięć. Maksimum i minimum 52-tygodniowe to najwyższe maksimum i najniższe minimum z ostatnich 252 sesji.
+
+<!-- definition-diagrams:moving-average -->
+![Średnia krocząca (MA)](/education/definitions/moving-average.pl.svg "Średnia krocząca uśrednia zamknięcia w swoim oknie. Ten przykład z czterech sesji daje 103; metoda używa 50, 150 i 200 sesji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Maksimum i minimum z 52 tygodni](/education/definitions/year-range.pl.svg "Ekstrema odniesienia pochodzą z 252 sesji, a nie tylko z widocznego krótkiego ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 | # | Reguła | Jak mierzy to StockPilot |
 |---:|---|---|
@@ -25,11 +39,39 @@ Mark Minervini, *Trade Like a Stock Market Wizard* (2013). Minervini dwukrotnie 
 | 7 | Cena jest blisko maksimum 52-tygodniowego | nie więcej niż 25% poniżej najwyższego maksimum z 252 sesji |
 | 8 | Siła względna w górnych 30% rynku | patrz niżej — tylko na stronach z rankingiem |
 
+<!-- definition-diagrams:minervini-rule-1 -->
+![Minervini 1 — Cena jest powyżej MA 150 i MA 200](/education/definitions/minervini-rule-1.pl.svg "dzisiejsze zamknięcie powyżej obu średnich Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 2 — MA 150 jest powyżej MA 200](/education/definitions/minervini-rule-2.pl.svg "porównanie z dzisiaj Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 3 — MA 200 rośnie](/education/definitions/minervini-rule-3.pl.svg "dziś wyżej niż 20 sesji (ok. miesiąc) temu Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 4 — MA 50 jest powyżej MA 150 i MA 200](/education/definitions/minervini-rule-4.pl.svg "porównanie z dzisiaj Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 5 — Cena jest powyżej MA 50](/education/definitions/minervini-rule-5.pl.svg "dzisiejsze zamknięcie powyżej niej Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 6 — Cena jest daleko od minimum 52-tygodniowego](/education/definitions/minervini-rule-6.pl.svg "co najmniej 30% powyżej najniższego minimum z 252 sesji Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 7 — Cena jest blisko maksimum 52-tygodniowego](/education/definitions/minervini-rule-7.pl.svg "nie więcej niż 25% poniżej najwyższego maksimum z 252 sesji Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minervini 8 — Siła względna w górnych 30% rynku](/education/definitions/minervini-rule-8.pl.svg "patrz niżej — tylko na stronach z rankingiem Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Reguła 8, siła względna.** Minervini chce spółki silniejszej od większości innych. StockPilot liczy ją tak, jak robi to Investor's Business Daily: ważona stopa zwrotu — **40%** zwrotu z ostatnich 3 miesięcy plus po **20%** zwrotów z ostatnich 6, 9 i 12 miesięcy — a potem szereguje wszystkie spółki **z tego samego rynku** od 0 (najsłabsza) do 100 (najsilniejsza). Reguła 8 jest spełniona przy wyniku **70 lub więcej**. Ponieważ porównuje spółkę ze wszystkimi innymi, istnieje tylko na stronach, które szeregują cały rynek (Pulpit, Obserwowane i Filtry). Strona spółki, która patrzy na jedną firmę, używa reguł 1–7.
 
 Spółka potrzebuje **co najmniej 252 sesji** (ok. roku) historii. Przy krótszej metoda pisze „za mało historii” zamiast zgadywać — inaczej trzymiesięczne maksimum uchodziłoby za 52-tygodniowe.
 
 Jedno uproszczenie: Minervini wymaga, by MA 200 rosła **co najmniej miesiąc, najlepiej cztery do pięciu**. Aplikacja sprawdza minimum jednego miesiąca.
+
+
+<!-- definition-diagrams:example-ma-slope-cases -->
+![Ta sama średnia początkowa, różne nachylenia](/education/definitions/example-ma-slope-cases.pl.svg "Rosnąca MA 200 spełnia warunek nachylenia; malejąca nie. Sama cena ponad średnią nie określa kierunku tej średniej. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Odległość od maksimum 200](/education/definitions/example-high-distance-cases.pl.svg "Zamknięcie 160 leży 20% poniżej 200 i spełnia tę jedną regułę. Zamknięcie 140 leży 30% poniżej i jej nie spełnia. Granicą jest 150. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Wagi siły względnej](/education/definitions/relative-strength-weights.pl.svg "Ważona stopa zwrotu jest porównywana z innymi spółkami tego samego rynku; sama stopa zwrotu nie jest percentylem. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Co widać w aplikacji
 
@@ -37,6 +79,13 @@ Jedno uproszczenie: Minervini wymaga, by MA 200 rosła **co najmniej miesiąc, n
 - **Znaczek „wystąpił niedawno”:** układ uznaje się za zaistniały w dniu, w którym spełnione były **wszystkie siedem reguł cenowych**. Znaczek pokazuje, ile dni temu zdarzyło się to ostatnio (patrząc do 90 sesji wstecz). Reguła 8 nie wpływa na znaczek, tylko na wynik.
 - **Znaczniki na wykresie:** bursztynowa kropka z zieloną etykietą „Trend Template” w każdym dniu, w którym pełny szablon siedmiu reguł **się włączył** (dzień wcześniej nie był spełniony). Dopóki szablon pozostaje spełniony, kolejnych znaczników nie ma, więc każdy znacznik to początek okresu spełniania reguł.
 - **Kolumna Łącznie i Podsumowanie analiz:** wynik wchodzi do łącznej oceny wielu metod i do podsumowania na stronie spółki.
+
+
+<!-- definition-diagrams:example-structural-score -->
+![Jedna niespełniona reguła zmienia wynik](/education/definitions/example-structural-score.pl.svg "W widoku siedmiu reguł strukturalnych sześć daje około 86, a siedem 100. Ranking rynku dodaje siłę względną jako ósmą regułę. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Wynik i pierwsza aktywacja](/education/definitions/minervini-score.pl.svg "Wynik to udział spełnionych reguł; znacznik wskazuje pierwszy dzień spełnienia wszystkich siedmiu reguł strukturalnych. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Jak to działało w praktyce
 

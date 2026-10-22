@@ -9,7 +9,20 @@ Stan Weinstein looks at every stock on a **weekly** chart and sees its life as a
 | 3 | Topping | the stock goes sideways again, this time at the top | sells / stays out |
 | 4 | Declining | the stock falls below a falling average | stays away |
 
+<!-- definition-diagrams:weinstein-stage-1 -->
+![1 — Basing](/education/definitions/weinstein-stage-1.en.svg "The price structure is read against the direction of the 30-week moving average. Stage labels describe context, not a guaranteed next move. Schematic example. Select the image to enlarge.")
+
+![2 — Advancing](/education/definitions/weinstein-stage-2.en.svg "The price structure is read against the direction of the 30-week moving average. Stage labels describe context, not a guaranteed next move. Schematic example. Select the image to enlarge.")
+
+![3 — Topping](/education/definitions/weinstein-stage-3.en.svg "The price structure is read against the direction of the 30-week moving average. Stage labels describe context, not a guaranteed next move. Schematic example. Select the image to enlarge.")
+
+![4 — Declining](/education/definitions/weinstein-stage-4.en.svg "The price structure is read against the direction of the 30-week moving average. Stage labels describe context, not a guaranteed next move. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
+
 The whole method is about buying **the moment Stage 1 turns into Stage 2**: the week the stock breaks out of a long, dull base on heavy volume. That is what StockPilot looks for. It is **long-only** and **medium-term** — a Stage 2 advance usually lasts months.
+
+![Four market stages: a base, an advance above the 30-week average, a top, and a decline below the average.](/education/images/weinstein.png "1 — Basing. 2 — Advancing. 3 — Topping. 4 — Declining. The amber line is the 30-week moving average (MA 30w). The cyan circle marks the transition from Stage 1 to Stage 2, with increased volume below. Schematic cycle, not a forecast or market data. Select the image to enlarge.")
 
 ## Where it comes from
 
@@ -27,6 +40,13 @@ Weinstein's stages, his 30-week average and his volume test are all defined on *
 
 The **week still in progress is ignored**. Weinstein buys on a weekly *close*, and a half-finished week carries only part of a week's volume, which would make the volume test meaningless. So from Monday to Thursday the method shows the result of the last completed week. A breakout week shows as "fired" on its Friday and over the weekend; from Monday on it shows as "Broke out 3d ago", "Broke out 4d ago" and so on, counted from the latest session. If the following week breaks out again, that is the same move: it gets no new marker on the chart and is not shown as "fired" either.
 
+
+<!-- definition-diagrams:example-week-volume-sum -->
+![Five daily volumes make one weekly total](/education/definitions/example-week-volume-sum.en.svg "In this example, daily volumes 20, 30, 25, 35 and 40 sum to 150. A partial week would omit some of that activity. Schematic example. Select the image to enlarge.")
+
+![A completed weekly bar](/education/definitions/completed-week.en.svg "Weekly OHLCV combines daily bars. The unfinished week is excluded so its partial volume is not compared with whole weeks. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## The six conditions StockPilot checks
 
 All six must hold on the same completed week for a breakout to **fire**:
@@ -40,17 +60,44 @@ All six must hold on the same completed week for a breakout to **fire**:
 | 5 | The advance is only beginning | the 30-week average has risen no more than 10% over those 10 weeks |
 | 6 | Buyers are really there | the week's volume is at least 2× the average of the previous 10 weeks |
 
+<!-- definition-diagrams:weinstein-rule-1 -->
+![Weinstein 1 — There was a real base](/education/definitions/weinstein-rule-1.en.svg "the 20 weeks before this one stayed within 30% from their highest high to their lowest low Schematic example. Select the image to enlarge.")
+
+![Weinstein 2 — The week breaks out of it](/education/definitions/weinstein-rule-2.en.svg "the weekly close is above the highest high of those 20 weeks Schematic example. Select the image to enlarge.")
+
+![Weinstein 3 — It is on the Stage 2 side](/education/definitions/weinstein-rule-3.en.svg "the weekly close is above the 30-week moving average Schematic example. Select the image to enlarge.")
+
+![Weinstein 4 — The decline is over](/education/definitions/weinstein-rule-4.en.svg "the 30-week average is no lower than it was 10 weeks ago Schematic example. Select the image to enlarge.")
+
+![Weinstein 5 — The advance is only beginning](/education/definitions/weinstein-rule-5.en.svg "the 30-week average has risen no more than 10% over those 10 weeks Schematic example. Select the image to enlarge.")
+
+![Weinstein 6 — Buyers are really there](/education/definitions/weinstein-rule-6.en.svg "the week's volume is at least 2× the average of the previous 10 weeks Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
+
 **Condition 5 is the heart of the method.** Without it, the same rules also fire on a stock that has already risen a long way and merely paused: a flat 20-week stretch on top of a steep advance still has a steeply *rising* 30-week average. That is Bulkowski's weaker "well inside Stage 2" buy. The limit keeps the method on the **transition** Weinstein actually buys. On GPW history it alone rejected 4,467 candidate weeks.
 
 Weinstein's Stage 1 follows a Stage 4 fall, but the fall is **not** checked separately: a stock may have been basing for a year or more, which would put the fall outside the history the app holds. Conditions 4 and 5 already require the flat average that defines Stage 1.
 
 The stock needs **at least 40 completed weeks** of history (the 30-week average plus the 10 weeks it is compared over).
 
+
+<!-- definition-diagrams:example-weekly-slope-limit -->
+![The average must rise slowly enough](/education/definitions/example-weekly-slope-limit.en.svg "Starting at 100 ten weeks ago, an average ending at 105 satisfies the 0–10% change rule. An average ending at 115 is too steep for this check. Schematic example. Select the image to enlarge.")
+
+![Judge the completed weekly close](/education/definitions/example-weekly-wick.en.svg "An intraweek high above 104 is not sufficient: the last weekly close at 101 returns below the base high. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## What you see in the app
 
 - **Score (0–100):** how much of the Stage 1 → 2 picture is in place. Six checks, about 17 points each: a tight base; the 30-week average has stopped falling; it has not already risen more than 10%; the price is above the 30-week average now; the price is no more than 20% above the top of the base (still in the buy zone); and a breakout in the last four weeks. When a breakout was recent, the base is judged as it was on the breakout week — otherwise the breakout's own rise would make the base look "not tight" exactly when the setup has just fired.
 - **Detail text:** "Stage 2 breakout x6.9 vol" on the breakout week, "Broke out 12d ago, 5/6" afterwards, "3/6 below 30w MA" or "3/6 setup" otherwise.
 - **Chart markers:** a blue dot with a green "Stage 2 breakout" label, placed on the **last trading day of the breakout week**.
+
+
+<!-- definition-diagrams:weinstein-score -->
+![Six checks, one readiness score](/education/definitions/weinstein-score.en.svg "The readiness score measures the current setup; the firing checklist evaluates the completed breakout week. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
 
 ## A real example: Dom Development, December 2022
 
@@ -75,6 +122,11 @@ Both cases are checked automatically in the app's tests on the real weekly price
 - It does not check **relative strength** against the market, which Weinstein also uses.
 - It does not manage the trade. Weinstein's own exits rely on stops below support and on the 30-week average; the app gives no stop, target or exit signal.
 - It does not read the market's own stage (Weinstein prefers to buy when the overall market is also in Stage 2).
+
+
+<!-- definition-diagrams:example-stage-context-exit -->
+![Recognising stages and planning an exit](/education/definitions/example-stage-context-exit.en.svg "A Stage 2 entry screen does not automatically provide a Stage 3 or Stage 4 exit. The illustration separates the entry context from later trade management. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
 
 ## Sources
 

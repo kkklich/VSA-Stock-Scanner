@@ -24,6 +24,13 @@ const DEFAULT_ENTRY: SeoEntry = {
 
 const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
   {
+    test: (p) => p.startsWith('/long-term'),
+    entry: {
+      title: 'Long-term ranking — quality, value and momentum',
+      description: 'Compare stocks within one market using quality, value and momentum scores. Review recorded scores and financial observations for long-term research.',
+    },
+  },
+  {
     test: (p) => p === '/',
     entry: {
       title: 'VSA Dashboard — GPW',

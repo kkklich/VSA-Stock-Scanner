@@ -6,6 +6,8 @@ The **pocket pivot** tries to get in earlier, **inside the base**. It looks for 
 
 The method is **long-only** and **medium-term**: like the breakout it tries to get ahead of, it aims to catch a move lasting weeks to months.
 
+![An up day near a moving average remains below resistance while its volume exceeds every down-day volume in the preceding ten sessions.](/education/images/pocket-pivot.png "1 — Price rises from near a moving average while still inside the base, below amber resistance. 2 — Its volume exceeds the heaviest down-day volume of the preceding 10 sessions, marked by the red dashed line. The preceding five sessions are quiet. Schematic example, not market data. Select the image to enlarge.")
+
 ## Where it comes from
 
 Gil Morales and Chris Kacher, *Trade Like an O'Neil Disciple: How We Made 18,000% in the Stock Market* (Wiley, 2010), and its sequel *In the Trading Cockpit with the O'Neil Disciples* (2012). Both managed money at William O'Neil + Co., the firm of the founder of Investor's Business Daily; Morales ran part of the firm's own capital there for eight years. The book calls the pocket pivot "an early base breakout indicator".
@@ -28,6 +30,13 @@ So this is a clearly described method from experienced investors, not a proven e
 
 The volume comparison is the method's most interesting idea: it sets **demand against supply** — the buyers' day against the sellers' biggest day — exactly the way VSA reads a single bar.
 
+
+<!-- definition-diagrams:example-largest-selling-day -->
+![A large buying day is not the reference](/education/definitions/example-largest-selling-day.en.svg "Among these reference-day examples, the largest down-day volume is 100. The up-day volume of 180 is excluded from that maximum; signal-day volume 120 passes this one comparison. Schematic example. Select the image to enlarge.")
+
+![Inside the base versus above it](/education/definitions/pivot-vs-breakout.en.svg "A pocket pivot can occur near a moving average inside the base. A volume breakout requires a close above the base high. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## The six conditions StockPilot checks
 
 All six must hold on the same day for a pocket pivot to **fire**:
@@ -41,17 +50,46 @@ All six must hold on the same day for a pocket pivot to **fire**:
 | 5 | It was quiet beforehand | the 5 sessions before it averaged less volume than the 50 sessions before them |
 | 6 | No wedge | the 5 sessions before it did **not** make a higher low on at least 4 days while the close rose |
 
+<!-- definition-diagrams:pocket-pivot-rule-1 -->
+![Pocket Pivot 1 — Buyers won the day](/education/definitions/pocket-pivot-rule-1.en.svg "the close is above the previous close Schematic example. Select the image to enlarge.")
+
+![Pocket Pivot 2 — Demand outweighs supply](/education/definitions/pocket-pivot-rule-2.en.svg "the day's volume is at least the volume of the biggest down day of the previous 10 sessions Schematic example. Select the image to enlarge.")
+
+![Pocket Pivot 3 — The trend is healthy](/education/definitions/pocket-pivot-rule-3.en.svg "the close is above the 50-session and the 200-session moving average Schematic example. Select the image to enlarge.")
+
+![Pocket Pivot 4 — It starts from a line, not from thin air](/education/definitions/pocket-pivot-rule-4.en.svg "the day's low is at, below, or no more than 2% above the 10- or 50-session average, and the close is above that average Schematic example. Select the image to enlarge.")
+
+![Pocket Pivot 5 — It was quiet beforehand](/education/definitions/pocket-pivot-rule-5.en.svg "the 5 sessions before it averaged less volume than the 50 sessions before them Schematic example. Select the image to enlarge.")
+
+![Pocket Pivot 6 — No wedge](/education/definitions/pocket-pivot-rule-6.en.svg "the 5 sessions before it did not make a higher low on at least 4 days while the close rose Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
+
 Conditions 1–3 are the authors' own words: the book asks for up-day volume "equal to or greater than the largest down-volume day over the prior 10 days" and says pocket pivots are bought above the 50-day moving average; Kacher's rules add the 200-day average. **Three numbers are the app's reading**, because the authors describe these conditions only in words or on charts: "right near" the line (2%), volume "quiet over the previous several days" (5 sessions) and the "wedge" (4 of 5 rising lows). They were fixed before any measurement and not adjusted afterwards.
 
 Conditions 5 and 6 together are the book's picture of a pocket pivot: a quiet pullback or pause on the moving average, then one day of demand heavier than any recent supply. They also cover two of the authors' warnings: a stock that "sells off hard" through its averages and shoots straight back up in a V does not do so on quiet volume, and a stock above its 200-session average is rarely in the multi-month downtrend Kacher warns against.
 
 If there was no down day with volume in the previous 10 sessions, there is nothing to compare with and **no** pocket pivot fires. The stock needs **at least 200 sessions** of history (for the 200-session average).
 
+
+<!-- definition-diagrams:example-insufficient-pivot-volume -->
+![A rising close with insufficient volume](/education/definitions/example-insufficient-pivot-volume.en.svg "A signal-day volume of 90 is below the largest down-day volume of 100. A rising close cannot compensate for this failed volume check. Schematic example. Select the image to enlarge.")
+
+![A low too far above the moving average](/education/definitions/example-pivot-too-far.en.svg "With the average at 100, the allowed low is at most 102. This bar has a low of 107, so it fails the proximity check for that average. Schematic example. Select the image to enlarge.")
+
+![No down day means no comparison](/education/definitions/example-no-selling-reference.en.svg "When the prior ten sessions contain no down day with volume, the engine has no selling-day benchmark and does not fire a pocket pivot. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## What you see in the app
 
 - **Score (0–100):** how complete the pocket-pivot picture is right now. Six checks, about 17 points each: the close above the 50-session average; above the 200-session average; the stock at a buy line (the same test as condition 4); quiet volume; no wedge; and a pocket pivot in the last 10 days. Below the 200-session average the score is capped at 50, because the authors buy no pocket pivot there, so for such a stock the method never counts as positive in the analytics summary.
 - **Detail text:** "Pocket pivot x1.4 down-vol" on the signal day (volume 1.4× the biggest down day), "Pocket pivot 3d ago, 6/6" on the following days, and otherwise "4/6 setup" or "2/6 below 200d MA".
 - **Chart markers:** a cyan dot with a green label on the signal day — "Pocket Pivot 10d" when the day came off the 10-session average (the authors' usual case), or "Pocket Pivot 50d" when it came off the 50-session average. Two signal days in a row get one marker.
+
+
+<!-- definition-diagrams:pivot-score-cap -->
+![The below-MA-200 score cap](/education/definitions/pivot-score-cap.en.svg "Below the 200-session average, the score is capped at 50. A high-volume up day alone does not establish a healthy trend. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
 
 ## A real example: XTB, July 2026
 

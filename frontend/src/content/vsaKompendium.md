@@ -21,6 +21,11 @@ W języku kursu duży wolumen jest „wysiłkiem”, a ruch ceny i zamknięcie s
 
 Kurs opisuje cykl rynku słowami akumulacja, wzrost, redystrybucja, dystrybucja i spadek. Użyteczne jest traktowanie tych pojęć jako hipotez o fazie rynku: po spadku duży obrót przy małym postępie w dół może być interpretowany jako zatrzymywanie podaży; po wzroście duży obrót przy braku postępu w górę może być interpretowany jako wchłanianie popytu. Dopiero późniejsze zachowanie ceny może taką hipotezę wesprzeć albo osłabić. Sam duży obrót nie dowodzi akumulacji, a sama konsolidacja nie dowodzi dystrybucji [K: lekcja 1; podział kategorii: lekcja 7, SRT 00:00:06–00:04:14].
 
+
+<!-- definition-diagrams:vsa-inputs -->
+![VSA: cena, wolumen i kontekst](/education/definitions/vsa-inputs.pl.svg "VSA wiąże zakres i położenie zamknięcia z wolumenem, a następnie sprawdza wcześniejsze tło. OHLCV nie identyfikuje uczestników. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 2. Dane i budowa świecy
 
 ### Zakres (spread)
@@ -29,17 +34,34 @@ Spread w materiale oznacza zakres od maksimum do minimum bara: H − L. Nie jest
 
 Wąski spread przy dużym wolumenie może oznaczać, że mimo znacznego obrotu cena nie przeszła daleko. VSA opisuje to jako wysiłek bez proporcjonalnego rezultatu. Szeroki spread przy niskim wolumenie może oznaczać, że cena przesunęła się łatwo, przy mniejszym oporze. Żadna z tych obserwacji nie ma znaczenia bez kierunku ruchu i tła.
 
+
+<!-- definition-diagrams:spread-body -->
+![Spread i korpus to różne wielkości](/education/definitions/spread-body.pl.svg "Spread to H − L. Korpus jest odległością między O i C; knoty dopełniają cały zakres. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Położenie zamknięcia
 
 Wykład i mapy omawiają zamknięcie wysoko, w środku lub nisko zakresu. Operacyjnie można wyrazić względne położenie jako pozycję zamknięcia pomiędzy low i high: (close − low) / (high − low), jeśli zakres jest dodatni [F]. Wtedy 0 oznacza zamknięcie przy minimum, a 1 — przy maksimum. To wyłącznie wygodny opis. W 2018 r. prowadzący mówi o przybliżonej górnej lub dolnej jednej trzeciej i wyraźnie odradza „aptekarskie” traktowanie granic [K: kurs 2018, lekcja 2, SRT 00:09:47–00:10:07]. Jedna z map podaje progi 30/70%; należy je czytać jako wizualny skrót, a nie uniwersalną stałą całego kursu [M]. W późniejszym użyciu przyjęcie granicy, np. 30% lub 70%, jest wyborem implementacyjnym [F/L], który trzeba opisać i zweryfikować.
 
 Kurs czasem opisuje położenie zamknięcia w tercjach, a czasem używa słów „wysoko” i „nisko” jakościowo. Warto więc zachować dokładność: „zamknięcie w dolnej części zakresu” jest obserwacją; „podaż wygrała” jest jej interpretacją.
 
+
+<!-- definition-diagrams:close-position -->
+![Zamknięcie wysoko i nisko](/education/definitions/close-position.pl.svg "Względna pozycja zamknięcia to (C − L) / (H − L). Przykłady mają ten sam zakres, lecz różne zamknięcia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Up Bar, Down Bar i kolor korpusu
 
 Up Bar to bar, którego zamknięcie jest wyższe niż zamknięcie poprzedniego bara; Down Bar — niższe [K; lekcja 1]. Ta klasyfikacja porównuje close z poprzednim close. Kolor korpusu świecy porównuje zwykle close z open, więc nie jest tym samym. Bar może zamknąć się powyżej poprzedniego zamknięcia, a jednocześnie poniżej swojego otwarcia; wówczas może być Up Barem, choć świeca ma czerwony korpus. Analogicznie Down Bar może mieć korpus wzrostowy.
 
 Różnica jest praktyczna: klasyfikacja Up/Down pomaga opisać relację do poprzedniego bara i jest używana w definicjach No Supply, No Demand i formacji dwubarowych; kolor korpusu opisuje relację w obrębie świecy. Kolory słupków wolumenu w platformie mogą z kolei zależeć od koloru świecy lub konfiguracji wskaźnika. Nie należy mylić trzech różnych rzeczy: kierunku close wobec poprzedniego close, koloru korpusu wobec open oraz koloru słupka wolumenu.
+
+
+<!-- definition-diagrams:up-bar-red-body -->
+![Up Bar z czerwonym korpusem](/education/definitions/up-bar-red-body.pl.svg "C = 102 jest ponad poprzednim zamknięciem 100, choć poniżej bieżącego otwarcia 104. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Down Bar z zielonym korpusem](/education/definitions/down-bar-green-body.pl.svg "C = 100 jest poniżej poprzedniego zamknięcia 102, choć ponad bieżącym otwarciem 98. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Wolumen
 
@@ -49,9 +71,18 @@ Należy porównywać podobne rzeczy: ten sam instrument, źródło danych, inter
 
 W mapach No Supply i No Demand kolor różowy oznacza wolumen niższy od dwóch poprzednich słupków w użytej konfiguracji platformy. Lekcje mówią wprost o takim ustawieniu [K: lekcja 12, SRT 00:00:06–00:01:19; lekcja 19, SRT 00:00:06–00:01:08]. Kolor różowy nie jest naturalną cechą wolumenu ani samodzielnym sygnałem rynkowym. Algorytm powinien wprost określić, czy chodzi o mniejszą wartość niż na poprzednich dwóch barach, czy też jedynie o kolor wskaźnika. Jeżeli platforma koloruje wolumen odmiennie, trzeba przełożyć znaczenie na liczby.
 
+
+<!-- definition-diagrams:volume-comparison -->
+![Wolumen jest porównaniem względnym](/education/definitions/volume-comparison.pl.svg "Ostatni wolumen jest niższy od każdej z dwóch poprzednich wartości. Różowy to jedynie konwencja prezentacji platformy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Wolumen a liczba otwartych kontraktów](/education/definitions/volume-vs-open-interest.pl.svg "Kontrakty obrócone w okresie i kontrakty nadal otwarte to różne miary. Akcje, kontrakty i liczba ticków również mają różne jednostki. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 3. Główna logika: effort-result, background i interwał
 
 ### Effort-result
+
+![Dwa przykłady równie wysokiego wolumenu: szeroki ruch w górę z zamknięciem blisko maksimum oraz odrzucony wzrost z zamknięciem blisko minimum.](/education/images/vsa-kompendium.png "Ten sam wysiłek, różne rezultaty. 1 — Duży wolumen towarzyszy postępowi w górę i wysokiemu zamknięciu. 2 — Duży wolumen towarzyszy próbie wzrostu, której rynek nie utrzymuje, pozostawiając niskie zamknięcie. H = maksimum, L = minimum, C = zamknięcie; cały zakres H–L to spread. Interpretację określają tło i kolejne bary. Przykład schematyczny, nie dane rynkowe. Kliknij ilustrację, aby ją powiększyć.")
 
 Wysiłek–rezultat porównuje relatywny obrót z tym, co zrobiła cena. Duży wolumen to duży wysiłek, ale nie narzuca on kierunku. Rezultat ocenia się poprzez spread, kierunek, zamknięcie i kolejny ruch.
 
@@ -62,6 +93,11 @@ Wysiłek–rezultat porównuje relatywny obrót z tym, co zrobiła cena. Duży w
 - **Mały obrót przy próbie wzrostu po dystrybucji:** może oznaczać brak popytu; to słabość dopiero w kontekście, nie dlatego, że jeden słupek jest mały.
 
 No Result From Effort (brak rezultatu z wysiłku) to nazwana w kursie postać tej zasady. Przykład kursowy dotyczy wzrostu na dużym wolumenie, po którym cena nie utrzymuje wysokiego zamknięcia. Gdyby popyt dominował, oczekiwanym rezultatem powinien być bar zamknięty wysoko; niskie zamknięcie interpretuje się jako możliwą przewagę podaży [K: lekcja 17, SRT 00:00:06–00:01:04]. Nie wolno jednak utożsamiać samego wolumenu z „wysiłkiem kupujących”: każda zawarta transakcja ma stronę kupującą i sprzedającą. VSA czyta skutek transakcji na cenie, a nie sumuje niezależnych kupujących i sprzedających.
+
+
+<!-- definition-diagrams:effort-result-detail -->
+![Wysiłek nie określa kierunku](/education/definitions/effort-result-detail.pl.svg "Duży wolumen może towarzyszyć zarówno postępowi ceny, jak i odrzuconemu ruchowi. Odczyt zależy od zamknięcia i tła. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Background — tło rynku
 
@@ -78,11 +114,23 @@ Lokalny No Supply po silnej dystrybucji nie ma automatycznie tej samej wymowy co
 
 Tło nie jest wymówką do zmieniania definicji sygnału po fakcie. Warto rozdzielić dwie notatki: „wzorzec spełnia definicję X” oraz „w tym miejscu interpretuję go jako potwierdzenie/ostrzeżenie, bo wcześniejszy kontekst Y”. Pozwala to uniknąć dopasowywania narracji do wyniku.
 
+
+<!-- definition-diagrams:background-structure -->
+![Background: wcześniejsza struktura](/education/definitions/background-structure.pl.svg "Ten sam lokalny bar trzeba umieścić wśród wcześniejszych fal, wsparcia lub oporu oraz sygnałów siły lub słabości. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Charakter wolumenu na falach
 
 Lekcja o wolumenie byczym i niedźwiedzim mówi o sekwencji fal, a nie o jednym słupku. Wolumen byczy: ruch wzrostowy ma tendencję do zwiększania obrotu, a cofnięcie do jego zmniejszania. Wolumen niedźwiedzi: spadkowe fale mają większy lub narastający wolumen, a odbicia — malejący. Taka obserwacja pomaga ocenić, czy korekta jest spokojniejsza niż ruch zgodny z trendem [K: lekcja 6, SRT 00:00:06–00:02:39].
 
 Nie oznacza to, że każdy słupek wzrostowy musi być wyższy od poprzedniego albo że każdy pullback w trendzie spadkowym musi mieć malejący wolumen. Wykład opisuje względny charakter fal. [F] Można to badać na odcinkach, porównując typowe obroty impulsu i cofnięcia w tym samym instrumencie i okresie, ale źródło nie podaje okna, uśrednienia ani wartości progowych [L]. Jeśli fal nie da się wiarygodnie wyznaczyć, ocena jest niepewna.
+
+
+<!-- definition-diagrams:bullish-volume-waves -->
+![Wzrostowy charakter wolumenu na falach](/education/definitions/bullish-volume-waves.pl.svg "Impuls wzrostowy ma większy wolumen niż korekta. To opis fal, a nie wymóg identycznego zachowania każdej świecy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Spadkowy charakter wolumenu na falach](/education/definitions/bearish-volume-waves.pl.svg "Fale spadkowe mają większy wolumen niż odbicia; porównuj całe odcinki tego samego instrumentu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Skala czasowa
 
@@ -90,17 +138,32 @@ Kurs zaleca najpierw określić kierunek na wyższej skali, a potem szukać miej
 
 Wyższa skala pomaga ocenić trend i kontekst, ale nie rozwiązuje automatycznie konfliktu. Jeśli wykres dzienny jest wzrostowy, a godzinowy pokazuje dystrybucję, krótkoterminowa decyzja zależy od tego, czy celem jest transakcja przeciw korekcie, czy poszukiwanie wejścia z głównym trendem. Warto zapisać, która skala odpowiada za bias, a która za trigger. Przeglądanie kolejnych interwałów aż do znalezienia pasującego sygnału grozi wyborem po fakcie.
 
+
+<!-- definition-diagrams:timeframe-context -->
+![Wyższy interwał i lokalny sygnał](/education/definitions/timeframe-context.pl.svg "Wyższy interwał daje kontekst, a niższy szczegóły. Zgodność jest użyteczna, lecz konfliktu nie rozwiązuje dobieranie pasującego wykresu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 4. Klasy sygnałów oraz ich katalog
 
 Lekcja 7 dzieli sygnały siły na akumulacyjne, zbierające podaż oraz testujące podaż, a sygnały słabości na dystrybucyjne, zalewające popyt i testujące popyt [K: lekcja 7, SRT 00:01:25–00:04:14]. Sygnałów siły poszukuje się po spadku lub przy końcu korekty spadkowej w trendzie wzrostowym; sygnałów słabości — po wzroście lub przy końcu korekty wzrostowej w trendzie spadkowym [K: lekcja 7, SRT 00:00:06–00:01:25]. Kurs nie przypisuje bezwyjątkowo każdego wzorca do jednej klasy: Two Bar Reversal może w zależności od wolumenu być sygnałem zbierania albo testowania podaży/popytu. Dlatego poniższy katalog podaje klasę jako interpretację, gdzie zależy ona od wolumenu i kontekstu.
 
 W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera hipotezę; nie jest potwierdzeniem statystycznym ani gwarancją wyniku. „Unieważnienie” oznacza zachowanie, które osłabia pierwotną interpretację lub wymaga ponownej oceny. Kurs nie zawsze podaje formalną cenę unieważnienia; jeśli tak jest, zaznaczam to jako lukę.
 
+
+<!-- definition-diagrams:signal-classes -->
+![Siła i słabość: trzy klasy](/education/definitions/signal-classes.pl.svg "Kurs grupuje sygnały jako akumulację/dystrybucję, zbieranie/zalewanie oraz testowanie. Tło może zmienić klasę konkretnej formacji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Sygnały siły
 
 #### 1. Bag Holding
 
 **Wzorzec [K].** Po spadku pojawia się bar o wąskim spreadzie i bardzo wysokim lub ultra wysokim wolumenie, niewidzianym w porównywalnym fragmencie po lewej stronie wykresu. Przy takim obrocie cena nie schodzi już swobodnie niżej. Kursowy wariant klasyczny opisuje Down Bar zamknięty mniej więcej pośrodku zakresu. Prowadzący dopuszcza jednak także Up Bar, jeśli wąski spread i wolumen wskazują na zatrzymywanie rynku. Różnica ma znaczenie: kolor lub kierunek bara nie powinien przeważyć nad relacją zakres–wolumen–reakcja [K: lekcja 8, SRT 01:58–04:35].
+
+<!-- definition-diagrams:bag-holding -->
+![Bag Holding](/education/definitions/bag-holding.pl.svg "Wąski zakres po spadku, zamknięcie w środku i wyjątkowy wolumen. Przykład jest Down Barem; sam kolor korpusu nie definiuje formacji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** W języku kursu to akumulacja/absorpcja podaży: duży obrót w obszarze niskich cen, ale niewielki dalszy postęp w dół. Wzorzec powinien skłonić do obserwacji, czy rynek potrafi odbić i czy późniejszy test odbywa się na mniejszym wolumenie.
 
@@ -110,6 +173,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Po wyraźnym spadku rynek robi szeroki ruch w dół przy wysokim lub ultra wysokim wolumenie, ale nie zamyka się przy samym minimum; zamknięcie w środkowej części zakresu wskazuje na reakcję popytu. Ważne jest porównanie obrotu z niedawnym fragmentem po lewej. Wysoki wolumen, który nie jest wyjątkowy w lokalnym kontekście, nie spełnia automatycznie warunku kulminacji [K: lekcja 8, SRT ok. 08:45–10:06; przykład kontrastowy ok. 14:08].
 
+<!-- definition-diagrams:selling-climax -->
+![Selling Climax](/education/definitions/selling-climax.pl.svg "Szeroki ruch spadkowy na wyjątkowym wolumenie zamyka się z dala od minimum. Nadal potrzebny jest późniejszy test. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Kurs interpretuje to jako kulminację sprzedaży, gdzie popyt przejmuje część podaży. Kulminacja nie oznacza „ostatecznego dna” z definicji. Po niej cena może jeszcze ponowić minimum, a rynek powinien pokazać, czy podaż została skutecznie przetestowana.
 
 **Potwierdzenie/unieważnienie.** Odbicie i późniejszy test z mniejszym obrotem wspierają hipotezę. Kolejne szerokie spadki z wysokim wolumenem i zamknięciem nisko sugerują, że podaż nadal dominuje. Kurs nie ustala wymaganego procentowego progu wolumenu [L].
@@ -117,6 +185,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 3. Stopping Volume
 
 **Wzorzec [K].** Dwubarowa obserwacja po spadku: pierwszy bar jest Down Bar z narastającym lub wyraźnym wolumenem; po nim pojawia się Up Bar zamknięty wysoko, niekiedy w obszarze korpusu poprzedniego czerwonego bara. Nie należy dodawać warunku, że zamknięcie drugiego bara ma wypaść w górnej części zakresu pierwszego. Wykład mówi o zwiększonym wolumenie pierwszego bara i odpowiedzi popytu w drugim [K: lekcja 9, SRT 00:00:06–01:29].
+
+<!-- definition-diagrams:stopping-volume -->
+![Stopping Volume](/education/definitions/stopping-volume.pl.svg "Po Down Barze na zwiększonym wolumenie następuje Up Bar z zamknięciem przy własnym maksimum. Reakcja jest częścią formacji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Podaż napływa, ale nie potrafi utrzymać ceny nisko; popyt absorbuje część wyprzedaży. Nie należy mylić go z dowolnym czerwonym barem o dużym wolumenie: elementem wzorca jest późniejsza odpowiedź.
 
@@ -126,6 +199,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Cena gwałtownie schodzi, często narusza wcześniejsze minimum lub dolną granicę zakresu, a następnie zamyka się w górnej jednej trzeciej szerokiego bara. Istotny jest dolny cień, reakcja z dołka i wolumen, który może być znaczny. Kurs wprost mówi, że kolor korpusu nie jest warunkiem: może być zielony lub czerwony [K: lekcja 10, SRT 00:00:06–01:55]. Mapa pokazuje jeden wariant z zielonym korpusem [M]; nie powinno się z tego robić dodatkowego kryterium.
 
+<!-- definition-diagrams:shakeout -->
+![Shakeout](/education/definitions/shakeout.pl.svg "Zejście pod wsparcie zostaje odrzucone, a szeroki bar zamyka się w górnej jednej trzeciej. Korpus może mieć dowolny kolor. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** „Wytrząśnięcie” ma testować podaż i wyeliminować uczestników reagujących na wybicie w dół; w tle akumulacyjnym może być mocnym sygnałem, że podaż została odebrana. Podobnie wyglądający bar w środku trendu może mieć inną wymowę.
 
 **Potwierdzenie/unieważnienie.** Odbicie, test z niższym wolumenem lub kolejne Up Bary wspierają hipotezę. Zamknięcie nisko, brak odbicia i nowe minima sugerują, że sprzedający nadal kontrolują ruch. Kurs wspomina też o Shakeout jako teście po wcześniejszej akumulacji — to sekwencja, a nie osobna gwarancja [K: lekcja 10, SRT 01:27–01:55].
@@ -133,6 +211,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 5. Two Bar Reversal — strona siły
 
 **Wzorzec [K].** Pierwszy bar: Down Bar, zamknięty nisko. Drugi: Up Bar, którego zamknięcie dochodzi co najmniej do otwarcia pierwszego bara lub wyżej. Kurs pokazuje wariant, w którym wolumen drugiego, wzrostowego bara jest większy od pierwszego; równa wartość również zostaje dopuszczona w dalszym omówieniu [K: lekcja 11, SRT 00:36–01:33 oraz ok. 04:18]. Przy bardzo małym wolumenie całej pary interpretacja może przejść z „zbierania podaży” w stronę testu [K: lekcja 11, SRT 00:06–00:30].
+
+<!-- definition-diagrams:two-bar-strength -->
+![Two Bar Reversal: siła](/education/definitions/two-bar-strength.pl.svg "Pierwszy bar zamyka się nisko; drugi na poziomie otwarcia pierwszego lub wyżej. Tutaj drugi wolumen jest większy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Powrót ceny po spadku pokazuje popyt odbierający podaż. Przy dużym wolumenie może być odczytywany jako zbieranie podaży, przy małym — raczej jako test. Miejsce po spadku, przy wsparciu lub w końcu korekty jest ważniejsze od samego podobieństwa dwóch świec.
 
@@ -142,6 +225,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Down Bar z wolumenem niskim, niższym niż na dwóch poprzednich słupkach, przez co w przykładowej konfiguracji platformy jest różowy. Mapa dodaje wąski spread jako typowy obraz [M]; transkrypcja określa przede wszystkim Down Bar oraz różowy/niewielki wolumen [K: lekcja 12, SRT 00:00:06–01:19]. Wąski zakres jest częsty i użyteczny jako cecha kontekstu, ale nie należy bez sprawdzenia podnosić go do warunku koniecznego wypowiedzianego w narracji.
 
+<!-- definition-diagrams:no-supply -->
+![No Supply](/education/definitions/no-supply.pl.svg "Down Bar ma wolumen niższy od każdego z dwóch poprzednich barów. Ważne są wzrostowe tło i późniejsza reakcja w górę. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Jest to sygnał testujący podaż, nie akumulacyjny ani samodzielnie zbierający podaż. Spadek na malejącym obrocie może sugerować, że presja podaży słabnie. Najwięcej znaczy po wcześniejszej sile, przy korekcie albo w pobliżu obszaru popytu.
 
 **Potwierdzenie/unieważnienie.** Kolejny Up Bar lub dalsza reakcja wzrostowa potwierdza skuteczność testu [K: lekcja 12, przykłady po 11:04 i 12:25]. Brak reakcji wzrostowej pozostawia sygnał niepotwierdzony. Jeśli po nim pojawia się szeroki Down Bar na rosnącym wolumenie i wybija wsparcie, hipoteza słabnącej podaży traci podstawę. „Różowy” jest ustawieniem porównania wolumenu do dwóch poprzednich, a nie własnością rynku.
@@ -149,6 +237,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 7. Test podaży
 
 **Wzorzec [K].** Po wcześniejszej sile cena wraca w obszar, gdzie podaż już była zbierana lub gdzie występowały silne sygnały popytu. Pojawia się bar o średnim lub wąskim spreadzie, niewielkim wolumenie i dolnym cieniu. Korpus nie ma rozstrzygającego znaczenia; kurs pokazuje zamknięcie wysoko jako korzystny wariant [K: lekcja 13, SRT 00:00:06–02:07]. Test może, ale nie musi być jednocześnie klasyfikowany jako No Supply; przykłady pokazują oba przypadki [K: lekcja 13, SRT 00:04:07–00:04:35].
+
+<!-- definition-diagrams:supply-test -->
+![Test podaży](/education/definitions/supply-test.pl.svg "Cena wraca w dawny obszar popytu na małym wolumenie, zostawia dolny knot i zamyka się wysoko. Test wymaga późniejszej reakcji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** To test w sensie pytania: „czy w tej strefie nadal pojawia się podaż?”. Sam mały wolumen nie odpowiada na to pytanie, dopóki cena nie sprawdzi wcześniejszego obszaru popytu. Wykład podkreśla, że test bez wcześniejszej akumulacji/siły ma małą wartość.
 
@@ -160,6 +253,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Klasyczny End of the Rising Market pojawia się po wzroście jako Up Bar zamknięty mniej więcej w środku zakresu, o wąskim spreadzie i największym wolumenie widocznym w tym ruchu [K: lekcja 14, SRT 01:07–03:16]. Kurs określa formację jako rzadką. Ruch nie postępuje proporcjonalnie do wysiłku.
 
+<!-- definition-diagrams:end-rising-market -->
+![End of the Rising Market](/education/definitions/end-rising-market.pl.svg "Po wzroście wąski Up Bar zamyka się w środku zakresu na najwyższym wolumenie ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Możliwa dystrybucja: obrót jest duży, lecz cena przestaje iść w górę. Kurs sugeruje czujność, nie automatyczne otwarcie krótkiej pozycji. Powtarzalne wysokie zamknięcia po sygnale lub kontynuacja wzrostu mogą obalić interpretację końca trendu. Wąski spread sam w sobie nie przewiduje kierunku.
 
 **Potwierdzenie/unieważnienie.** Kolejne słabe reakcje, Upthrust, No Demand albo test popytu wspierają scenariusz słabości. Jeśli rynek utrzymuje wysokie ceny i późniejsze wzrosty uzyskują dobry rezultat przy mocnym wolumenie, teza słabości słabnie.
@@ -167,6 +265,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 9. Buying Climax
 
 **Wzorzec [K].** Po rozciągniętym wzroście pojawia się szeroki bar, wyjątkowo wysoki wolumen i brak zamknięcia przy maksimum — często zamknięcie środkowe, z górną częścią zakresu odrzuconą przez podaż [K: lekcja 14, SRT 06:48–09:02]. Istotna jest relacja do wcześniejszego wzrostu i porównanie wolumenu z lokalną historią; nie każdy słupek rekordowy na ekranie jest kulminacją.
+
+<!-- definition-diagrams:buying-climax -->
+![Buying Climax](/education/definitions/buying-climax.pl.svg "Szeroki bar po wzroście ma wyjątkowy wolumen i nie zamyka się przy maksimum; tutaj zamknięcie jest w środku. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Popyt, który dołącza do już rozwiniętego wzrostu, może spotkać podaż. „Kulminacja kupna” nie dowodzi, że cena natychmiast się odwróci. Rynek może zbudować zakres, wykonać test albo kontynuować wzrost.
 
@@ -176,6 +279,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** W ruchu wzrostowym pojawia się Up Bar z górnym cieniem i zwiększonym wolumenem, ale wolumen nie jest największy w obserwowanym wzroście [K: lekcja 15, SRT 00:00:06–01:53]. Jest to ważna cecha odróżniająca kursową definicję od uproszczenia „duży wolumen na wzroście”.
 
+<!-- definition-diagrams:supply-coming-in -->
+![Supply Coming In](/education/definitions/supply-coming-in.pl.svg "Up Bar zostawia górny knot na zwiększonym wolumenie, który nie jest jednak najwyższy w ruchu wzrostowym. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Górny cień oraz wzmożony obrót przy wzroście mogą oznaczać podaż wchodzącą na wyższych poziomach. To ostrzeżenie o możliwym osłabieniu, nie bezpośredni sygnał do sprzedaży. Prowadzący wprost zaznacza, że nie jest to samo w sobie wejście i warto czekać na dalszy układ [K: lekcja 15, ok. 03:13–04:06].
 
 **Potwierdzenie/unieważnienie.** Późniejszy Trap Upmove, No Demand, Upthrust lub słabe zamknięcia wspierają scenariusz. Jeśli rynek robi postęp w górę i utrzymuje wysokie zamknięcia, sam Supply Coming In mógł być jedynie odpoczynkiem w trendzie.
@@ -183,6 +291,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 11. Trap Upmove
 
 **Wzorzec [K].** Po wzroście lub wzrostowej korekcie cena wykonuje fałszywą próbę pójścia wyżej, czasem przebija lokalne maksimum, po czym kończy bar nisko przy zwiększonym wolumenie podażowym. Kursowy opis podkreśla zamknięcie nisko jako pułapkę dla późnych kupujących [K: lekcja 16, SRT 00:06–02:14]. Wzorzec może pojawić się przy końcu wzrostowego fragmentu korekty w większym trendzie spadkowym.
+
+<!-- definition-diagrams:trap-upmove -->
+![Trap Upmove](/education/definitions/trap-upmove.pl.svg "Cena próbuje wyjść ponad lokalny szczyt, po czym zamyka się nisko na zwiększonym wolumenie. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Uczestnicy, którzy kupili wybicie, zostają po niewłaściwej stronie, jeśli cena nie utrzymuje ruchu. Nie należy utożsamiać każdego górnego cienia z pułapką.
 
@@ -192,6 +305,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Po wzrostowym wysiłku — dużym wolumenie — cena nie osiąga oczekiwanego rezultatu: zamiast utrzymać się wysoko, zamyka się nisko lub zostawia odrzucenie od góry. W tej lekcji przykładem jest napływ jeszcze większego wolumenu, lecz słabsze zamknięcie niż na poprzednim barze [K: lekcja 17, SRT 00:00:06–01:04; przykłady od 01:46].
 
+<!-- definition-diagrams:no-result-effort -->
+![No Result From Effort](/education/definitions/no-result-effort.pl.svg "Wolumen rośnie, ale rezultat zamknięcia słabnie: ruch w górę nie zostaje utrzymany. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Możliwy sygnał podaży w tle wzrostu, zgodnie z regułą effort-result. Ważne, aby „wysoki wolumen” był wysoki względem porównywanego ruchu, a rezultat faktycznie słaby. Kurs nie nadaje mu uniwersalnego progu.
 
 **Potwierdzenie/unieważnienie.** Dalsze niskie zamknięcia i brak powrotu do wysokich poziomów wspierają słabość. Jeśli cena szybko odzyska zakres i kontynuuje wzrost, początkowe niepowodzenie nie potwierdziło trwałej przewagi podaży.
@@ -199,6 +317,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 13. Two Bar Reversal — strona słabości
 
 **Wzorzec [K].** Pierwszy bar jest Up Barem. Drugi to Down Bar i zamyka się na wysokości otwarcia pierwszego lub niżej; wolumen drugiego ma być zbliżony do pierwszego lub wyższy. Wariantem testującym popyt jest sytuacja, gdy wolumen całej pary jest mały w relacji do wcześniejszego ruchu, a drugi bar nadal ma wolumen zbliżony do lub większy niż pierwszy; samo V2<V1 nie oznacza testu [K: lekcja 18, SRT 00:06–01:17, 02:05 i dalszy opis].
+
+<!-- definition-diagrams:two-bar-weakness -->
+![Two Bar Reversal: słabość](/education/definitions/two-bar-weakness.pl.svg "Drugi bar zamyka się na poziomie otwarcia pierwszego lub niżej, przy wolumenie podobnym lub większym. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Po próbie wzrostu cena wraca poniżej ważnego poziomu pierwszego bara, co wskazuje na potencjalne przejęcie kontroli przez podaż. Miejsce po wzroście i wcześniejszy background słabości są istotne. Jest to lustrzany odpowiednik wariantu siły z lekcji 11.
 
@@ -208,6 +331,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 
 **Wzorzec [K].** Up Bar z wolumenem niższym od dwóch poprzednich słupków — na wskazanej konfiguracji różowy — jest testem popytu [K: lekcja 19, SRT 00:00:06–01:08]. Kurs wyjaśnia go jako próbę wzrostu przy niskim obrocie, która nie pokazuje aktywnego popytu.
 
+<!-- definition-diagrams:no-demand -->
+![No Demand](/education/definitions/no-demand.pl.svg "Up Bar ma wolumen niższy niż każdy z dwóch poprzednich barów. W kursie słabość nadal zależy od tła i późniejszej reakcji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Interpretacja.** Wzorzec jest najbardziej znaczący podczas słabego tła, po wzroście zakończonym dystrybucją albo po wcześniejszym sygnale podaży. W tle akumulacyjnym taki sam Up Bar może być zwykłą niskowolumenową przerwą przed dalszym wzrostem.
 
 **Potwierdzenie/unieważnienie.** Następujący Down Bar lub kolejne niższe zamknięcia wspierają brak popytu. Silny wzrost i poprawiające się wolumeny oznaczają, że domniemany test nie wykazał przewagi podaży. Powtarzające się No Demand to nie automatyczny łańcuch shortów; trzeba oceniać, czy po każdej próbie rynek rzeczywiście odrzuca wyższe ceny.
@@ -215,6 +343,11 @@ W opisach „potwierdzenie” oznacza późniejszą obserwację, która wspiera 
 #### 15. Upthrust
 
 **Wzorzec [K].** Cena narusza lub testuje niedawne wysokie poziomy, lecz wraca z górnym cieniem i zamyka się w dolnej jednej trzeciej zakresu. Kurs rozdziela dwa warianty według obrotu: przy średnim lub większym wolumenie Upthrust może być sygnałem zalewania popytu; przy niskim wolumenie — testującym popyt [K: lekcja 20, SRT 00:00:06–00:01:21]. „Ukryty” Upthrust w niektórych przykładach ma czerwony korpus/Down Bar i górne odrzucenie; nazwa nie zmienia znaczenia zamknięcia i wolumenu.
+
+<!-- definition-diagrams:upthrust -->
+![Upthrust](/education/definitions/upthrust.pl.svg "Cena testuje lub przekracza wcześniejszy szczyt, po czym zamyka się w dolnej jednej trzeciej. Wolumen rozróżnia warianty kursowe. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 
 **Interpretacja.** Cena chwilowo zachęca do kupna nad szczytem, ale nie utrzymuje wyższych poziomów. Pojedynczy Upthrust nie dowodzi zmiany trendu. Lekcja pokazuje przykład, w którym pierwszy Upthrust nie usuwa całego popytu, a dalsza reakcja i testy dopiero wyjaśniają tło [K: lekcja 20, przykłady ok. 09:04–09:49 i podsumowanie ok. 21:38].
 
@@ -234,6 +367,11 @@ Praktyczny rozkład procesu:
 
 Kursowe wyjaśnienie historii o dużym uczestniku kontrolującym ilość uwalnianej podaży należy czytać jako model dydaktyczny, a nie dowód tego, kto rzeczywiście zawiera transakcje na oglądanym instrumencie. Z perspektywy analizy wykresu sprawdzalna jest relacja ceny i wolumenu, a nie opowieść o tożsamości uczestnika.
 
+
+<!-- definition-diagrams:test-process -->
+![Test jest sekwencją](/education/definitions/test-process.pl.svg "Po wcześniejszej sile następuje odbicie, spokojny powrót w obszar i reakcja w górę. Bez reakcji test pozostaje niepotwierdzony. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 6. Sekwencje VSA, WFO i korekty
 
 ### Sekwencje wzrostowe i spadkowe
@@ -244,6 +382,13 @@ Lekcje 23 i 24 opisują sekwencje jako uporządkowane ciągi trzech sygnałów. 
 
 Przy ćwiczeniu sekwencji warto zapisywać: sygnał 1 i jego tło; obszar reakcji; sygnał 2; czy rynek dotarł do testu; jak wyglądał wolumen podczas testu; oraz jaka była odpowiedź ceny. To pozwala oddzielić poprawną identyfikację wzorca od wyniku transakcji. Kurs zachęca do sprawdzenia wcześniejszych transakcji pod kątem sekwencji [K: lekcja 23, SRT 01:42–02:20], ale sam postulat, że sekwencje „dramatycznie zwiększą skuteczność”, jest twierdzeniem prowadzącego, nie niezależną statystyką.
 
+
+<!-- definition-diagrams:bullish-sequence -->
+![Wzrostowa sekwencja trzech sygnałów](/education/definitions/bullish-sequence.pl.svg "Akumulacja, zbieranie podaży i test podaży tworzą uporządkowaną hipotezę. Nadal potrzebna jest późniejsza reakcja. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Spadkowa sekwencja trzech sygnałów](/education/definitions/bearish-sequence.pl.svg "Dystrybucja, zalewanie popytu i test popytu wymagają późniejszej reakcji w dół potwierdzającej scenariusz. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### WFO — wolumenowa formacja odwrócenia
 
 WFO z lekcji 25 i 26 porównuje dwa kolejne ekstrema rozdzielone korektą. WFO na spadki ma dwa wierzchołki, z których drugi cenowo jest wyżej; WFO na wzrosty — dwa dołki, z których drugi cenowo jest niżej. W obu opisach pierwsze ekstremum ma większy wolumen, drugi wolumen jest mniejszy niż pierwszy, ale większy niż wszystkie wolumeny na odcinku pomiędzy ekstremami: V1 > V2 > każdy wolumen pomiędzy nimi [K: lekcja 25, SRT ok. 14:37; lekcja 26, SRT 00:46–01:15 oraz 09:20–09:34]. To rozróżnia drugie ekstremum od zwykłej korekty na malejącym obrocie.
@@ -252,11 +397,27 @@ WFO nie polega wyłącznie na znalezieniu dwóch szczytów lub dwóch dołków. 
 
 WFO jest obszarem zainteresowania i może wspierać scenariusz, ale nie przesądza, czy cena natychmiast odwróci cały trend. Materiał omawia różne późniejsze drogi: kontynuację wcześniejszego kierunku po korekcie oraz zmianę kierunku po odbiciu i skutecznym teście [K: lekcja 26, SRT 01:15–02:07]. WFO może zatem dostarczyć hipotezy, a dalszy test i struktura ceny są potrzebne do rozróżnienia wariantów. Kurs wspomina łączenie WFO z inną techniką i geometrią [K: lekcja 25, SRT 05:47–06:12].
 
+
+<!-- definition-diagrams:wfo-bullish -->
+![Wzrostowe WFO: dwa coraz niższe dołki](/education/definitions/wfo-bullish.pl.svg "Drugi dołek jest niższy cenowo. V1 przewyższa V2, a V2 każdy wolumen między ekstremami; nie gwarantuje to odwrócenia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Spadkowe WFO: dwa coraz wyższe szczyty](/education/definitions/wfo-bearish.pl.svg "Drugi szczyt jest wyższy cenowo, przy tej samej relacji V1 > V2 > wolumeny pomiędzy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Korekty
 
 Lekcja 27 rozróżnia korektę na wygasającym wolumenie od korekty zakończonej wyraźnym „wybraniem” lub „wylaniem”. W klasycznej korekcie trendowej wolumen cofnięcia jest słabszy niż na impulsie zgodnym z trendem. W drugiej odmianie sam koniec korekty sygnalizuje ponowne wejście popytu lub podaży, czasem przez gwałtowny bar o zwiększonym wolumenie [K: lekcja 27, SRT 00:00:54–01:15 i 06:31–08:17]. Te słowa są opisowe; źródło nie daje liczbowej definicji „wygasającego” wolumenu ani progu, od którego korekta ma być uznana za zakończoną.
 
 Korekta może wyglądać jak ruch przeciwny do trendu, ale też jak konsolidacja lub gwałtowny ruch testujący. Rozróżnia się ją przez strukturę, kierunek dominujących fal i charakter wolumenu; nie wystarczy nazwać każdego przeciwnego ruchu „korektą”. Jeżeli wolumen na spadku w trendzie wzrostowym rośnie, a cena robi szerokie spadkowe bary, hipoteza łagodnej korekty słabnie. Po stronie trendu spadkowego analogicznie należy obserwować odbicia.
+
+
+<!-- definition-diagrams:quiet-correction -->
+![Korekta na malejącym wolumenie](/education/definitions/quiet-correction.pl.svg "Ruch przeciwny na cichszym wolumenie może być korektą trendu. Rosnący wolumen i szerokie przeciwne bary osłabiają tę interpretację. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Korekta zakończona wyraźnym akcentem](/education/definitions/correction-accent.pl.svg "Kurs opisuje też ostre odrzucenie na zwiększonym wolumenie na końcu korekty; nie ustala uniwersalnego progu liczbowego. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Korekta ABC](/education/definitions/abc-correction.pl.svg "A, B i C oznaczają kolejne odcinki korekty. Kurs nie podaje jednej uniwersalnej reguły automatycznego wykrywania fal. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## 7. Geometria jako poziom obserwacji
 
@@ -266,6 +427,11 @@ Praktyczny proces: najpierw określić, jaki impuls mierzymy i dlaczego; następ
 
 Opracowanie nie narzuca szerokości strefy wokół fibonacciego, reguły wyboru kotwic, sposobu łączenia wielu poziomów ani sposobu filtrowania fałszywych reakcji. Te elementy trzeba zapisać jawnie przed testem [L]. VSA może opisać zachowanie przy poziomie; nie usuwa niepewności co do tego, czy wybrana geometria jest istotna.
 
+
+<!-- definition-diagrams:retracement-zones -->
+![Strefy zniesienia](/education/definitions/retracement-zones.pl.svg "Dla pokazanego wzrostu ze 100 do 140 zniesienie 50% to 120, a 61,8% to 115,28. Sam poziom nie jest sygnałem. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Świece i bary jako uzupełnienie VSA
 
 Lekcje 3 i 4 przedstawiają formacje świecowe jako dodatkowy filtr miejsca i zachowania ceny. Kurs nie zaleca handlu wyłącznie z kształtu świecy: formacja ma pojawić się w odpowiednim backgroundzie i otrzymać potwierdzenie wolumenowe. Dla młota prowadzący opisuje długi dolny cień, zamknięcie blisko maksimum, korpus nie większy niż około jedna trzecia zakresu, położenie po spadku i brak znaczenia koloru korpusu. Wysoki górny cień dyskwalifikuje klasyczny kształt. Narracja wiąże wejście z zamknięciem potwierdzonego młota, a poziom poniżej jego minimum z invalidacją [K: lekcja 3, SRT 00:00:06–02:50].
@@ -273,6 +439,28 @@ Lekcje 3 i 4 przedstawiają formacje świecowe jako dodatkowy filtr miejsca i za
 Lustrzana spadająca gwiazda pojawia się po wzroście, ma długi górny cień, zamknięcie blisko minimum i mały korpus; duży dolny cień osłabia kwalifikację. Kurs opisuje SL nad maksimum formacji oraz wymóg tła VSA [K: lekcja 4, SRT 00:00:06–02:04]. Pozostałe przykłady w tych lekcjach obejmują przenikanie i gwiazdę poranną po spadku, a także gwiazdę wieczorną, zasłonę ciemnej chmury i objęcie bessy po wzroście. Dla gwiazdy wieczornej mapa nie zawiera osobnego slajdu strategii, więc reguł z sąsiednich formacji nie należy mechanicznie przenosić na nią.
 
 Lekcja 5 odróżnia wejście po zamknięciu świecowego wzorca od wejścia na wybicie. W Inside Bar drugi bar w całości mieści się między high i low pierwszego; dopiero trzeci bar, gdy wybije maksimum lub minimum pierwszego bara, uruchamia kierunkowy wariant [K: lekcja 5, SRT 00:01:01–03:53]. Kolor korpusów nie definiuje tej formacji. Mapa strategii pokazuje krótką konfigurację, ale narracja wyraźnie omawia Inside Bar zarówno na wzrosty, jak i na spadki. Formacje te mogą pomóc wyznaczyć trigger i poziom invalidacji, ale nie zastępują VSA ani oceny kosztu wejścia po wybiciu.
+
+
+<!-- definition-diagrams:hammer -->
+![Młot](/education/definitions/hammer.pl.svg "Po spadku: długi dolny knot, mały korpus przy maksimum i brak dużego górnego knota. Sam kolor nie rozstrzyga. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Spadająca gwiazda](/education/definitions/shooting-star.pl.svg "Po wzroście: długi górny knot, mały korpus przy minimum i brak dużego dolnego knota. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Formacja przenikania](/education/definitions/piercing-line.pl.svg "Po świecy spadkowej pojawia się wzrostowa, zamknięta ponad środkiem pierwszego korpusu. Miejsce i wolumen pozostają koniecznym tłem. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Gwiazda poranna](/education/definitions/morning-star.pl.svg "Duży korpus spadkowy, mały korpus środkowy i powrót w pierwszy korpus ilustrują układ trzech świec. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Gwiazda wieczorna](/education/definitions/evening-star.pl.svg "Duży korpus wzrostowy, mały środkowy i spadek w pierwszy korpus. Kompendium nie podaje osobnej pełnej strategii dla tego kształtu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Zasłona ciemnej chmury](/education/definitions/dark-cloud.pl.svg "Świeca spadkowa otwiera się ponad poprzednim korpusem i zamyka poniżej jego środka. Wymaga kontekstu VSA. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Objęcie bessy](/education/definitions/bearish-engulfing.pl.svg "Drugi, spadkowy korpus obejmuje poprzedni wzrostowy. Porównuje się korpusy, niekoniecznie pełne zakresy z knotami. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Inside Bar: wybicie w górę](/education/definitions/inside-up.pl.svg "Zakres drugiego bara mieści się w pierwszym; trzeci wybija ponad maksimum pierwszego. Kolor korpusu nie definiuje układu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Inside Bar: wybicie w dół](/education/definitions/inside-down.pl.svg "Zakres drugiego bara mieści się w pierwszym; trzeci wybija poniżej minimum pierwszego. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 8. Proces decyzyjny od obserwacji do transakcji
 
 Lekcja 29 odróżnia ocenę kierunku od scenariusza. Ocena kierunku mówi, czy aktualne tło wydaje się wzrostowe, spadkowe czy niejednoznaczne. Scenariusz ma ponadto określone warunki wejścia, stop lossu i prowadzenia pozycji [K: lekcja 29, SRT 03:33–05:09]. Kierunek bez miejsca wejścia nie jest jeszcze gotowym planem. Można mieć czytelne tło, ale nie mieć sensownego miejsca z bliskim stopem; wówczas „brak pozycji” jest pełnoprawnym wynikiem procesu [K: lekcja 29, SRT 11:03–11:28].
@@ -290,9 +478,19 @@ Poniższa kolejność jest formalizacją [F] kursowego procesu, nie cytatem z je
 9. **Zarządzaj według zasad zapisanych przed wejściem.** Kursowe przykłady obejmują przesunięcie stopu na zero i wyjście przy silnym sygnale przeciwnym; dokładna reguła, kiedy to zrobić, powinna być sprecyzowana w testowanej strategii.
 10. **Zapisz wynik i klasyfikację.** Oddziel poprawne wykonanie planu od wyniku pojedynczej transakcji. Błąd planu, błąd danych, błąd wykonania i normalna strata to różne kategorie.
 
+
+<!-- definition-diagrams:direction-vs-plan -->
+![Kierunek to nie pełny plan transakcji](/education/definitions/direction-vs-plan.pl.svg "Opinia o kierunku staje się scenariuszem dopiero po określeniu warunku wejścia, unieważnienia i prowadzenia pozycji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Scenariusz nr 5 jako przykład procesu, nie wzorzec uniwersalny
 
 W lekcji 29 warunkiem wyboru „ważnego miejsca” jest jeden z wariantów: zakończenie ABC, WFO albo poziom geometrii [K: lekcja 29, SRT 12:38–14:22]. Nie są one trzema warunkami, które muszą wystąpić naraz. Dalsze etapy konkretnego scenariusza są bardziej szczegółowe: brak silnej podaży przy wcześniejszym szczycie, korekcyjne zejście wolumenu, formacja świecowa potwierdzona sygnałem VSA oraz potencjał co najmniej 3R [K: lekcja 29, SRT 16:04–18:04; szczegóły m.in. 16:24, 16:46, 17:12 i 17:41–18:04]. Scenariusz ilustruje zależność między kierunkiem, strefą i wejściem; nie należy automatycznie przenosić go na każdą pozycję.
+
+
+<!-- definition-diagrams:scenario-five -->
+![Scenariusz 5: alternatywne miejsca](/education/definitions/scenario-five.pl.svg "Koniec ABC, WFO lub poziom geometryczny to alternatywne sposoby znalezienia ważnego miejsca, po których następują dalsze warunki. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Plan transakcji jako karta przed wejściem
 
@@ -311,6 +509,11 @@ Minimalny zapis, który pozwala później sprawdzić proces, może zawierać:
 | Niepewność | Brakujący sygnał, rozjazd interwałów, ograniczenia danych, bliskie makro |
 | Rezultat | R, koszty, poślizg, wykonanie planu, zrzut wykresu z chwili decyzji |
 
+
+<!-- definition-diagrams:trade-plan -->
+![Plan transakcji przed wejściem](/education/definitions/trade-plan.pl.svg "Zapisz przesłanki i unieważnienie przed poznaniem wyniku, aby później można było sprawdzić plan. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 9. Ryzyko, stop loss, wielkość pozycji i koszty
 
 ### Stop loss i wielkość pozycji
@@ -327,17 +530,38 @@ Przykład wyłącznie arytmetyczny, nie rekomendacja instrumentu: kapitał 10 00
 
 SL powinien odpowiadać technicznej invalidacji scenariusza. Zbyt ciasny stop może zostać trafiony przez normalny szum; zbyt szeroki wymaga mniejszej pozycji. Stop zleceniowy nie gwarantuje wykonania po stop price: po aktywacji zlecenie rynkowe może zostać zrealizowane gorzej przy szybkim ruchu lub luce [FINRA, Stop Orders](https://www.finra.org/investors/insights/stop-orders-factors-consider-during-volatile-markets). Mechanika i dostępne typy zleceń zależą od rynku, brokera i produktu.
 
+
+<!-- definition-diagrams:stop-loss -->
+![Stop loss i unieważnienie](/education/definitions/stop-loss.pl.svg "Planowany stop leży za poziomem unieważniającym scenariusz. Luka może spowodować gorszą cenę wykonania. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Wielkość pozycji: przykład obliczenia](/education/definitions/position-size.pl.svg "Przykład z artykułu zakłada budżet 100, ryzyko 5 plus 0,20 kosztu na jednostkę i zaokrąglenie 19,2307 w dół do 19,23 przy kroku 0,01. To ilustracja, nie zalecenie ryzyka. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Relacja zysku do ryzyka
 
 3:1 pojawia się w kursie jako minimalny potencjał zysku względem ryzyka w omawianym scenariuszu i przykładach prowadzenia transakcji [K: lekcja 28, SRT ok. 35:48–37:34; kurs 2018, lekcja 3, SRT 01:09:35]. Sama relacja celu do stopu nie mówi, czy strategia jest zyskowna. Przy prostym założeniu jednej wielkości zysku 3R i straty 1R próg rentowności bez kosztów wynosi 25% wygranych, jeżeli nie ma pozycji zamkniętych na zero. Prowizje, poślizg, różne wyjścia, luki i niepełne wykonania zmieniają tę arytmetykę.
 
 Przykład z lekcji 28 o serii 20 transakcji i ilustracyjnej kombinacji zysków/strat ma pokazać rolę rozkładu ryzyka, nie dowodzić przewagi metody. Każde takie wyliczenie powinno jawnie określać założenia: czy procent ryzyka jest liczony od zmiennego kapitału, czy stałego; czy uwzględnia koszty; jak traktuje breakeven; ile było obsunięcia; jakiej próbki użyto. Mała próbka i wybrane przykłady z wykresu nie pozwalają ocenić przyszłej skuteczności.
 
+
+<!-- definition-diagrams:reward-risk -->
+![R i relacja zysku do ryzyka](/education/definitions/reward-risk.pl.svg "Przy wejściu 100, stopie 95 i celu 115 początkowe ryzyko to 5, a planowany zysk 15, czyli 3R. Sama relacja nie dowodzi rentowności strategii. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Próg rentowności w uproszczonym modelu 3R](/education/definitions/breakeven-rate.pl.svg "Jedna wygrana +3R równoważy trzy straty −1R przed kosztami: 25% wygranych. Inne wyjścia i koszty zmieniają to obliczenie. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Koszty i makro
 
 Transakcja ma koszt spreadu, prowizji, finansowania overnight, ewentualnego rolowania kontraktu, poślizgu oraz wykonania przy niskiej płynności. Jeżeli sygnał i stop są blisko siebie, koszt może istotnie pogorszyć rzeczywisty stosunek zysku do ryzyka. W backteście należy stosować koszty zgodne z instrumentem i okresem; nie wolno wnioskować z danych CFD o całym rynku, jeśli źródło wolumenu jest wyłącznie brokerskie.
 
 Lekcja 30 omawia cztery ogólne rodzaje reakcji na dane: ruch zgodny z oczekiwaniem, początkowy ruch zgodny z danymi, po którym cena odwraca; początkowa reakcja przeciwna do oczekiwania i silna kontynuacja; oraz opóźniona lub niejednoznaczna reakcja [K: lekcja 30, SRT 00:00:14–01:39]. Zamiast zakładać, że „dobre dane muszą podnieść cenę”, kurs zachęca do obserwacji reakcji ceny i wolumenu. Żadnego stałego czasu oczekiwania po publikacji źródło nie określa [L]. Przed publikacją trzeba uwzględnić możliwy spread, lukę, szybkie zmiany ceny i ryzyko poślizgu.
+
+
+<!-- definition-diagrams:trading-costs -->
+![Wynik brutto i koszty transakcji](/education/definitions/trading-costs.pl.svg "Spread, prowizja, finansowanie i poślizg obniżają wynik netto; przy bliskich stopach ich udział może być duży. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Reakcje ceny na nową informację](/education/definitions/macro-reactions.pl.svg "Kurs rozróżnia kontynuację, odwrócenie, początkowy ruch przeciwny i reakcję opóźnioną lub niejasną. Dobra wiadomość nie gwarantuje wzrostu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## 10. Formalizacja metody w kodzie i jej granice
 
@@ -369,6 +593,11 @@ Przykładowe decyzje wymagające jawnego opisu:
 
 Dopiero po zapisaniu tych wyborów warto badać wyniki. Należy oddzielić okres projektowania od walidacji, sprawdzić różne fazy rynku i unikać strojenia progów na pojedynczych przykładach z kursu. Rozsądna analiza obejmuje liczbę transakcji, wynik po kosztach, średnie R, obsunięcie, rozkład strat, zależność od instrumentu i interwału, a także zachowanie poza próbką. To są zasady oceny algorytmu [F], nie deklaracja, że VSA z góry daje dodatnią wartość oczekiwaną.
 
+
+<!-- definition-diagrams:formalisation -->
+![Obserwacja, formalizacja i dowód](/education/definitions/formalisation.pl.svg "Mierzalna cecha, wybrany próg i zmierzony rezultat to odrębne rzeczy. Parametry nieustalone przez kurs trzeba ujawnić. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 11. Co źródła mówią, a czego nie dowodzą
 
 Kurs mówi o „smart money”, profesjonalnych uczestnikach, akumulowaniu akcji, wchłanianiu podaży i zamykaniu uczestników po przeciwnej stronie. To użyteczne metafory do wyobrażenia sobie możliwej dynamiki rynku, ale z pojedynczego słupka wolumenu nie można zidentyfikować, kim były strony transakcji ani czy działała jedna skoordynowana grupa. Każda transakcja ma kupującego i sprzedającego. Wysoki wolumen przy małym spreadzie pokazuje aktywność i ograniczony postęp, nie nazwy lub intencje uczestników.
@@ -387,31 +616,66 @@ Szczególną ostrożność zachowaj wobec:
 
 Kurs ma wartość przede wszystkim jako katalog pytań do wykresu: jaki był wysiłek, jaki był rezultat, jak cena się zamknęła, co wydarzyło się wcześniej i co rynek zrobił potem? Te pytania można przekształcić w spójną i kontrolowalną procedurę. Odpowiedź musi jednak pozostać hipotezą do czasu, aż zostanie sprawdzona na danych i wykonaniu.
 
+
+<!-- definition-diagrams:observation-vs-intent -->
+![Obserwacja a intencje uczestników](/education/definitions/observation-vs-intent.pl.svg "Duży obrót przy małym postępie ceny jest obserwowalny. Tożsamości i zamiarów konkretnego kupującego nie da się odczytać z samego bara. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## 12. Ćwiczenia do nauki i walidacji
 
 ### Ćwiczenie A — opis baru bez interpretacji
 
 Wybierz 50 losowych barów z jednego instrumentu. Zapisz dla każdego: spread względem 10 poprzednich barów, Up/Down według close wobec poprzedniego close, położenie close w zakresie, wolumen względem dwóch poprzednich i względem ostatniego lokalnego fragmentu. Nie wpisuj jeszcze „akumulacja”, „dystrybucja” ani „smart money”. Celem jest nauczyć się odróżniać obserwację od narracji. Porównaj własne określenie spreadu wąski/średni/szeroki z regułą liczbową, którą zdecydujesz się formalnie przetestować.
 
+
+<!-- definition-diagrams:example-exercise-observation -->
+![Ćwiczenie A: opisz przed interpretacją](/education/definitions/example-exercise-observation.pl.svg "Dla tego bara zakres wynosi 16, a pozycja zamknięcia (108 − 96) / 16 = 0,75. Zapisz te obserwacje przed nadaniem interpretacji. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Ćwiczenie B — sygnał i kontekst
 
 Dla każdego sygnału z katalogu znajdź na wykresie kilka przykładów, w tym te, które zakończyły się przeciwnie do oczekiwania. Zasłoń przyszłe bary. Zapisz definicję, tło, hipotezę, warunek dalszego potwierdzenia i unieważnienie. Dopiero potem odsłoń przyszłe dane. Dzięki temu zobaczysz, czy nazwa wzorca rzeczywiście pomaga podejmować decyzje przed wynikiem, czy tylko łatwo opisuje historię po fakcie.
+
+
+<!-- definition-diagrams:example-exercise-hidden-future -->
+![Ćwiczenie B: najpierw zasłoń przyszłość](/education/definitions/example-exercise-hidden-future.pl.svg "Zapisz hipotezę i unieważnienie wyłącznie na podstawie danych dostępnych przy sygnale. Dopiero potem odsłoń kolejne bary; uwzględnij też niepowodzenia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Ćwiczenie C — test podaży jako sekwencja
 
 Zaznacz wcześniejszą siłę po spadku, odbicie, obszar retestu, wolumen podczas zejścia i następującą odpowiedź. Oznacz test jako skuteczny tylko wtedy, gdy spełnia przyjętą wcześniej definicję i pojawia się reakcja. Policz osobno: wszystkie próby, próby potwierdzone i próby zanegowane. Nie pomijaj sytuacji, w których test nie przyniósł wzrostu.
 
+
+<!-- definition-diagrams:example-exercise-test-sequence -->
+![Ćwiczenie C: zaznacz całą sekwencję](/education/definitions/example-exercise-test-sequence.pl.svg "Schemat pokazuje odbicie, powrót do obszaru testu przy mniejszym wolumenie i późniejszą reakcję. Oddziel próby od testów potwierdzonych i zanegowanych. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Ćwiczenie D — audyt VSA w kodzie
 
 Przygotuj syntetyczne bary ręcznie: narrow spread + high volume; wide spread + low volume; Up Bar z czerwonym korpusem; Down Bar z zielonym korpusem; wolumen niższy od dwóch poprzednich; świeca z H=L. Sprawdź, czy kod klasyfikuje cechy niezależnie od koloru korpusu, prawidłowo oblicza położenie close i obsługuje zakres zerowy. Każdy wygenerowany sygnał powinien mieć powód w postaci cech źródłowych, aby dało się go audytować.
+
+
+<!-- definition-diagrams:example-exercise-zero-range -->
+![Ćwiczenie D: obsłuż bar o zerowym zakresie](/education/definitions/example-exercise-zero-range.pl.svg "Gdy O = H = L = C, zakres wynosi zero. Wzór pozycji zamknięcia dzieliłby przez zero, dlatego implementacja musi jawnie obsłużyć ten przypadek. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### Ćwiczenie E — poza próbą i koszty
 
 Zdefiniuj reguły przed badaniem. Podziel dane chronologicznie na próbę do projektowania i późniejszy okres walidacji. Zmierz bazowy wariant bez sygnału, potem sprawdź, czy filtr VSA poprawia wynik po kosztach, w różnych fazach i na nieużytych wcześniej instrumentach. Raportuj rozkład wyników, a nie tylko odsetek zyskownych transakcji. Jeśli wynik zależy od jednego progu, jednego rynku albo kilku najlepszych przykładów, jego stabilność jest słaba.
 
+
+<!-- definition-diagrams:example-exercise-validation-split -->
+![Ćwiczenie E: walidacja później w czasie](/education/definitions/example-exercise-validation-split.pl.svg "Wcześniejszy okres służy ustaleniu reguł, a późniejszy ich ocenie względem punktu odniesienia po kosztach. Dostrajanie reguł na walidacji narusza ten podział. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### Ćwiczenie F — dziennik decyzji
 
 Przez co najmniej jeden pełny cykl ćwiczeń zapisuj także decyzje o braku wejścia. Dołącz zrzut wykresu z chwili planowania, feed, interwał, hipotezę, poziom unieważnienia i koszt. Po fakcie oceniaj oddzielnie: jakość hipotezy, jakość wykonania oraz rezultat. Jedna zyskowna transakcja może być błędna proceduralnie; jedna strata może być zgodna z planem.
+
+
+<!-- definition-diagrams:example-exercise-journal -->
+![Ćwiczenie F: zapisuj także pominięte wejścia](/education/definitions/example-exercise-journal.pl.svg "Przydatny dziennik zachowuje pierwotny plan oraz zapisuje wejścia i decyzje o rezygnacji. Oceniaj proces oddzielnie od późniejszego zysku lub straty. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## 13. Najważniejsze rozbieżności map, narracji i dokumentów wtórnych
 
@@ -479,19 +743,19 @@ W mapie lekcji 8 część tytułu sygnału jest transkrybowana jako „Back Hold
 
 ## 15. Słownik skrótów i rozróżnień
 
-| Termin | Znaczenie w tym opracowaniu |
-|---|---|
-| Bar | Jednostka danych z jednego interwału; świeca lub słupek zależnie od wykresu |
-| Spread | High minus low bara, czyli pełen zakres ceny |
-| Close high / close low | Położenie zamknięcia w relacji do zakresu bara |
-| Up Bar / Down Bar | Close wyżej/niżej niż close poprzedniego bara |
-| Effort-result | Porównanie relatywnego wolumenu z ruchem i zamknięciem ceny |
-| Background | Kierunek, struktura fal, wcześniejsze sygnały i położenie w wyższej skali |
-| Test podaży / popytu | Powrót ceny do obszaru sprawdzającego, czy dana strona nadal wywiera presję |
-| Akumulacja / dystrybucja | Kursowa interpretacja możliwego przejmowania podaży/popytu; nie bezpośredni odczyt intencji |
-| WFO | Wolumenowa formacja odwrócenia z dwoma ekstremami, korektą i relacją wolumenów |
-| SL / stop loss | Poziom planowanego wyjścia ograniczający stratę; cena wykonania może się różnić |
-| R | Jednostka początkowego ryzyka pozycji, używana do porównania wyników |
+| Termin | Znaczenie w tym opracowaniu | Ilustracja |
+|---|---|---|
+| Bar | Jednostka danych z jednego interwału; świeca lub słupek zależnie od wykresu | ![OHLCV i poprawne dane wejściowe](/education/definitions/ohlcv-data.pl.svg) |
+| Spread | High minus low bara, czyli pełen zakres ceny | ![Spread i korpus to różne wielkości](/education/definitions/spread-body.pl.svg) |
+| Close high / close low | Położenie zamknięcia w relacji do zakresu bara | ![Zamknięcie wysoko i nisko](/education/definitions/close-position.pl.svg) |
+| Up Bar / Down Bar | Close wyżej/niżej niż close poprzedniego bara | ![Up Bar z czerwonym korpusem](/education/definitions/up-bar-red-body.pl.svg) |
+| Effort-result | Porównanie relatywnego wolumenu z ruchem i zamknięciem ceny | ![Wysiłek nie określa kierunku](/education/definitions/effort-result-detail.pl.svg) |
+| Background | Kierunek, struktura fal, wcześniejsze sygnały i położenie w wyższej skali | ![Background: wcześniejsza struktura](/education/definitions/background-structure.pl.svg) |
+| Test podaży / popytu | Powrót ceny do obszaru sprawdzającego, czy dana strona nadal wywiera presję | ![Test jest sekwencją](/education/definitions/test-process.pl.svg) |
+| Akumulacja / dystrybucja | Kursowa interpretacja możliwego przejmowania podaży/popytu; nie bezpośredni odczyt intencji | ![Obserwacja a intencje uczestników](/education/definitions/observation-vs-intent.pl.svg) |
+| WFO | Wolumenowa formacja odwrócenia z dwoma ekstremami, korektą i relacją wolumenów | ![Wzrostowe WFO: dwa coraz niższe dołki](/education/definitions/wfo-bullish.pl.svg) |
+| SL / stop loss | Poziom planowanego wyjścia ograniczający stratę; cena wykonania może się różnić | ![Stop loss i unieważnienie](/education/definitions/stop-loss.pl.svg) |
+| R | Jednostka początkowego ryzyka pozycji, używana do porównania wyników | ![R i relacja zysku do ryzyka](/education/definitions/reward-risk.pl.svg) |
 
 ## Zakończenie
 
@@ -522,6 +786,11 @@ Słowo `candidate` w wynikach oznacza spełnienie warunków programu. Nie dowodz
 
 Szczegółowe, obowiązujące warunki każdego detektora znajdują się w `python/README.md` i `python/engine.py`. Jeżeli zmienisz konfigurację, zmienisz również badany wariant strategii. Nie nazywaj wyników różnych konfiguracji wynikami jednej niezmiennej metody.
 
+
+<!-- definition-diagrams:candidate-definition -->
+![Kandydat nie oznacza potwierdzenia](/education/definitions/candidate-definition.pl.svg "Kandydat spełnia zdefiniowane warunki formacji. Późniejsze potwierdzenie to osobne zdarzenie, a nakładające się nazwy nie są niezależnymi głosami. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### A.2. Uruchomienie
 
 Potrzebny jest Python 3.10 lub nowszy. Sam silnik nie wymaga instalowania pakietów przez `pip`. Otwórz terminal w podfolderze `python` rozpakowanego pakietu i wykonaj:
@@ -544,6 +813,11 @@ To tylko ilustracja formatu; dwie świece nie wystarczają do rozgrzania modelu.
 
 W zbiorze powinien być jeden instrument i jeden interwał. Nie sklejaj wolumenu kontraktu futures z ceną innego instrumentu ani danych różnych dostawców bez jawnej synchronizacji i uzasadnienia. Plik nie może zawierać niezamkniętej ostatniej świecy. Ceny muszą być dodatnie, wolumen nieujemny, a High i Low obejmować Open i Close. Model nie obsługuje instrumentów z cenami zerowymi lub ujemnymi.
 
+
+<!-- definition-diagrams:ohlcv-data -->
+![OHLCV i poprawne dane wejściowe](/education/definitions/ohlcv-data.pl.svg "High i Low obejmują Open i Close; wolumen jest nieujemny. Używaj kolejnych znaczników czasu, jednego instrumentu i interwału, pomijając niedokończone bary. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### A.3. Jak czytać wyniki
 
 `signals.csv` służy do audytu świeca po świecy: zawiera dane wejściowe, cechy, kandydatów i zdarzenia potwierdzenia. `trades.csv` opisuje symulowane transakcje. `equity.csv` pokazuje przebieg kapitału z wyceną otwartej pozycji. `summary.json` jest skrótem wyników. Dokładny wykaz plików i kolumn podaje instrukcja programu.
@@ -556,6 +830,13 @@ Rozróżniaj trzy czasy:
 
 Potwierdzenie w implementacji jest bardziej mechaniczne niż obserwacja prowadzącego: pełne reguły podaje README. Dotknięcie poziomu i zamknięcie poza nim nie są tym samym. Model nie udaje, że z samego OHLC zna kolejność wszystkich ruchów w obrębie świecy. Gdy po wejściu stop i cel mieszczą się w zakresie tej samej świecy, przyjmuje wykonanie stopu jako pierwsze. To założenie konserwatywne, a nie odtworzenie rzeczywistej ścieżki ceny.
 
+
+<!-- definition-diagrams:candidate-confirmation-execution -->
+![Kandydat → potwierdzenie → wykonanie](/education/definitions/candidate-confirmation-execution.pl.svg "Kandydat jest znany po zamknięciu; potwierdzenie następuje później; model wykonuje wejście najwcześniej na otwarciu kolejnego bara po potwierdzeniu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Jedna świeca nie ujawnia kolejności ruchu](/education/definitions/intrabar-ambiguity.pl.svg "Jeżeli stop i cel leżą wewnątrz jednego bara, samo OHLC nie ujawnia kolejności. Model zakłada wykonanie stopu jako pierwszego. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### A.4. Ryzyko i jednostki
 
 Kwota planowanego ryzyka jest ułamkiem kapitału. Wielkość pozycji zależy od odległości wejścia od stopu, kosztów oraz limitu nominału. Cel wyznaczony jako wielokrotność odległości do stopu nie oznacza, że rynek rzeczywiście ma taki potencjał: program nie bada wszystkich oporów, wsparć ani płynności na drodze do celu. To szczególnie ważna różnica wobec oceny potencjału w kursowym scenariuszu nr 5.
@@ -566,6 +847,13 @@ Stop jest poziomem aktywacji wyjścia, a nie gwarancją kwoty straty. Luka przez
 
 Obsunięcie kapitału jest mierzone na kolejnych zamknięciach świec, po uwzględnieniu modelowanych wyjść. Nie jest to dokładne maksimum obsunięcia wewnątrz świecy. W przypadku otwartej pozycji wycena uwzględnia szacowany koszt zamknięcia; nie jest jeszcze zrealizowaną transakcją. Stała prowizja i poślizg nie modelują całej zmienności spreadu bid-ask, finansowania pozycji, kolejek zleceń ani wpływu własnego zlecenia na cenę.
 
+
+<!-- definition-diagrams:contract-units -->
+![Odległość ceny to nie całe ryzyko](/education/definitions/contract-units.pl.svg "Wartość punktu, ilość, koszty i przeliczenie walut określają ryzyko pieniężne. Jednostka instrumentu nie oznacza automatycznie kontraktu futures lub lota FX. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Obsunięcie od szczytu kapitału](/education/definitions/drawdown.pl.svg "Obsunięcie mierzy spadek od wcześniejszego szczytu kapitału. W tym modelu jest mierzone na zamknięciach, nie przy każdej cenie wewnątrz świecy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ### A.5. Czego dowodzą testy programu
 
 Testy jednostkowe sprawdzają logikę i obliczenia na kontrolowanych przykładach. Test przyczynowości porównuje wyniki na prefiksie szeregu z tą samą częścią wyniku dla całej historii: dodanie późniejszych świec nie może zmienić dawnych cech ani dawnych zdarzeń analitycznych. Metadane wykonania transakcji i statystyki końcowe należy oceniać osobno, ponieważ pojawiają się później.
@@ -573,6 +861,13 @@ Testy jednostkowe sprawdzają logikę i obliczenia na kontrolowanych przykładac
 Przejście testów nie jest dowodem przewagi inwestycyjnej. Do jej oceny potrzebny jest oddzielony czasowo zbiór testowy z rzeczywistymi danymi, realistycznymi kosztami i kontrolą liczby sprawdzonych wariantów. W pakiecie nie ma rzeczywistych danych rynkowych ani deklaracji, że strategia zarabia.
 
 Rozsądny eksperyment polega na zamrożeniu konfiguracji po okresie treningowym, sprawdzeniu kolejnego okresu bez zmian, powtórzeniu tego procesu w kolejnych oknach oraz zestawieniu wyników z prostym punktem odniesienia. Raportuj liczbę transakcji, wynik netto, obsunięcie, rozkład zysków i strat oraz wrażliwość na koszty. Wykres kilku trafnych przykładów sam w sobie nie wystarcza.
+
+
+<!-- definition-diagrams:out-of-sample -->
+![Weryfikacja poza próbą uczącą](/education/definitions/out-of-sample.pl.svg "Ustal reguły przed sprawdzeniem późniejszego okresu. Poprawne obliczenie nie dowodzi rentowności strategii. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Przyczynowość: przyszłe bary nie zmieniają przeszłości](/education/definitions/lookahead-bias.pl.svg "Dodanie późniejszych barów nie może zmieniać wcześniejszych cech ani zdarzeń analitycznych. Ekstremum wymagające późniejszego potwierdzenia jest znane dopiero po opóźnieniu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ### A.6. Pochodzenie i powtarzalność
 

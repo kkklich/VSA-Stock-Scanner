@@ -51,8 +51,9 @@ _WARSAW_NOON = datetime(2026, 9, 8, 10, 0, tzinfo=UTC)  # 12:00 Europe/Warsaw
 
 
 @pytest.fixture(autouse=True)
-def _clean_state():
+def _clean_state(monkeypatch):
     """Each test starts with an empty error table and log buffer."""
+    monkeypatch.setattr(settings, "admin_token", "test-admin-token")
     error_tracker.clear()
     action_log._recent.clear()
     yield
@@ -575,7 +576,7 @@ class TestOverallStatus:
 
 class TestAdminEndpoints:
     def test_health_answers_without_a_database(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             body = client.get("/api/admin/health").json()
 
         assert body["status"] in {"ok", "warn", "error"}
@@ -583,10 +584,10 @@ class TestAdminEndpoints:
         assert body["ingest"]["schedule"].endswith("Europe/Warsaw")
         assert body["log"]["enabled"] is True
 
-    def test_health_reports_that_the_admin_api_is_open(self) -> None:
-        """The screen shows tracebacks and caller IPs; say when it is unguarded."""
+    def test_health_denies_access_when_shared_token_is_unset(self, monkeypatch) -> None:
+        monkeypatch.setattr(settings, "admin_token", "")
         with TestClient(app) as client:
-            assert client.get("/api/admin/health").json()["protected"] is False
+            assert client.get("/api/admin/health").status_code == 401
 
     def test_errors_endpoint_lists_grouped_failures(self) -> None:
         error_tracker.record_message(
@@ -595,7 +596,7 @@ class TestAdminEndpoints:
         error_tracker.record_message(
             "Ingest error for pkn", template="Ingest error for %s", source="app.jobs"
         )
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             body = client.get("/api/admin/errors").json()
 
         assert body["groupCount"] == 1
@@ -609,14 +610,14 @@ class TestAdminEndpoints:
             error_tracker.record_message(
                 f"Ingest error for {ticker}", template="Ingest error for %s"
             )
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             body = client.get("/api/admin/errors").json()
 
         assert body["items"][0]["count"] == 290
 
     def test_errors_show_up_in_the_health_read(self) -> None:
         error_tracker.record_exception(_boom("visible in health"))
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             body = client.get("/api/admin/health").json()
 
         assert body["errors"]["totalCount"] == 1
@@ -641,7 +642,7 @@ class TestAdminEndpoints:
     def test_the_admin_token_gates_every_admin_endpoint(self) -> None:
         settings.admin_token = "s3cret"
         try:
-            with TestClient(app) as client:
+            with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
                 assert client.get("/api/admin/health").status_code == 401
                 assert client.get("/api/admin/errors").status_code == 401
                 assert client.get("/api/admin/logs").status_code == 401
@@ -686,7 +687,7 @@ class TestAdminEndpoints:
             token, _ = create_access_token(
                 user_id=1, email="admin@example.com", role="admin", token_version=1
             )
-            with TestClient(app) as client:
+            with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
                 ok = client.get(
                     "/api/admin/health",
                     headers={"Authorization": f"Bearer {token}"},

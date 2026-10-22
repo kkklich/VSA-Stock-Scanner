@@ -4,6 +4,8 @@
 // table in one language would be easy to miss by eye in a 580-line article.
 
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   EDUCATION_ARTICLES,
   articleBySlug,
@@ -12,6 +14,7 @@ import {
 } from './education'
 import en from '../i18n/locales/en.json'
 import pl from '../i18n/locales/pl.json'
+import diagrams from '../../public/education/definitions/manifest.json'
 
 /** Counts of each heading level and of tables — the article's skeleton. */
 function skeleton(md: string) {
@@ -30,6 +33,36 @@ function skeleton(md: string) {
 type ArticleStrings = Record<string, { title: string; summary: string }>
 
 describe('Education articles', () => {
+  it('publishes every definition diagram in both languages with a real local image', () => {
+    for (const diagram of diagrams) {
+      for (const lang of ['en', 'pl'] as const) {
+        const article = EDUCATION_ARTICLES.find(a => a.content[lang].includes(diagram.files[lang]))
+        expect(article, `${diagram.id} is embedded in ${lang}`).toBeDefined()
+        const svg = readFileSync(resolve('public', diagram.files[lang].slice(1)), 'utf8')
+        expect(svg).toContain('viewBox="0 0 960 560"')
+        expect(svg).toContain('<desc id="desc">')
+        expect(svg).not.toMatch(/NaN|undefined|<script|<foreignObject/)
+        expect(article?.content[lang]).toContain(`![${diagram.title[lang === 'en' ? 0 : 1]}]`)
+      }
+    }
+  })
+
+  it.each([['minervini', 8], ['volume-breakout', 5], ['weinstein', 6], ['pocket-pivot', 6]] as const)(
+    'illustrates every %s checklist rule',
+    (method, count) => {
+      expect(diagrams.filter(d => d.id.startsWith(`${method}-rule-`))).toHaveLength(count)
+    },
+  )
+
+  it('places an image inside every named VSA catalogue definition in both languages', () => {
+    const compendium = articleBySlug('vsa-kompendium')!
+    for (const lang of ['en', 'pl'] as const) {
+      const sections = [...compendium.content[lang].matchAll(/^#### \d+\. [^\n]+\n([\s\S]*?)(?=^#{2,4} |$(?![\s\S]))/gm)]
+      expect(sections).toHaveLength(15)
+      for (const section of sections) expect(section[1]).toContain('/education/definitions/')
+    }
+  })
+
   it.each(EDUCATION_ARTICLES.map((a) => [a.slug, a] as const))(
     '%s exists in both languages with the same structure',
     (_slug, article) => {

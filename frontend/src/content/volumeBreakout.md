@@ -2,9 +2,21 @@
 
 Spółka, która rosła, często robi przerwę i przez kilka tygodni lub miesięcy porusza się w bok. Inwestorzy nazywają taki boczny odcinek **bazą**. W dobrej bazie spółka się uspokaja: zakres cen się zwęża, a akcje zmieniają właściciela rzadziej, bo sprzedający w większości już wyszli.
 
+<!-- definition-diagrams:base-definition -->
+![Baza: ruch boczny](/education/definitions/base-definition.pl.svg "Baza to przerwa w ruchu trendowym. W pokazanej spokojnej bazie zakres wahań i wolumen maleją. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Wybicie** to dzień, w którym cena wreszcie opuszcza bazę w górę — do nowego maksimum całego odcinka — przy **skoku wolumenu**. Ten wolumen jest tu kluczowy: sugeruje, że wchodzą duzi kupujący, np. fundusze, a nie że cena po prostu przesunęła się przez opór. Metoda kupuje właśnie tego dnia.
 
 Metoda jest **tylko na wzrosty** i **średnioterminowa**: wybicie ma rozpocząć ruch trwający od tygodni do miesięcy.
+
+![Zawężająca się baza boczna, po której świeca zamyka się ponad oporem przy skoku wolumenu.](/education/images/volume-breakout.png "1 — Wahania ceny i wolumen maleją wewnątrz bazy. 2 — Zamknięcie wybija ponad maksimum bazy. 3 — Wolumen rośnie; aplikacja wymaga co najmniej 1,5× średniej z poprzednich 50 sesji. Dolna przerywana linia oznacza średni wolumen. Przykład schematyczny, nie dane rynkowe. Kliknij ilustrację, aby ją powiększyć.")
+
+
+<!-- definition-diagrams:example-quiet-base-breakout -->
+![Spokojna konsolidacja, potem ekspansja](/education/definitions/example-quiet-base-breakout.pl.svg "Przykład łączy zawężający się zakres ceny i malejący wolumen z późniejszym szerokim barem ponad oporem. Ilustruje kolejność, nie gwarantuje wyniku. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Skąd pochodzi
 
@@ -27,9 +39,29 @@ Aby wybicie **wystąpiło**, wszystkie warunki muszą być spełnione tego sameg
 | 4 | Wolumen wysechł przed wybiciem | dzień wcześniej: średni wolumen z ostatnich 10 sesji nie wyższy niż średnia z 40 sesji przed nimi |
 | 5 | Prawdziwa, ciasna baza | poprzednie 50 sesji mieściło się w zakresie najwyżej 35% od najwyższego maksimum do najniższego minimum |
 
+<!-- definition-diagrams:volume-breakout-rule-1 -->
+![Volume Breakout 1 — Nowe maksimum bazy](/education/definitions/volume-breakout-rule-1.pl.svg "zamknięcie powyżej najwyższego maksimum z poprzednich 50 sesji (ok. 10 tygodni) Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Volume Breakout 2 — Skok wolumenu](/education/definitions/volume-breakout-rule-2.pl.svg "wolumen co najmniej 1,5× średniej z poprzednich 50 sesji Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Volume Breakout 3 — Dzień wygrali kupujący](/education/definitions/volume-breakout-rule-3.pl.svg "zamknięcie w górnej połowie dziennego zakresu Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Volume Breakout 4 — Wolumen wysechł przed wybiciem](/education/definitions/volume-breakout-rule-4.pl.svg "dzień wcześniej: średni wolumen z ostatnich 10 sesji nie wyższy niż średnia z 40 sesji przed nimi Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Volume Breakout 5 — Prawdziwa, ciasna baza](/education/definitions/volume-breakout-rule-5.pl.svg "poprzednie 50 sesji mieściło się w zakresie najwyżej 35% od najwyższego maksimum do najniższego minimum Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 Warunki 4 i 5 odróżniają wybicie z **prawdziwej bazy** od innych mocnych dni wzrostowych: luki po informacji albo spółki, która już pędzi niemal pionowo w górę bez żadnej bazy pod spodem. Warunek 4 jest mierzony na dzień **przed** wybiciem, żeby wolumen samego wybicia go nie zepsuł. Prawidłowe bazy O'Neila mają ok. 12–33% głębokości; granica 35% zostawia trochę zapasu.
 
 Spółka potrzebuje **co najmniej 160 sesji** historii, żeby metoda mogła ją ocenić.
+
+
+<!-- definition-diagrams:example-wick-without-breakout -->
+![Knot ponad bazą nie wystarcza](/education/definitions/example-wick-without-breakout.pl.svg "Ostatnie maksimum sięga 109, ale zamknięcie wynosi 102, poniżej oporu 104. Przykład nie spełnia warunku wybicia ceną zamknięcia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Dwa wolumeny przy tym samym progu](/education/definitions/example-breakout-volume-cases.pl.svg "Przy wolumenie odniesienia 100 minimum wynosi 150. Wolumen 180 spełnia ten warunek; 120 nie, nawet gdy cena wybiła ponad bazę. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Co widać w aplikacji
 
@@ -44,6 +76,11 @@ Spółka potrzebuje **co najmniej 160 sesji** historii, żeby metoda mogła ją 
 - **Opis:** „Breakout x2.3 vol” w dniu wybicia (wolumen 2,3× średniej), „Broke out 4d ago” w kolejnych dniach albo „3/5 setup”, gdy w ostatnich 60 sesjach nie było wybicia.
 - **Znaczniki na wykresie:** indygo kropka z zieloną etykietą „Volume Breakout” w **pierwszym** dniu każdego wybicia (mocny ruch może dać kilka dni wybicia z rzędu; oznaczany jest tylko pierwszy).
 
+
+<!-- definition-diagrams:breakout-readiness -->
+![Gotowość a wystąpienie wybicia](/education/definitions/breakout-readiness.pl.svg "Cztery warunki przygotowania mogą dać 80 przed wybiciem; niedawne wybicie dodaje pozostałe 20 punktów. Wynik nie jest listą warunków wystąpienia sygnału. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Jak to działało w praktyce
 
 - **Bramka testu wstecznego w aplikacji** (GPW, 288 spółek, pomiar z 2026-09-23): po wybiciu akcja pobiła swój typowy ruch w **44,1%** przypadków w ciągu 10 sesji i w **45,1%** w ciągu 30. Średnia przewaga (+0,20 i +0,49 punktu procentowego) jest **mniejsza niż ta, którą w tym samym teście uzyskuje losowo wybrany dzień** (+0,59 i +1,20). Metoda **nie przechodzi** bramki.
@@ -56,6 +93,11 @@ Spółka potrzebuje **co najmniej 160 sesji** historii, żeby metoda mogła ją 
 - Nie sprawdza wzrostu zysków ani pozostałych kryteriów CANSLIM („C”, „A”, „N” itd. u O'Neila) — tylko część dotyczącą ceny i wolumenu.
 - Nie prowadzi transakcji. Własna reguła O'Neila to sprzedać akcję, która spadnie 7–8% poniżej ceny zakupu; aplikacja nie podaje stopu, celu ani sygnału wyjścia.
 - Nie patrzy na szeroki rynek, który O'Neil uważa za rozstrzygający („M” w CANSLIM).
+
+
+<!-- definition-diagrams:example-breakout-next-paths -->
+![Wybicie może trwać lub zawieść](/education/definitions/example-breakout-next-paths.pl.svg "Obie hipotetyczne ścieżki zaczynają się na tym samym zamknięciu wybicia. Sam sygnał skanera nie określa dalszej ścieżki ceny ani wyjścia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Źródła
 

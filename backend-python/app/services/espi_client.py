@@ -381,7 +381,7 @@ class EspiClient:
 
     async def _post_form(self, url: str, data: dict) -> str | None:
         try:
-            async with httpx.AsyncClient(verify=False, timeout=12.0, headers=_HEADERS) as client:
+            async with httpx.AsyncClient(timeout=12.0, headers=_HEADERS) as client:
                 resp = await client.post(url, data=data)
                 if resp.status_code == 200 and len(resp.text) > 50:
                     return resp.text
@@ -392,7 +392,7 @@ class EspiClient:
 
     async def _get_url(self, url: str) -> str | None:
         try:
-            async with httpx.AsyncClient(verify=False, timeout=12.0, headers=_HEADERS) as client:
+            async with httpx.AsyncClient(timeout=12.0, headers=_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200 and len(resp.text) > 50:
                     return resp.text
@@ -408,6 +408,7 @@ class EspiClient:
         encoded = urlencode(data, doseq=True)
         cmd = [
             "curl.exe",
+            "--proto", "=https",
             "-s",
             "-X",
             "POST",
@@ -434,8 +435,10 @@ class EspiClient:
 
         cmd = [
             "curl.exe",
+            "--proto", "=https",
             "-s",
             "-L",
+            "--proto-redir", "=https",
             url,
             "-H",
             "Referer: https://www.gpw.pl/komunikaty",

@@ -1,0 +1,1835 @@
+[
+  {
+    "id": "example-trend-stack",
+    "article": "minervini",
+    "section": "The idea in plain language",
+    "title": [
+      "Reading the trend layers together",
+      "Łączne odczytywanie warstw trendu"
+    ],
+    "files": {
+      "en": "/education/definitions/example-trend-stack.en.svg",
+      "pl": "/education/definitions/example-trend-stack.pl.svg"
+    }
+  },
+  {
+    "id": "example-ma-slope-cases",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Same starting average, different slopes",
+      "Ta sama średnia początkowa, różne nachylenia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-ma-slope-cases.en.svg",
+      "pl": "/education/definitions/example-ma-slope-cases.pl.svg"
+    }
+  },
+  {
+    "id": "example-high-distance-cases",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Distance from a high of 200",
+      "Odległość od maksimum 200"
+    ],
+    "files": {
+      "en": "/education/definitions/example-high-distance-cases.en.svg",
+      "pl": "/education/definitions/example-high-distance-cases.pl.svg"
+    }
+  },
+  {
+    "id": "example-structural-score",
+    "article": "minervini",
+    "section": "What you see in the app",
+    "title": [
+      "One unmet rule changes the score",
+      "Jedna niespełniona reguła zmienia wynik"
+    ],
+    "files": {
+      "en": "/education/definitions/example-structural-score.en.svg",
+      "pl": "/education/definitions/example-structural-score.pl.svg"
+    }
+  },
+  {
+    "id": "example-wick-without-breakout",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "A wick above the base is not enough",
+      "Knot ponad bazą nie wystarcza"
+    ],
+    "files": {
+      "en": "/education/definitions/example-wick-without-breakout.en.svg",
+      "pl": "/education/definitions/example-wick-without-breakout.pl.svg"
+    }
+  },
+  {
+    "id": "example-breakout-volume-cases",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Two volume levels at the same threshold",
+      "Dwa wolumeny przy tym samym progu"
+    ],
+    "files": {
+      "en": "/education/definitions/example-breakout-volume-cases.en.svg",
+      "pl": "/education/definitions/example-breakout-volume-cases.pl.svg"
+    }
+  },
+  {
+    "id": "example-quiet-base-breakout",
+    "article": "volumeBreakout",
+    "section": "The idea in plain language",
+    "title": [
+      "Quiet consolidation, then expansion",
+      "Spokojna konsolidacja, potem ekspansja"
+    ],
+    "files": {
+      "en": "/education/definitions/example-quiet-base-breakout.en.svg",
+      "pl": "/education/definitions/example-quiet-base-breakout.pl.svg"
+    }
+  },
+  {
+    "id": "example-breakout-next-paths",
+    "article": "volumeBreakout",
+    "section": "What the app does not do",
+    "title": [
+      "A breakout can continue or fail",
+      "Wybicie może trwać lub zawieść"
+    ],
+    "files": {
+      "en": "/education/definitions/example-breakout-next-paths.en.svg",
+      "pl": "/education/definitions/example-breakout-next-paths.pl.svg"
+    }
+  },
+  {
+    "id": "example-week-volume-sum",
+    "article": "weinstein",
+    "section": "Why weekly bars",
+    "title": [
+      "Five daily volumes make one weekly total",
+      "Pięć wolumenów dziennych tworzy sumę tygodnia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-week-volume-sum.en.svg",
+      "pl": "/education/definitions/example-week-volume-sum.pl.svg"
+    }
+  },
+  {
+    "id": "example-weekly-slope-limit",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "The average must rise slowly enough",
+      "Średnia musi rosnąć dostatecznie powoli"
+    ],
+    "files": {
+      "en": "/education/definitions/example-weekly-slope-limit.en.svg",
+      "pl": "/education/definitions/example-weekly-slope-limit.pl.svg"
+    }
+  },
+  {
+    "id": "example-weekly-wick",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Judge the completed weekly close",
+      "Oceń zamknięcie pełnego tygodnia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-weekly-wick.en.svg",
+      "pl": "/education/definitions/example-weekly-wick.pl.svg"
+    }
+  },
+  {
+    "id": "example-stage-context-exit",
+    "article": "weinstein",
+    "section": "What the app does not do",
+    "title": [
+      "Recognising stages and planning an exit",
+      "Rozpoznawanie faz i planowanie wyjścia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-stage-context-exit.en.svg",
+      "pl": "/education/definitions/example-stage-context-exit.pl.svg"
+    }
+  },
+  {
+    "id": "example-largest-selling-day",
+    "article": "pocketPivot",
+    "section": "How it differs from a volume breakout",
+    "title": [
+      "A large buying day is not the reference",
+      "Duży dzień wzrostowy nie jest odniesieniem"
+    ],
+    "files": {
+      "en": "/education/definitions/example-largest-selling-day.en.svg",
+      "pl": "/education/definitions/example-largest-selling-day.pl.svg"
+    }
+  },
+  {
+    "id": "example-insufficient-pivot-volume",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "A rising close with insufficient volume",
+      "Rosnące zamknięcie przy zbyt małym wolumenie"
+    ],
+    "files": {
+      "en": "/education/definitions/example-insufficient-pivot-volume.en.svg",
+      "pl": "/education/definitions/example-insufficient-pivot-volume.pl.svg"
+    }
+  },
+  {
+    "id": "example-pivot-too-far",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "A low too far above the moving average",
+      "Minimum zbyt daleko nad średnią"
+    ],
+    "files": {
+      "en": "/education/definitions/example-pivot-too-far.en.svg",
+      "pl": "/education/definitions/example-pivot-too-far.pl.svg"
+    }
+  },
+  {
+    "id": "example-no-selling-reference",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "No down day means no comparison",
+      "Brak dnia spadkowego oznacza brak porównania"
+    ],
+    "files": {
+      "en": "/education/definitions/example-no-selling-reference.en.svg",
+      "pl": "/education/definitions/example-no-selling-reference.pl.svg"
+    }
+  },
+  {
+    "id": "example-reference-window",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "The candidate is outside its reference window",
+      "Kandydat leży poza oknem odniesienia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-reference-window.en.svg",
+      "pl": "/education/definitions/example-reference-window.pl.svg"
+    }
+  },
+  {
+    "id": "example-offsetting-signals",
+    "article": "vsaRating",
+    "section": "From patterns to one number",
+    "title": [
+      "Opposing signals can cancel out",
+      "Przeciwne sygnały mogą się równoważyć"
+    ],
+    "files": {
+      "en": "/education/definitions/example-offsetting-signals.en.svg",
+      "pl": "/education/definitions/example-offsetting-signals.pl.svg"
+    }
+  },
+  {
+    "id": "example-rating-decay-example",
+    "article": "vsaRating",
+    "section": "From patterns to one number",
+    "title": [
+      "One signal fades toward neutral",
+      "Jeden sygnał zanika ku neutralności"
+    ],
+    "files": {
+      "en": "/education/definitions/example-rating-decay-example.en.svg",
+      "pl": "/education/definitions/example-rating-decay-example.pl.svg"
+    }
+  },
+  {
+    "id": "example-timeframe-conflict",
+    "article": "vsaRating",
+    "section": "Where you see it in the app",
+    "title": [
+      "Daily strength and weekly weakness",
+      "Siła dzienna i słabość tygodniowa"
+    ],
+    "files": {
+      "en": "/education/definitions/example-timeframe-conflict.en.svg",
+      "pl": "/education/definitions/example-timeframe-conflict.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-observation",
+    "article": "vsaKompendium",
+    "section": "Exercise A — describing a bar without interpretation",
+    "title": [
+      "Exercise A: describe before interpreting",
+      "Ćwiczenie A: opisz przed interpretacją"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-observation.en.svg",
+      "pl": "/education/definitions/example-exercise-observation.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-hidden-future",
+    "article": "vsaKompendium",
+    "section": "Exercise B — signal and context",
+    "title": [
+      "Exercise B: hide the future first",
+      "Ćwiczenie B: najpierw zasłoń przyszłość"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-hidden-future.en.svg",
+      "pl": "/education/definitions/example-exercise-hidden-future.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-test-sequence",
+    "article": "vsaKompendium",
+    "section": "Exercise C — a test of supply as a sequence",
+    "title": [
+      "Exercise C: mark the whole sequence",
+      "Ćwiczenie C: zaznacz całą sekwencję"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-test-sequence.en.svg",
+      "pl": "/education/definitions/example-exercise-test-sequence.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-zero-range",
+    "article": "vsaKompendium",
+    "section": "Exercise D — auditing VSA in code",
+    "title": [
+      "Exercise D: handle a zero-range bar",
+      "Ćwiczenie D: obsłuż bar o zerowym zakresie"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-zero-range.en.svg",
+      "pl": "/education/definitions/example-exercise-zero-range.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-validation-split",
+    "article": "vsaKompendium",
+    "section": "Exercise E — out of sample and costs",
+    "title": [
+      "Exercise E: keep validation later in time",
+      "Ćwiczenie E: walidacja później w czasie"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-validation-split.en.svg",
+      "pl": "/education/definitions/example-exercise-validation-split.pl.svg"
+    }
+  },
+  {
+    "id": "example-exercise-journal",
+    "article": "vsaKompendium",
+    "section": "Exercise F — a decision journal",
+    "title": [
+      "Exercise F: record skipped entries too",
+      "Ćwiczenie F: zapisuj także pominięte wejścia"
+    ],
+    "files": {
+      "en": "/education/definitions/example-exercise-journal.en.svg",
+      "pl": "/education/definitions/example-exercise-journal.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-1",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 1 — Price is above the 150-day and the 200-day MA",
+      "Minervini 1 — Cena jest powyżej MA 150 i MA 200"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-1.en.svg",
+      "pl": "/education/definitions/minervini-rule-1.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-2",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 2 — The 150-day MA is above the 200-day MA",
+      "Minervini 2 — MA 150 jest powyżej MA 200"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-2.en.svg",
+      "pl": "/education/definitions/minervini-rule-2.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-3",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 3 — The 200-day MA is rising",
+      "Minervini 3 — MA 200 rośnie"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-3.en.svg",
+      "pl": "/education/definitions/minervini-rule-3.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-4",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 4 — The 50-day MA is above the 150-day and the 200-day MA",
+      "Minervini 4 — MA 50 jest powyżej MA 150 i MA 200"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-4.en.svg",
+      "pl": "/education/definitions/minervini-rule-4.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-5",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 5 — Price is above the 50-day MA",
+      "Minervini 5 — Cena jest powyżej MA 50"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-5.en.svg",
+      "pl": "/education/definitions/minervini-rule-5.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-6",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 6 — Price is well off its 52-week low",
+      "Minervini 6 — Cena jest daleko od minimum 52-tygodniowego"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-6.en.svg",
+      "pl": "/education/definitions/minervini-rule-6.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-7",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 7 — Price is near its 52-week high",
+      "Minervini 7 — Cena jest blisko maksimum 52-tygodniowego"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-7.en.svg",
+      "pl": "/education/definitions/minervini-rule-7.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-rule-8",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Minervini 8 — Relative strength is in the top 30% of the market",
+      "Minervini 8 — Siła względna w górnych 30% rynku"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-rule-8.en.svg",
+      "pl": "/education/definitions/minervini-rule-8.pl.svg"
+    }
+  },
+  {
+    "id": "moving-average",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Moving average (MA)",
+      "Średnia krocząca (MA)"
+    ],
+    "files": {
+      "en": "/education/definitions/moving-average.en.svg",
+      "pl": "/education/definitions/moving-average.pl.svg"
+    }
+  },
+  {
+    "id": "year-range",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "52-week high and low",
+      "Maksimum i minimum z 52 tygodni"
+    ],
+    "files": {
+      "en": "/education/definitions/year-range.en.svg",
+      "pl": "/education/definitions/year-range.pl.svg"
+    }
+  },
+  {
+    "id": "relative-strength-weights",
+    "article": "minervini",
+    "section": "The eight rules StockPilot checks",
+    "title": [
+      "Relative-strength weighting",
+      "Wagi siły względnej"
+    ],
+    "files": {
+      "en": "/education/definitions/relative-strength-weights.en.svg",
+      "pl": "/education/definitions/relative-strength-weights.pl.svg"
+    }
+  },
+  {
+    "id": "minervini-score",
+    "article": "minervini",
+    "section": "What you see in the app",
+    "title": [
+      "Score and first activation",
+      "Wynik i pierwsza aktywacja"
+    ],
+    "files": {
+      "en": "/education/definitions/minervini-score.en.svg",
+      "pl": "/education/definitions/minervini-score.pl.svg"
+    }
+  },
+  {
+    "id": "volume-breakout-rule-1",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Volume Breakout 1 — A new high for the base",
+      "Volume Breakout 1 — Nowe maksimum bazy"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-breakout-rule-1.en.svg",
+      "pl": "/education/definitions/volume-breakout-rule-1.pl.svg"
+    }
+  },
+  {
+    "id": "volume-breakout-rule-2",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Volume Breakout 2 — A burst of volume",
+      "Volume Breakout 2 — Skok wolumenu"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-breakout-rule-2.en.svg",
+      "pl": "/education/definitions/volume-breakout-rule-2.pl.svg"
+    }
+  },
+  {
+    "id": "volume-breakout-rule-3",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Volume Breakout 3 — Buyers won the day",
+      "Volume Breakout 3 — Dzień wygrali kupujący"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-breakout-rule-3.en.svg",
+      "pl": "/education/definitions/volume-breakout-rule-3.pl.svg"
+    }
+  },
+  {
+    "id": "volume-breakout-rule-4",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Volume Breakout 4 — Volume dried up before the breakout",
+      "Volume Breakout 4 — Wolumen wysechł przed wybiciem"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-breakout-rule-4.en.svg",
+      "pl": "/education/definitions/volume-breakout-rule-4.pl.svg"
+    }
+  },
+  {
+    "id": "volume-breakout-rule-5",
+    "article": "volumeBreakout",
+    "section": "The conditions StockPilot checks",
+    "title": [
+      "Volume Breakout 5 — A real, tight base",
+      "Volume Breakout 5 — Prawdziwa, ciasna baza"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-breakout-rule-5.en.svg",
+      "pl": "/education/definitions/volume-breakout-rule-5.pl.svg"
+    }
+  },
+  {
+    "id": "base-definition",
+    "article": "volumeBreakout",
+    "section": "The idea in plain language",
+    "title": [
+      "Base: a sideways pause",
+      "Baza: ruch boczny"
+    ],
+    "files": {
+      "en": "/education/definitions/base-definition.en.svg",
+      "pl": "/education/definitions/base-definition.pl.svg"
+    }
+  },
+  {
+    "id": "breakout-readiness",
+    "article": "volumeBreakout",
+    "section": "What you see in the app",
+    "title": [
+      "Readiness score versus breakout",
+      "Gotowość a wystąpienie wybicia"
+    ],
+    "files": {
+      "en": "/education/definitions/breakout-readiness.en.svg",
+      "pl": "/education/definitions/breakout-readiness.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-1",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 1 — There was a real base",
+      "Weinstein 1 — Była prawdziwa baza"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-1.en.svg",
+      "pl": "/education/definitions/weinstein-rule-1.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-2",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 2 — The week breaks out of it",
+      "Weinstein 2 — Tydzień wybija się z niej"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-2.en.svg",
+      "pl": "/education/definitions/weinstein-rule-2.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-3",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 3 — It is on the Stage 2 side",
+      "Weinstein 3 — Jest po stronie Fazy 2"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-3.en.svg",
+      "pl": "/education/definitions/weinstein-rule-3.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-4",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 4 — The decline is over",
+      "Weinstein 4 — Spadek się skończył"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-4.en.svg",
+      "pl": "/education/definitions/weinstein-rule-4.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-5",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 5 — The advance is only beginning",
+      "Weinstein 5 — Wzrost dopiero się zaczyna"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-5.en.svg",
+      "pl": "/education/definitions/weinstein-rule-5.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-rule-6",
+    "article": "weinstein",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Weinstein 6 — Buyers are really there",
+      "Weinstein 6 — Kupujący naprawdę są"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-rule-6.en.svg",
+      "pl": "/education/definitions/weinstein-rule-6.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-stage-1",
+    "article": "weinstein",
+    "section": "The idea in plain language",
+    "title": [
+      "1 — Basing",
+      "1 — Budowanie bazy"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-stage-1.en.svg",
+      "pl": "/education/definitions/weinstein-stage-1.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-stage-2",
+    "article": "weinstein",
+    "section": "The idea in plain language",
+    "title": [
+      "2 — Advancing",
+      "2 — Wzrost"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-stage-2.en.svg",
+      "pl": "/education/definitions/weinstein-stage-2.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-stage-3",
+    "article": "weinstein",
+    "section": "The idea in plain language",
+    "title": [
+      "3 — Topping",
+      "3 — Szczyt"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-stage-3.en.svg",
+      "pl": "/education/definitions/weinstein-stage-3.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-stage-4",
+    "article": "weinstein",
+    "section": "The idea in plain language",
+    "title": [
+      "4 — Declining",
+      "4 — Spadek"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-stage-4.en.svg",
+      "pl": "/education/definitions/weinstein-stage-4.pl.svg"
+    }
+  },
+  {
+    "id": "completed-week",
+    "article": "weinstein",
+    "section": "Why weekly bars",
+    "title": [
+      "A completed weekly bar",
+      "Zamknięta świeca tygodniowa"
+    ],
+    "files": {
+      "en": "/education/definitions/completed-week.en.svg",
+      "pl": "/education/definitions/completed-week.pl.svg"
+    }
+  },
+  {
+    "id": "weinstein-score",
+    "article": "weinstein",
+    "section": "What you see in the app",
+    "title": [
+      "Six checks, one readiness score",
+      "Sześć warunków, jeden wynik"
+    ],
+    "files": {
+      "en": "/education/definitions/weinstein-score.en.svg",
+      "pl": "/education/definitions/weinstein-score.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-1",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 1 — Buyers won the day",
+      "Pocket Pivot 1 — Dzień wygrali kupujący"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-1.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-1.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-2",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 2 — Demand outweighs supply",
+      "Pocket Pivot 2 — Popyt przeważa nad podażą"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-2.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-2.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-3",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 3 — The trend is healthy",
+      "Pocket Pivot 3 — Trend jest zdrowy"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-3.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-3.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-4",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 4 — It starts from a line, not from thin air",
+      "Pocket Pivot 4 — Startuje od linii, nie z powietrza"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-4.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-4.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-5",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 5 — It was quiet beforehand",
+      "Pocket Pivot 5 — Wcześniej było spokojnie"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-5.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-5.pl.svg"
+    }
+  },
+  {
+    "id": "pocket-pivot-rule-6",
+    "article": "pocketPivot",
+    "section": "The six conditions StockPilot checks",
+    "title": [
+      "Pocket Pivot 6 — No wedge",
+      "Pocket Pivot 6 — Bez klina"
+    ],
+    "files": {
+      "en": "/education/definitions/pocket-pivot-rule-6.en.svg",
+      "pl": "/education/definitions/pocket-pivot-rule-6.pl.svg"
+    }
+  },
+  {
+    "id": "pivot-vs-breakout",
+    "article": "pocketPivot",
+    "section": "How it differs from a volume breakout",
+    "title": [
+      "Inside the base versus above it",
+      "Wewnątrz bazy a ponad bazą"
+    ],
+    "files": {
+      "en": "/education/definitions/pivot-vs-breakout.en.svg",
+      "pl": "/education/definitions/pivot-vs-breakout.pl.svg"
+    }
+  },
+  {
+    "id": "pivot-score-cap",
+    "article": "pocketPivot",
+    "section": "What you see in the app",
+    "title": [
+      "The below-MA-200 score cap",
+      "Ograniczenie wyniku poniżej MA 200"
+    ],
+    "files": {
+      "en": "/education/definitions/pivot-score-cap.en.svg",
+      "pl": "/education/definitions/pivot-score-cap.pl.svg"
+    }
+  },
+  {
+    "id": "bag-holding",
+    "article": "vsaKompendium",
+    "section": "1. Bag Holding",
+    "title": [
+      "Bag Holding",
+      "Bag Holding"
+    ],
+    "files": {
+      "en": "/education/definitions/bag-holding.en.svg",
+      "pl": "/education/definitions/bag-holding.pl.svg"
+    }
+  },
+  {
+    "id": "selling-climax",
+    "article": "vsaKompendium",
+    "section": "2. Selling Climax",
+    "title": [
+      "Selling Climax",
+      "Selling Climax"
+    ],
+    "files": {
+      "en": "/education/definitions/selling-climax.en.svg",
+      "pl": "/education/definitions/selling-climax.pl.svg"
+    }
+  },
+  {
+    "id": "stopping-volume",
+    "article": "vsaKompendium",
+    "section": "3. Stopping Volume",
+    "title": [
+      "Stopping Volume",
+      "Stopping Volume"
+    ],
+    "files": {
+      "en": "/education/definitions/stopping-volume.en.svg",
+      "pl": "/education/definitions/stopping-volume.pl.svg"
+    }
+  },
+  {
+    "id": "shakeout",
+    "article": "vsaKompendium",
+    "section": "4. Shakeout",
+    "title": [
+      "Shakeout",
+      "Shakeout"
+    ],
+    "files": {
+      "en": "/education/definitions/shakeout.en.svg",
+      "pl": "/education/definitions/shakeout.pl.svg"
+    }
+  },
+  {
+    "id": "two-bar-strength",
+    "article": "vsaKompendium",
+    "section": "5. Two Bar Reversal — the strength side",
+    "title": [
+      "Two Bar Reversal: strength",
+      "Two Bar Reversal: siła"
+    ],
+    "files": {
+      "en": "/education/definitions/two-bar-strength.en.svg",
+      "pl": "/education/definitions/two-bar-strength.pl.svg"
+    }
+  },
+  {
+    "id": "no-supply",
+    "article": "vsaKompendium",
+    "section": "6. No Supply",
+    "title": [
+      "No Supply",
+      "No Supply"
+    ],
+    "files": {
+      "en": "/education/definitions/no-supply.en.svg",
+      "pl": "/education/definitions/no-supply.pl.svg"
+    }
+  },
+  {
+    "id": "supply-test",
+    "article": "vsaKompendium",
+    "section": "7. Test of supply",
+    "title": [
+      "Test of supply",
+      "Test podaży"
+    ],
+    "files": {
+      "en": "/education/definitions/supply-test.en.svg",
+      "pl": "/education/definitions/supply-test.pl.svg"
+    }
+  },
+  {
+    "id": "end-rising-market",
+    "article": "vsaKompendium",
+    "section": "8. End of the Rising Market",
+    "title": [
+      "End of the Rising Market",
+      "End of the Rising Market"
+    ],
+    "files": {
+      "en": "/education/definitions/end-rising-market.en.svg",
+      "pl": "/education/definitions/end-rising-market.pl.svg"
+    }
+  },
+  {
+    "id": "buying-climax",
+    "article": "vsaKompendium",
+    "section": "9. Buying Climax",
+    "title": [
+      "Buying Climax",
+      "Buying Climax"
+    ],
+    "files": {
+      "en": "/education/definitions/buying-climax.en.svg",
+      "pl": "/education/definitions/buying-climax.pl.svg"
+    }
+  },
+  {
+    "id": "supply-coming-in",
+    "article": "vsaKompendium",
+    "section": "10. Supply Coming In",
+    "title": [
+      "Supply Coming In",
+      "Supply Coming In"
+    ],
+    "files": {
+      "en": "/education/definitions/supply-coming-in.en.svg",
+      "pl": "/education/definitions/supply-coming-in.pl.svg"
+    }
+  },
+  {
+    "id": "trap-upmove",
+    "article": "vsaKompendium",
+    "section": "11. Trap Upmove",
+    "title": [
+      "Trap Upmove",
+      "Trap Upmove"
+    ],
+    "files": {
+      "en": "/education/definitions/trap-upmove.en.svg",
+      "pl": "/education/definitions/trap-upmove.pl.svg"
+    }
+  },
+  {
+    "id": "no-result-effort",
+    "article": "vsaKompendium",
+    "section": "12. No Result From Effort",
+    "title": [
+      "No Result From Effort",
+      "No Result From Effort"
+    ],
+    "files": {
+      "en": "/education/definitions/no-result-effort.en.svg",
+      "pl": "/education/definitions/no-result-effort.pl.svg"
+    }
+  },
+  {
+    "id": "two-bar-weakness",
+    "article": "vsaKompendium",
+    "section": "13. Two Bar Reversal — the weakness side",
+    "title": [
+      "Two Bar Reversal: weakness",
+      "Two Bar Reversal: słabość"
+    ],
+    "files": {
+      "en": "/education/definitions/two-bar-weakness.en.svg",
+      "pl": "/education/definitions/two-bar-weakness.pl.svg"
+    }
+  },
+  {
+    "id": "no-demand",
+    "article": "vsaKompendium",
+    "section": "14. No Demand",
+    "title": [
+      "No Demand",
+      "No Demand"
+    ],
+    "files": {
+      "en": "/education/definitions/no-demand.en.svg",
+      "pl": "/education/definitions/no-demand.pl.svg"
+    }
+  },
+  {
+    "id": "upthrust",
+    "article": "vsaKompendium",
+    "section": "15. Upthrust",
+    "title": [
+      "Upthrust",
+      "Upthrust"
+    ],
+    "files": {
+      "en": "/education/definitions/upthrust.en.svg",
+      "pl": "/education/definitions/upthrust.pl.svg"
+    }
+  },
+  {
+    "id": "rating-spring",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "Spring",
+      "Spring"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-spring.en.svg",
+      "pl": "/education/definitions/rating-spring.pl.svg"
+    }
+  },
+  {
+    "id": "rating-sos",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "Sign of Strength (SOS)",
+      "Sign of Strength (SOS)"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-sos.en.svg",
+      "pl": "/education/definitions/rating-sos.pl.svg"
+    }
+  },
+  {
+    "id": "rating-successful-test",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "Successful Test",
+      "Successful Test"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-successful-test.en.svg",
+      "pl": "/education/definitions/rating-successful-test.pl.svg"
+    }
+  },
+  {
+    "id": "rating-upthrust",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "Upthrust: engine rules",
+      "Upthrust: reguły silnika"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-upthrust.en.svg",
+      "pl": "/education/definitions/rating-upthrust.pl.svg"
+    }
+  },
+  {
+    "id": "rating-sow",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "Sign of Weakness (SOW)",
+      "Sign of Weakness (SOW)"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-sow.en.svg",
+      "pl": "/education/definitions/rating-sow.pl.svg"
+    }
+  },
+  {
+    "id": "rating-no-demand",
+    "article": "vsaRating",
+    "section": "The six patterns the engine looks for",
+    "title": [
+      "No Demand: engine rules",
+      "No Demand: reguły silnika"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-no-demand.en.svg",
+      "pl": "/education/definitions/rating-no-demand.pl.svg"
+    }
+  },
+  {
+    "id": "rating-background",
+    "article": "vsaRating",
+    "section": "The background check",
+    "title": [
+      "Rising, neutral or falling background",
+      "Tło wzrostowe, neutralne lub spadkowe"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-background.en.svg",
+      "pl": "/education/definitions/rating-background.pl.svg"
+    }
+  },
+  {
+    "id": "rating-climax-filter",
+    "article": "vsaRating",
+    "section": "The background check",
+    "title": [
+      "Climax exceptions",
+      "Wyjątki dla kulminacji"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-climax-filter.en.svg",
+      "pl": "/education/definitions/rating-climax-filter.pl.svg"
+    }
+  },
+  {
+    "id": "rating-decay",
+    "article": "vsaRating",
+    "section": "From patterns to one number",
+    "title": [
+      "Signal weights fade with age",
+      "Wagi sygnałów maleją z wiekiem"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-decay.en.svg",
+      "pl": "/education/definitions/rating-decay.pl.svg"
+    }
+  },
+  {
+    "id": "rating-transform",
+    "article": "vsaRating",
+    "section": "From patterns to one number",
+    "title": [
+      "Net score → rating",
+      "Wynik netto → rating"
+    ],
+    "files": {
+      "en": "/education/definitions/rating-transform.en.svg",
+      "pl": "/education/definitions/rating-transform.pl.svg"
+    }
+  },
+  {
+    "id": "weekly-confirmation",
+    "article": "vsaRating",
+    "section": "Where you see it in the app",
+    "title": [
+      "Daily and weekly confirmation",
+      "Potwierdzenie dzienne i tygodniowe"
+    ],
+    "files": {
+      "en": "/education/definitions/weekly-confirmation.en.svg",
+      "pl": "/education/definitions/weekly-confirmation.pl.svg"
+    }
+  },
+  {
+    "id": "vsa-inputs",
+    "article": "vsaKompendium",
+    "section": "1. What VSA is",
+    "title": [
+      "VSA: price, volume and context",
+      "VSA: cena, wolumen i kontekst"
+    ],
+    "files": {
+      "en": "/education/definitions/vsa-inputs.en.svg",
+      "pl": "/education/definitions/vsa-inputs.pl.svg"
+    }
+  },
+  {
+    "id": "spread-body",
+    "article": "vsaKompendium",
+    "section": "Range (spread)",
+    "title": [
+      "Spread and body are different",
+      "Spread i korpus to różne wielkości"
+    ],
+    "files": {
+      "en": "/education/definitions/spread-body.en.svg",
+      "pl": "/education/definitions/spread-body.pl.svg"
+    }
+  },
+  {
+    "id": "close-position",
+    "article": "vsaKompendium",
+    "section": "Where the bar closes",
+    "title": [
+      "Close high and close low",
+      "Zamknięcie wysoko i nisko"
+    ],
+    "files": {
+      "en": "/education/definitions/close-position.en.svg",
+      "pl": "/education/definitions/close-position.pl.svg"
+    }
+  },
+  {
+    "id": "up-bar-red-body",
+    "article": "vsaKompendium",
+    "section": "Up Bar, Down Bar and body colour",
+    "title": [
+      "Up Bar with a red body",
+      "Up Bar z czerwonym korpusem"
+    ],
+    "files": {
+      "en": "/education/definitions/up-bar-red-body.en.svg",
+      "pl": "/education/definitions/up-bar-red-body.pl.svg"
+    }
+  },
+  {
+    "id": "down-bar-green-body",
+    "article": "vsaKompendium",
+    "section": "Up Bar, Down Bar and body colour",
+    "title": [
+      "Down Bar with a green body",
+      "Down Bar z zielonym korpusem"
+    ],
+    "files": {
+      "en": "/education/definitions/down-bar-green-body.en.svg",
+      "pl": "/education/definitions/down-bar-green-body.pl.svg"
+    }
+  },
+  {
+    "id": "volume-comparison",
+    "article": "vsaKompendium",
+    "section": "Volume",
+    "title": [
+      "Volume is a relative comparison",
+      "Wolumen jest porównaniem względnym"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-comparison.en.svg",
+      "pl": "/education/definitions/volume-comparison.pl.svg"
+    }
+  },
+  {
+    "id": "volume-vs-open-interest",
+    "article": "vsaKompendium",
+    "section": "Volume",
+    "title": [
+      "Volume versus open interest",
+      "Wolumen a liczba otwartych kontraktów"
+    ],
+    "files": {
+      "en": "/education/definitions/volume-vs-open-interest.en.svg",
+      "pl": "/education/definitions/volume-vs-open-interest.pl.svg"
+    }
+  },
+  {
+    "id": "effort-result-detail",
+    "article": "vsaKompendium",
+    "section": "Effort-result",
+    "title": [
+      "Effort does not determine direction",
+      "Wysiłek nie określa kierunku"
+    ],
+    "files": {
+      "en": "/education/definitions/effort-result-detail.en.svg",
+      "pl": "/education/definitions/effort-result-detail.pl.svg"
+    }
+  },
+  {
+    "id": "background-structure",
+    "article": "vsaKompendium",
+    "section": "Background — the market backdrop",
+    "title": [
+      "Background: the preceding structure",
+      "Background: wcześniejsza struktura"
+    ],
+    "files": {
+      "en": "/education/definitions/background-structure.en.svg",
+      "pl": "/education/definitions/background-structure.pl.svg"
+    }
+  },
+  {
+    "id": "bullish-volume-waves",
+    "article": "vsaKompendium",
+    "section": "The character of volume on waves",
+    "title": [
+      "Bullish volume on waves",
+      "Wzrostowy charakter wolumenu na falach"
+    ],
+    "files": {
+      "en": "/education/definitions/bullish-volume-waves.en.svg",
+      "pl": "/education/definitions/bullish-volume-waves.pl.svg"
+    }
+  },
+  {
+    "id": "bearish-volume-waves",
+    "article": "vsaKompendium",
+    "section": "The character of volume on waves",
+    "title": [
+      "Bearish volume on waves",
+      "Spadkowy charakter wolumenu na falach"
+    ],
+    "files": {
+      "en": "/education/definitions/bearish-volume-waves.en.svg",
+      "pl": "/education/definitions/bearish-volume-waves.pl.svg"
+    }
+  },
+  {
+    "id": "timeframe-context",
+    "article": "vsaKompendium",
+    "section": "Timeframe",
+    "title": [
+      "Higher timeframe and local trigger",
+      "Wyższy interwał i lokalny sygnał"
+    ],
+    "files": {
+      "en": "/education/definitions/timeframe-context.en.svg",
+      "pl": "/education/definitions/timeframe-context.pl.svg"
+    }
+  },
+  {
+    "id": "signal-classes",
+    "article": "vsaKompendium",
+    "section": "4. Signal classes and the signal catalogue",
+    "title": [
+      "Strength and weakness: three classes",
+      "Siła i słabość: trzy klasy"
+    ],
+    "files": {
+      "en": "/education/definitions/signal-classes.en.svg",
+      "pl": "/education/definitions/signal-classes.pl.svg"
+    }
+  },
+  {
+    "id": "test-process",
+    "article": "vsaKompendium",
+    "section": "5. The test as a process, not a single candle",
+    "title": [
+      "A test is a sequence",
+      "Test jest sekwencją"
+    ],
+    "files": {
+      "en": "/education/definitions/test-process.en.svg",
+      "pl": "/education/definitions/test-process.pl.svg"
+    }
+  },
+  {
+    "id": "bullish-sequence",
+    "article": "vsaKompendium",
+    "section": "Rising and falling sequences",
+    "title": [
+      "A bullish three-signal sequence",
+      "Wzrostowa sekwencja trzech sygnałów"
+    ],
+    "files": {
+      "en": "/education/definitions/bullish-sequence.en.svg",
+      "pl": "/education/definitions/bullish-sequence.pl.svg"
+    }
+  },
+  {
+    "id": "bearish-sequence",
+    "article": "vsaKompendium",
+    "section": "Rising and falling sequences",
+    "title": [
+      "A bearish three-signal sequence",
+      "Spadkowa sekwencja trzech sygnałów"
+    ],
+    "files": {
+      "en": "/education/definitions/bearish-sequence.en.svg",
+      "pl": "/education/definitions/bearish-sequence.pl.svg"
+    }
+  },
+  {
+    "id": "wfo-bullish",
+    "article": "vsaKompendium",
+    "section": "WFO — the volume reversal formation",
+    "title": [
+      "Bullish WFO: two lower extremes",
+      "Wzrostowe WFO: dwa coraz niższe dołki"
+    ],
+    "files": {
+      "en": "/education/definitions/wfo-bullish.en.svg",
+      "pl": "/education/definitions/wfo-bullish.pl.svg"
+    }
+  },
+  {
+    "id": "wfo-bearish",
+    "article": "vsaKompendium",
+    "section": "WFO — the volume reversal formation",
+    "title": [
+      "Bearish WFO: two higher extremes",
+      "Spadkowe WFO: dwa coraz wyższe szczyty"
+    ],
+    "files": {
+      "en": "/education/definitions/wfo-bearish.en.svg",
+      "pl": "/education/definitions/wfo-bearish.pl.svg"
+    }
+  },
+  {
+    "id": "quiet-correction",
+    "article": "vsaKompendium",
+    "section": "Corrections",
+    "title": [
+      "Correction on declining volume",
+      "Korekta na malejącym wolumenie"
+    ],
+    "files": {
+      "en": "/education/definitions/quiet-correction.en.svg",
+      "pl": "/education/definitions/quiet-correction.pl.svg"
+    }
+  },
+  {
+    "id": "correction-accent",
+    "article": "vsaKompendium",
+    "section": "Corrections",
+    "title": [
+      "A correction ending with a sharp accent",
+      "Korekta zakończona wyraźnym akcentem"
+    ],
+    "files": {
+      "en": "/education/definitions/correction-accent.en.svg",
+      "pl": "/education/definitions/correction-accent.pl.svg"
+    }
+  },
+  {
+    "id": "abc-correction",
+    "article": "vsaKompendium",
+    "section": "Corrections",
+    "title": [
+      "ABC correction",
+      "Korekta ABC"
+    ],
+    "files": {
+      "en": "/education/definitions/abc-correction.en.svg",
+      "pl": "/education/definitions/abc-correction.pl.svg"
+    }
+  },
+  {
+    "id": "retracement-zones",
+    "article": "vsaKompendium",
+    "section": "7. Geometry as a level to watch",
+    "title": [
+      "Retracement zones",
+      "Strefy zniesienia"
+    ],
+    "files": {
+      "en": "/education/definitions/retracement-zones.en.svg",
+      "pl": "/education/definitions/retracement-zones.pl.svg"
+    }
+  },
+  {
+    "id": "hammer",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Hammer",
+      "Młot"
+    ],
+    "files": {
+      "en": "/education/definitions/hammer.en.svg",
+      "pl": "/education/definitions/hammer.pl.svg"
+    }
+  },
+  {
+    "id": "shooting-star",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Shooting star",
+      "Spadająca gwiazda"
+    ],
+    "files": {
+      "en": "/education/definitions/shooting-star.en.svg",
+      "pl": "/education/definitions/shooting-star.pl.svg"
+    }
+  },
+  {
+    "id": "piercing-line",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Piercing line",
+      "Formacja przenikania"
+    ],
+    "files": {
+      "en": "/education/definitions/piercing-line.en.svg",
+      "pl": "/education/definitions/piercing-line.pl.svg"
+    }
+  },
+  {
+    "id": "morning-star",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Morning star",
+      "Gwiazda poranna"
+    ],
+    "files": {
+      "en": "/education/definitions/morning-star.en.svg",
+      "pl": "/education/definitions/morning-star.pl.svg"
+    }
+  },
+  {
+    "id": "evening-star",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Evening star",
+      "Gwiazda wieczorna"
+    ],
+    "files": {
+      "en": "/education/definitions/evening-star.en.svg",
+      "pl": "/education/definitions/evening-star.pl.svg"
+    }
+  },
+  {
+    "id": "dark-cloud",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Dark cloud cover",
+      "Zasłona ciemnej chmury"
+    ],
+    "files": {
+      "en": "/education/definitions/dark-cloud.en.svg",
+      "pl": "/education/definitions/dark-cloud.pl.svg"
+    }
+  },
+  {
+    "id": "bearish-engulfing",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Bearish engulfing",
+      "Objęcie bessy"
+    ],
+    "files": {
+      "en": "/education/definitions/bearish-engulfing.en.svg",
+      "pl": "/education/definitions/bearish-engulfing.pl.svg"
+    }
+  },
+  {
+    "id": "inside-up",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Inside Bar: upward breakout",
+      "Inside Bar: wybicie w górę"
+    ],
+    "files": {
+      "en": "/education/definitions/inside-up.en.svg",
+      "pl": "/education/definitions/inside-up.pl.svg"
+    }
+  },
+  {
+    "id": "inside-down",
+    "article": "vsaKompendium",
+    "section": "Candles and bars as a complement to VSA",
+    "title": [
+      "Inside Bar: downward breakout",
+      "Inside Bar: wybicie w dół"
+    ],
+    "files": {
+      "en": "/education/definitions/inside-down.en.svg",
+      "pl": "/education/definitions/inside-down.pl.svg"
+    }
+  },
+  {
+    "id": "direction-vs-plan",
+    "article": "vsaKompendium",
+    "section": "8. The decision process from observation to trade",
+    "title": [
+      "Direction is not a complete trade plan",
+      "Kierunek to nie pełny plan transakcji"
+    ],
+    "files": {
+      "en": "/education/definitions/direction-vs-plan.en.svg",
+      "pl": "/education/definitions/direction-vs-plan.pl.svg"
+    }
+  },
+  {
+    "id": "scenario-five",
+    "article": "vsaKompendium",
+    "section": "Scenario no. 5 as an example of the process, not a universal template",
+    "title": [
+      "Scenario 5: alternative locations",
+      "Scenariusz 5: alternatywne miejsca"
+    ],
+    "files": {
+      "en": "/education/definitions/scenario-five.en.svg",
+      "pl": "/education/definitions/scenario-five.pl.svg"
+    }
+  },
+  {
+    "id": "trade-plan",
+    "article": "vsaKompendium",
+    "section": "The trade plan as a card filled in before entry",
+    "title": [
+      "The trade plan before entry",
+      "Plan transakcji przed wejściem"
+    ],
+    "files": {
+      "en": "/education/definitions/trade-plan.en.svg",
+      "pl": "/education/definitions/trade-plan.pl.svg"
+    }
+  },
+  {
+    "id": "stop-loss",
+    "article": "vsaKompendium",
+    "section": "Stop loss and position size",
+    "title": [
+      "Stop loss and invalidation",
+      "Stop loss i unieważnienie"
+    ],
+    "files": {
+      "en": "/education/definitions/stop-loss.en.svg",
+      "pl": "/education/definitions/stop-loss.pl.svg"
+    }
+  },
+  {
+    "id": "position-size",
+    "article": "vsaKompendium",
+    "section": "Stop loss and position size",
+    "title": [
+      "Position size: an arithmetic example",
+      "Wielkość pozycji: przykład obliczenia"
+    ],
+    "files": {
+      "en": "/education/definitions/position-size.en.svg",
+      "pl": "/education/definitions/position-size.pl.svg"
+    }
+  },
+  {
+    "id": "reward-risk",
+    "article": "vsaKompendium",
+    "section": "Reward to risk",
+    "title": [
+      "R and reward-to-risk",
+      "R i relacja zysku do ryzyka"
+    ],
+    "files": {
+      "en": "/education/definitions/reward-risk.en.svg",
+      "pl": "/education/definitions/reward-risk.pl.svg"
+    }
+  },
+  {
+    "id": "breakeven-rate",
+    "article": "vsaKompendium",
+    "section": "Reward to risk",
+    "title": [
+      "Break-even under a simplified 3R model",
+      "Próg rentowności w uproszczonym modelu 3R"
+    ],
+    "files": {
+      "en": "/education/definitions/breakeven-rate.en.svg",
+      "pl": "/education/definitions/breakeven-rate.pl.svg"
+    }
+  },
+  {
+    "id": "trading-costs",
+    "article": "vsaKompendium",
+    "section": "Costs and macro",
+    "title": [
+      "Gross result and trading costs",
+      "Wynik brutto i koszty transakcji"
+    ],
+    "files": {
+      "en": "/education/definitions/trading-costs.en.svg",
+      "pl": "/education/definitions/trading-costs.pl.svg"
+    }
+  },
+  {
+    "id": "macro-reactions",
+    "article": "vsaKompendium",
+    "section": "Costs and macro",
+    "title": [
+      "Price reactions to new information",
+      "Reakcje ceny na nową informację"
+    ],
+    "files": {
+      "en": "/education/definitions/macro-reactions.en.svg",
+      "pl": "/education/definitions/macro-reactions.pl.svg"
+    }
+  },
+  {
+    "id": "formalisation",
+    "article": "vsaKompendium",
+    "section": "10. Formalising the method in code and its limits",
+    "title": [
+      "Observation, formalisation and evidence",
+      "Obserwacja, formalizacja i dowód"
+    ],
+    "files": {
+      "en": "/education/definitions/formalisation.en.svg",
+      "pl": "/education/definitions/formalisation.pl.svg"
+    }
+  },
+  {
+    "id": "observation-vs-intent",
+    "article": "vsaKompendium",
+    "section": "11. What the sources say, and what they do not prove",
+    "title": [
+      "Observation versus participant intent",
+      "Obserwacja a intencje uczestników"
+    ],
+    "files": {
+      "en": "/education/definitions/observation-vs-intent.en.svg",
+      "pl": "/education/definitions/observation-vs-intent.pl.svg"
+    }
+  },
+  {
+    "id": "candidate-definition",
+    "article": "vsaKompendium",
+    "section": "A.1. What is actually calculated",
+    "title": [
+      "Candidate does not mean confirmation",
+      "Kandydat nie oznacza potwierdzenia"
+    ],
+    "files": {
+      "en": "/education/definitions/candidate-definition.en.svg",
+      "pl": "/education/definitions/candidate-definition.pl.svg"
+    }
+  },
+  {
+    "id": "ohlcv-data",
+    "article": "vsaKompendium",
+    "section": "A.2. Running it",
+    "title": [
+      "OHLCV and valid input data",
+      "OHLCV i poprawne dane wejściowe"
+    ],
+    "files": {
+      "en": "/education/definitions/ohlcv-data.en.svg",
+      "pl": "/education/definitions/ohlcv-data.pl.svg"
+    }
+  },
+  {
+    "id": "candidate-confirmation-execution",
+    "article": "vsaKompendium",
+    "section": "A.3. How to read the output",
+    "title": [
+      "Candidate → confirmation → execution",
+      "Kandydat → potwierdzenie → wykonanie"
+    ],
+    "files": {
+      "en": "/education/definitions/candidate-confirmation-execution.en.svg",
+      "pl": "/education/definitions/candidate-confirmation-execution.pl.svg"
+    }
+  },
+  {
+    "id": "intrabar-ambiguity",
+    "article": "vsaKompendium",
+    "section": "A.3. How to read the output",
+    "title": [
+      "One candle does not reveal the path",
+      "Jedna świeca nie ujawnia kolejności ruchu"
+    ],
+    "files": {
+      "en": "/education/definitions/intrabar-ambiguity.en.svg",
+      "pl": "/education/definitions/intrabar-ambiguity.pl.svg"
+    }
+  },
+  {
+    "id": "contract-units",
+    "article": "vsaKompendium",
+    "section": "A.4. Risk and units",
+    "title": [
+      "Price distance is not the whole risk",
+      "Odległość ceny to nie całe ryzyko"
+    ],
+    "files": {
+      "en": "/education/definitions/contract-units.en.svg",
+      "pl": "/education/definitions/contract-units.pl.svg"
+    }
+  },
+  {
+    "id": "drawdown",
+    "article": "vsaKompendium",
+    "section": "A.4. Risk and units",
+    "title": [
+      "Drawdown from an equity peak",
+      "Obsunięcie od szczytu kapitału"
+    ],
+    "files": {
+      "en": "/education/definitions/drawdown.en.svg",
+      "pl": "/education/definitions/drawdown.pl.svg"
+    }
+  },
+  {
+    "id": "out-of-sample",
+    "article": "vsaKompendium",
+    "section": "A.5. What the program's tests prove",
+    "title": [
+      "Out-of-sample validation",
+      "Weryfikacja poza próbą uczącą"
+    ],
+    "files": {
+      "en": "/education/definitions/out-of-sample.en.svg",
+      "pl": "/education/definitions/out-of-sample.pl.svg"
+    }
+  },
+  {
+    "id": "lookahead-bias",
+    "article": "vsaKompendium",
+    "section": "A.5. What the program's tests prove",
+    "title": [
+      "Causality: future bars cannot rewrite the past",
+      "Przyczynowość: przyszłe bary nie zmieniają przeszłości"
+    ],
+    "files": {
+      "en": "/education/definitions/lookahead-bias.en.svg",
+      "pl": "/education/definitions/lookahead-bias.pl.svg"
+    }
+  }
+]

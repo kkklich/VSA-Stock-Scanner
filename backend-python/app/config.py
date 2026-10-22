@@ -124,11 +124,9 @@ class Settings(BaseSettings):
     # grow the process without bound.
     error_tracking_max_groups: int = 200
 
-    # Optional shared secret for /api/admin/*. When set, those endpoints
-    # require an `X-Admin-Token` header matching it; when empty they are open,
-    # which is fine locally but NOT on a public deployment — the admin screens
-    # carry stack traces and caller IP addresses. GET /api/admin/health reports
-    # `protected: false` when this is unset so the UI can warn about it.
+    # Shared secret for /api/admin/*. An active admin account is also accepted.
+    # Empty disables shared-token access; it never makes diagnostics public.
+    # The token is required when registering an allowlisted admin address.
     admin_token: str = ""
 
     # ── User accounts (JWT) ───────────────────────────────────────────────────
@@ -156,9 +154,8 @@ class Settings(BaseSettings):
     # wants a closed list of people.
     registration_open: bool = True
 
-    # Comma-separated e-mail addresses that get the "admin" role when they
-    # register. Informational for now — /api/admin/* still uses its own
-    # STOCKPILOT_ADMIN_TOKEN — but stored from the start.
+    # Addresses eligible for the admin role. Registration also requires
+    # STOCKPILOT_ADMIN_TOKEN; an address alone is not proof of ownership.
     admin_emails: str = ""
 
     @property

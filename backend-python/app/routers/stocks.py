@@ -18,11 +18,13 @@ ingest completes.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, timedelta
+from threading import BoundedSemaphore
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -111,6 +113,8 @@ from app.models import (
     VsaSettings,
     VsaSignalResponse,
 )
+from app.services.action_log import _client_ip
+from app.services.auth import LoginThrottle
 from app.services.cache import LockRegistry, TTLCache
 from app.services.capex_service import build_capex_screen, sum_ttm, summarize_capex
 from app.services.espi_client import EspiClient
@@ -129,7 +133,11 @@ from app.services.ranking_service import (
     compute_ranking,
     ranking_cache_key,
 )
-from app.services.refresh_service import RefreshService, build_rating_points
+from app.services.refresh_service import (
+    RATING_LOOKBACK_DAYS,
+    RefreshService,
+    build_rating_points,
+)
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
 from app.services.trade_simulation_service import build_trade_simulation
@@ -891,6 +899,15 @@ async def get_methods() -> list[TradingMethodInfo]:
 # generation guard the heatmap/volume-surge use so a scan racing the nightly
 # refresh is served but not cached stale.
 _method_backtest_locks = LockRegistry()
+_method_backtest_gate = BoundedSemaphore(1)
+_method_backtest_budget = LoginThrottle(max_failures=2, window_seconds=60)
+
+
+def _backtest_finished(task: asyncio.Task) -> None:
+    # A disconnected caller cannot release admission while its worker still runs.
+    _method_backtest_gate.release()
+    if not task.cancelled():
+        task.exception()  # Observe errors even if every caller disconnected.
 
 
 @router.get(
@@ -902,6 +919,7 @@ _method_backtest_locks = LockRegistry()
 )
 async def get_method_backtest(
     method_id: str,
+    request: Request = None,
     forward_sessions: Annotated[
         int, Query(alias="forwardSessions", ge=3, le=30)
     ] = DEFAULT_FORWARD_SESSIONS,
@@ -934,6 +952,8 @@ async def get_method_backtest(
     # would not fit in memory.
     [scope] = _resolve_markets(market, allow_all=False)
     config = _parse_vsa_settings(vsa_settings)
+    if not method.uses_vsa_settings:
+        config = VsaConfig()
     cache_key = (
         f"method-backtest:{scope.id}:{method_id}:{forward_sessions}"
         f"{config.cache_suffix()}"
@@ -945,44 +965,68 @@ async def get_method_backtest(
         async with lock:
             result = cache.get(cache_key)
             if result is None:
-                generation = cache.generation
-                logger.info("Method back-test cold — computing for %s.", method_id)
-                stats = await compute_method_backtest(
-                    method=method,
-                    companies=companies.get_companies(scope.id),
-                    stooq=stooq,
-                    history_cache=history_cache,
-                    history_cache_ttl=settings.history_cache_seconds,
-                    repo=repo,
-                    config=config,
-                    forward_sessions=forward_sessions,
-                )
-                result = MethodBacktestResponse(
-                    method_id=stats.method_id,
-                    name=stats.name,
-                    market=scope.id,
-                    as_of=stats.as_of,
-                    forward_sessions=stats.forward_sessions,
-                    scanned_count=stats.scanned_count,
-                    signal_count=stats.signal_count,
-                    evaluated_count=stats.evaluated_count,
-                    win_count=stats.win_count,
-                    win_rate_pct=stats.win_rate_pct,
-                    avg_forward_return_pct=stats.avg_forward_return_pct,
-                    baseline_return_pct=stats.baseline_return_pct,
-                    avg_excess_return_pct=stats.avg_excess_return_pct,
-                    reward_risk=stats.reward_risk,
-                    passes=stats.passes,
-                    grade=stats.grade,
-                    summary=stats.summary,
-                    engine=stats.engine,
-                )
-                if not cache.set_if_generation(
-                    cache_key, result, settings.history_cache_seconds, generation
-                ):
-                    logger.info(
-                        "Method back-test cache invalidated mid-compute — not cached."
+                if not _method_backtest_gate.acquire(blocking=False):
+                    raise HTTPException(
+                        status.HTTP_429_TOO_MANY_REQUESTS,
+                        "A back-test is already running. Please try again shortly.",
+                        headers={"Retry-After": "5"},
                     )
+                if request is not None:
+                    client_key = _client_ip(request) or "unknown"
+                    if not _method_backtest_budget.admit(client_key):
+                        _method_backtest_gate.release()
+                        raise HTTPException(
+                            status.HTTP_429_TOO_MANY_REQUESTS,
+                            "Too many uncached back-tests. Please try again shortly.",
+                            headers={"Retry-After": str(
+                                _method_backtest_budget.retry_after_seconds(client_key)
+                            )},
+                        )
+
+                async def compute_and_cache() -> MethodBacktestResponse:
+                    generation = cache.generation
+                    logger.info("Method back-test cold — computing for %s.", method_id)
+                    stats = await compute_method_backtest(
+                        method=method,
+                        companies=companies.get_companies(scope.id),
+                        stooq=stooq,
+                        history_cache=history_cache,
+                        history_cache_ttl=settings.history_cache_seconds,
+                        repo=repo,
+                        config=config,
+                        forward_sessions=forward_sessions,
+                    )
+                    result = MethodBacktestResponse(
+                        method_id=stats.method_id,
+                        name=stats.name,
+                        market=scope.id,
+                        as_of=stats.as_of,
+                        forward_sessions=stats.forward_sessions,
+                        scanned_count=stats.scanned_count,
+                        signal_count=stats.signal_count,
+                        evaluated_count=stats.evaluated_count,
+                        win_count=stats.win_count,
+                        win_rate_pct=stats.win_rate_pct,
+                        avg_forward_return_pct=stats.avg_forward_return_pct,
+                        baseline_return_pct=stats.baseline_return_pct,
+                        avg_excess_return_pct=stats.avg_excess_return_pct,
+                        reward_risk=stats.reward_risk,
+                        passes=stats.passes,
+                        grade=stats.grade,
+                        summary=stats.summary,
+                        engine=stats.engine,
+                    )
+                    if not cache.set_if_generation(
+                        cache_key, result, settings.history_cache_seconds, generation
+                    ):
+                        logger.info(
+                            "Method back-test cache invalidated mid-compute — not cached."
+                        )
+                    return result
+
+                task = asyncio.create_task(compute_and_cache())
+                task.add_done_callback(_backtest_finished)
+                result = await asyncio.shield(task)
     return result
 
 
@@ -2254,21 +2298,29 @@ async def get_rating_history(
                 source="db",
             )
 
-    # 2. Fallback: derive the history from the OHLCV bars on the fly.
+    # Fetch context before the displayed range so changing the chart range
+    # cannot change the rating for the same session.
     quotes = await _get_quotes(
         normalized,
-        from_date=effective_from,
+        from_date=effective_from - timedelta(days=RATING_LOOKBACK_DAYS),
         to_date=to_date,
         cache=cache,
         cache_ttl=settings.history_cache_seconds,
         repo=repo,
         stooq=stooq,
     )
+    snapshot_dates = {
+        q.date for q in quotes
+        if q.date >= effective_from and (to_date is None or q.date <= to_date)
+    }
+    points = await asyncio.to_thread(
+        build_rating_points, quotes, currency, snapshot_dates=snapshot_dates,
+    )
     return RatingHistoryResponse(
         ticker=normalized.upper(),
         name=company.name if company else None,
         currency=currency,
-        points=build_rating_points(quotes, currency=currency),
+        points=points,
         source="computed",
     )
 

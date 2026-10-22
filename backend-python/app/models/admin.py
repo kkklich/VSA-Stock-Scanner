@@ -266,9 +266,8 @@ class SystemHealthResponse(_CamelModel):
     status: str
     version: str
     uptime_seconds: float
-    # False when the admin endpoints are reachable by anyone (no admin token
-    # configured) — the UI shows a warning, because this screen carries
-    # tracebacks and caller IP addresses.
+    # True: diagnostics always require an active admin account or a configured
+    # shared token, including when shared-token access is disabled.
     protected: bool
     ingest: IngestHealth
     data: DataHealth

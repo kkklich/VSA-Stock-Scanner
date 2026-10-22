@@ -9,7 +9,20 @@ Stan Weinstein patrzy na każdą spółkę na wykresie **tygodniowym** i widzi j
 | 3 | Szczyt | spółka znów porusza się w bok, tym razem na górze | sprzedaje / trzyma się z daleka |
 | 4 | Spadek | spółka spada poniżej opadającej średniej | trzyma się z daleka |
 
+<!-- definition-diagrams:weinstein-stage-1 -->
+![1 — Budowanie bazy](/education/definitions/weinstein-stage-1.pl.svg "Strukturę ceny odczytuje się względem kierunku średniej 30-tygodniowej. Faza opisuje kontekst, nie gwarantuje kolejnego ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![2 — Wzrost](/education/definitions/weinstein-stage-2.pl.svg "Strukturę ceny odczytuje się względem kierunku średniej 30-tygodniowej. Faza opisuje kontekst, nie gwarantuje kolejnego ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![3 — Szczyt](/education/definitions/weinstein-stage-3.pl.svg "Strukturę ceny odczytuje się względem kierunku średniej 30-tygodniowej. Faza opisuje kontekst, nie gwarantuje kolejnego ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![4 — Spadek](/education/definitions/weinstein-stage-4.pl.svg "Strukturę ceny odczytuje się względem kierunku średniej 30-tygodniowej. Faza opisuje kontekst, nie gwarantuje kolejnego ruchu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 Cała metoda polega na kupnie **w chwili, gdy Faza 1 przechodzi w Fazę 2**: w tygodniu, w którym spółka wybija się z długiej, nudnej bazy na dużym wolumenie. Właśnie tego szuka StockPilot. Metoda jest **tylko na wzrosty** i **średnioterminowa** — wzrost w Fazie 2 trwa zwykle miesiącami.
+
+![Cztery fazy rynku: baza, wzrost ponad średnią 30-tygodniową, szczyt i spadek poniżej średniej.](/education/images/weinstein.png "1 — Budowanie bazy. 2 — Wzrost. 3 — Szczyt. 4 — Spadek. Bursztynowa linia to średnia 30-tygodniowa (MA 30w). Błękitny okrąg wskazuje przejście z Fazy 1 do Fazy 2, ze zwiększonym wolumenem poniżej. Schemat cyklu, nie prognoza ani dane rynkowe. Kliknij ilustrację, aby ją powiększyć.")
 
 ## Skąd pochodzi
 
@@ -27,6 +40,13 @@ Fazy Weinsteina, jego 30-tygodniowa średnia i test wolumenu są zdefiniowane na
 
 **Trwający tydzień jest pomijany.** Weinstein kupuje na tygodniowym *zamknięciu*, a niedokończony tydzień ma tylko część tygodniowego wolumenu, co odebrałoby sens testowi wolumenu. Dlatego od poniedziałku do czwartku metoda pokazuje wynik ostatniego zakończonego tygodnia. Tydzień wybicia jest widoczny jako „wystąpiło” w swój piątek i przez weekend, a od poniedziałku jako „Broke out 3d ago”, „Broke out 4d ago” itd. (wybicie sprzed 3, 4 dni), licząc od ostatniej sesji. Jeśli następny tydzień znów wybija, to ten sam ruch: nie dostaje nowego znacznika na wykresie i nie jest też pokazywany jako „wystąpiło”.
 
+
+<!-- definition-diagrams:example-week-volume-sum -->
+![Pięć wolumenów dziennych tworzy sumę tygodnia](/education/definitions/example-week-volume-sum.pl.svg "W tym przykładzie wolumeny dzienne 20, 30, 25, 35 i 40 sumują się do 150. Niepełny tydzień pomija część tej aktywności. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Zamknięta świeca tygodniowa](/education/definitions/completed-week.pl.svg "Tygodniowe OHLCV łączy świece dzienne. Trwający tydzień jest pomijany, aby nie porównywać częściowego wolumenu z pełnymi tygodniami. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Sześć warunków, które sprawdza StockPilot
 
 Aby wybicie **wystąpiło**, wszystkie sześć warunków musi być spełnionych w tym samym zakończonym tygodniu:
@@ -40,17 +60,44 @@ Aby wybicie **wystąpiło**, wszystkie sześć warunków musi być spełnionych 
 | 5 | Wzrost dopiero się zaczyna | 30-tygodniowa średnia wzrosła w tych 10 tygodniach najwyżej o 10% |
 | 6 | Kupujący naprawdę są | wolumen tygodnia co najmniej 2× średniej z poprzednich 10 tygodni |
 
+<!-- definition-diagrams:weinstein-rule-1 -->
+![Weinstein 1 — Była prawdziwa baza](/education/definitions/weinstein-rule-1.pl.svg "20 tygodni przed tym tygodniem mieściło się w zakresie najwyżej 30% od najwyższego maksimum do najniższego minimum Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Weinstein 2 — Tydzień wybija się z niej](/education/definitions/weinstein-rule-2.pl.svg "tygodniowe zamknięcie powyżej najwyższego maksimum tych 20 tygodni Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Weinstein 3 — Jest po stronie Fazy 2](/education/definitions/weinstein-rule-3.pl.svg "tygodniowe zamknięcie powyżej 30-tygodniowej średniej kroczącej Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Weinstein 4 — Spadek się skończył](/education/definitions/weinstein-rule-4.pl.svg "30-tygodniowa średnia nie jest niżej niż 10 tygodni temu Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Weinstein 5 — Wzrost dopiero się zaczyna](/education/definitions/weinstein-rule-5.pl.svg "30-tygodniowa średnia wzrosła w tych 10 tygodniach najwyżej o 10% Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Weinstein 6 — Kupujący naprawdę są](/education/definitions/weinstein-rule-6.pl.svg "wolumen tygodnia co najmniej 2× średniej z poprzednich 10 tygodni Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 **Warunek 5 to serce metody.** Bez niego te same reguły włączałyby się także na spółce, która już mocno urosła i tylko zrobiła przerwę: płaski 20-tygodniowy odcinek na szczycie stromego wzrostu wciąż ma stromo *rosnącą* 30-tygodniową średnią. To słabszy zakup Bulkowskiego „głęboko w Fazie 2”. Ten limit trzyma metodę przy **przejściu**, które naprawdę kupuje Weinstein. W historii GPW sam ten warunek odrzucił 4467 tygodni-kandydatów.
 
 Faza 1 u Weinsteina następuje po spadku w Fazie 4, ale spadek **nie** jest sprawdzany osobno: spółka mogła budować bazę rok lub dłużej, a wtedy spadek wypadłby poza historię, którą ma aplikacja. Warunki 4 i 5 i tak wymagają płaskiej średniej, która definiuje Fazę 1.
 
 Spółka potrzebuje **co najmniej 40 zakończonych tygodni** historii (30-tygodniowa średnia plus 10 tygodni, w których jest porównywana).
 
+
+<!-- definition-diagrams:example-weekly-slope-limit -->
+![Średnia musi rosnąć dostatecznie powoli](/education/definitions/example-weekly-slope-limit.pl.svg "Przy wartości 100 dziesięć tygodni temu średnia kończąca na 105 spełnia regułę zmiany 0–10%. Wartość 115 oznacza zbyt stromy wzrost dla tego warunku. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Oceń zamknięcie pełnego tygodnia](/education/definitions/example-weekly-wick.pl.svg "Maksimum wewnątrz tygodnia ponad 104 nie wystarcza: ostatnie zamknięcie tygodnia na 101 wraca poniżej maksimum bazy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Co widać w aplikacji
 
 - **Wynik (0–100):** na ile obraz przejścia z Fazy 1 do Fazy 2 jest kompletny. Sześć sprawdzeń, po ok. 17 punktów: ciasna baza; 30-tygodniowa średnia przestała spadać; nie wzrosła już o ponad 10%; cena jest teraz powyżej 30-tygodniowej średniej; cena jest najwyżej 20% powyżej szczytu bazy (wciąż w strefie zakupu); oraz wybicie w ciągu ostatnich czterech tygodni. Gdy wybicie było niedawno, bazę ocenia się tak, jak wyglądała w tygodniu wybicia — inaczej wzrost po wybiciu sprawiłby, że baza wyglądałaby na „nieciasną” akurat wtedy, gdy układ właśnie się włączył.
 - **Opis:** „Stage 2 breakout x6.9 vol” w tygodniu wybicia, „Broke out 12d ago, 5/6” później, a w pozostałych przypadkach „3/6 below 30w MA” albo „3/6 setup”.
 - **Znaczniki na wykresie:** niebieska kropka z zieloną etykietą „Stage 2 breakout”, umieszczona w **ostatnim dniu sesyjnym tygodnia wybicia**.
+
+
+<!-- definition-diagrams:weinstein-score -->
+![Sześć warunków, jeden wynik](/education/definitions/weinstein-score.pl.svg "Wynik ocenia aktualny układ; warunki wystąpienia sygnału oceniają zamknięty tydzień wybicia. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Prawdziwy przykład: Dom Development, grudzień 2022
 
@@ -75,6 +122,11 @@ Oba przypadki są automatycznie sprawdzane w testach aplikacji na prawdziwych ce
 - Nie sprawdza **siły względnej** wobec rynku, z której Weinstein też korzysta.
 - Nie prowadzi transakcji. Wyjścia Weinsteina opierają się na zleceniach stop poniżej wsparcia i na 30-tygodniowej średniej; aplikacja nie podaje stopu, celu ani sygnału wyjścia.
 - Nie odczytuje fazy całego rynku (Weinstein woli kupować, gdy cały rynek też jest w Fazie 2).
+
+
+<!-- definition-diagrams:example-stage-context-exit -->
+![Rozpoznawanie faz i planowanie wyjścia](/education/definitions/example-stage-context-exit.pl.svg "Skaner wejścia w Fazę 2 nie dostarcza automatycznie wyjścia w Fazie 3 lub 4. Ilustracja rozdziela kontekst wejścia od późniejszego zarządzania transakcją. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Źródła
 

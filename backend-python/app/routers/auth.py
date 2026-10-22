@@ -20,9 +20,13 @@ A signed-in visitor can still change their own password.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import secrets
-from typing import Annotated
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from threading import BoundedSemaphore
+from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 
@@ -63,6 +67,29 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # two apart would turn this endpoint into a way to find out which addresses are
 # registered here.
 _BAD_CREDENTIALS = "E-mail or password is incorrect."
+
+_PasswordResult = TypeVar("_PasswordResult")
+_password_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="password")
+_password_slots = BoundedSemaphore(4)
+
+
+async def _password_work(
+    operation: Callable[..., _PasswordResult], *args: str,
+) -> _PasswordResult:
+    # Reserve before submission: neither the executor nor cancelled requests
+    # may create an unbounded queue of expensive bcrypt work.
+    if not _password_slots.acquire(blocking=False):
+        raise _fail(
+            status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attempts",
+            "Sign-in is busy. Please try again shortly.", headers={"Retry-After": "1"},
+        )
+    try:
+        future = _password_executor.submit(operation, *args)
+    except BaseException:
+        _password_slots.release()
+        raise
+    future.add_done_callback(lambda _finished: _password_slots.release())
+    return await asyncio.wrap_future(future)
 
 
 def _fail(
@@ -313,8 +340,8 @@ async def register(
 
     # Registration is rate-limited by address too: it is the one endpoint that
     # writes a row for an anonymous caller.
-    key = _client_key(request)
-    if throttle is not None and throttle.is_blocked(key):
+    key = f"register:{_client_key(request)}"
+    if throttle is not None and not throttle.admit(key):
         raise _fail(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "too_many_attempts",
@@ -325,19 +352,15 @@ async def register(
     try:
         email = normalize_email(payload.email)
     except AuthError as exc:
-        if throttle is not None:
-            throttle.record_failure(key)
         raise _fail(status.HTTP_400_BAD_REQUEST, "invalid_email", str(exc)) from exc
     try:
         validate_password(payload.password)
     except AuthError as exc:
-        if throttle is not None:
-            throttle.record_failure(key)
         raise _fail(status.HTTP_400_BAD_REQUEST, "weak_password", str(exc)) from exc
 
     wants_admin = is_admin_email(email)
-    if wants_admin and settings.admin_token:
-        if not x_admin_token or not secrets.compare_digest(
+    if wants_admin:
+        if not settings.admin_token or not x_admin_token or not secrets.compare_digest(
             x_admin_token, settings.admin_token
         ):
             raise _fail(
@@ -349,7 +372,7 @@ async def register(
     try:
         row = await repository.create(
             email=email,
-            password_hash=hash_password(payload.password),
+            password_hash=await _password_work(hash_password, payload.password),
             display_name=clean_display_name(payload.display_name, email),
             role="admin" if wants_admin else "user",
         )
@@ -386,7 +409,6 @@ async def login(
     # second stops one machine walking a list of addresses.
     ip_key = _client_key(request)
     email_key = f"email:{email}"
-    keys = [email_key, ip_key]
 
     # Block the caller IP if this address has flooded failed attempts
     if throttle is not None and throttle.is_blocked(ip_key):
@@ -397,31 +419,41 @@ async def login(
             headers={"Retry-After": str(throttle.retry_after_seconds(ip_key))},
         )
 
+    # Reserve both budgets before the first await. Success releases only its
+    # own IP reservation, preserving earlier and concurrent failed attempts.
+    ip_attempt = None
+    if throttle is not None:
+        if not throttle.admit(email_key, allow_recovery=True):
+            raise _fail(
+                status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attempts",
+                "Too many sign-in attempts. Please wait before trying again.",
+                headers={"Retry-After": str(throttle.recovery_retry_after(email_key))},
+            )
+        ip_attempt = throttle.record_failure(ip_key)
+
     row = await repository.get_by_email(email)
     credentials_valid = (
         row is not None
         and row.is_active
-        and verify_password(payload.password, row.password_hash)
+        and await _password_work(verify_password, payload.password, row.password_hash)
     )
 
     if not credentials_valid:
-        if throttle is not None:
-            for key in keys:
-                throttle.record_failure(key)
-        # If this email has sustained repeated failures, throttle bad guesses
-        # without locking out a genuine user who enters the correct password.
+        # The threshold attempt reports 429 too. Subsequent attempts are
+        # admitted only at the recovery-probe cadence, before verification.
         if throttle is not None and throttle.is_blocked(email_key):
             raise _fail(
                 status.HTTP_429_TOO_MANY_REQUESTS,
                 "too_many_attempts",
                 "Too many sign-in attempts. Please wait a few minutes.",
-                headers={"Retry-After": str(throttle.retry_after_seconds(email_key))},
+                headers={"Retry-After": str(throttle.recovery_retry_after(email_key))},
             )
         raise _fail(status.HTTP_401_UNAUTHORIZED, "bad_credentials", _BAD_CREDENTIALS)
 
     if throttle is not None:
-        for key in keys:
-            throttle.clear(key)
+        throttle.clear(email_key)
+        if ip_attempt is not None:
+            throttle.forgive(ip_key, ip_attempt)
 
     try:
         await repository.touch_last_login(row.id)
@@ -506,7 +538,7 @@ async def change_password(
     repo: Annotated[UserRepository | None, Depends(get_user_repository)] = None,
 ) -> AuthResponse:
     repository = _require_repo(repo)
-    if not verify_password(payload.current_password, user.password_hash):
+    if not await _password_work(verify_password, payload.current_password, user.password_hash):
         raise _fail(
             status.HTTP_401_UNAUTHORIZED,
             "wrong_current_password",
@@ -517,7 +549,8 @@ async def change_password(
     except AuthError as exc:
         raise _fail(status.HTTP_400_BAD_REQUEST, "weak_password", str(exc)) from exc
 
-    await repository.set_password(user.id, hash_password(payload.new_password))
+    password_hash = await _password_work(hash_password, payload.new_password)
+    await repository.set_password(user.id, password_hash)
     # Re-read so the new token carries the bumped token_version — otherwise the
     # caller would be signed out by their own password change.
     updated = await repository.get_by_id(user.id)

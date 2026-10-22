@@ -46,8 +46,35 @@ const markdownComponents: Components = {
       {children}
     </h4>
   ),
-  p: ({ children }) => (
-    <p className="my-3 text-sm leading-relaxed text-slate-300">{children}</p>
+  p: ({ children, node }) => {
+    const child = node?.children.length === 1 ? node.children[0] : undefined
+    if (child?.type === 'element' && child.tagName === 'img') {
+      const caption = child.properties.title
+      return (
+        <figure className="my-6 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+          {children}
+          {typeof caption === 'string' && (
+            <figcaption className="border-t border-slate-800 px-4 py-3 text-xs leading-relaxed text-slate-400">
+              {caption}
+            </figcaption>
+          )}
+        </figure>
+      )
+    }
+    return <p className="my-3 text-sm leading-relaxed text-slate-300">{children}</p>
+  },
+  img: ({ src, alt }) => (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="block focus-visible:outline-2 focus-visible:outline-emerald-400">
+      <img
+        src={src}
+        alt={alt ?? ''}
+        loading="lazy"
+        decoding="async"
+        width={src?.startsWith('/education/definitions/') ? 960 : src?.startsWith('/education/images/') ? 1536 : undefined}
+        height={src?.startsWith('/education/definitions/') ? 560 : src?.startsWith('/education/images/') ? 1024 : undefined}
+        className="block h-auto w-full"
+      />
+    </a>
   ),
   ul: ({ children }) => (
     <ul className="my-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-slate-300">
@@ -114,7 +141,7 @@ const markdownComponents: Components = {
     </th>
   ),
   td: ({ children }) => (
-    <td className="border border-slate-800 px-3 py-2 align-top text-slate-300">
+    <td className="border border-slate-800 px-3 py-2 align-top text-slate-300 [&_img]:w-40 [&_img]:max-w-none">
       {children}
     </td>
   ),

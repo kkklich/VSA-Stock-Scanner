@@ -9,6 +9,7 @@ encode/decode and the router's own rules.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import jwt
 import pytest
@@ -286,7 +287,12 @@ class TestRegister:
     ) -> None:
         assert _register(client).json()["user"]["role"] == "user"
         monkeypatch.setattr(settings, "admin_emails", "boss@example.com")
-        promoted = _register(client, email="boss@example.com")
+        monkeypatch.setattr(settings, "admin_token", "test-provisioning-token")
+        promoted = client.post(
+            "/api/auth/register",
+            json={"email": "boss@example.com", "password": "tajne-haslo-1"},
+            headers={"X-Admin-Token": "test-provisioning-token"},
+        )
         assert promoted.json()["user"]["role"] == "admin"
 
     def test_admin_registration_requires_admin_token_when_configured(
@@ -378,9 +384,11 @@ class TestLogin:
         assert codes[-1] == 429
 
     def test_attacker_cannot_lock_out_legitimate_user(
-        self, client: TestClient
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _register(client)
+        clock = [1000.0]
+        monkeypatch.setattr(auth_service, "time", SimpleNamespace(monotonic=lambda: clock[0]))
         attacker_headers = {"X-Forwarded-For": "198.51.100.5"}
         # Attacker on an external IP spams wrong password repeatedly until email throttling kicks in
         for _ in range(12):
@@ -397,8 +405,9 @@ class TestLogin:
         )
         assert wrong.status_code == 429
 
-        # Legitimate user from their own IP entering the correct password can
-        # still log in successfully
+        # A blocked account admits one recovery probe every 30 seconds.
+        # Correct credentials remain usable without waiting the full IP window.
+        clock[0] += int(wrong.headers["Retry-After"])
         legit = client.post(
             "/api/auth/login",
             json={"email": "ala@example.com", "password": "tajne-haslo-1"},

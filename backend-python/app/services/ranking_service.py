@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 
 from app.analysis.ai_insight import analyze_stock
@@ -87,6 +88,10 @@ _MIN_52W_COVERAGE_DAYS = 330
 # importable.
 _MIN_MARKET_CAP_PLN = MIN_MARKET_CAP_PLN
 _MAX_CONCURRENT = 4
+# Shared across markets and request/background scans. A dedicated single worker
+# keeps CPU work off the event loop without consuming the default executor
+# (used by other API operations) or multiplying GIL contention across scans.
+_ANALYSIS_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ranking")
 _SPARKLINE_BARS = 10
 # Recency pre-filter: exclude suspended/stale listings, whose last bar keeps
 # falling further behind the rest of the market while their rating (keyed to
@@ -121,16 +126,15 @@ _RS_WEIGHTS = (0.4, 0.2, 0.2, 0.2)
 
 def _relative_strength_raw(quotes: Sequence[StooqDailyQuote]) -> float | None:
     """The stock's raw blended trailing return (percent), or None if too short."""
-    closes = [float(q.close) for q in quotes]
-    n = len(closes)
+    n = len(quotes)
     if n <= max(_RS_OFFSETS):
         return None
-    last = closes[-1]
+    last = float(quotes[-1].close)
     if last <= 0:
         return None
     perf = 0.0
     for off, weight in zip(_RS_OFFSETS, _RS_WEIGHTS, strict=True):
-        past = closes[-1 - off]
+        past = float(quotes[-1 - off].close)
         if past <= 0:
             return None
         perf += weight * (last / past - 1.0) * 100.0
@@ -356,6 +360,17 @@ async def compute_ranking(
             )
             return None
 
+        return await asyncio.get_running_loop().run_in_executor(
+            _ANALYSIS_EXECUTOR, analyse, company, quotes or [], rs_rank
+        )
+
+    def analyse(
+        company: GpwCompany,
+        quotes: list[StooqDailyQuote],
+        rs_rank: float | None,
+    ) -> tuple[StockRankingItem, date] | None:
+        """CPU-only work; never access async clients or caches in this worker."""
+        currency = quote_currency(company)
         # Everything below except the 52-week context runs on the 120-day
         # analysis slice, so the longer fetch window (CONTEXT_HISTORY_DAYS)
         # never changes ratings, signals or the pre-filters.
@@ -491,9 +506,8 @@ async def compute_ranking(
         quotes = await fetch_quotes(company.ticker)
         return company.ticker, _relative_strength_raw(quotes or [])
 
-    # Both passes below fan out over the whole universe. The DB reads inside
-    # fetch_quotes are gated by db_semaphore and the live fetches by semaphore,
-    # so the gather is wide but the I/O underneath it is not.
+    # Fetch concurrently, bounded by the DB/provider gates above. Raw RS reads
+    # just five closes per stock; the expensive analysis runs in the worker.
 
     rs_pairs = await asyncio.gather(
         *(rs_raw_for(c) for c in companies), return_exceptions=True
@@ -507,14 +521,18 @@ async def compute_ranking(
             rs_raw[ticker] = raw
     rs_rank_by_ticker = _percentile_ranks(rs_raw)
 
-    # return_exceptions=True so one failed task can never abort the whole gather.
-    results = await asyncio.gather(
-        *(
-            fetch_and_analyse(c, rs_rank_by_ticker.get(c.ticker))
-            for c in companies
-        ),
-        return_exceptions=True,
-    )
+    # Submit only one stock per scan at a time, instead of queuing the whole
+    # universe in the executor. Concurrent scans share its single CPU worker.
+    # Cancellation stops further submissions; at most the currently running
+    # stock finishes, and queued work is cancelled by run_in_executor's future.
+    results: list[tuple[StockRankingItem, date] | None | Exception] = []
+    for company in companies:
+        try:
+            results.append(await fetch_and_analyse(
+                company, rs_rank_by_ticker.get(company.ticker)
+            ))
+        except Exception as exc:  # preserve per-company failure isolation
+            results.append(exc)
     # An exception that escaped fetch_and_analyse's guard (e.g. the DB dying
     # mid-scan) must be logged, or a broken run would look like an empty market.
     for company, result in zip(companies, results, strict=True):

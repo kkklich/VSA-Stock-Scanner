@@ -7,6 +7,10 @@ Tables:
   * ``company_quarterly_financials`` — quarterly income-statement history
   * ``company_cashflow``            — capex / operating cash flow per reported
                                      period (feeds the capex screen)
+  * ``financial_observations``     — append-only financial fetch payloads and
+                                     actual acquisition timestamps
+  * ``long_term_snapshots``        — append-only ranking revisions with full
+                                     inputs and comparison cohorts
   * ``rating_snapshots``           — one VSA rating per (ticker, date), written by
                                      the refresh pipeline so the rating's evolution
                                      over time can be charted
@@ -130,6 +134,53 @@ class RatingSnapshotRow(Base):
     verdict: Mapped[str] = mapped_column(String(20), nullable=False)
     # Closing price on that day, for plotting rating vs price together.
     close: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
+
+
+class FinancialObservationRow(Base):
+    """Append-only evidence of what a fetch actually returned when received.
+
+    ``observed_at`` is acquisition time, never the statement period end or an
+    inferred publication date. Restatements and repeated fetches remain distinct.
+    """
+
+    __tablename__ = "financial_observations"
+    __table_args__ = (
+        Index("ix_financial_observation_history", "ticker", "observed_at", "id"),
+        Index("ix_financial_observation_kinds", "ticker", "kind"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class LongTermSnapshotRow(Base):
+    """Immutable ranking revisions, including their full inputs and cohort."""
+
+    __tablename__ = "long_term_snapshots"
+    __table_args__ = (
+        Index("ix_long_term_snapshot_history", "ticker", "recorded_at", "id"),
+        Index("ix_long_term_snapshot_market", "market"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
+    market: Mapped[str] = mapped_column(String(20), nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quality: Mapped[float | None] = mapped_column(Float, nullable=True)
+    value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    momentum: Mapped[float | None] = mapped_column(Float, nullable=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
 class CompanyCashflowRow(Base):

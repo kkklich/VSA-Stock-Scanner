@@ -76,7 +76,7 @@ services:
       # is the file half.
       STOCKPILOT_ACTION_LOG_RETENTION_DAYS: ${STOCKPILOT_ACTION_LOG_RETENTION_DAYS:-30}
       # Shared secret for /api/admin/* (the System page: health, errors, logs).
-      # Optional: empty leaves those endpoints open.
+      # Empty disables shared-token access; authenticated admin accounts still work.
       STOCKPILOT_ADMIN_TOKEN: ${STOCKPILOT_ADMIN_TOKEN:-}
       # Sign-in (optional visitor accounts). JWT_SECRET is the key every
       # login token is signed with; left empty (the owner's choice) the app
@@ -97,7 +97,7 @@ services:
       # The folder must be writable by the container's user (uid 10001) —
       # deploy/deploy.sh prepares it. Size is capped by the app itself
       # (10 MB x 6 files), so it cannot fill the disk.
-      - ./logs:/app/logs
+      - ./logs:/app/logs:z
     # No `ports:` — only the web container talks to it, over the compose network.
     logging:
       driver: json-file
@@ -128,7 +128,7 @@ services:
     volumes:
       # ~/stockpilot/ml on the server — survives rebuilds, deploys and `down`.
       # deploy/deploy.sh makes it writable by the container's user (uid 10001).
-      - ./ml:/app/ml
+      - ./ml:/app/ml:z
     # The cap. Memory equals memory+swap, so the job cannot spill into swap and
     # slow the whole server down: over the limit, only the job is stopped.
     mem_limit: ${STOCKPILOT_ML_MEMORY:-1g}

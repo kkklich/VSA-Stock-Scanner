@@ -377,8 +377,12 @@ class IngestService:
         if full or today.weekday() == 0 or await self._fundamentals_missing():
             fundamentals_for = companies
         else:
+            missing_observations = await self._repo.get_missing_financial_observation_tickers(
+                [c.ticker for c in companies]
+            )
             fundamentals_for = [
-                c for c in companies if market_of(c.ticker).id in full_ids
+                c for c in companies
+                if market_of(c.ticker).id in full_ids or c.ticker in missing_observations
             ]
         if fundamentals_for:
             logger.info(
@@ -586,7 +590,7 @@ class IngestService:
             )
 
     async def _fundamentals_missing(self) -> bool:
-        """True when no cash-flow data is stored yet (first run after upgrade).
+        """True when no cash flow is stored yet (first run after upgrade).
 
         Cheap: an existence probe ("is there a single row?"), not a read of the
         whole table. Without it the capex screen would stay empty until the
@@ -597,6 +601,22 @@ class IngestService:
         except Exception:  # noqa: BLE001 — a probe must never abort the ingest
             logger.debug("Could not check stored cash-flow data; skipping backfill.")
             return False
+
+    async def observation_bootstrap_markets(self) -> list[str]:
+        """Resume initialization of incomplete financial/ranking archives.
+
+        A single on-demand fetch or a completed market must not hide missing
+        observations elsewhere after an interrupted first refresh.
+        """
+        missing_tickers = await self._repo.get_missing_financial_observation_tickers(
+            [c.ticker for c in self._companies]
+        )
+        missing_markets = {market_of(ticker).id for ticker in missing_tickers}
+        scope = self._scope(None)
+        for market in scope:
+            if not await self._repo.has_long_term_snapshots(market):
+                missing_markets.add(market)
+        return [market for market in scope if market in missing_markets]
 
     async def _ingest_fundamentals(
         self, semaphore: asyncio.Semaphore, companies: list[GpwCompany]
@@ -674,7 +694,7 @@ class IngestService:
 
     async def run_insider_refresh(self) -> dict[str, int]:
         """Daily 12:00 job: download insider transactions for all tracked companies."""
-        semaphore = asyncio.Semaphore(self._max_concurrent)
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
         companies_checked = 0
         rows_fetched = 0
 

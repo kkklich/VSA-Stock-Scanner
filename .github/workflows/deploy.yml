@@ -1,9 +1,9 @@
-# StockPilot — deploy to the Cyber_Folks VPS.
+# StockPilot — deploy to the Oracle VPS, including archive-based installations.
 #
 # Triggered by the CI workflow finishing SUCCESSFULLY on main/master (or
-# manually from the Actions tab). It logs into the server over SSH and runs
-# deploy/deploy.sh there: git pull, rebuild the containers, restart,
-# health-check.
+# manually from the Actions tab). Upload the checked commit, rebuild the
+# containers over SSH, restart, then check health. No server Git checkout or
+# server-side GitHub credentials are needed. Keep .env.prod and data on the VPS.
 #
 # Why not "on: push"? Because then the VPS rebuild raced the tests: both
 # workflows started at the same moment, so the server could be rebuilding a
@@ -24,12 +24,20 @@
 #                   then:      cat ~/.ssh/github_deploy.pub >> ~/.ssh/authorized_keys
 #                   and paste the contents of ~/.ssh/github_deploy as the secret.
 #   VPS_PORT        (optional) SSH port if it isn't 22
-#   VPS_PATH        (optional) checkout path on the server; defaults to ~/stockpilot
+#   VPS_PATH        (optional) app path, e.g. /home/opc/stockpilot; defaults to
+#                   the SSH user's home directory followed by /stockpilot
+#   VPS_FINGERPRINT (optional) SSH host fingerprint, shared by upload and deploy
+#
+# The SSH user needs passwordless sudo for the Docker deployment (as opc has
+# on the Oracle image). The existing VPS folder must contain .env.prod.
 #
 # Until these secrets exist the job fails fast with a clear message — deploying
 # by hand (ssh in, `bash deploy/deploy.sh`) stays perfectly valid.
 
 name: Deploy
+
+permissions:
+  contents: read
 
 on:
   workflow_run:
@@ -73,7 +81,7 @@ jobs:
             echo "Manual deploy of $BRANCH, started by $ACTOR."
           else
             echo "CI run $CI_RUN_ID went green for commit $CI_SHA on $BRANCH."
-            echo "Deploying the tip of $BRANCH."
+            echo "Deploying the exact commit checked by CI."
           fi
 
       - name: Check that the deploy secrets are configured
@@ -91,30 +99,55 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          # Passed to the remote shell as $REF_NAME rather than substituted into
-          # the script text. Interpolating ${{ github.ref_name }} straight into
-          # the script is a shell-injection sink — a crafted branch/ref name
-          # could inject commands. As an env var it is plain data.
-          #
-          # On a workflow_run event github.ref_name is always the default branch,
-          # so the branch CI actually tested (head_branch) comes first; the
-          # fallback is for the manual "Run workflow" button.
-          REF_NAME: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+      - name: Check out the selected commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Package application source
+        run: |
+          git archive --format=tar.gz --output=stockpilot-release.tar.gz HEAD \
+            backend-python frontend deploy docker-compose.prod.yml env.prod.example
+
+      - name: Upload source to the VPS
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          fingerprint: ${{ secrets.VPS_FINGERPRINT }}
+          source: stockpilot-release.tar.gz
+          target: /tmp/stockpilot-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ secrets.VPS_PATH }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          DEPLOY_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          fingerprint: ${{ secrets.VPS_FINGERPRINT }}
           # Building the images can take a few minutes on a small VPS.
           command_timeout: 30m
-          # Forward REF_NAME from the runner env into the remote session.
-          envs: REF_NAME
+          envs: DEPLOY_PATH,DEPLOY_SHA,DEPLOY_RUN
           script: |
             set -euo pipefail
-            cd "${{ secrets.VPS_PATH || '~/stockpilot' }}"
-            git fetch --all
-            git reset --hard "origin/${REF_NAME}"
-            bash deploy/deploy.sh --skip-pull
+            app_path="${DEPLOY_PATH:-$HOME/stockpilot}"
+            case "$app_path" in
+              '~/'*) app_path="$HOME/${app_path:2}" ;;
+            esac
+            cd "$app_path"
+            test -f .env.prod || { echo 'Missing server configuration: .env.prod'; exit 1; }
+            sudo -n docker compose version
+            archive="/tmp/stockpilot-$DEPLOY_RUN/stockpilot-release.tar.gz"
+            tar -xzf "$archive" --no-same-owner
+            sudo -n bash deploy/deploy.sh --skip-pull
+            printf '%s\n' "$DEPLOY_SHA" > .deployed-sha
+            rm -f -- "$archive"
+            rmdir -- "/tmp/stockpilot-$DEPLOY_RUN"

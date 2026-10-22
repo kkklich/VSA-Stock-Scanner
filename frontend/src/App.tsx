@@ -16,6 +16,7 @@ import { ScannerPage } from './pages/ScannerPage'
 import { SectorHeatmapPage } from './pages/SectorHeatmapPage'
 import { VolumeSurgePage } from './pages/VolumeSurgePage'
 import { CapexPage } from './pages/CapexPage'
+import { LongTermPage } from './pages/LongTermPage'
 import { FiltersPage } from './pages/FiltersPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SystemPage } from './pages/SystemPage'
@@ -35,6 +36,7 @@ function titleKeyForPath(pathname: string): string {
   if (pathname.startsWith('/heatmap')) return 'pageTitles.heatmap'
   if (pathname.startsWith('/volume-surge')) return 'pageTitles.volumeSurge'
   if (pathname.startsWith('/capex')) return 'pageTitles.investment'
+  if (pathname.startsWith('/long-term')) return 'pageTitles.longTerm'
   if (pathname.startsWith('/stock/')) return 'pageTitles.stock'
   if (pathname.startsWith('/filters')) return 'pageTitles.filters'
   if (pathname.startsWith('/settings')) return 'pageTitles.settings'
@@ -87,6 +89,7 @@ export default function App() {
         <Route path="heatmap" element={<SectorHeatmapPage />} />
         <Route path="volume-surge" element={<VolumeSurgePage />} />
         <Route path="capex" element={<CapexPage />} />
+        <Route path="long-term" element={<LongTermPage />} />
         <Route path="stock/:ticker" element={<ChartsPage />} />
         <Route path="filters" element={<FiltersPage />} />
         <Route path="settings" element={<SettingsPage />} />

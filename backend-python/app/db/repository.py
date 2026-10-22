@@ -14,20 +14,28 @@ SQLAlchemy async + asyncpg.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from copy import deepcopy
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
-from sqlalchemy import case, func, select, update
+from sqlalchemy import case, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.db.long_term_repository import (
+    PostgresLongTermRepository,
+    financial_payload,
+    snapshot_values,
+    utc_timestamp,
+)
 from app.db.models import (
     CompanyCashflowRow,
     CompanyFundamentalsRow,
     CompanyQuarterlyRow,
     CompanyRow,
     DailyQuoteRow,
+    FinancialObservationRow,
     InsiderTransactionRow,
     RatingSnapshotRow,
 )
@@ -155,6 +163,36 @@ class QuoteRepository(Protocol):
         """Return the stored fundamentals for a ticker, or None if not yet ingested."""
         ...
 
+    async def get_long_term_inputs(self, tickers: list[str]) -> dict[str, dict]:
+        """Latest metrics and their actual observation timestamps, keyed by ticker."""
+        ...
+
+    async def append_long_term_snapshots(
+        self, items: list[dict], recorded_at: datetime, model_version: str
+    ) -> None:
+        """Append full ranking items; reruns create new immutable revisions."""
+        ...
+
+    async def get_long_term_history(self, ticker: str, limit: int = 100) -> list[dict]:
+        """Newest ranking payloads with recordedAt and modelVersion."""
+        ...
+
+    async def get_financial_history(self, ticker: str, limit: int = 50) -> list[dict]:
+        """Newest acquired payloads with observedAt, kind and source."""
+        ...
+
+    async def has_long_term_snapshots(self, market: str | None = None) -> bool:
+        """True if a ranking has been recorded, optionally within one market."""
+        ...
+
+    async def has_financial_observations(self) -> bool:
+        """True if real financial data has been observed since history was enabled."""
+        ...
+
+    async def get_missing_financial_observation_tickers(self, tickers: list[str]) -> set[str]:
+        """Missing archives of metrics or of optional statement kinds already stored."""
+        ...
+
     async def get_report_dates(self, tickers: Sequence[str]) -> dict[str, list[date]]:
         """Return the stored report dates (last and next) per ticker.
 
@@ -260,7 +298,7 @@ def _insider_item(row: InsiderTransactionRow) -> InsiderTransactionItem:
 
 # ── PostgreSQL implementation ─────────────────────────────────────────────────
 
-class PostgresQuoteRepository:
+class PostgresQuoteRepository(PostgresLongTermRepository):
     """Production repository backed by PostgreSQL (via SQLAlchemy async + asyncpg)."""
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -447,10 +485,17 @@ class PostgresQuoteRepository:
             )
             stmt = insert.on_conflict_do_update(index_elements=["ticker"], set_=set_)
             await session.execute(stmt)
+            await session.execute(
+                pg_insert(FinancialObservationRow).values(
+                    ticker=ticker.lower(), observed_at=now, kind="fundamentals", source="yahoo",
+                    payload=financial_payload(metrics),
+                )
+            )
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
         if not reports:
             return
+        observed_at = datetime.now(tz=UTC)
         rows = [
             {
                 "ticker": ticker,
@@ -473,10 +518,28 @@ class PostgresQuoteRepository:
                 },
             )
             await session.execute(stmt)
+            currency = (
+                await session.execute(
+                    select(CompanyFundamentalsRow.financial_currency).where(
+                        CompanyFundamentalsRow.ticker == ticker
+                    )
+                )
+            ).scalar_one_or_none()
+            await session.execute(
+                insert(FinancialObservationRow).values(
+                    ticker=ticker.lower(), observed_at=observed_at,
+                    kind="quarterly", source="yahoo",
+                    payload={
+                        "reports": [financial_payload(r) for r in reports],
+                        "financialCurrency": currency,
+                    },
+                )
+            )
 
     async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
         if not periods:
             return
+        observed_at = datetime.now(tz=UTC)
         rows = [
             {
                 "ticker": ticker,
@@ -504,6 +567,14 @@ class PostgresQuoteRepository:
                 },
             )
             await session.execute(stmt)
+            await session.execute(
+                insert(FinancialObservationRow).values(
+                    ticker=ticker.lower(), observed_at=observed_at, kind="cashflow", source="yahoo",
+                    payload={
+                        "periods": [financial_payload(p) for p in periods],
+                    },
+                )
+            )
 
     async def get_cashflow(self, ticker: str) -> list[CashflowPeriod]:
         async with self._sf() as session:
@@ -749,6 +820,9 @@ class InMemoryQuoteRepository:
         self._cashflow: dict[str, list[CashflowPeriod]] = {}
         self._ratings: dict[str, dict[date, RatingPoint]] = {}
         self._insider_transactions: dict[str, list[InsiderTransactionItem]] = {}
+        self._fundamentals_observed_at: dict[str, datetime] = {}
+        self._financial_observations: list[dict] = []
+        self._long_term_snapshots: list[dict] = []
 
     async def upsert_companies(self, companies: list[GpwCompany]) -> None:
         by_ticker = {c.ticker: c for c in self._companies}
@@ -810,6 +884,11 @@ class InMemoryQuoteRepository:
         return updated
 
     async def upsert_fundamentals(self, ticker: str, metrics: FinancialMetrics) -> None:
+        observed_at = datetime.now(tz=UTC)
+        self._record_financial_observation(
+            ticker, "fundamentals", financial_payload(metrics), observed_at
+        )
+        self._fundamentals_observed_at[ticker] = observed_at
         stored = self._fundamentals.get(ticker)
         if stored is not None:
             last, upcoming = merge_report_dates(
@@ -822,12 +901,24 @@ class InMemoryQuoteRepository:
             metrics = metrics.model_copy(
                 update={"last_report_date": last, "next_report_date": upcoming}
             )
-        self._fundamentals[ticker] = metrics
+        self._fundamentals[ticker] = metrics.model_copy(deep=True)
 
     async def upsert_quarterly(self, ticker: str, reports: list[QuarterlyReport]) -> None:
+        if not reports:
+            return
+        metrics = self._fundamentals.get(ticker)
+        self._record_financial_observation(ticker, "quarterly", {
+            "reports": [financial_payload(r) for r in reports],
+            "financialCurrency": metrics.financial_currency if metrics else None,
+        }, datetime.now(tz=UTC))
         self._quarterly[ticker] = reports
 
     async def upsert_cashflow(self, ticker: str, periods: list[CashflowPeriod]) -> None:
+        if not periods:
+            return
+        self._record_financial_observation(ticker, "cashflow", {
+            "periods": [financial_payload(p) for p in periods],
+        }, datetime.now(tz=UTC))
         # Same key as the DB's unique constraint, so a re-ingest replaces a
         # period instead of duplicating it.
         merged = {(p.period_end, p.period_type): p for p in self._cashflow.get(ticker, [])}
@@ -836,6 +927,74 @@ class InMemoryQuoteRepository:
         self._cashflow[ticker] = sorted(
             merged.values(), key=lambda p: p.period_end, reverse=True
         )
+
+    def _record_financial_observation(
+        self, ticker: str, kind: str, payload: dict, observed_at: datetime
+    ) -> None:
+        self._financial_observations.append({
+            "ticker": ticker.lower(),
+            "observedAt": utc_timestamp(observed_at).isoformat(),
+            "kind": kind, "source": "yahoo", "payload": deepcopy(payload),
+        })
+
+    async def get_long_term_inputs(self, tickers: list[str]) -> dict[str, dict]:
+        return {
+            ticker: {
+                "metrics": self._fundamentals[ticker].model_copy(deep=True),
+                "observed_at": self._fundamentals_observed_at[ticker],
+            }
+            for ticker in {t.lower() for t in tickers}
+            if ticker in self._fundamentals and ticker in self._fundamentals_observed_at
+        }
+
+    async def append_long_term_snapshots(
+        self, items: list[dict], recorded_at: datetime, model_version: str
+    ) -> None:
+        rows = [snapshot_values(item, recorded_at, model_version) for item in items]
+        self._long_term_snapshots.extend(rows)
+
+    async def get_long_term_history(self, ticker: str, limit: int = 100) -> list[dict]:
+        if limit <= 0:
+            return []
+        rows = sorted(
+            (r for r in reversed(self._long_term_snapshots) if r["ticker"] == ticker.lower()),
+            key=lambda r: r["recorded_at"], reverse=True,
+        )[:limit]
+        return [{
+            **deepcopy(row["payload"]),
+            "recordedAt": row["recorded_at"].isoformat(), "modelVersion": row["model_version"],
+        } for row in rows]
+
+    async def get_financial_history(self, ticker: str, limit: int = 50) -> list[dict]:
+        if limit <= 0:
+            return []
+        rows = sorted(
+            (r for r in reversed(self._financial_observations) if r["ticker"] == ticker.lower()),
+            key=lambda r: r["observedAt"], reverse=True,
+        )[:limit]
+        return [{k: deepcopy(v) for k, v in row.items() if k != "ticker"} for row in rows]
+
+    async def has_long_term_snapshots(self, market: str | None = None) -> bool:
+        return any(
+            market is None or row["market"] == market for row in self._long_term_snapshots
+        )
+
+    async def has_financial_observations(self) -> bool:
+        return bool(self._financial_observations)
+
+    async def get_missing_financial_observation_tickers(self, tickers: list[str]) -> set[str]:
+        wanted = {ticker.lower() for ticker in tickers}
+        required = {ticker: {"fundamentals"} for ticker in wanted}
+        available = {ticker: set() for ticker in wanted}
+        for ticker in wanted:
+            if self._quarterly.get(ticker):
+                required[ticker].add("quarterly")
+            if self._cashflow.get(ticker):
+                required[ticker].add("cashflow")
+        for row in self._financial_observations:
+            if row["ticker"] in wanted:
+                available[row["ticker"]].add(row["kind"])
+        return {ticker for ticker in wanted if not required[ticker] <= available[ticker]}
 
     async def get_cashflow(self, ticker: str) -> list[CashflowPeriod]:
         return list(self._cashflow.get(ticker, []))

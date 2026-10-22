@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import settings
 from app.dependencies import action_log
 from app.jobs.daily_ingest import IngestStats
 from app.main import app
@@ -35,8 +36,9 @@ from app.services.refresh_service import ingest_outcome
 
 
 @pytest.fixture(autouse=True)
-def _clear_log():
+def _clear_log(monkeypatch):
     """Each test starts from an empty in-memory buffer."""
+    monkeypatch.setattr(settings, "admin_token", "test-admin-token")
     action_log._recent.clear()
     yield
     action_log._recent.clear()
@@ -208,7 +210,7 @@ class TestRecentBuffer:
 
 class TestRequestLogging:
     def test_successful_call_is_recorded_with_route_template(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             response = client.get("/api/stocks")
         assert response.status_code == 200
 
@@ -222,14 +224,14 @@ class TestRequestLogging:
         assert entry.duration_ms is not None and entry.duration_ms >= 0
 
     def test_response_carries_the_request_id_of_its_log_entry(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             response = client.get("/api/stocks")
         request_id = response.headers.get("X-Request-Id")
         assert request_id
         assert any(e.request_id == request_id for e in action_log.recent())
 
     def test_query_string_is_recorded_sanitised(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/api/stocks/ranking?page=1&pageSize=1&settings=%7B%22a%22%3A1%7D")
         entry = action_log.recent(action="/api/stocks/ranking")[0]
         assert "page=1" in entry.query
@@ -237,7 +239,7 @@ class TestRequestLogging:
         assert '{"a"' not in entry.query
 
     def test_client_error_is_recorded_as_such(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             response = client.get("/api/stocks/ranking?page=0")
         assert response.status_code == 422
         entry = action_log.recent(action="/api/stocks/ranking")[0]
@@ -246,7 +248,7 @@ class TestRequestLogging:
 
     def test_health_probe_is_not_recorded(self) -> None:
         """The Docker healthcheck polls /health every 30s — pure noise."""
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/health")
         assert action_log.recent(action="/health") == []
 
@@ -257,7 +259,7 @@ class TestRequestLogging:
         layer — the OPTIONS call reaches it before CORS answers it, so the skip
         has to be explicit. Without it every browser call is logged twice.
         """
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             preflight = client.options(
                 "/api/stocks/methods",
                 headers={
@@ -278,7 +280,7 @@ class TestRequestLogging:
         assert entries[0].method == "GET"
 
     def test_route_template_groups_calls_for_different_tickers(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/api/stocks/kgh/volume")
             client.get("/api/stocks/pko/volume")
         entries = action_log.recent(action="/api/stocks/{ticker}/volume")
@@ -351,7 +353,7 @@ class TestJobLogging:
         assert all(e.request_id == "abc123def456" for e in entries)
 
     def test_manual_refresh_endpoint_ties_the_job_to_the_call(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             response = client.post("/api/stocks/refresh")
         # 503 when no refresh service is wired up in this test app — the point
         # is only that the endpoint hands its request id down when it does.
@@ -459,7 +461,7 @@ class TestIngestOutcome:
 
 class TestAdminLogEndpoints:
     def test_logs_endpoint_returns_recent_actions(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/api/stocks")
             response = client.get("/api/admin/logs")
         assert response.status_code == 200
@@ -471,7 +473,7 @@ class TestAdminLogEndpoints:
         assert response.headers["X-Total-Count"] == str(body["totalCount"])
 
     def test_logs_endpoint_filters_by_action_and_kind(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/api/stocks")
             action_log.log_job("job.refresh", OUTCOME_FINISHED)
             jobs = client.get("/api/admin/logs?kind=job").json()
@@ -484,7 +486,7 @@ class TestAdminLogEndpoints:
         # Filtered to the company-list calls: reading the log is itself a
         # recorded action, so an unfiltered page 2 would be shifted by the
         # page-1 request that had just been logged.
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             for _ in range(5):
                 client.get("/api/stocks")
             page1 = client.get("/api/admin/logs?action=/api/stocks&pageSize=2").json()
@@ -498,7 +500,7 @@ class TestAdminLogEndpoints:
         assert not (ids1 & ids2)
 
     def test_summary_reports_where_logs_are_saved_and_last_job_outcomes(self) -> None:
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             client.get("/api/stocks")
             action_log.log_job("job.ingest", OUTCOME_FAILED, detail={"error": "boom"})
             body = client.get("/api/admin/logs/summary").json()
@@ -518,7 +520,7 @@ class TestAdminLogEndpoints:
             started_at=datetime.now(tz=UTC) - timedelta(days=5),
         )
         action_log.record(stale)
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as client:
             body = client.get("/api/admin/logs/summary?hours=1").json()
         assert "job.ancient" not in {job["action"] for job in body["lastJobs"]}
 

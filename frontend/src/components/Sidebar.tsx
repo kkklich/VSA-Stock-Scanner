@@ -11,6 +11,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   LayoutGrid,
+  Layers,
   LineChart,
   Settings,
   Star,
@@ -30,6 +31,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
+  { to: '/long-term', labelKey: 'nav.longTerm', icon: Layers, match: (p) => p.startsWith('/long-term') },
   {
     to: '/watchlist',
     labelKey: 'nav.watchlist',

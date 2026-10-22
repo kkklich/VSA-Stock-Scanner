@@ -8,8 +8,9 @@ Lifespan sequence
 0. Open the action log's rotating file (the audit trail of every API call and
    background job - see app/services/action_log.py).
 1. Open shared stooq HTTP client.
-2. (If DATABASE_URL is set) Create async DB engine, conditionally create tables,
-   build repo, and start the action log's database writer.
+2. (If DATABASE_URL is set) Initialize DB services in the background, retrying
+   failures with capped backoff. Readiness stays 503 until repository and
+   scheduler are installed; no-DB mode is only used when explicitly configured.
 3. Start-up check, per served market: a market with (almost) no stored data
    gets the full ~400-day download, one whose newest finished session is
    missing gets the ordinary top-up — in the background, so the app is live
@@ -43,6 +44,7 @@ from app.dependencies import (
     create_http_client,
     error_tracker,
     get_quote_repository,
+    get_scheduler,
     gpw_company_service,
     history_cache,
     ranking_cache,
@@ -57,7 +59,7 @@ from app.dependencies import (
     yahoo_client,
 )
 from app.markets import enabled_markets, refresh_runs
-from app.routers import admin, auth, stocks
+from app.routers import admin, auth, long_term, stocks
 from app.services.action_log import (
     OUTCOME_FINISHED,
     OUTCOME_STARTED,
@@ -69,6 +71,11 @@ from app.services.refresh_service import RefreshService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_DB_RETRY_DELAY = 3.0
+_DB_MAX_RETRY_DELAY = 30.0
+_DB_INIT_TIMEOUT = 60.0
+_HEALTH_DB_TIMEOUT = 5.0
 
 # yfinance logs its own ERROR line for every symbol Yahoo cannot serve
 # ("possibly delisted; no price data found"). Every call into it is already
@@ -157,6 +164,8 @@ async def lifespan(_app: FastAPI):
 
     scheduler = None
     engine: AsyncEngine | None = None
+    database_startup: asyncio.Task | None = None
+    startup_jobs: list[asyncio.Task] = []
 
     try:
         # ── 2. Database (optional) ────────────────────────────────────────────
@@ -173,48 +182,12 @@ async def lifespan(_app: FastAPI):
             engine = build_engine(settings.database_url)
             session_factory = build_session_factory(engine)
 
-            # Retry connecting — PostgreSQL may still be starting up.
-            _DB_RETRIES = 5
-            _DB_RETRY_DELAY = 3.0
-            db_connected = False
-            for attempt in range(1, _DB_RETRIES + 1):
-                try:
-                    async with engine.connect() as _probe:
-                        await _probe.execute(text("SELECT 1"))
-                    db_connected = True
-                    break
-                except Exception as exc:
-                    if attempt < _DB_RETRIES:
-                        logger.warning(
-                            "DB connection attempt %d/%d failed (%s). "
-                            "Retrying in %.0fs…",
-                            attempt, _DB_RETRIES, exc, _DB_RETRY_DELAY,
-                        )
-                        await asyncio.sleep(_DB_RETRY_DELAY)
-                    else:
-                        logger.error(
-                            "Could not connect to PostgreSQL after %d attempts (%s). "
-                            "Running without DB — data will not be persisted.",
-                            _DB_RETRIES, exc,
-                        )
-
-            if not db_connected:
-                await engine.dispose()
-                engine = None
-                # Degrade gracefully: without this fallback the Refresh button
-                # and /api/stocks/refresh/status would stay broken ("service
-                # not initialised") until the backend is restarted with the
-                # database reachable.
-                set_refresh_service(
-                    RefreshService(
-                        companies=gpw_company_service.enabled_companies(),
-                        stooq=yahoo_client,
-                        history_cache=history_cache,
-                        ranking_cache=ranking_cache,
-                        action_log=action_log,
-                    )
-                )
-            else:
+            async def initialize_database() -> None:
+                nonlocal scheduler
+                # Retry the entire preparation, including schema and bootstrap
+                # queries. Publish dependencies only after all of it succeeds.
+                async with engine.connect() as probe:
+                    await probe.execute(text("SELECT 1"))
                 # create_all is idempotent: it only creates tables that are
                 # missing and never alters existing ones. Running it on every
                 # startup means tables added in newer versions (e.g.
@@ -239,24 +212,18 @@ async def lifespan(_app: FastAPI):
                 logger.info("Database schema verified (missing tables created).")
 
                 repo = PostgresQuoteRepository(session_factory)
-                set_quote_repository(repo)
 
                 # Optional visitor accounts (app/routers/auth.py). Only
                 # available with a database: without one there is nowhere to
                 # keep them, and /api/auth/* says so instead of pretending.
-                set_user_repository(UserRepository(session_factory))
+                user_repo = UserRepository(session_factory)
 
                 # Mirror the action log into the action_logs table as well as
                 # the file, and start its periodic retention prune.
                 log_repo = ActionLogRepository(session_factory)
-                set_action_log_repository(log_repo)
                 # Whole-table reads for GET /api/admin/health: how fresh the
                 # stored data actually is, independent of what the jobs said.
-                set_data_health_repository(DataHealthRepository(session_factory))
-                if settings.action_log_to_db:
-                    await action_log.start_db_writer(
-                        log_repo, settings.action_log_retention_days
-                    )
+                health_repo = DataHealthRepository(session_factory)
 
                 # Every company on every served market; each run picks its own.
                 companies = gpw_company_service.enabled_companies()
@@ -280,7 +247,6 @@ async def lifespan(_app: FastAPI):
                     live_svc = LivePriceService(
                         companies=companies, client=stooq, action_log=action_log
                     )
-                    set_live_prices(live_svc)
 
                 # Full pipeline: ingest → ranking → rating snapshots (→ live
                 # prices for any market trading). Used by the bootstrap, the
@@ -295,28 +261,30 @@ async def lifespan(_app: FastAPI):
                     action_log=action_log,
                     live=live_svc,
                 )
-                set_refresh_service(refresh_svc)
 
                 # ── 3. Start-up download ──────────────────────────────────────
                 plan = await ingest_svc.bootstrap_plan()
-                if plan.needed:
+                observation_markets = await ingest_svc.observation_bootstrap_markets()
+                startup_markets = [m.id for m in enabled_markets()
+                                   if m.id in plan.markets or m.id in observation_markets]
+                if observation_markets:
+                    logger.info(
+                        "Start-up: initializing observation history for %s.",
+                        ", ".join(observation_markets),
+                    )
+                if startup_markets:
                     logger.info(
                         "Start-up data check: full download for %s; top-up for %s.",
                         ", ".join(plan.full) or "no market",
                         ", ".join(plan.catch_up) or "no market",
                     )
-                    refresh_svc.start(
-                        trigger="bootstrap",
-                        markets=plan.markets,
-                        full_markets=plan.full,
-                    )
                 else:
                     logger.info("Start-up data check: every served market is current.")
                 # A restart during a session would otherwise show no live prices
-                # until the next full hour. A bootstrap refresh started above
+                # until the next full hour. The bootstrap refresh planned above
                 # ends with the live step for its own markets, so only the
                 # others are downloaded here.
-                covered = set(plan.markets) if plan.needed else set()
+                covered = set(startup_markets)
                 live_due = (
                     [m for m in live_svc.due_markets() if m not in covered]
                     if live_svc is not None
@@ -327,7 +295,6 @@ async def lifespan(_app: FastAPI):
                         "Start-up: %s trading now — downloading live prices.",
                         ", ".join(live_due),
                     )
-                    live_svc.start(markets=live_due, trigger="startup")
 
                 # ── 4. Nightly scheduler ──────────────────────────────────────
                 runs = refresh_runs()
@@ -337,7 +304,21 @@ async def lifespan(_app: FastAPI):
                     live=live_svc,
                     live_interval_minutes=settings.live_prices_interval_minutes,
                 )
+                if settings.action_log_to_db:
+                    await action_log.start_db_writer(
+                        log_repo, settings.action_log_retention_days
+                    )
                 scheduler.start()
+                # No await between publication and starting the jobs: requests
+                # see either a pending runtime or the fully wired runtime.
+                history_cache.clear()
+                ranking_cache.clear()
+                set_quote_repository(repo)
+                set_user_repository(user_repo)
+                set_action_log_repository(log_repo)
+                set_data_health_repository(health_repo)
+                set_live_prices(live_svc)
+                set_refresh_service(refresh_svc)
                 # Exposed so the health endpoint can report the next run time
                 # from the scheduler itself rather than from the setting that
                 # was meant to configure it.
@@ -354,6 +335,55 @@ async def lifespan(_app: FastAPI):
                         else "off"
                     ),
                 )
+                if startup_markets:
+                    startup_jobs.append(asyncio.create_task(refresh_svc.run(
+                        trigger="bootstrap", markets=startup_markets,
+                        full_markets=plan.full,
+                    ), name="startup_refresh"))
+                if live_svc is not None and live_due:
+                    startup_jobs.append(asyncio.create_task(live_svc.run(
+                        markets=live_due, trigger="startup",
+                    ), name="startup_live_prices"))
+                action_log.log_job(
+                    "job.database_startup", OUTCOME_FINISHED,
+                    detail={"repositoryReady": True, "schedulerActive": True},
+                )
+
+            async def initialize_with_retry() -> None:
+                delay = _DB_RETRY_DELAY
+                while True:
+                    try:
+                        async with asyncio.timeout(_DB_INIT_TIMEOUT):
+                            await initialize_database()
+                        return
+                    except Exception:
+                        # Also roll back partial activation (e.g. scheduler
+                        # startup failure), before another attempt can begin.
+                        for task in startup_jobs:
+                            task.cancel()
+                        if startup_jobs:
+                            await asyncio.gather(*startup_jobs, return_exceptions=True)
+                            startup_jobs.clear()
+                        if scheduler is not None and scheduler.running:
+                            scheduler.shutdown(wait=False)
+                        set_scheduler(None)
+                        set_quote_repository(None)
+                        set_user_repository(None)
+                        set_action_log_repository(None)
+                        set_data_health_repository(None)
+                        set_live_prices(None)
+                        set_refresh_service(None)
+                        await action_log.stop_db_writer()
+                        logger.exception(
+                            "Database initialization failed; API is not ready. "
+                            "Retrying in %.0fs.", delay,
+                        )
+                        await asyncio.sleep(delay)
+                        delay = min(delay * 2, _DB_MAX_RETRY_DELAY)
+
+            database_startup = asyncio.create_task(
+                initialize_with_retry(), name="database_startup"
+            )
         else:
             logger.info(
                 "STOCKPILOT_DATABASE_URL not set — running without DB persistence. "
@@ -381,6 +411,15 @@ async def lifespan(_app: FastAPI):
 
     finally:
         # ── 6. Graceful shutdown ──────────────────────────────────────────────
+        # Stop recovery before disposing the engine so it cannot publish new
+        # services after teardown. Cancel startup downloads before closing I/O.
+        if database_startup is not None:
+            database_startup.cancel()
+            await asyncio.gather(database_startup, return_exceptions=True)
+        for task in startup_jobs:
+            task.cancel()
+        if startup_jobs:
+            await asyncio.gather(*startup_jobs, return_exceptions=True)
         if scheduler is not None and scheduler.running:
             scheduler.shutdown(wait=False)
         set_scheduler(None)
@@ -435,18 +474,27 @@ app.add_middleware(
 )
 
 app.include_router(stocks.router)
+app.include_router(long_term.router)
 app.include_router(admin.router)
 app.include_router(auth.router)
 
 
-@app.get("/health", tags=["meta"], summary="Liveness probe")
+@app.get("/health", tags=["meta"], summary="Readiness probe")
 async def health(
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)] = None,
 ) -> dict[str, str]:
     db_status = "disabled"
+    if settings.db_enabled:
+        scheduler = get_scheduler()
+        if repo is None or scheduler is None or not scheduler.running:
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"status": "degraded", "db": "initializing"},
+            )
     if repo is not None:
         try:
-            await repo.has_today_data("kgh")
+            async with asyncio.timeout(_HEALTH_DB_TIMEOUT):
+                await repo.has_today_data("kgh")
             db_status = "ok"
         except Exception as exc:
             logger.exception("Health check DB probe failed.")

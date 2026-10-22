@@ -23,9 +23,8 @@ One full run:
      settings and warm the ranking cache, so the first page load after a
      refresh is instant.
   3. Persist one rating snapshot per (ticker, day) to ``rating_snapshots``.
-     Every run also (re)writes the ratings for the whole loaded history
-     window, so the "rating over time" chart is populated immediately after
-     the very first refresh instead of growing one point per day.
+     Backfill missing dates using each date's own preceding analysis window.
+     Routine refreshes preserve existing ratings and verdicts.
   4. Today's live prices for whichever refreshed markets are trading right
      now (``app/services/live_prices.py``) — what makes the Refresh button,
      pressed during a session, show today's prices at once instead of at the
@@ -71,6 +70,7 @@ from app.services.action_log import (
 )
 from app.services.cache import TTLCache
 from app.services.live_prices import LivePriceService
+from app.services.long_term_service import build_long_term_ranking, long_term_cache_key
 from app.services.market_cache import invalidate_markets
 from app.services.ranking_service import (
     CONTEXT_HISTORY_DAYS,
@@ -86,7 +86,8 @@ _WARSAW = ZoneInfo("Europe/Warsaw")
 
 # Mirror ranking_service: how far back the ranking (and thus the snapshot
 # backfill) looks. Snapshots are written for every trading day in this window.
-_HISTORY_DAYS = 120
+RATING_LOOKBACK_DAYS = 120
+_HISTORY_DAYS = RATING_LOOKBACK_DAYS
 # A stock needs this many bars before its historical ratings mean anything.
 _MIN_BARS = 25
 
@@ -175,6 +176,7 @@ class RefreshService:
         # How many stocks got rating snapshots written on the last run — kept
         # so the run's log entry can report it.
         self.snapshots_written: int | None = None
+        self.long_term_snapshots_written: int | None = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -296,6 +298,7 @@ class RefreshService:
                         "fullMarkets": full_ids,
                         "stocksRanked": self.stocks_ranked,
                         "snapshotsWritten": self.snapshots_written,
+                        "longTermSnapshotsWritten": self.long_term_snapshots_written,
                         "dbEnabled": self._repo is not None,
                         "livePrices": live_prices,
                     },
@@ -432,6 +435,27 @@ class RefreshService:
             self.snapshots_written = None
             logger.info("Refresh: no database configured — rating history not stored.")
 
+        # Capture QVM as observed now. Never backfill past sessions using
+        # today's financial data; repeated refreshes append revisions.
+        self.long_term_snapshots_written = await self._snapshot_long_term(scope)
+
+    async def _snapshot_long_term(self, scope: list[str]) -> int | None:
+        if self._repo is None:
+            return None
+        written = 0
+        for market_id in scope:
+            now = datetime.now(UTC)
+            result = await build_long_term_ranking(
+                self._companies, market_id, self._repo, now=now,
+            )
+            items = [item.model_dump(mode="json", by_alias=True)
+                     for item in result.items if item.as_of is not None]
+            await self._repo.append_long_term_snapshots(items, now, result.model_version)
+            written += len(items)
+            self._ranking_cache.set(long_term_cache_key(market_id), result, 600)
+        logger.info("Refresh: %d long-term observations stored.", written)
+        return written
+
     async def _snapshot_ratings(
         self, ranking: list[StockRankingItem], today: date
     ) -> int:
@@ -445,7 +469,17 @@ class RefreshService:
             try:
                 quotes = await self._load_quotes(ticker, from_date, context_from)
                 currency = self._currencies.get(ticker) or market_of(ticker).currency
-                points = build_rating_points(quotes, currency=currency)
+                existing = await self._repo.get_rating_history(ticker, from_date, today)
+                saved_dates = {point.date for point in existing}
+                missing_dates = {
+                    q.date for q in quotes
+                    if from_date <= q.date <= today and q.date not in saved_dates
+                }
+                if not missing_dates:
+                    continue
+                points = await asyncio.to_thread(
+                    build_rating_points, quotes, currency, snapshot_dates=missing_dates,
+                )
                 if points:
                     await self._repo.upsert_rating_snapshots(ticker, points)
                     written += 1
@@ -464,16 +498,16 @@ class RefreshService:
     ) -> list[StooqDailyQuote]:
         """Reuse the history the ranking step just loaded (cache → DB).
 
-        The ranking caches the longer 52-week-context window (keyed by
-        ``context_from``); snapshots only need the bars from ``from_date``
-        on, so the cached list is sliced back down to the snapshot window.
+        Include a full analysis window BEFORE the first output date. Otherwise
+        a later refresh loses the context that produced an earlier rating.
         """
         cache_key = f"history:{ticker}:{context_from}:None"
         quotes: list[StooqDailyQuote] | None = self._history_cache.get(cache_key)
+        history_from = from_date - timedelta(days=RATING_LOOKBACK_DAYS)
         if quotes is not None:
-            return [q for q in quotes if q.date >= from_date]
+            return [q for q in quotes if q.date >= history_from]
         if self._repo is not None:
-            return await self._repo.get_quotes(ticker, from_date)
+            return await self._repo.get_quotes(ticker, history_from)
         return []
 
     async def run_insider_refresh(self) -> None:
@@ -508,40 +542,40 @@ class RefreshService:
 
 
 def build_rating_points(
-    quotes: list[StooqDailyQuote], currency: str = GPW.currency
+    quotes: list[StooqDailyQuote], currency: str = GPW.currency,
+    *, snapshot_dates: set[date] | None = None,
 ) -> list[RatingPoint]:
     """Compute one rating snapshot per trading day from an OHLCV series.
 
-    Uses the DEFAULT VSA settings so stored history stays comparable across
-    days. Signal detection has no lookahead and ``compute_rating`` ignores
-    signals dated after the as-of day, so the value for a past day matches
-    what the engine would have reported on that day.
+    Each output date uses its own preceding 120 calendar days, DEFAULT VSA
+    settings and liquidity check, matching a ranking run on that date. Callers
+    must supply this preceding context as well as the desired output dates.
+    ``snapshot_dates`` limits output without discarding the warm-up bars.
 
     ``currency`` is the stock's quote currency — the liquidity floor is
     judged in it (złoty unless said otherwise).
     """
     if len(quotes) < _MIN_BARS:
         return []
-    if below_liquidity_floor(median_turnover(quotes), currency):
-        return []
-
-    signals = detect_signals(quotes)
+    ordered = sorted(quotes, key=lambda q: q.date)
     points: list[RatingPoint] = []
-    for q in quotes:
+    start = 0
+    for index, q in enumerate(ordered):
         day = q.date
-        # Both the rating and the verdict are fed the SAME list of signals that
-        # had already happened by ``day``. ``compute_rating`` also ignores
-        # future-dated signals internally, so passing the full list would give
-        # the same numbers today — but only by accident, and an accident that
-        # would break the moment either function's decay changed. Making the
-        # "no lookahead" rule explicit is what guarantees a stored snapshot is
-        # what the engine really would have said on that day.
-        past_signals = [s for s in signals if s.date <= day]
-        verdict, _ = verdict_from_signals(past_signals, day)
+        if snapshot_dates is not None and day not in snapshot_dates:
+            continue
+        window_from = day - timedelta(days=RATING_LOOKBACK_DAYS)
+        while ordered[start].date < window_from:
+            start += 1
+        window = ordered[start:index + 1]
+        if len(window) < _MIN_BARS or below_liquidity_floor(median_turnover(window), currency):
+            continue
+        signals = detect_signals(window)
+        verdict, _ = verdict_from_signals(signals, day)
         points.append(
             RatingPoint(
                 date=day,
-                rating=compute_rating(past_signals, day),
+                rating=compute_rating(signals, day),
                 verdict=verdict,
                 close=float(q.close),
             )

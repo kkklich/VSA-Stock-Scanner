@@ -26,6 +26,7 @@ address verification and password reset by e-mail.
 from __future__ import annotations
 
 import logging
+import math
 import re
 import secrets
 import time
@@ -170,10 +171,9 @@ def is_admin_email(email: str) -> bool:
     """True when the address is listed in ``STOCKPILOT_ADMIN_EMAILS``.
 
     The only way to become an admin: there is no self-service promotion and no
-    "first account wins" rule, which would hand the site to whoever registered
-    first. The role is informational today — ``/api/admin/*`` still uses its own
-    shared token — but it is stored from the start so the gate can move later
-    without a migration.
+    "first account wins" rule. The registration router additionally requires
+    the shared admin token to prove authority over an allowlisted address.
+    An active admin role grants access to the operational API.
     """
     listed = {
         part.strip().lower()
@@ -284,8 +284,13 @@ def decode_token(token: str, *, expected_type: str) -> TokenClaims:
 # ── Brute-force throttle ──────────────────────────────────────────────────────
 
 
+@dataclass(frozen=True, slots=True)
+class _ThrottleAttempt:
+    timestamp: float
+
+
 class LoginThrottle:
-    """Counts recent failed sign-ins per key (an e-mail, or a caller's IP).
+    """Bounds admitted authentication attempts per key (email or IP).
 
     In-process and deliberately simple: the API runs as a single Uvicorn worker
     (the scheduler and every cache are in-process too), so one dictionary is the
@@ -294,17 +299,25 @@ class LoginThrottle:
     would be worse than letting a guesser start over.
     """
 
-    def __init__(self, *, max_failures: int = 10, window_seconds: int = 900) -> None:
-        self._max = max_failures
+    def __init__(
+        self, *, max_failures: int = 10, window_seconds: int = 900,
+        recovery_seconds: int = 30,
+    ) -> None:
+        self._max = max(1, max_failures)
         self._window = window_seconds
-        self._failures: dict[str, list[float]] = {}
+        self._recovery_seconds = recovery_seconds
+        self._failures: dict[str, list[_ThrottleAttempt]] = {}
+        self._recovery_after: dict[str, float] = {}
 
-    def _recent(self, key: str, now: float) -> list[float]:
-        stamps = [t for t in self._failures.get(key, []) if now - t < self._window]
+    def _recent(self, key: str, now: float) -> list[_ThrottleAttempt]:
+        stamps = [
+            t for t in self._failures.get(key, []) if now - t.timestamp < self._window
+        ]
         if stamps:
             self._failures[key] = stamps
         else:
             self._failures.pop(key, None)
+            self._recovery_after.pop(key, None)
         return stamps
 
     def is_blocked(self, key: str) -> bool:
@@ -315,20 +328,50 @@ class LoginThrottle:
         stamps = self._recent(key, now)
         if len(stamps) < self._max:
             return 0
-        return max(1, int(self._window - (now - stamps[0])))
+        return max(1, int(self._window - (now - stamps[0].timestamp)))
 
-    def record_failure(self, key: str) -> None:
+    def record_failure(self, key: str) -> _ThrottleAttempt:
         now = time.monotonic()
         stamps = self._recent(key, now)
-        stamps.append(now)
-        self._failures[key] = stamps
+        attempt = _ThrottleAttempt(now)
+        stamps.append(attempt)
+        self._failures[key] = stamps[-self._max:]
+        if len(stamps) >= self._max:
+            self._recovery_after.setdefault(key, now + self._recovery_seconds)
         # Bound the dictionary: a flood of distinct keys (spoofed addresses)
         # must not grow the process. Dropping the least recently active entry
         # only ever forgives failures, never invents them.
         if len(self._failures) > 4096:
-            oldest = min(self._failures, key=lambda k: self._failures[k][-1])
+            oldest = min(self._failures, key=lambda k: self._failures[k][-1].timestamp)
             self._failures.pop(oldest, None)
+            self._recovery_after.pop(oldest, None)
+
+        return attempt
+
+    def forgive(self, key: str, attempt: _ThrottleAttempt) -> None:
+        """Release only this successful request; preserve concurrent failures."""
+        stamps = self._recent(key, time.monotonic())
+        self._failures[key] = [stamp for stamp in stamps if stamp is not attempt]
+        if len(self._failures[key]) < self._max:
+            self._recovery_after.pop(key, None)
+        if not self._failures[key]:
+            self._failures.pop(key, None)
+
+    def admit(self, key: str, *, allow_recovery: bool = False) -> bool:
+        """Reserve an attempt synchronously, before the caller's first await."""
+        if self.is_blocked(key):
+            now = time.monotonic()
+            if not allow_recovery or now < self._recovery_after.get(key, 0):
+                return False
+            self._recovery_after[key] = now + self._recovery_seconds
+            return True
+        self.record_failure(key)
+        return True
+
+    def recovery_retry_after(self, key: str) -> int:
+        return max(1, math.ceil(self._recovery_after.get(key, 0) - time.monotonic()))
 
     def clear(self, key: str) -> None:
         """Forget a key's failures — called after a successful sign-in."""
         self._failures.pop(key, None)
+        self._recovery_after.pop(key, None)

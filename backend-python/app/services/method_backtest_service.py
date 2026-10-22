@@ -267,7 +267,7 @@ async def compute_method_backtest(
         if len(bars) <= forward_sessions:
             return
         try:
-            raw = method.signals(bars, config)
+            raw = await asyncio.to_thread(method.signals, bars, config)
         except Exception:  # noqa: BLE001 — one bad stock must not sink the gate
             logger.exception("Backtest: %s signals failed for %s.", method.id, company.ticker)
             return

@@ -8,6 +8,8 @@ The VSA rating is the number from 0 to 100 shown next to every company on the Da
 
 The rating describes the **last 120 days** of trading. It is not a price target and not a recommendation. How well it has actually predicted anything is covered honestly in "How well it has worked" below.
 
+![A spring and an upthrust illustrate opposing contributions to a VSA rating scale from 0 to 100, centred on 50.](/education/images/vsa-rating.png "Signs of strength add weight and signs of weakness subtract it, after the background checks described below. A spring and an upthrust illustrate the two sides. Older signals gradually fade; 50 is neutral, above 70 indicates strength and below 30 weakness. The rating is not a forecast. Schematic example, not market data. Select the image to enlarge.")
+
 ## The six patterns the engine looks for
 
 For every trading day the engine compares the bar with the **previous 20 sessions**: their average spread, their average volume, and their highest high and lowest low. A day can carry at most one pattern. The table shows the default settings; you can change most of the numbers on the Scanner page, and the rating then follows your settings.
@@ -21,7 +23,27 @@ For every trading day the engine compares the bar with the **previous 20 session
 | Sign of Weakness (SOW) | bearish | A wide down bar (spread over 1.5× average) on high volume (over 1.5×) that closes in the bottom 35% of the bar, below the previous close. | 1.0 |
 | No Demand | bearish | A narrow up bar (spread under 0.7× average) on volume under 0.7× average and lower than each of the two previous days, not closing in the top 35%. | 0.6 |
 
+<!-- definition-diagrams:rating-spring -->
+![Spring](/education/definitions/rating-spring.en.svg "The low breaks below the lowest low of the previous 20 sessions, but the close is back above it, in the top 40% of the bar. Either a wide bar (spread over 1.2× average) on high volume (over 1.2× average, but not more than 4×), or low volume (under 0.7× average) with only a shallow dip (at most half an average spread below). Schematic example. Select the image to enlarge.")
+
+![Sign of Strength (SOS)](/education/definitions/rating-sos.en.svg "A wide up bar (spread over 1.5× average) on high volume (over 1.5×, not more than 4×) that closes in the top 35% of the bar, above the previous close and above the highest high of the previous 20 sessions. Schematic example. Select the image to enlarge.")
+
+![Successful Test](/education/definitions/rating-successful-test.en.svg "The bar dips below the previous bar's low into the lowest quarter of the 20-session range (no more than half an average spread below it), closes in the top 35% of the bar, on volume under 0.7× average and lower than each of the two previous days. Schematic example. Select the image to enlarge.")
+
+![Upthrust: engine rules](/education/definitions/rating-upthrust.en.svg "The high reaches the highest high of the previous 20 sessions, but the close falls back below it, in the bottom 30% of a wide bar (spread over 1.2× average). Volume either high (over 1.3×) or low (under 0.7×). Schematic example. Select the image to enlarge.")
+
+![Sign of Weakness (SOW)](/education/definitions/rating-sow.en.svg "A wide down bar (spread over 1.5× average) on high volume (over 1.5×) that closes in the bottom 35% of the bar, below the previous close. Schematic example. Select the image to enlarge.")
+
+![No Demand: engine rules](/education/definitions/rating-no-demand.en.svg "A narrow up bar (spread under 0.7× average) on volume under 0.7× average and lower than each of the two previous days, not closing in the top 35%. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
+
 An "up bar" means the close is higher than the **previous day's close** — not higher than the day's own open. That is the VSA definition, and it is why the colour of a candle and the direction of a VSA bar can differ.
+
+
+<!-- definition-diagrams:example-reference-window -->
+![The candidate is outside its reference window](/education/definitions/example-reference-window.en.svg "The average spread, average volume and range extrema come from the previous twenty sessions. The candidate bar is evaluated against them. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
 
 ## The background check
 
@@ -35,9 +57,21 @@ A Spring or a Successful Test is ignored in a falling background (a break lower 
 
 Two cases are read as a **climax** instead. A Sign-of-Strength bar on more than 4× average volume in a rising background is treated as a **buying climax** and counted as bearish (it is shown as an Upthrust). A Sign-of-Weakness bar on more than 4× volume that makes a new low in a falling background may be professional buying into panic ("stopping volume"), so it produces no signal at all.
 
+
+<!-- definition-diagrams:rating-background -->
+![Rising, neutral or falling background](/education/definitions/rating-background.en.svg "The previous close is compared with the prior 30-session average. The neutral band lies between −3% and +3%. Schematic example. Select the image to enlarge.")
+
+![Climax exceptions](/education/definitions/rating-climax-filter.en.svg "More than four times average volume changes how the engine treats certain extreme bars: an upward climax is bearish, and a downward stopping-volume case is ignored. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## From patterns to one number
 
 Every pattern carries its weight (the last column of the first table), and that weight **halves every 30 days**, so an old signal fades away gradually. Bullish weights are added, bearish ones subtracted, giving a *net score*. The rating is:
+
+<!-- definition-diagrams:rating-decay -->
+![Signal weights fade with age](/education/definitions/rating-decay.en.svg "A signal retains half its weight after 30 days and one quarter after 60 days. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 
 > rating = 50 + 50 × tanh(net score ÷ 2), rounded
 
@@ -52,12 +86,28 @@ Every pattern carries its weight (the last column of the first table), and that 
 | −1.2 to −0.45 | 23–39 | Sell | one fresh No Demand (≈ 35) |
 | −1.2 or less | 23 or less | Strong Sell | fresh strong bearish signals |
 
+
+<!-- definition-diagrams:example-offsetting-signals -->
+![Opposing signals can cancel out](/education/definitions/example-offsetting-signals.en.svg "A bullish contribution of +1 and a bearish contribution of −1, with equal decay, sum to zero. The formula then returns a rating of 50. Schematic example. Select the image to enlarge.")
+
+![One signal fades toward neutral](/education/definitions/example-rating-decay-example.en.svg "With no new signals, an initial bullish weight of 1 becomes 0.5 after 30 days and 0.25 after 60. The corresponding rounded ratings are 73, 62 and 56. Schematic example. Select the image to enlarge.")
+
+![Net score → rating](/education/definitions/rating-transform.en.svg "The tanh transformation keeps the rating between 0 and 100. Opposing weights can cancel around neutral 50. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
+
 ## Where you see it in the app
 
 - **Dashboard, Watchlist, Filters:** the *Rating* column, the verdict badge and "days ago" (how long since the last signal of any kind).
 - **The "1W" chip:** the same engine run on **weekly** candles built from the same daily bars. A green "1W ✓" means the weekly chart leans the same way as the daily one; a red "1W ✗" means it leans the other way. Nothing is shown when either side is neutral.
 - **The stock chart:** green arrows for bullish patterns, red arrows for bearish ones.
 - **The Scanner page:** switch individual patterns on or off, change their thresholds, and see back-test statistics for each pattern.
+
+
+<!-- definition-diagrams:example-timeframe-conflict -->
+![Daily strength and weekly weakness](/education/definitions/example-timeframe-conflict.en.svg "Opposite non-neutral daily and weekly verdicts indicate a conflict. They describe different timeframes; agreement is not a forecast of the next move. Schematic example. Select the image to enlarge.")
+
+![Daily and weekly confirmation](/education/definitions/weekly-confirmation.en.svg "The weekly chip compares directions from the daily and weekly engines; a neutral side produces no confirmation chip. Schematic example. Select the image to enlarge.")
+<!-- /definition-diagrams -->
 
 ## How well it has worked
 

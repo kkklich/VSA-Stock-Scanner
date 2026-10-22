@@ -6,6 +6,8 @@ Zanim spółka wybije się na nowe maksima, zwykle przez kilka tygodni porusza s
 
 Metoda jest **tylko na wzrosty** i **średnioterminowa**: tak jak wybicie, które próbuje wyprzedzić, ma złapać ruch trwający od tygodni do miesięcy.
 
+![Dzień wzrostowy przy średniej pozostaje poniżej oporu, a jego wolumen przewyższa wolumen każdego dnia spadkowego z poprzednich dziesięciu sesji.](/education/images/pocket-pivot.png "1 — Cena rośnie z okolicy średniej, nadal wewnątrz bazy i poniżej bursztynowego oporu. 2 — Wolumen przewyższa największy wolumen dnia spadkowego z poprzednich 10 sesji, oznaczony czerwoną przerywaną linią. Pięć wcześniejszych sesji jest spokojnych. Przykład schematyczny, nie dane rynkowe. Kliknij ilustrację, aby ją powiększyć.")
+
 ## Skąd pochodzi
 
 Gil Morales i Chris Kacher, *Trade Like an O'Neil Disciple: How We Made 18,000% in the Stock Market* (Wiley, 2010), oraz jej kontynuacja *In the Trading Cockpit with the O'Neil Disciples* (2012). Obaj zarządzali pieniędzmi w William O'Neil + Co., firmie założyciela Investor's Business Daily; Morales przez osiem lat prowadził tam część własnego kapitału firmy. Książka nazywa pocket pivot „an early base breakout indicator” — wczesnym wskaźnikiem wybicia z bazy.
@@ -28,6 +30,13 @@ To więc jasno opisana metoda doświadczonych inwestorów, a nie udowodniona prz
 
 Porównanie wolumenu to najciekawszy pomysł tej metody: zestawia **popyt z podażą** — dzień kupujących z największym dniem sprzedających — dokładnie tak, jak analiza VSA czyta pojedynczy bar.
 
+
+<!-- definition-diagrams:example-largest-selling-day -->
+![Duży dzień wzrostowy nie jest odniesieniem](/education/definitions/example-largest-selling-day.pl.svg "Wśród tych przykładowych dni odniesienia największy wolumen dnia spadkowego wynosi 100. Wzrostowy dzień z wolumenem 180 nie należy do tego maksimum; wolumen sygnału 120 spełnia to jedno porównanie. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Wewnątrz bazy a ponad bazą](/education/definitions/pivot-vs-breakout.pl.svg "Pocket pivot może wystąpić przy średniej wewnątrz bazy. Volume Breakout wymaga zamknięcia ponad maksimum bazy. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Sześć warunków, które sprawdza StockPilot
 
 Aby pocket pivot **wystąpił**, wszystkie sześć warunków musi być spełnionych tego samego dnia:
@@ -41,17 +50,46 @@ Aby pocket pivot **wystąpił**, wszystkie sześć warunków musi być spełnion
 | 5 | Wcześniej było spokojnie | 5 sesji przed nim miało średnio mniejszy wolumen niż 50 sesji przed nimi |
 | 6 | Bez klina | w 5 sesjach przed nim **nie** było wyższego minimum w co najmniej 4 dniach przy rosnącym zamknięciu |
 
+<!-- definition-diagrams:pocket-pivot-rule-1 -->
+![Pocket Pivot 1 — Dzień wygrali kupujący](/education/definitions/pocket-pivot-rule-1.pl.svg "zamknięcie powyżej poprzedniego zamknięcia Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Pocket Pivot 2 — Popyt przeważa nad podażą](/education/definitions/pocket-pivot-rule-2.pl.svg "wolumen dnia co najmniej równy wolumenowi największego dnia spadkowego z poprzednich 10 sesji Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Pocket Pivot 3 — Trend jest zdrowy](/education/definitions/pocket-pivot-rule-3.pl.svg "zamknięcie powyżej średniej kroczącej z 50 i z 200 sesji Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Pocket Pivot 4 — Startuje od linii, nie z powietrza](/education/definitions/pocket-pivot-rule-4.pl.svg "dzienne minimum na, pod albo najwyżej 2% nad średnią z 10 lub 50 sesji, a zamknięcie powyżej tej średniej Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Pocket Pivot 5 — Wcześniej było spokojnie](/education/definitions/pocket-pivot-rule-5.pl.svg "5 sesji przed nim miało średnio mniejszy wolumen niż 50 sesji przed nimi Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Pocket Pivot 6 — Bez klina](/education/definitions/pocket-pivot-rule-6.pl.svg "w 5 sesjach przed nim nie było wyższego minimum w co najmniej 4 dniach przy rosnącym zamknięciu Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
+
 Warunki 1–3 to słowa samych autorów: książka wymaga wolumenu dnia wzrostowego „equal to or greater than the largest down-volume day over the prior 10 days” (równego największemu wolumenowi dnia spadkowego z poprzednich 10 dni albo od niego większego) i mówi, że pocket pivoty kupuje się powyżej średniej z 50 dni; reguły Kachera dodają średnią z 200 dni. **Trzy liczby to odczytanie aplikacji**, bo autorzy opisują te warunki tylko słowami albo na wykresach: „tuż przy” linii (2%), wolumen „spokojny przez kilka poprzednich dni” (5 sesji) i „klin” (4 z 5 rosnących minimów). Ustalono je przed jakimkolwiek pomiarem i nie dopasowywano później.
 
 Warunki 5 i 6 razem to obraz pocket pivota z książki: spokojne cofnięcie albo pauza na średniej kroczącej, a potem jeden dzień popytu cięższego niż jakakolwiek niedawna podaż. Pokrywają też dwa ostrzeżenia autorów: spółka, która „mocno spada” przez swoje średnie i od razu wraca w górę w kształcie litery V, nie robi tego na spokojnym wolumenie, a spółka powyżej średniej z 200 sesji rzadko jest w wielomiesięcznym trendzie spadkowym, przed którym ostrzega Kacher.
 
 Jeśli w poprzednich 10 sesjach nie było żadnego dnia spadkowego z wolumenem, nie ma z czym porównać i pocket pivot **nie** występuje. Spółka potrzebuje **co najmniej 200 sesji** historii (dla średniej z 200 sesji).
 
+
+<!-- definition-diagrams:example-insufficient-pivot-volume -->
+![Rosnące zamknięcie przy zbyt małym wolumenie](/education/definitions/example-insufficient-pivot-volume.pl.svg "Wolumen dnia sygnału 90 jest niższy od największego wolumenu dnia spadkowego 100. Rosnące zamknięcie nie zastępuje niespełnionego warunku wolumenu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Minimum zbyt daleko nad średnią](/education/definitions/example-pivot-too-far.pl.svg "Przy średniej 100 dopuszczalne minimum wynosi najwyżej 102. Ten bar ma minimum 107, więc nie spełnia warunku bliskości tej średniej. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+
+![Brak dnia spadkowego oznacza brak porównania](/education/definitions/example-no-selling-reference.pl.svg "Gdy poprzednie dziesięć sesji nie zawiera dnia spadkowego z wolumenem, silnik nie ma odniesienia do podaży i nie generuje pocket pivot. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
+
 ## Co widać w aplikacji
 
 - **Wynik (0–100):** na ile obraz pocket pivota jest teraz kompletny. Sześć sprawdzeń, po ok. 17 punktów: zamknięcie powyżej średniej z 50 sesji; powyżej średniej z 200 sesji; spółka jest przy linii zakupu (ten sam test co warunek 4); wolumen był spokojny; brak klina; oraz pocket pivot w ciągu ostatnich 10 dni. Poniżej średniej z 200 sesji wynik jest ograniczony do 50, bo autorzy nie kupują tam żadnego pocket pivota, więc przy takiej spółce metoda nigdy nie liczy się jako pozytywna w podsumowaniu analityki.
 - **Opis:** „Pocket pivot x1.4 down-vol” w dniu sygnału (wolumen 1,4× największego dnia spadkowego), „Pocket pivot 3d ago, 6/6” w kolejnych dniach, a w pozostałych przypadkach „4/6 setup” albo „2/6 below 200d MA”.
 - **Znaczniki na wykresie:** turkusowa kropka z zieloną etykietą w dniu sygnału — „Pocket Pivot 10d”, gdy dzień wyszedł od średniej z 10 sesji (zwykły przypadek u autorów), albo „Pocket Pivot 50d”, gdy od średniej z 50 sesji. Dwa dni sygnału z rzędu dostają jeden znacznik.
+
+
+<!-- definition-diagrams:pivot-score-cap -->
+![Ograniczenie wyniku poniżej MA 200](/education/definitions/pivot-score-cap.pl.svg "Poniżej średniej z 200 sesji wynik jest ograniczony do 50. Sam wzrost na dużym wolumenie nie oznacza zdrowego trendu. Przykład schematyczny. Kliknij ilustrację, aby ją powiększyć.")
+<!-- /definition-diagrams -->
 
 ## Prawdziwy przykład: XTB, lipiec 2026
 

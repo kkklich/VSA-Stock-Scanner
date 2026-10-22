@@ -1,4 +1,98 @@
 {
+  "longTerm": {
+    "title": "Ranking długoterminowy: jakość + wycena + momentum",
+    "shortDescription": "Ocena względna 0–100 do analizy w horyzoncie 1–3 lat; nie jest prawdopodobieństwem wzrostu ani prognozą stopy zwrotu.",
+    "howScoringWorks": "Jak działa ocena",
+    "filters": {
+      "sector": "Sektor", "allSectors": "Wszystkie sektory", "unknownSector": "Brak sektora",
+      "scoredOnly": "Tylko ocenione", "watchlistOnly": "Tylko obserwowane", "clear": "Wyczyść filtry",
+      "matches": "Wyświetlono {{count}} z {{total}} spółek"
+    },
+    "freshness": {
+      "label": "Stan danych", "lastLoaded": "Ostatnie wczytanie", "financials": "Obserwacje finansowe · od najstarszej do najnowszej",
+      "reload": "Wczytaj ponownie", "reloading": "Ponowne wczytywanie…",
+      "stale": "Ponowne wczytanie nie powiodło się. Wyświetlamy ostatnio pobrane wyniki; mogą być nieaktualne.",
+      "explanation": "Daty dotyczą całego wybranego rynku. Ostatnie wczytanie to moment pobrania rankingu przez tę stronę; daty obserwacji finansowych oznaczają otrzymanie danych przez StockPilota, a nie ich publikację.",
+      "issues": "Dane finansowe: {{missing}} spółek bez danych lub daty obserwacji; {{stale}} z danymi oznaczonymi jako nieaktualne."
+    },
+    "tabs": { "label": "Szczegóły spółki", "overview": "Przegląd", "scores": "Historia ocen", "financials": "Dane finansowe" },
+    "chart": {
+      "title": "Zapisane oceny w czasie",
+      "description": "Oś czasu pokazuje moment zapisu oceny. Każdy punkt to rzeczywista obserwacja; braki oceny i zmiany wersji modelu przerywają linię. Rewizje z tego samego dnia są zachowane.",
+      "insufficient": "Wykres pojawi się po zapisaniu ocen z co najmniej dwóch różnych momentów. Dotychczasowe zapisy znajdziesz poniżej.",
+      "models": "Wersje modelu: {{models}}",
+      "overlapping": "Część zapisów ma identyczny czas i może nakładać się na wykresie. Wszystkie rewizje są dostępne poniżej.",
+      "invalidDates": "Zapisy bez poprawnego czasu obserwacji pominięto na wykresie; pozostają na liście poniżej."
+    },
+    "description": "Ranking do analizy spółek w horyzoncie 1–3 lat. Wynik 0–100 porównuje spółkę z innymi; nie jest prawdopodobieństwem wzrostu ani prognozą stopy zwrotu. Skuteczność długoterminowa nie została jeszcze potwierdzona.",
+    "methodology": "Początkowa heurystyka: każdy z trzech czynników ma równą wagę (⅓). Wyższa ocena oznacza lepsze wskaźniki względem grupy porównawczej, a nie gwarancję zysku.",
+    "coverageExplanation": "Pokrycie danych to udział dostępnych wskaźników spośród sześciu. Pełna ocena wymaga także aktualnych danych, odpowiedniej grupy porównawczej oraz spełnienia progów płynności i wielkości spółki. Kreska oznacza brak oceny, a nie zero.",
+    "explanations": {
+      "quality": "Rentowność kapitału własnego, rentowność aktywów i marża zysku netto opisują zdolność do generowania zysków.",
+      "value": "Rentowność zysku (zysk / cena, odwrotność C/Z) porównuje zysk z ceną akcji.",
+      "momentum": "Zmiana ceny przez 12 i 6 miesięcy z pominięciem ostatniego miesiąca. Opisuje dotychczasowy trend."
+    },
+    "search": "Szukaj symbolu lub nazwy",
+    "ticker": "Spółka",
+    "score": "Ocena",
+    "qualityScore": "Jakość",
+    "valueScore": "Wycena",
+    "momentumScore": "Momentum",
+    "coverage": "Pokrycie danych",
+    "status": "Status / historia",
+    "oneMarket": "Porównanie w obrębie jednego rynku: {{market}}",
+    "counts": "Oceniono: {{scored}} z {{total}} spółek",
+    "latestSession": "Najnowsza sesja giełdowa",
+    "session": "Sesja giełdowa",
+    "modelVersion": "Wersja modelu",
+    "scored": "Oceniono",
+    "unscored": "Brak pełnej oceny",
+    "noneScored": "Żadna spółka nie ma jeszcze wystarczających poprawnych danych i grupy porównawczej do pełnej oceny.",
+    "empty": "Brak danych rankingu. Obserwacje pojawią się po udanym odświeżeniu danych.",
+    "noMatches": "Żadna spółka nie pasuje do tych filtrów. Wyczyść je lub dodaj spółki do obserwowanych.",
+    "history": "Wskaźniki i historia",
+    "openHistory": "Wskaźniki i historia spółki {{ticker}}",
+    "details": "Wskaźniki i historia — {{name}}",
+    "close": "Zamknij szczegóły",
+    "comparison": "Grupa porównawcza wskaźników finansowych: {{group}}. Momentum porównuje spółki w całym rynku. Minimalna liczebność grupy porównawczej, z uwzględnieniem tej spółki: {{peers}}.",
+    "groups": { "market": "rynek", "sector": "sektor", "mixed": "sektor lub rynek, zależnie od wskaźnika" },
+    "financialObservedAt": "Obserwacja danych finansowych",
+    "recordedAt": "Zapis oceny",
+    "observedAt": "Zaobserwowano w StockPilocie",
+    "source": "Źródło",
+    "currencyUnknown": "waluta nie została zapisana",
+    "lossValuationInput": "Model wpisuje zero do wskaźnika Z/C przy znanym zerowym lub ujemnym zysku netto albo zysku na akcję. To reguła oceny, a nie zaobserwowana rentowność zysku 0%.",
+    "quarterlyCurrencyContext": "Waluta sprawozdawcza w chwili obserwacji: {{currency}}. Nie zapisano oddzielnie waluty dla tych okresów sprawozdawczych.",
+    "scoreHistory": "Historia zapisanych ocen",
+    "financialHistory": "Historia danych finansowych",
+    "historyExplanation": "Historia zaczyna się od zapisu obserwacji w StockPilocie. Czas obserwacji oznacza moment otrzymania danych przez system, a nie datę ich pierwotnej publikacji. Sesję giełdową i okres raportu finansowego pokazujemy oddzielnie. Korekta raportu zostaje kolejną obserwacją i nie zmienia wcześniejszych zapisów.",
+    "storageUnavailable": "Zapis historii jest niedostępny: baza danych nie jest skonfigurowana. Oceny i obserwacje finansowe nie są zapisywane.",
+    "noScoreHistory": "Brak zapisanych ocen. Zapis rozpocznie się po udanym odświeżeniu rankingu.",
+    "noFinancialHistory": "Brak obserwacji finansowych. Zapis rozpocznie się po udanym odświeżeniu danych finansowych.",
+    "noPeriods": "Ta obserwacja nie zawiera okresów sprawozdawczych.",
+    "latestScores": "Pokazujemy do 100 ostatnich zapisów ocen, od najnowszego.",
+    "latestFinancials": "Pokazujemy do 50 ostatnich obserwacji finansowych, od najnowszej.",
+    "loadError": "Nie udało się pobrać tych danych.",
+    "inputs": { "roe": "Rentowność kapitału (ROE)", "roa": "Rentowność aktywów (ROA)", "netMargin": "Marża zysku netto", "earningsYield": "Rentowność zysku (Z/C)", "momentum12_1": "Momentum: od 12 do 1 miesiąca temu", "momentum6_1": "Momentum: od 6 do 1 miesiąca temu" },
+    "missing": {
+      "fundamentals_missing": "Brak danych finansowych",
+      "fundamentals_stale": "Nieaktualne dane finansowe",
+      "quality_missing": "Niepełne wskaźniki jakości",
+      "value_missing": "Brak wskaźnika wyceny",
+      "momentum_missing": "Niepełna historia cen",
+      "peers_missing": "Za mało porównywalnych spółek",
+      "price_stale": "Nieaktualne dane cenowe",
+      "liquidity": "Niespełniony próg płynności",
+      "market_cap": "Niespełniony próg kapitalizacji",
+      "unknown": "Niespełniony warunek oceny"
+    },
+    "kinds": { "fundamentals": "Wskaźniki finansowe", "quarterly": "Raporty kwartalne", "cashflow": "Raporty przepływów pieniężnych" },
+    "periods": { "annual": "Roczny", "quarterly": "Kwartalny" },
+    "fields": {
+      "periodEnd": "Koniec okresu sprawozdawczego", "periodType": "Rodzaj okresu", "financialCurrency": "Waluta sprawozdawcza", "currency": "Waluta sprawozdawcza",
+      "marketCap": "Kapitalizacja", "peRatio": "C/Z", "forwardPe": "Prognozowane C/Z", "eps": "Zysk na akcję", "dividendYield": "Stopa dywidendy", "totalRevenue": "Przychody", "netIncome": "Zysk netto", "operatingIncome": "Zysk operacyjny", "sharesOutstanding": "Liczba akcji", "returnOnEquity": "Rentowność kapitału (ROE)", "returnOnAssets": "Rentowność aktywów (ROA)", "capex": "Nakłady inwestycyjne", "operatingCashFlow": "Przepływy operacyjne", "freeCashFlow": "Wolne przepływy pieniężne", "lastReportDate": "Ostatnia data raportu podana przez źródło", "nextReportDate": "Następna data raportu podana przez źródło"
+    }
+  },
   "common": {
     "appName": "StockPilot",
     "retry": "Ponów",
@@ -40,6 +134,7 @@
     "pl": "Polski"
   },
   "nav": {
+    "longTerm": "Ranking długoterminowy",
     "dashboard": "Pulpit",
     "watchlist": "Obserwowane",
     "scanner": "Skaner",
@@ -61,6 +156,7 @@
     "closed": "ZAMKNIĘTY"
   },
   "pageTitles": {
+    "longTerm": "Ranking długoterminowy",
     "dashboard": "Pulpit",
     "watchlist": "Obserwowane",
     "scanner": "Skaner VSA",

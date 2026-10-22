@@ -28,7 +28,7 @@ from app.db.health_repository import MarketStoredStats, StoredDataStats
 from app.db.repository import InMemoryQuoteRepository
 from app.jobs.daily_ingest import IngestService, build_scheduler, markets_in
 from app.markets import GPW, US, refresh_runs
-from app.models import GpwCompany, StooqDailyQuote
+from app.models import FinancialMetrics, GpwCompany, StooqDailyQuote
 from app.services import yahoo_finance_client
 from app.services.action_log import OUTCOME_FAILED, OUTCOME_FINISHED
 from app.services.cache import TTLCache
@@ -248,10 +248,15 @@ class TestFundamentalsScope:
 
         monkeypatch.setattr(daily_ingest, "datetime", _Clock)
         client = _FundamentalsRecorder()
+        repo = InMemoryQuoteRepository()
+        # These cases describe initialized markets; archive bootstrap has its
+        # own coverage/retry tests in test_long_term_bootstrap.py.
+        for company in (_GPW_CO, _US_CO, _UK_CO):
+            asyncio.run(repo.upsert_fundamentals(company.ticker, FinancialMetrics()))
         svc = IngestService(
             companies=[_GPW_CO, _US_CO, _UK_CO],
             stooq=client,
-            repo=InMemoryQuoteRepository(),
+            repo=repo,
             history_cache=TTLCache(),
             ranking_cache=TTLCache(),
         )
@@ -534,16 +539,22 @@ class _BusyRefresh:
 class TestHealthEndpointPerRun:
     """The running flag and the error belong to the run that covers them."""
 
+    @pytest.fixture(autouse=True)
+    def _admin_credentials(self, monkeypatch):
+        monkeypatch.setattr(settings, "admin_token", "test-health-token")
+
     def _runs(self, refresh: _BusyRefresh) -> dict[str, dict]:
         from fastapi.testclient import TestClient
 
         from app.dependencies import get_refresh_service
         from app.main import app
 
-        with TestClient(app) as client:
+        with TestClient(app, headers={"X-Admin-Token": "test-health-token"}) as client:
             app.dependency_overrides[get_refresh_service] = lambda: refresh
             try:
-                body = client.get("/api/admin/health").json()
+                response = client.get("/api/admin/health")
+                assert response.status_code == 200
+                body = response.json()
             finally:
                 app.dependency_overrides.pop(get_refresh_service, None)
         return {run["runId"]: run for run in body["ingest"]["runs"]}

@@ -11,9 +11,8 @@ both of the app's supported modes. ``source`` in the payload says which.
 
 **Access.** These endpoints expose stack traces, file paths and caller IP
 addresses. When ``STOCKPILOT_ADMIN_TOKEN`` is set they require a matching
-``X-Admin-Token`` header; when it is not they are open, which is right for a
-laptop and wrong for a public deployment — so the health payload reports
-``protected: false`` and the UI says so out loud.
+``X-Admin-Token`` header. An authenticated active admin account is also
+accepted. Without either credential the endpoints always reject access.
 """
 
 from __future__ import annotations
@@ -78,9 +77,8 @@ async def require_admin(
     Otherwise, if ``STOCKPILOT_ADMIN_TOKEN`` is configured, a matching
     ``X-Admin-Token`` header is required.
 
-    No token configured means open access — the local default, where the API
-    is only reachable from the same machine. Set ``STOCKPILOT_ADMIN_TOKEN`` in
-    production: this router hands out tracebacks and visitor IP addresses.
+    Without a shared token, only an authenticated administrator can enter.
+    An omitted secret must never make diagnostic data public.
 
     ``compare_digest`` rather than ``==`` so a wrong guess takes the same time
     as a right one, which is what stops the check from leaking the token one
@@ -90,9 +88,7 @@ async def require_admin(
         return
 
     expected = settings.admin_token
-    if not expected:
-        return
-    if not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
+    if not expected or not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             detail="Admin token required.",
@@ -618,7 +614,7 @@ async def get_system_health(
         status=overall_status(ingest, data, errors),
         version=__version__,
         uptime_seconds=round((now - APP_STARTED_AT).total_seconds(), 1),
-        protected=bool(settings.admin_token),
+        protected=True,
         ingest=ingest,
         data=data,
         errors=errors,

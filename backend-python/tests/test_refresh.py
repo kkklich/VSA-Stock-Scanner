@@ -74,11 +74,11 @@ def _make_service(
 
 
 class TestBuildRatingPoints:
-    def test_one_point_per_bar(self) -> None:
+    def test_one_point_per_bar_after_minimum_history(self) -> None:
         quotes = _rich_quotes(40)
         points = build_rating_points(quotes)
-        assert len(points) == 40
-        assert [p.date for p in points] == [q.date for q in quotes]
+        assert len(points) == 16
+        assert [p.date for p in points] == [q.date for q in quotes[24:]]
 
     def test_ratings_are_in_range_and_close_is_kept(self) -> None:
         points = build_rating_points(_rich_quotes(40))
@@ -148,7 +148,7 @@ class TestRefreshService:
         asyncio.run(svc.run())
 
         history = asyncio.run(repo.get_rating_history("kgh", date(2020, 1, 1)))
-        assert len(history) == 40  # one snapshot per bar (backfill)
+        assert len(history) == 16  # backfill only dates with at least 25 bars
         assert history[0].date < history[-1].date
         assert svc.last_refresh_at is not None
         assert svc.last_error is None
@@ -250,7 +250,7 @@ class TestRatingHistoryEndpoint:
             assert resp.status_code == 200
             body = resp.json()
             assert body["source"] == "computed"
-            assert len(body["points"]) == 40
+            assert len(body["points"]) == 16
         finally:
             self._cleanup()
 

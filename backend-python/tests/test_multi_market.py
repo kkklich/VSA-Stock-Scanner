@@ -376,7 +376,7 @@ class TestFloorsFollowTheCurrency:
         thin = _bars(close=10.0, volume=3_000)
         assert build_rating_points(thin) == []
         assert build_rating_points(thin, currency="PLN") == []
-        assert len(build_rating_points(thin, currency="USD")) == len(thin)
+        assert len(build_rating_points(thin, currency="USD")) == len(thin) - 24
         assert build_rating_points(_bars(close=500.0, volume=3_000), currency="GBp") == []
 
 

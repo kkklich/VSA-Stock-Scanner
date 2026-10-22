@@ -113,6 +113,8 @@ class TradingMethod(ABC):
     source_url: str | None = None
     #: "Bullish" — every method we ship is a long-only setup for now.
     direction: str = "Bullish"
+    #: Whether caller-supplied VSA settings affect this method.
+    uses_vsa_settings: bool = False
 
     @abstractmethod
     def evaluate(

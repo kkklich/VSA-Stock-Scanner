@@ -69,6 +69,7 @@ def vsa_result_from_signals(
 
 @register_method
 class VsaMethod(TradingMethod):
+    uses_vsa_settings = True
     id = "vsa"
     order = 10
     name = "VSA rating"
