@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { renderWithProviders, screen } from '../test/utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, renderWithProviders, screen } from '../test/utils'
 import type { LongTermSnapshot } from '../types/longTerm'
 import { LongTermHistoryChart } from './LongTermHistoryChart'
 
@@ -11,6 +11,8 @@ function snapshot(recordedAt: string, score: number | null, modelVersion = 'qvm-
     comparisonGroup: 'market', peerCount: 10, recordedAt, modelVersion,
   }
 }
+
+afterEach(() => { vi.unstubAllGlobals() })
 
 describe('LongTermHistoryChart', () => {
   it('waits for two usable distinct observation times, rather than inventing a past', () => {
@@ -72,5 +74,39 @@ describe('LongTermHistoryChart', () => {
     expect(points).toHaveLength(2)
     expect(points[0].getAttribute('cx')).not.toEqual(points[1].getAttribute('cx'))
     expect(points[0].querySelector('title')).toHaveTextContent('2026-10-22T10:00:00.123456+00:00')
+  })
+
+  it('keeps the plot 220px tall with readable scale coordinates when a narrow container resizes', () => {
+    let resize: ResizeObserverCallback | null = null
+    const disconnect = vi.fn()
+    class ChartResizeObserver {
+      constructor(callback: ResizeObserverCallback) { resize = callback }
+      observe() {}
+      disconnect = disconnect
+    }
+    vi.stubGlobal('ResizeObserver', ChartResizeObserver)
+    const { rerender, unmount } = renderWithProviders(<LongTermHistoryChart items={[]} />)
+    expect(resize).toBeNull()
+    rerender(<LongTermHistoryChart items={[
+      snapshot('2026-10-21T10:00:00Z', 0), snapshot('2026-10-22T10:00:00Z', 100),
+    ]} />)
+    const chart = screen.getByRole('img')
+    const notifyWidth = (width: number) => act(() => {
+      resize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver)
+    })
+    notifyWidth(268)
+    expect(chart).toHaveAttribute('viewBox', '0 0 268 220')
+    expect(chart).toHaveStyle({ height: '220px' })
+    const points = Array.from(chart.querySelectorAll('circle'))
+    expect(points.map((point) => point.getAttribute('cx'))).toEqual(['34', '256'])
+    const verticalPositions = points.map((point) => point.getAttribute('cy'))
+    notifyWidth(900)
+    expect(chart).toHaveAttribute('viewBox', '0 0 900 220')
+    expect(points.map((point) => point.getAttribute('cy'))).toEqual(verticalPositions)
+    expect(points.map((point) => point.getAttribute('data-score'))).toEqual(['0', '100'])
+    notifyWidth(0)
+    expect(chart).toHaveAttribute('viewBox', '0 0 900 220')
+    unmount()
+    expect(disconnect).toHaveBeenCalledOnce()
   })
 })

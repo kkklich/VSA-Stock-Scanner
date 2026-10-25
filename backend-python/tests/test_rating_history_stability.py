@@ -108,7 +108,8 @@ async def test_failed_snapshot_read_cannot_overwrite_saved_history():
         companies=[GpwCompany(ticker="alr", name="Alior")],
         stooq=AsyncMock(), history_cache=TTLCache(), ranking_cache=TTLCache(), repo=repo,
     )
-    assert await service._snapshot_ratings([_ranking_item()], date(2026, 9, 22)) == 0
+    with pytest.raises(RuntimeError, match="Rating snapshots incomplete"):
+        await service._snapshot_ratings([_ranking_item()], date(2026, 9, 22))
     repo.upsert_rating_snapshots.assert_not_awaited()
 
 

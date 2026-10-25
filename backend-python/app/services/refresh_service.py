@@ -96,6 +96,15 @@ _MIN_BARS = 25
 _INGEST_FAILURE_SHARE = 0.10
 
 
+def failed_ingest_markets(stats: IngestStats) -> list[str]:
+    return [
+        market for market, counts in stats.by_market.items()
+        if counts.companies and (
+            counts.fetched == 0 or counts.failed > counts.companies * _INGEST_FAILURE_SHARE
+        )
+    ]
+
+
 def ingest_outcome(stats: IngestStats) -> str:
     """Did the download step work? — the verdict its log entry carries.
 
@@ -105,7 +114,8 @@ def ingest_outcome(stats: IngestStats) -> str:
     to surface a genuinely broken run — cry wolf most nights, and a warning
     nobody believes is worse than no warning at all.
 
-    So the step is reported as failed only when it is really broken:
+    Apply these rules to EACH requested market, as well as the aggregate, so
+    a larger market's successes cannot hide a complete smaller-market outage:
 
       * **nothing was fetched** — every ticker errored or was skipped, which
         is what a dead network, a wrong symbol list or an unreachable database
@@ -119,6 +129,8 @@ def ingest_outcome(stats: IngestStats) -> str:
     ``detail`` either way, so a run with a handful of casualties is still
     fully readable — it is just not shouted about.
     """
+    if failed_ingest_markets(stats):
+        return OUTCOME_FAILED
     if stats.companies == 0:
         # Nothing was asked for, so nothing failing is not a failure.
         return OUTCOME_FINISHED
@@ -265,6 +277,9 @@ class RefreshService:
         async with self._running:
             self.last_started_at = datetime.now(tz=UTC)
             self.last_error = None
+            self.stocks_ranked = None
+            self.snapshots_written = None
+            self.long_term_snapshots_written = None
             started = time.perf_counter()
             scope = self._scope(markets)
             self.run_markets = scope
@@ -386,17 +401,38 @@ class RefreshService:
                 full=full, markets=scope, full_markets=full_markets
             )
             if stats is not None:
+                outcome = ingest_outcome(stats)
                 self._log_job(
                     "job.ingest",
-                    ingest_outcome(stats),
+                    outcome,
                     duration_ms=stats.duration_ms,
                     detail=stats.as_detail(),
                 )
+                if outcome == OUTCOME_FAILED:
+                    # A recorded ingest failure must also fail the containing
+                    # refresh. Ranking stale/partial data cannot turn it into
+                    # success or advance the last successful refresh time.
+                    failed_markets = failed_ingest_markets(stats)
+                    affected = [stats.by_market[m] for m in failed_markets] or [stats]
+                    summary = "; ".join(
+                        f"{market}: fetched {counts.fetched} of {counts.companies} companies; "
+                        f"{counts.failed} failed, {counts.skipped} skipped"
+                        for market, counts in zip(
+                            failed_markets or [', '.join(scope)], affected, strict=True
+                        )
+                    )
+                    raise RuntimeError(
+                        f"Ingest failed for {summary}. "
+                        "See the ingest log for affected tickers."
+                    )
             else:
                 self._log_job(
                     "job.ingest",
                     OUTCOME_SKIPPED,
                     detail={"reason": "already running"},
+                )
+                raise RuntimeError(
+                    "Refresh incomplete: ingest is already running in another job."
                 )
         else:
             # No DB: just drop the refreshed markets' caches so the ranking
@@ -463,6 +499,7 @@ class RefreshService:
         from_date = today - timedelta(days=_HISTORY_DAYS)
         context_from = today - timedelta(days=CONTEXT_HISTORY_DAYS)
         written = 0
+        failures: list[str] = []
 
         for item in ranking:
             ticker = item.ticker.lower()
@@ -485,12 +522,20 @@ class RefreshService:
                     written += 1
             except Exception:
                 logger.exception("Failed to snapshot ratings for %s.", ticker)
+                failures.append(ticker)
 
         logger.info(
             "Refresh: rating snapshots stored for %d/%d ranked stocks.",
             written,
             len(ranking),
         )
+        self.snapshots_written = written
+        if failures:
+            raise RuntimeError(
+                f"Rating snapshots incomplete: {len(failures)} of {len(ranking)} "
+                f"stocks failed ({', '.join(failures[:10])}). "
+                f"Snapshots written for {written} stocks; retry the refresh."
+            )
         return written
 
     async def _load_quotes(

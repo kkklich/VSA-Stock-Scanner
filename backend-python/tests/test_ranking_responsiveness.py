@@ -14,6 +14,7 @@ import pytest
 from app.main import app
 from app.models import GpwCompany, StooqDailyQuote
 from app.services import ranking_service as ranking
+from app.services import scanner_service as scanner
 from app.services.cache import TTLCache
 
 TODAY = date(2026, 9, 22)
@@ -44,17 +45,19 @@ def _inputs(count=3, warm=False):
 
 
 @pytest.mark.parametrize("warm", [False, True])
-@pytest.mark.parametrize("stage", [
-    "detect_signals", "compute_weekly_view", "analyze_stock", "_evaluate_methods",
+@pytest.mark.parametrize("service,stage", [
+    (ranking, "detect_signals"), (ranking, "compute_weekly_view"),
+    (ranking, "analyze_stock"), (ranking, "_evaluate_methods"),
+    (scanner, "detect_signals"),
 ])
-def test_health_responds_while_ranking_analysis_is_blocked(monkeypatch, warm, stage):
+def test_health_responds_while_ranking_analysis_is_blocked(monkeypatch, warm, service, stage):
     """A handshake proves overlap without depending on a millisecond threshold."""
     async def scenario():
         loop = asyncio.get_running_loop()
         loop_thread = threading.get_ident()
         entered = asyncio.Event()
         release = threading.Event()
-        original = getattr(ranking, stage)
+        original = getattr(service, stage)
 
         def blocked(*args, **kwargs):
             # Fail promptly on the old implementation rather than blocking the
@@ -65,8 +68,9 @@ def test_health_responds_while_ranking_analysis_is_blocked(monkeypatch, warm, st
             assert release.wait(10), "Test did not release ranking analysis"
             return original(*args, **kwargs)
 
-        monkeypatch.setattr(ranking, stage, blocked)
-        task = asyncio.create_task(ranking.compute_ranking(**_inputs(warm=warm)))
+        monkeypatch.setattr(service, stage, blocked)
+        compute = ranking.compute_ranking if service is ranking else scanner.compute_scanner_stats
+        task = asyncio.create_task(compute(**_inputs(warm=warm)))
         try:
             await asyncio.wait_for(entered.wait(), 5)
             async with httpx.AsyncClient(
@@ -79,12 +83,13 @@ def test_health_responds_while_ranking_analysis_is_blocked(monkeypatch, warm, st
         finally:
             release.set()
             rows = await asyncio.wait_for(task, 10)
-        assert len(rows) == 3
+        assert len(rows) == (3 if service is ranking else 6)
 
     asyncio.run(scenario())
 
 
-def test_concurrent_scans_and_cancellation_do_not_queue_whole_markets(monkeypatch):
+@pytest.mark.parametrize("service", [ranking, scanner])
+def test_concurrent_scans_and_cancellation_do_not_queue_whole_markets(monkeypatch, service):
     async def scenario():
         loop = asyncio.get_running_loop()
         entered = asyncio.Event()
@@ -102,8 +107,8 @@ def test_concurrent_scans_and_cancellation_do_not_queue_whole_markets(monkeypatc
                 return super().submit(fn, *args, **kwargs)
 
         executor = RecordingExecutor(max_workers=1)
-        monkeypatch.setattr(ranking, "_ANALYSIS_EXECUTOR", executor)
-        original = ranking.detect_signals
+        monkeypatch.setattr(service, "_ANALYSIS_EXECUTOR", executor)
+        original = service.detect_signals
 
         def blocked(*args, **kwargs):
             calls.append(threading.get_ident())
@@ -111,8 +116,9 @@ def test_concurrent_scans_and_cancellation_do_not_queue_whole_markets(monkeypatc
             assert release.wait(10)
             return original(*args, **kwargs)
 
-        monkeypatch.setattr(ranking, "detect_signals", blocked)
-        tasks = [asyncio.create_task(ranking.compute_ranking(**_inputs(50, True)))
+        monkeypatch.setattr(service, "detect_signals", blocked)
+        compute = ranking.compute_ranking if service is ranking else scanner.compute_scanner_stats
+        tasks = [asyncio.create_task(compute(**_inputs(50, True)))
                  for _ in range(2)]
         try:
             await asyncio.wait_for(entered.wait(), 5)

@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 
+class IncompleteScanError(RuntimeError):
+    """A scan failed to read/analyse its universe; never cache it as complete."""
+
+
 class StooqAccessError(Exception):
     """Raised when stooq.pl refuses to serve data.
 

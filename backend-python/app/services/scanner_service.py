@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from statistics import median
@@ -35,6 +36,7 @@ from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
+from app.services.exceptions import IncompleteScanError, StooqAccessError
 from app.services.ranking_service import CONTEXT_HISTORY_DAYS
 from app.services.stooq_client import StooqClient
 
@@ -47,6 +49,8 @@ logger = logging.getLogger(__name__)
 _HISTORY_DAYS = 120
 _FORWARD_SESSIONS = 10  # look-ahead window for the back-test
 _MAX_CONCURRENT = 4
+# One shared worker for all scanner requests; independent of the default pool.
+_ANALYSIS_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="scanner")
 
 # Map backend SignalName enum values to the display names used by the UI.
 SIGNAL_DISPLAY: dict[str, str] = {
@@ -123,7 +127,9 @@ async def compute_scanner_stats(
         async with semaphore:
             try:
                 rows = await stooq.get_daily_history(ticker, from_date=from_date)
-            except Exception as exc:  # noqa: BLE001 — includes StooqAccessError
+            except StooqAccessError as exc:
+                if exc.__cause__ is not None:
+                    raise
                 logger.debug("Scanner: skip %s — %s", ticker, exc)
                 rows = []
             if repo is not None and rows:
@@ -135,8 +141,8 @@ async def compute_scanner_stats(
         history_cache.set(cache_key, rows or [], history_cache_ttl)
         return rows or []
 
-    async def process(company: GpwCompany) -> None:
-        fetched = await fetch_quotes(company.ticker)
+    def process(fetched: list[StooqDailyQuote]) -> None:
+        # This accumulator belongs only to this scan's sequential worker calls.
         # Analysis runs on the ranking's 120-day slice; only the shared fetch
         # window is longer (see CONTEXT_HISTORY_DAYS), so the stats are
         # identical to a plain 120-day fetch.
@@ -217,14 +223,25 @@ async def compute_scanner_stats(
             else:
                 bucket.loss_mag.append(magnitude)
 
-    results = await asyncio.gather(
-        *(process(c) for c in companies), return_exceptions=True
+    # Fetch concurrently under the I/O gates, then submit one CPU job per
+    # scan at a time. Cancellation cannot leave a whole market queued behind it.
+    histories = await asyncio.gather(
+        *(fetch_quotes(c.ticker) for c in companies), return_exceptions=True
     )
-    # A ticker whose task raised (e.g. the DB dying mid-scan) silently
-    # contributes nothing to the stats — log it so the gap is visible.
-    for company, result in zip(companies, results, strict=True):
-        if isinstance(result, BaseException):
-            logger.error("Scanner stats: skipping %s: %s", company.ticker, result)
+    failures = [c.ticker for c, rows in zip(companies, histories, strict=True)
+                if isinstance(rows, BaseException)]
+    if failures:
+        raise IncompleteScanError(
+            f"Scanner incomplete: could not read {len(failures)} companies "
+            f"({', '.join(failures[:10])}). Please retry."
+        )
+    for company, rows in zip(companies, histories, strict=True):
+        try:
+            await asyncio.get_running_loop().run_in_executor(_ANALYSIS_EXECUTOR, process, rows)
+        except Exception as exc:
+            raise IncompleteScanError(
+                f"Scanner analysis failed for {company.ticker}. Please retry."
+            ) from exc
 
     result: list[SignalEffStats] = []
     for display_name, bucket in acc.items():

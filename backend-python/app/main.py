@@ -34,6 +34,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app import __version__
@@ -66,6 +67,7 @@ from app.services.action_log import (
     ActionLogMiddleware,
 )
 from app.services.error_tracker import ErrorTrackingHandler
+from app.services.exceptions import IncompleteScanError
 from app.services.live_prices import LivePriceService
 from app.services.refresh_service import RefreshService
 
@@ -477,6 +479,11 @@ app.include_router(stocks.router)
 app.include_router(long_term.router)
 app.include_router(admin.router)
 app.include_router(auth.router)
+
+
+@app.exception_handler(IncompleteScanError)
+async def incomplete_scan_handler(_request, exc: IncompleteScanError):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 @app.get("/health", tags=["meta"], summary="Readiness probe")

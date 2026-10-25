@@ -173,8 +173,8 @@ export function LongTermPage() {
                 <p className="truncate text-xs text-slate-400" title={item.name}>{item.name}</p>
                 <p className="mt-1 text-[11px] text-slate-500">{t('longTerm.session')}: {item.asOf ?? '—'}</p>
               </td>
-              {SCORE_KEYS.map((key) => <td key={key} className={`block min-w-0 px-3 py-3 tabular-nums lg:table-cell lg:text-right ${item[key] === null ? 'text-slate-500' : key === 'score' ? `font-semibold ${ratingTone(item[key]).text}` : 'text-slate-300'}`}>
-                <span className="mb-1 block break-words text-[11px] font-normal text-slate-400 lg:hidden">{t(`longTerm.${key}`)}</span>
+              {SCORE_KEYS.map((key) => <td key={key} className={`block min-w-0 px-2 py-3 tabular-nums lg:table-cell lg:px-3 lg:text-right ${item[key] === null ? 'text-slate-500' : key === 'score' ? `font-semibold ${ratingTone(item[key]).text}` : 'text-slate-300'}`}>
+                <span className="mb-1 block min-h-8 break-words text-[10px] font-normal leading-4 text-slate-400 lg:hidden">{t(`longTerm.${key}`)}</span>
                 {key === 'score' ? scoreText(item[key], i18n.language) : <LongTermFactorBar value={item[key]} label={t(`longTerm.${key}`)} />}
               </td>)}
               <td className="block min-w-0 px-3 py-3 text-slate-300 lg:table-cell lg:text-right"><span className="mb-1 block text-[11px] text-slate-400 lg:hidden">{t('longTerm.coverage')}</span>{scoreText(item.coverage, i18n.language)}%</td>

@@ -120,6 +120,16 @@ class BootstrapPlan:
 
 
 @dataclass(slots=True)
+class MarketIngestStats:
+    """Download counters for one market, independent of larger peer markets."""
+
+    companies: int = 0
+    fetched: int = 0
+    skipped: int = 0
+    failed: int = 0
+
+
+@dataclass(slots=True)
 class IngestStats:
     """What one ingest run actually did — the audit trail's raw material.
 
@@ -150,6 +160,15 @@ class IngestStats:
     fundamentals_run: bool = False
     duration_ms: float = 0.0
     failures: list[str] = field(default_factory=list)
+    by_market: dict[str, MarketIngestStats] = field(default_factory=dict)
+
+    def record(self, ticker: str, outcome: str) -> None:
+        if outcome not in {"fetched", "skipped", "failed"}:
+            raise ValueError(f"Unknown ingest outcome: {outcome}")
+        setattr(self, outcome, getattr(self, outcome) + 1)
+        market = self.by_market.get(market_of(ticker).id)
+        if market is not None:
+            setattr(market, outcome, getattr(market, outcome) + 1)
 
     def as_detail(self) -> dict:
         """The JSON-friendly form stored in an action-log entry."""
@@ -165,6 +184,13 @@ class IngestStats:
             "adjustedTickers": self.adjusted_tickers[:_MAX_REPORTED_ADJUSTED],
             "fundamentalsRun": self.fundamentals_run,
             "failures": self.failures[:_MAX_REPORTED_FAILURES],
+            "byMarket": {
+                market: {
+                    "companies": counts.companies, "fetched": counts.fetched,
+                    "skipped": counts.skipped, "failed": counts.failed,
+                }
+                for market, counts in self.by_market.items()
+            },
         }
 
 
@@ -243,6 +269,9 @@ class IngestService:
         stats = IngestStats(
             full=full or bool(full_ids), companies=len(companies), markets=scope
         )
+        for company in companies:
+            market_id = market_of(company.ticker).id
+            stats.by_market.setdefault(market_id, MarketIngestStats()).companies += 1
         today = datetime.now(_WARSAW).date()
         incremental_from = today - timedelta(days=_INCREMENTAL_DAYS)
         bootstrap_from = today - timedelta(days=_FULL_HISTORY_DAYS)
@@ -306,14 +335,14 @@ class IngestService:
                     logger.warning("Ingest skipped for %s: %s", ticker, exc)
                     if widened:
                         self._remember_open_gap(ticker)
-                    stats.skipped += 1
+                    stats.record(ticker, "skipped")
                     stats.failures.append(ticker)
                     return
                 except Exception as exc:  # noqa: BLE001
                     logger.error("Ingest error for %s: %s", ticker, exc)
                     if widened:
                         self._remember_open_gap(ticker)
-                    stats.failed += 1
+                    stats.record(ticker, "failed")
                     stats.failures.append(ticker)
                     return
 
@@ -346,15 +375,17 @@ class IngestService:
                     # before this, the ticker simply went missing and the job
                     # still reported success.
                     logger.error("Ingest write failed for %s: %s", ticker, exc)
-                    stats.failed += 1
+                    stats.record(ticker, "failed")
                     stats.failures.append(ticker)
                     return
-                stats.fetched += 1
+                stats.record(ticker, "fetched")
                 stats.bars_written += len(quotes)
                 if repaired:
                     stats.adjusted += 1
                     stats.adjusted_tickers.append(ticker)
                 logger.debug("Persisted %d bars for %s.", len(quotes), ticker)
+            else:
+                stats.record(ticker, "skipped")
 
         await asyncio.gather(*(ingest_one(c) for c in companies))
 
@@ -525,7 +556,7 @@ class IngestService:
                 repair_from,
                 exc,
             )
-            stats.failed += 1
+            stats.record(ticker, "failed")
             stats.failures.append(ticker)
             return None, False
 
@@ -534,7 +565,7 @@ class IngestService:
                 "Re-download of %s returned nothing; skipping tonight's write.",
                 ticker,
             )
-            stats.failed += 1
+            stats.record(ticker, "failed")
             stats.failures.append(ticker)
             return None, False
 
@@ -557,7 +588,7 @@ class IngestService:
                 repaired_bars[0].date,
                 span[0],
             )
-            stats.failed += 1
+            stats.record(ticker, "failed")
             stats.failures.append(ticker)
             return None, False
 

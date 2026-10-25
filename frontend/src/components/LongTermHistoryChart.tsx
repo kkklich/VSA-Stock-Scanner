@@ -1,9 +1,10 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LongTermSnapshot } from '../types/longTerm'
 import { scoreText } from '../lib/longTerm'
 
-const WIDTH = 640
+const INITIAL_WIDTH = 640
+const MIN_WIDTH = 240
 const HEIGHT = 220
 const LEFT = 34
 const RIGHT = 12
@@ -28,17 +29,34 @@ function observationTime(value: string): number {
 export function LongTermHistoryChart({ items }: { items: LongTermSnapshot[] }) {
   const { t, i18n } = useTranslation()
   const id = useId()
+  const plotRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(INITIAL_WIDTH)
   const observations = items.map((item, index) => ({ item, index, time: observationTime(item.recordedAt) }))
     .filter(({ time }) => Number.isFinite(time))
     .sort((a, b) => a.time - b.time || a.index - b.index)
   const usable = observations.filter(({ item }) => item.score !== null && Number.isFinite(item.score) && item.score >= 0 && item.score <= 100)
   const distinctTimes = new Set(usable.map(({ time }) => time))
-  if (distinctTimes.size < 2) return <p className="rounded-lg bg-slate-800/50 p-3 text-sm text-slate-400">{t('longTerm.chart.insufficient')}</p>
+  const canPlot = distinctTimes.size >= 2
+  useEffect(() => {
+    const container = plotRef.current
+    if (!container) return
+    const resize = (nextWidth: number) => {
+      if (Number.isFinite(nextWidth) && nextWidth > 0) setWidth(Math.max(MIN_WIDTH, nextWidth))
+    }
+    resize(container.getBoundingClientRect().width)
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) resize(entries[0].contentRect.width)
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [canPlot])
+  if (!canPlot) return <p className="rounded-lg bg-slate-800/50 p-3 text-sm text-slate-400">{t('longTerm.chart.insufficient')}</p>
 
   // Include dated missing scores in the time domain; they are breaks, never zeroes.
   const firstTime = observations[0].time
   const lastTime = observations[observations.length - 1].time
-  const x = (time: number) => LEFT + ((time - firstTime) / (lastTime - firstTime)) * (WIDTH - LEFT - RIGHT)
+  const x = (time: number) => LEFT + ((time - firstTime) / (lastTime - firstTime)) * (width - LEFT - RIGHT)
   const y = (score: number) => TOP + ((100 - score) / 100) * (HEIGHT - TOP - BOTTOM)
   const models = [...new Set(usable.map(({ item }) => item.modelVersion))]
   const segments: { model: string; points: string[] }[] = []
@@ -58,9 +76,10 @@ export function LongTermHistoryChart({ items }: { items: LongTermSnapshot[] }) {
 
   return <figure className="min-w-0 space-y-3 rounded-lg border border-slate-800 p-3">
     <figcaption id={`${id}-title`} className="text-sm font-semibold text-slate-200">{t('longTerm.chart.title')}</figcaption>
-    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="block h-auto w-full overflow-visible">
+    <div ref={plotRef} className="min-w-0">
+    <svg viewBox={`0 0 ${width} ${HEIGHT}`} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="block w-full overflow-visible" style={{ height: HEIGHT }}>
       {[0, 50, 100].map((value) => <g key={value}>
-        <line x1={LEFT} x2={WIDTH - RIGHT} y1={y(value)} y2={y(value)} className="stroke-slate-700" strokeDasharray="3 5" />
+        <line x1={LEFT} x2={width - RIGHT} y1={y(value)} y2={y(value)} className="stroke-slate-700" strokeDasharray="3 5" />
         <text x={LEFT - 8} y={y(value)} textAnchor="end" dominantBaseline="middle" className="fill-slate-400 text-xs">{value}</text>
       </g>)}
       {segments.filter(({ points }) => points.length > 1).map(({ model, points }, index) => <polyline
@@ -70,6 +89,7 @@ export function LongTermHistoryChart({ items }: { items: LongTermSnapshot[] }) {
         <title>{`${t('longTerm.recordedAt')}: ${dateLabel(time)} (${item.recordedAt}) · ${t('longTerm.score')}: ${scoreText(item.score, i18n.language)} · ${t('longTerm.modelVersion')}: ${item.modelVersion} · ${t('longTerm.session')}: ${item.asOf ?? '—'}`}</title>
       </circle>)}
     </svg>
+    </div>
     <div aria-hidden="true" className="flex justify-between gap-4 text-xs tabular-nums text-slate-400"><span>{dateLabel(firstTime)}</span><span className="text-right">{dateLabel(lastTime)}</span></div>
     <p id={`${id}-description`} className="text-xs leading-relaxed text-slate-400">{t('longTerm.chart.description')}</p>
     <p className="text-xs text-slate-400">{t('longTerm.chart.models', { models: models.join(', ') })}</p>

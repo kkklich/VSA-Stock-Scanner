@@ -42,7 +42,7 @@ from app.markets import (
 )
 from app.models import GpwCompany, MethodResultModel, StockRankingItem, StooqDailyQuote
 from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
-from app.services.exceptions import StooqAccessError
+from app.services.exceptions import IncompleteScanError, StooqAccessError
 from app.services.stooq_client import StooqClient
 
 logger = logging.getLogger(__name__)
@@ -300,6 +300,8 @@ async def compute_ranking(
             try:
                 quotes = await stooq.get_daily_history(ticker, from_date=from_date)
             except StooqAccessError as exc:
+                if exc.__cause__ is not None:
+                    raise  # transport/provider failure, not a known empty ticker
                 logger.warning("Skipping %s: data provider error: %s", ticker, exc)
                 # A provider that answers "I have nothing for this ticker"
                 # is remembered for a while, so a listing renamed or delisted
@@ -314,7 +316,7 @@ async def compute_ranking(
                 return None
             except Exception as exc:  # noqa: BLE001
                 logger.error("Skipping %s: unexpected error: %s", ticker, exc)
-                return None
+                raise
 
             # Persist inside the semaphore so at most _MAX_CONCURRENT DB writes
             # are in flight simultaneously (prevents connection pool exhaustion).
@@ -380,8 +382,8 @@ async def compute_ranking(
                          company.ticker, len(recent))
             return None
 
-        # Guard the analysis + model construction: a single company with
-        # malformed data must never 500 the whole ranking — skip it instead.
+        # Record analysis/model failures so the caller rejects the incomplete
+        # ranking instead of caching a silently truncated market.
         try:
             if below_liquidity_floor(median_turnover(recent), currency):
                 logger.debug("Skipping %s: below liquidity threshold.", company.ticker)
@@ -492,7 +494,7 @@ async def compute_ranking(
             return item, last_bar_date
         except Exception:  # noqa: BLE001
             logger.exception("Skipping %s: analysis failed.", company.ticker)
-            return None
+            raise
 
     # Relative-strength pre-pass (Minervini's rule 8): compute each stock's raw
     # blended trailing return, then rank those into 0-100 percentiles across the
@@ -512,6 +514,13 @@ async def compute_ranking(
     rs_pairs = await asyncio.gather(
         *(rs_raw_for(c) for c in companies), return_exceptions=True
     )
+    failed_rs = [c.ticker for c, result in zip(companies, rs_pairs, strict=True)
+                 if isinstance(result, BaseException)]
+    if failed_rs:
+        raise IncompleteScanError(
+            f"Ranking incomplete: could not read {len(failed_rs)} companies "
+            f"({', '.join(failed_rs[:10])}). Please retry."
+        )
     rs_raw: dict[str, float] = {}
     for res in rs_pairs:
         if isinstance(res, BaseException):
@@ -538,6 +547,7 @@ async def compute_ranking(
     for company, result in zip(companies, results, strict=True):
         if isinstance(result, BaseException):
             logger.error("Ranking: skipping %s: %s", company.ticker, result)
+            data_failures.append(company.ticker)
     pairs = [r for r in results if isinstance(r, tuple)]
 
     if data_failures:
@@ -550,6 +560,10 @@ async def compute_ranking(
             len(companies),
             ", ".join(data_failures[:10]),
             ", …" if len(data_failures) > 10 else "",
+        )
+        raise IncompleteScanError(
+            f"Ranking incomplete: {len(data_failures)} companies failed "
+            f"({', '.join(data_failures[:10])}). Please retry."
         )
 
     # Recency pre-filter (see _MAX_SESSION_LAG_DAYS): a ticker whose last bar
