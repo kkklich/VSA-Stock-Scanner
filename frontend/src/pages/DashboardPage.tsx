@@ -282,8 +282,8 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Heading, market overview, and ranking controls */}
+      <div className="flex flex-col gap-5">
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
             {t('dashboard.heading')}
@@ -299,6 +299,10 @@ export function DashboardPage() {
           </p>
           <DisclaimerNote className="mt-1" />
         </div>
+
+        {/* Always about the whole market, so the search/filter/favorites below
+            do not change the breadth or the biggest rating movers. */}
+        <MarketOverview market={market} />
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
@@ -459,10 +463,6 @@ export function DashboardPage() {
           <RefreshButton onRefreshed={refetch} />
         </div>
       </div>
-
-      {/* Top-down read: breadth and the biggest rating movers. Always about the
-          whole market, so the search/filter/favorites below do not change it. */}
-      <MarketOverview market={market} />
 
       {/* States */}
       {loading && (
