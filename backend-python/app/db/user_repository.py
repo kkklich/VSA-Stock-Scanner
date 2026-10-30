@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.journal_repository import JournalRepository
 from app.db.models import UserRow
+from app.db.portfolio_repository import PortfolioRepository
 from app.db.watchlist_repository import WatchlistRepository
 
 
@@ -35,6 +36,7 @@ class UserRepository:
         self._session_factory = session_factory
         self.watchlists = WatchlistRepository(session_factory)
         self.journal = JournalRepository(session_factory)
+        self.portfolios = PortfolioRepository(session_factory)
 
     async def create(
         self,

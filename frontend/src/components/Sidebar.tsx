@@ -16,6 +16,7 @@ import {
   Settings,
   Star,
   TrendingUp,
+  Wallet,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -32,6 +33,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
   { to: '/journal', labelKey: 'journal.title', icon: BookOpen, match: (p) => p.startsWith('/journal') },
+  { to: '/portfolio', labelKey: 'portfolio.title', icon: Wallet, match: (p) => p.startsWith('/portfolio') },
   { to: '/long-term', labelKey: 'nav.longTerm', icon: Layers, match: (p) => p.startsWith('/long-term') },
   {
     to: '/watchlist',

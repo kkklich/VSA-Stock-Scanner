@@ -24,6 +24,14 @@ const DEFAULT_ENTRY: SeoEntry = {
 
 const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
   {
+    test: (p) => p.startsWith('/portfolio'),
+    entry: {
+      title: 'My portfolio',
+      description: 'Your private portfolios, transactions and latest available valuations.',
+      noindex: true,
+    },
+  },
+  {
     test: (p) => p.startsWith('/long-term'),
     entry: {
       title: 'Long-term ranking — quality, value and momentum',

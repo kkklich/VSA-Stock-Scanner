@@ -71,6 +71,45 @@ Journal data is stored only in the account database, with a limit of 500 entries
 The new table is created at backend startup; Alembic-managed deployments should
 apply revision `011`. Guests are prompted to sign in and do not get a local diary.
 
+## Personal portfolios
+
+Signed-in users can open **My portfolio** in the sidebar and create up to 20
+private portfolios, each with a name and broker. Record a purchase or sale with
+the transaction date, tracked instrument, quantity, price per share and optional
+fees. The quote currency is selected from the instrument; London pence are shown
+as GBX. Each portfolio supports up to 1,000 transactions.
+
+Positions show remaining quantity, average cost including purchase fees, latest
+available price, quote date, market value and unrealized profit/loss. Sales use
+FIFO by default, with moving average available per portfolio, and deduct sale
+fees from realized profit/loss. Changing the cost method recalculates the ledger
+without modifying recorded transactions. Add trades on the same date in execution
+order. Backdated changes and transaction deletions
+are rejected if they would leave a historical short position. To correct a trade,
+delete it and record its replacement; dependent sales may need removing first.
+
+Valuation uses the latest stored closing quotes and newer available intraday
+quotes from the existing hourly price service. It does not request a fresh market
+download when the page is refreshed. Quote dates are shown separately from the
+calculation timestamp. Missing prices leave the complete currency valuation
+unavailable rather than displaying a partial total. Each currency has its own
+totals; no indicative FX rates are applied. Dividends, corporate actions, cash
+balances and tax accounting are not automatically recorded.
+
+The page explains its calculation rules, separates closing and intraday quotes,
+and flags quotes older than seven calendar days (an informational threshold,
+not a holiday calendar). Its percentage P/L is relative to remaining cost basis;
+it is not an annualized or cash-flow-adjusted return. Calculation references:
+[IBKR portfolio fields](https://www.ibkrguides.com/ibkrdesktop/account-portfolio.htm),
+[Portfolio Performance cost methods](https://help.portfolio-performance.info/en/concepts/cost-methodology/),
+[transaction currency and fees](https://help.portfolio-performance.info/en/reference/transaction/buy-sell/).
+
+Portfolios are saved in the account database and reloaded on browser focus and
+every minute while visible. Version checks prevent overwriting edits from another
+device; unchanged creation and trade requests can be retried without duplicates.
+Guests are prompted to sign in. Startup creates the new table; Alembic-managed
+deployments should apply revision `013` (`alembic upgrade head`).
+
 ## Deploy to production
 
 Full owner's walkthrough (DNS, SSH, TLS, updates, troubleshooting):
