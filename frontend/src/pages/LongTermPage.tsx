@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CompanyLink } from '../components/ui'
 import { MarketTabs } from '../components/MarketTabs'
@@ -6,7 +6,8 @@ import { LoadError, LongTermHistory } from '../components/LongTermHistory'
 import { LongTermFactorBar } from '../components/LongTermFactorBar'
 import { scoreText } from '../lib/longTerm'
 import { summarizeLongTermFreshness } from '../lib/longTermFreshness'
-import { FAVORITES_KEY, loadFavorites } from '../lib/favorites'
+import { useWatchlists } from '../hooks/useWatchlists'
+import { WatchlistControls } from '../components/WatchlistControls'
 import { ratingTone } from '../lib/format'
 import { useSingleMarket } from '../hooks/useMarkets'
 import { useLongTermRanking } from '../hooks/useLongTerm'
@@ -31,20 +32,12 @@ export function LongTermPage() {
   const [query, setQuery] = useState('')
   const [scoredOnly, setScoredOnly] = useState(false)
   const [watchlistOnly, setWatchlistOnly] = useState(false)
-  const [favorites, setFavorites] = useState(loadFavorites)
+  const { stars: favorites } = useWatchlists()
   const [sectorFilter, setSectorFilter] = useState<{ market: string | null; value: string }>({ market: null, value: '' })
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [ascending, setAscending] = useState(false)
   const [selected, setSelected] = useState<{ market: string; ticker: string } | null>(null)
   const historyButtons = useRef(new Map<string, HTMLButtonElement>())
-  useEffect(() => {
-    // Stars can change in another tab while this page remains open.
-    const sync = () => setFavorites(loadFavorites())
-    const onStorage = (event: StorageEvent) => { if (event.key === FAVORITES_KEY || event.key === null) sync() }
-    window.addEventListener('storage', onStorage)
-    window.addEventListener('focus', sync)
-    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('focus', sync) }
-  }, [])
   const sectors = useMemo(() => Array.from(new Set((data?.items ?? []).map((item) => item.sector?.trim() || UNKNOWN_SECTOR))).sort((a, b) => a.localeCompare(b, i18n.language)), [data, i18n.language])
   const sector = sectorFilter.market === market && sectors.includes(sectorFilter.value) ? sectorFilter.value : ''
   const freshness = useMemo(() => summarizeLongTermFreshness(data?.items ?? []), [data])
@@ -124,7 +117,7 @@ export function LongTermPage() {
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-800 pt-3 text-sm text-slate-300">
         <label className="flex items-center gap-2"><input type="checkbox" checked={scoredOnly} onChange={(event) => setScoredOnly(event.target.checked)} className="accent-emerald-500" />{t('longTerm.filters.scoredOnly')}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={watchlistOnly} onChange={(event) => { setFavorites(loadFavorites()); setWatchlistOnly(event.target.checked) }} className="accent-emerald-500" />{t('longTerm.filters.watchlistOnly')}</label>
+        <WatchlistControls compact /><label className="flex items-center gap-2"><input type="checkbox" checked={watchlistOnly} onChange={(event) => { setWatchlistOnly(event.target.checked) }} className="accent-emerald-500" />{t('longTerm.filters.watchlistOnly')}</label>
         {filtersActive && <button type="button" onClick={clearFilters} className="text-xs text-emerald-400 hover:underline">{t('longTerm.filters.clear')}</button>}
         {data && <p role="status" className="text-xs text-slate-400 sm:ml-auto">{t('longTerm.filters.matches', { count: items.length, total: data.items.length })}</p>}
       </div>

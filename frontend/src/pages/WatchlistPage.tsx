@@ -24,7 +24,8 @@ import { useMarkets, useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { fetchRanking, type RankingSortKey } from '../api/stocksApi'
 import type { SignalVerdict, StockRankingItem } from '../types'
-import { loadFavorites, saveFavorites } from '../lib/favorites'
+import { useWatchlists } from '../hooks/useWatchlists'
+import { WatchlistControls } from '../components/WatchlistControls'
 import { settingsQueryValue } from '../lib/vsaSettings'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import { Pagination } from '../components/ui'
@@ -81,7 +82,7 @@ export function WatchlistPage() {
   const [query, setQuery] = useState('')
   // Debounced search text — avoids firing a request on every keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [favoritesOnly, setFavoritesOnly] = useState(true)
   const [filterOpen, setFilterOpen] = useState(false)
   const { buttonRef: filterButtonRef, style: filterStyle } =
     useDropdownPosition(filterOpen, 240)
@@ -97,12 +98,9 @@ export function WatchlistPage() {
   const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
     useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir)
 
-  // Starred tickers, persisted across sessions in localStorage.
-  const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
+  // Membership of the selected account list (local favorites for guests).
+  const { stars, toggleStar, activeId } = useWatchlists()
 
-  useEffect(() => {
-    saveFavorites(stars)
-  }, [stars])
 
   // Debounce the search box (300 ms) before it becomes a query parameter.
   useEffect(() => {
@@ -110,8 +108,6 @@ export function WatchlistPage() {
     return () => clearTimeout(timer)
   }, [query])
 
-  const toggleStar = (ticker: string) =>
-    setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
 
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
 
@@ -181,6 +177,8 @@ export function WatchlistPage() {
     setCurrentPage(1)
   }, [
     debouncedSearch,
+    activeId,
+    favCount,
     favoritesOnly,
     minRating,
     signalFilter,
@@ -279,6 +277,7 @@ export function WatchlistPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
+      <WatchlistControls />
       {/* Page header */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-baseline gap-2">
@@ -314,13 +313,14 @@ export function WatchlistPage() {
                 ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
                 : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800')
             }
-            title="Show only favorites"
+            title={t('watchlists.onlyActive')}
+            aria-pressed={favoritesOnly}
           >
             <Star
               size={14}
               className={favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}
             />
-            <span className="hidden sm:inline">Favorites</span>
+            <span>{t('watchlists.onlyActive')}</span>
           </button>
 
           {/* Filter dropdown */}

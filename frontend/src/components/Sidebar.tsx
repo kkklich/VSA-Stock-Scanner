@@ -31,6 +31,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
+  { to: '/journal', labelKey: 'journal.title', icon: BookOpen, match: (p) => p.startsWith('/journal') },
   { to: '/long-term', labelKey: 'nav.longTerm', icon: Layers, match: (p) => p.startsWith('/long-term') },
   {
     to: '/watchlist',

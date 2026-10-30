@@ -20,6 +20,7 @@ export function loadFavorites(): FavoritesMap {
 export function saveFavorites(map: FavoritesMap): void {
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(map))
+    window.dispatchEvent(new Event('stockpilot:favorites-changed'))
   } catch {
     /* ignore */
   }

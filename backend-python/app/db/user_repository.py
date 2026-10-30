@@ -19,7 +19,9 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.db.journal_repository import JournalRepository
 from app.db.models import UserRow
+from app.db.watchlist_repository import WatchlistRepository
 
 
 class EmailAlreadyRegistered(Exception):
@@ -31,6 +33,8 @@ class UserRepository:
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
+        self.watchlists = WatchlistRepository(session_factory)
+        self.journal = JournalRepository(session_factory)
 
     async def create(
         self,

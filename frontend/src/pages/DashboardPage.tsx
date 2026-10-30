@@ -32,7 +32,8 @@ import { SessionNote } from '../components/SessionNote'
 import { LiveNote } from '../components/LivePrice'
 import { SortMenu } from '../components/SortMenu'
 import { CombinedScoreCell, MethodScoreCell } from '../components/MethodCells'
-import { loadFavorites, saveFavorites } from '../lib/favorites'
+import { useWatchlists } from '../hooks/useWatchlists'
+import { WatchlistControls } from '../components/WatchlistControls'
 import { RATING_OPTIONS, SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
   initialSortDir,
@@ -59,7 +60,7 @@ const METHOD_COLUMN_WIDTH = 130
 export function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const [stars, setStars] = useState<Record<string, boolean>>(loadFavorites)
+  const { stars, toggleStar } = useWatchlists()
 
   const [query, setQuery] = useState('')
   // Debounced search text — avoids firing a request on every keystroke.
@@ -124,9 +125,6 @@ export function DashboardPage() {
   }
   const resetMethods = () => setStoredMethods(null)
 
-  useEffect(() => {
-    saveFavorites(stars)
-  }, [stars])
 
   // Tickers currently starred — the allow-list sent to the backend while the
   // favorites-only view is on. An empty list legitimately matches nothing.
@@ -181,8 +179,6 @@ export function DashboardPage() {
     refetch,
   } = useInfiniteRanking(rankingParams, { enabled: market !== null })
 
-  const toggleStar = (ticker: string) =>
-    setStars((p) => ({ ...p, [ticker]: !p[ticker] }))
 
   const openTicker = (ticker: string) => navigate(`/stock/${ticker.toLowerCase()}`)
 
@@ -282,6 +278,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
+      <WatchlistControls />
       {/* Heading, market overview, and ranking controls */}
       <div className="flex flex-col gap-5">
         <div>

@@ -25,6 +25,7 @@ import {
 } from '../components/ChartMethodLegend'
 import { CompanyPicker } from '../components/CompanyPicker'
 import { FavoriteButton } from '../components/FavoriteButton'
+import { JournalPanel } from '../components/JournalPanel'
 import { AiAnalysisCard } from '../components/AiAnalysisCard'
 import { TrustScoreCard } from '../components/TrustScoreCard'
 import { TradeSimulationCard } from '../components/TradeSimulationCard'
@@ -1241,6 +1242,7 @@ export function ChartsPage() {
           />
           <RatingHistoryCard ticker={ticker} />
           <TradeSimulationCard ticker={ticker} />
+          <JournalPanel ticker={ticker} data={data} overlays={overlays} signals={vsaChartSignals} loading={loading} />
         </div>
 
         {/* Right: consolidated summary, volume, fundamentals / investment /

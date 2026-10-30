@@ -27,6 +27,50 @@ cd backend-python; .\.venv\Scripts\python.exe -m pytest -q   # backend tests
 cd frontend; npm run build                                    # frontend build
 ```
 
+## Account watchlists
+
+Sign in and use **New list** on the dashboard or Watchlist page to create named
+watchlists. The active list is shared by the ranking, stock-detail star and
+long-term watchlist filter. Stars add/remove a company in that list; the same
+company can belong to multiple lists. Switch off **Active list only** on the
+Watchlist page to browse and add other companies.
+
+Lists are private to the account and stored in the database (up to 20 lists,
+500 companies each). They refresh when the browser tab regains focus and every
+minute while visible. The selected list is remembered per account in each
+browser. Rename and delete controls are beside the list selector; at least one
+list is retained.
+
+Guests keep their existing browser-local favorites. After signing in, **Copy
+browser favorites** merges them into the active account list without removing
+the local copy or overwriting other saved companies. Signing out returns to the
+guest favorites. Account-list errors are shown explicitly; failed writes are
+not presented as saved.
+
+The database table is created by normal startup schema initialization. Deployments
+managed with Alembic should apply revision `010` (`alembic upgrade head`).
+
+## Observation journal
+
+Signed-in users can save an observation from a stock's chart page and find all
+their entries under **Observation journal** in the sidebar. Notes, confirmation
+and invalidation conditions are private to the account, alongside a frozen copy
+of the completed chart candles, visible signal layers and method scores. The
+snapshot stores chart data, not a screenshot: it can be viewed interactively
+without fetching or recalculating its historical evidence. It retains up to the
+last 5,000 loaded candles; unfinished live candles are excluded. Score-session
+dates are shown separately from the chart interval and observation creation time.
+
+The original scenario and snapshot are immutable. Users can update the outcome
+(observing, confirmed, invalidated, closed), add conclusions, compare the frozen
+chart with current data, or explicitly delete the entry. Concurrent outcome edits
+require reloading rather than overwriting a newer version. Repeating an uncertain
+creation request uses the same entry ID to avoid duplicate observations.
+
+Journal data is stored only in the account database, with a limit of 500 entries.
+The new table is created at backend startup; Alembic-managed deployments should
+apply revision `011`. Guests are prompted to sign in and do not get a local diary.
+
 ## Deploy to production
 
 Full owner's walkthrough (DNS, SSH, TLS, updates, troubleshooting):

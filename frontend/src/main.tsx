@@ -5,6 +5,7 @@ import './index.css'
 import './i18n'
 import App from './App.tsx'
 import { AuthProvider } from './components/AuthProvider'
+import { WatchlistsProvider } from './components/WatchlistsProvider'
 import { initTheme } from './lib/theme'
 
 // Load the saved light/dark choice before the first render. The inline script
@@ -18,7 +19,7 @@ createRoot(document.getElementById('root')!).render(
       {/* Who is signed in, for the whole app. Nobody has to be: every page
           works signed out. */}
       <AuthProvider>
-        <App />
+        <WatchlistsProvider><App /></WatchlistsProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

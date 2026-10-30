@@ -11,6 +11,7 @@ import { TopBar } from './components/TopBar'
 import { Footer } from './components/Footer'
 import { DashboardPage } from './pages/DashboardPage'
 import { WatchlistPage } from './pages/WatchlistPage'
+import { JournalPage } from './pages/JournalPage'
 import { ChartsPage } from './pages/ChartsPage'
 import { ScannerPage } from './pages/ScannerPage'
 import { SectorHeatmapPage } from './pages/SectorHeatmapPage'
@@ -32,6 +33,7 @@ import { usePageSeo } from './lib/seo'
 function titleKeyForPath(pathname: string): string {
   if (pathname === '/') return 'pageTitles.dashboard'
   if (pathname.startsWith('/watchlist')) return 'pageTitles.watchlist'
+  if (pathname.startsWith('/journal')) return 'journal.title'
   if (pathname.startsWith('/scanner')) return 'pageTitles.scanner'
   if (pathname.startsWith('/heatmap')) return 'pageTitles.heatmap'
   if (pathname.startsWith('/volume-surge')) return 'pageTitles.volumeSurge'
@@ -85,6 +87,7 @@ export default function App() {
         {/* /dashboard is an alias for the home page */}
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="watchlist" element={<WatchlistPage />} />
+        <Route path="journal" element={<JournalPage />} />
         <Route path="scanner" element={<ScannerPage />} />
         <Route path="heatmap" element={<SectorHeatmapPage />} />
         <Route path="volume-surge" element={<VolumeSurgePage />} />

@@ -60,7 +60,7 @@ from app.dependencies import (
     yahoo_client,
 )
 from app.markets import enabled_markets, refresh_runs
-from app.routers import admin, auth, long_term, stocks
+from app.routers import admin, auth, journal, long_term, stocks, watchlists
 from app.services.action_log import (
     OUTCOME_FINISHED,
     OUTCOME_STARTED,
@@ -479,6 +479,8 @@ app.include_router(stocks.router)
 app.include_router(long_term.router)
 app.include_router(admin.router)
 app.include_router(auth.router)
+app.include_router(watchlists.router)
+app.include_router(journal.router)
 
 
 @app.exception_handler(IncompleteScanError)

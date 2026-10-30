@@ -36,6 +36,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Float,
+    ForeignKey,
     Index,
     Integer,
     Numeric,
@@ -46,6 +47,42 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
+
+class JournalEntryRow(Base):
+    """Immutable observation evidence plus a separately editable outcome."""
+
+    __tablename__ = "journal_entries"
+    __table_args__ = (Index("ix_journal_owner_created", "user_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    confirmation: Mapped[str] = mapped_column(Text, nullable=False)
+    invalidation: Mapped[str] = mapped_column(Text, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="observing")
+    review: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class WatchlistRow(Base):
+    """Private named lists; tickers retain their exchange suffixes."""
+
+    __tablename__ = "watchlists"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_watchlist_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    tickers: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
 class CompanyRow(Base):
