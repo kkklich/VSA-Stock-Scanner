@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.analysis.ai_insight import ENGINE_VERSION, analyze_stock
@@ -13,6 +14,8 @@ from app.dependencies import get_stooq_client, history_cache, ranking_cache
 from app.main import app
 from app.models import StooqDailyQuote
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

@@ -29,6 +29,7 @@ import { Range52wCell } from '../components/Range52wCell'
 import { LiveDot } from '../components/LivePrice'
 import { deltaTone, fmtApproxPln, fmtCompactPln, fmtMoney, fmtPct } from './format'
 import { displayTicker, plnHint, toPln } from './markets'
+import { CLASSIC_RANKING_COLUMNS, CLASSIC_VSA_ENABLED } from './methodStatus'
 
 /** localStorage key for the shared ranking-column selection. */
 export const RANKING_COLUMNS_KEY = 'stockpilot:ranking-columns:v1'
@@ -56,6 +57,7 @@ export type RankingColumnId =
   | 'volume'
   | 'aiConfidence'
   | 'trend'
+  | 'insiderActivity'
 
 /**
  * Where a column goes in the phone/tablet card layout.
@@ -421,6 +423,7 @@ export type ColumnVisibility = Partial<Record<RankingColumnId, boolean>>
 
 /** Whether a column is currently shown (required columns always are). */
 export function isColumnVisible(col: RankingColumn, stored: ColumnVisibility): boolean {
+  if (!CLASSIC_VSA_ENABLED && CLASSIC_RANKING_COLUMNS.has(col.id)) return false
   if (col.required) return true
   return stored[col.id] ?? col.defaultVisible
 }
@@ -468,7 +471,9 @@ export function normalizeOrder(order: ColumnOrder | null | undefined): ColumnOrd
 /** Every registry column, in the user's order. */
 export function orderedColumns(order?: ColumnOrder | null): RankingColumn[] {
   const byId = new Map(RANKING_COLUMNS.map((c) => [c.id, c]))
-  return normalizeOrder(order).map((id) => byId.get(id) as RankingColumn)
+  return normalizeOrder(order)
+    .filter((id) => CLASSIC_VSA_ENABLED || !CLASSIC_RANKING_COLUMNS.has(id))
+    .map((id) => byId.get(id) as RankingColumn)
 }
 
 /**

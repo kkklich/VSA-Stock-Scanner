@@ -26,6 +26,9 @@ from app.analysis.methods import method_ids
 from app.analysis.vsa import compute_rating, detect_signals
 from app.models import AnalyticsOpinionSource, StooqDailyQuote
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

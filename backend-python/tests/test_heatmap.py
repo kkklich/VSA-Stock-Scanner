@@ -18,6 +18,9 @@ from app.main import app
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.heatmap_service import _pct_change, compute_changes
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

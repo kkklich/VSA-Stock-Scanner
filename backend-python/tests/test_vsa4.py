@@ -220,13 +220,15 @@ class TestRegistration:
     def test_registered_after_v3_and_long_only(self) -> None:
         ids = method_ids()
         assert "vsa4" in ids
-        # order: ... vsa3 (60) < vsa4 (65) < weinstein (70)
-        assert ids.index("vsa3") < ids.index("vsa4") < ids.index("weinstein")
+        # Archived V1/Classic/V3 must stay absent; V4 remains fully active.
+        assert not {"vsa", "glinicki", "vsa3"}.intersection(ids)
+        assert ids.index("vsa4") < ids.index("weinstein")
         m = _method()
         assert m.name == "VSA V4"
         assert m.direction == "Bullish"
         assert m.name and m.description and m.source and m.source_url
-        assert m.source != get_method("vsa3").source
+        from app.analysis.methods.vsa3 import Vsa3
+        assert m.source != Vsa3.source
 
 
 class TestScoreLadder:
@@ -305,7 +307,13 @@ class TestSlicing:
         for end in range(_EVAL_BARS, len(bars) + 1, 23):
             part = analyze(bars[end - _EVAL_BARS : end], cfg)
             for j in range(_WARMUP_BARS, _EVAL_BARS):
-                assert part[j] == full[end - _EVAL_BARS + j], (end, j)
+                # Provenance indices are local to the supplied input. Compare
+                # the same original bars when checking a sliced history.
+                normalized = dict(part[j])
+                for key in ("setup_primary_index", "setup_secondary_index"):
+                    if normalized.get(key) is not None:
+                        normalized[key] += end - _EVAL_BARS
+                assert normalized == full[end - _EVAL_BARS + j], (end, j)
 
     def test_evaluate_agrees_with_the_markers_on_every_prefix(self) -> None:
         quotes = _random_walk()

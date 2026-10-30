@@ -151,6 +151,8 @@ def test_parse_espi_list_and_report_html() -> None:
     assert tx.price == 142.50
     assert tx.value == 15000 * 142.50
     assert tx.publication_date == date(2026, 3, 15)
+    assert tx.trade_date == date(2026, 3, 14)
+    assert tx.insider_name == "Jan Kowalski"
     assert tx.role == "Prezes Zarządu"
     assert tx.source == "espi"
 

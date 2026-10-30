@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from statistics import mean
 
+from app.analysis.fundamentals import assess_fundamentals
 from app.analysis.statistics import median_turnover
 from app.markets import below_liquidity_floor, below_market_cap_floor, market_of, quote_currency
 from app.models.long_term import MODEL_VERSION, LongTermItem
@@ -190,6 +191,10 @@ def compute_long_term(
         _candidate(c, quotes.get(c.ticker, []), fundamentals.get(c.ticker), as_of)
         for c in companies
     ]
+    fundamental_assessments = assess_fundamentals(
+        companies, fundamentals, as_of=as_of,
+        exclusions={row.company.ticker: row.missing for row in candidates},
+    )
     output: list[LongTermItem] = []
     for row in candidates:
         missing = list(row.missing)
@@ -270,6 +275,7 @@ def compute_long_term(
                     else "market"
                 ),
                 peer_count=min(peer_counts, default=0),
+                fundamental_analysis=fundamental_assessments[row.company.ticker],
             )
         )
     return sorted(output, key=lambda row: (row.score is None, -(row.score or 0), row.ticker))

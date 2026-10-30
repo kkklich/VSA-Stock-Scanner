@@ -68,6 +68,7 @@ import {
 } from '../lib/format'
 import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { CLASSIC_VSA_ENABLED, isMethodActive } from '../lib/methodStatus'
 import { fmtLiveTime, notTradedYet } from '../lib/live'
 
 // ── Signal filtering (driven by the detection-settings panel) ─────────────────
@@ -920,7 +921,7 @@ export function ChartsPage() {
   // the legend swatch and the dots always match, and a method keeps its colour
   // when another is added or removed).
   const methodGroups = useMemo(() => {
-    const groups = data?.methodSignals ?? []
+    const groups = (data?.methodSignals ?? []).filter((g) => isMethodActive(g.methodId))
     const colors = methodColorsFor(
       groups.map((g) => g.methodId),
       palette,
@@ -938,7 +939,7 @@ export function ChartsPage() {
 
   const allChartMethodIds = useMemo(
     () => [
-      VSA_METHOD_ID,
+      ...(CLASSIC_VSA_ENABLED ? [VSA_METHOD_ID] : []),
       ...methodGroups.map((g) => g.methodId),
       INSIDER_METHOD_ID,
     ],
@@ -981,7 +982,7 @@ export function ChartsPage() {
   // VSA arrows show only when VSA is selected (still filtered by the
   // detection-sensitivity panel, which stays a VSA-only control).
   const vsaChartSignals = useMemo(
-    () => (isMethodShown(VSA_METHOD_ID) ? visibleSignals : []),
+    () => (CLASSIC_VSA_ENABLED && isMethodShown(VSA_METHOD_ID) ? visibleSignals : []),
     [isMethodShown, visibleSignals],
   )
 
@@ -1007,6 +1008,7 @@ export function ChartsPage() {
     if (!data) return []
     const vsaName = catalogue.find((m) => m.id === VSA_METHOD_ID)?.name ?? 'VSA'
     return [
+      ...(CLASSIC_VSA_ENABLED ? [
       {
         id: VSA_METHOD_ID,
         name: vsaName,
@@ -1015,6 +1017,7 @@ export function ChartsPage() {
         count: visibleSignals.length,
         selected: isMethodShown(VSA_METHOD_ID),
       },
+      ] : []),
       ...methodGroups.map((g) => ({
         id: g.methodId,
         name: g.name,
@@ -1085,6 +1088,7 @@ export function ChartsPage() {
         {/* Today's price so far while the exchange trades; the rating beside
             it stays the last finished session's. */}
         {data.live && <LiveChip live={data.live} />}
+        {CLASSIC_VSA_ENABLED && (
         <span
           className={
             'ml-auto rounded-md px-2.5 py-1 text-sm font-semibold ring-1 ring-inset ' +
@@ -1093,17 +1097,19 @@ export function ChartsPage() {
         >
           {t('chart.vsaBadge', { rating: data.currentRating })}
         </span>
+        )}
       </div>
 
       <DisclaimerNote />
 
       {/* Three-column detail grid */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_300px]">
+      <div className={`grid grid-cols-1 gap-4 ${CLASSIC_VSA_ENABLED ? "xl:grid-cols-[260px_minmax(0,1fr)_300px]" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
         {/* Left: signal checklist */}
-        <SignalChecklist strength={strength} weakness={weakness} />
+        {CLASSIC_VSA_ENABLED && <SignalChecklist strength={strength} weakness={weakness} />}
 
         {/* Center: detection settings + chart */}
         <div className="flex min-w-0 flex-col gap-4">
+          {CLASSIC_VSA_ENABLED && (
           <DetectionSettings
             sensitivity={sensitivity}
             contextWindow={contextWindow}
@@ -1117,6 +1123,7 @@ export function ChartsPage() {
               setContextWindow(DEFAULT_CONTEXT_WINDOW)
             }}
           />
+          )}
           <Card className="p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
@@ -1240,7 +1247,7 @@ export function ChartsPage() {
             includeAll={includeAllInsider}
             onToggleIncludeAll={setIncludeAllInsider}
           />
-          <RatingHistoryCard ticker={ticker} />
+          {CLASSIC_VSA_ENABLED && <RatingHistoryCard ticker={ticker} />}
           <TradeSimulationCard ticker={ticker} />
           <JournalPanel ticker={ticker} data={data} overlays={overlays} signals={vsaChartSignals} loading={loading} />
         </div>
@@ -1256,6 +1263,7 @@ export function ChartsPage() {
             sector={data.sector}
           />
           <InvestmentCard data={fundamentals} loading={fundamentalsLoading} />
+          {CLASSIC_VSA_ENABLED && (
           <RatingCard
             currentRating={data.currentRating}
             ratingChange={data.ratingChange}
@@ -1263,8 +1271,9 @@ export function ChartsPage() {
             weeklySignal={data.weeklySignal ?? null}
             weeklyAgreement={data.weeklyAgreement ?? null}
           />
-          <AiAnalysisCard ticker={ticker} />
-          <TrustScoreCard ticker={ticker} />
+          )}
+          {CLASSIC_VSA_ENABLED && <AiAnalysisCard ticker={ticker} />}
+          {CLASSIC_VSA_ENABLED && <TrustScoreCard ticker={ticker} />}
         </div>
       </div>
     </div>

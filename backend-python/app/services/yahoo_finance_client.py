@@ -34,6 +34,7 @@ from app.models import (
     StooqDailyQuote,
 )
 from app.services.exceptions import NoIntradayDataError, StooqAccessError
+from app.services.fundamental_data import extract_fundamental_details
 
 logger = logging.getLogger(__name__)
 
@@ -554,8 +555,9 @@ class YahooFinanceClient:
     def _fetch_fundamentals_sync(self, yf_ticker: str) -> FinancialMetrics:
         import yfinance as yf
 
+        company = yf.Ticker(yf_ticker)
         try:
-            info = _with_rate_limit_retry(lambda: yf.Ticker(yf_ticker).info, yf_ticker) or {}
+            info = _with_rate_limit_retry(lambda: company.info, yf_ticker) or {}
         except Exception as exc:
             logger.warning("Could not fetch fundamentals for %s: %s", yf_ticker, exc)
             info = {}
@@ -566,6 +568,20 @@ class YahooFinanceClient:
 
         last_report, next_report = report_dates_from_info(
             info, market_for_yahoo_symbol(yf_ticker).tz, _utcnow()
+        )
+
+        frames = {}
+        if info:
+            for attribute in ("income_stmt", "balance_sheet"):
+                try:
+                    frames[attribute] = _with_rate_limit_retry(
+                        lambda attr=attribute: getattr(company, attr), yf_ticker
+                    )
+                except Exception as exc:
+                    logger.info("No %s for %s: %s", attribute, yf_ticker, exc)
+        details = extract_fundamental_details(
+            info, frames.get("income_stmt"), frames.get("balance_sheet"),
+            today=_utcnow().date(),
         )
 
         return FinancialMetrics(
@@ -583,6 +599,7 @@ class YahooFinanceClient:
             return_on_assets=_safe("returnOnAssets"),
             last_report_date=last_report,
             next_report_date=next_report,
+            fundamental_details=details,
         )
 
     async def get_quarterly_reports(self, ticker: str) -> list[QuarterlyReport]:
@@ -605,13 +622,13 @@ class YahooFinanceClient:
         if stmt is None or stmt.empty:
             return []
 
-        def _row_val(col, name: str):
+        def _row_val(col, name: str, *, fractional: bool = False):
             for idx in stmt.index:
                 if str(idx).lower() == name.lower():
                     val = stmt.loc[idx, col]
                     try:
                         f = float(val)
-                        return None if math.isnan(f) else int(f)
+                        return None if not math.isfinite(f) else f if fractional else int(f)
                     except (TypeError, ValueError):
                         return None
             return None
@@ -621,12 +638,16 @@ class YahooFinanceClient:
             period_end = col.date() if hasattr(col, "date") else None
             if period_end is None:
                 continue
+            eps = _row_val(col, "Diluted EPS", fractional=True)
+            if eps is None:
+                eps = _row_val(col, "Basic EPS", fractional=True)
             reports.append(
                 QuarterlyReport(
                     period_end=period_end.isoformat(),
                     total_revenue=_row_val(col, "Total Revenue"),
                     net_income=_row_val(col, "Net Income"),
                     operating_income=_row_val(col, "Operating Income"),
+                    eps=eps,
                 )
             )
         return reports
@@ -637,7 +658,7 @@ class YahooFinanceClient:
         """Return annual + quarterly cash-flow periods for one ticker.
 
         Feeds the capex screen ("how much does this company invest in
-        itself"). Periods with no capex figure at all are dropped — Yahoo
+        itself"). Periods with no cash-flow figures at all are dropped — Yahoo
         often lists the row but leaves the cell empty, and an empty row is
         indistinguishable from "invested nothing" once stored.
         """
@@ -786,7 +807,7 @@ def _periods_from_frame(
     """Extract capex / cash-flow figures from one yfinance cash-flow frame.
 
     Columns are reporting periods (newest first), rows are statement lines.
-    Periods without a capex figure are skipped.
+    Periods without any usable cash-flow figure are skipped.
     """
     if frame is None or getattr(frame, "empty", True):
         return []
@@ -801,7 +822,9 @@ def _periods_from_frame(
         if period_end is None:
             continue
         capex = _frame_value(frame, column, _CAPEX_ROWS, labels)
-        if capex is None:
+        ocf = _frame_value(frame, column, _OCF_ROWS, labels)
+        fcf = _frame_value(frame, column, _FCF_ROWS, labels)
+        if capex is None and ocf is None and fcf is None:
             continue
         periods.append(
             CashflowPeriod(
@@ -809,9 +832,9 @@ def _periods_from_frame(
                 period_type=period_type,  # type: ignore[arg-type]  # caller passes a literal
                 # Yahoo reports capex as a negative cash outflow; store it as
                 # positive "money spent" so it reads and sorts naturally.
-                capex=abs(capex),
-                operating_cash_flow=_frame_value(frame, column, _OCF_ROWS, labels),
-                free_cash_flow=_frame_value(frame, column, _FCF_ROWS, labels),
+                capex=abs(capex) if capex is not None else None,
+                operating_cash_flow=ocf,
+                free_cash_flow=fcf,
                 currency=currency,
             )
         )

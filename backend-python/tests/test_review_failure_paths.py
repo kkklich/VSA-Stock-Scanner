@@ -20,6 +20,9 @@ from app.services.exceptions import StooqAccessError
 from app.services.refresh_service import RefreshService, ingest_outcome
 from tests.test_ranking import _series
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 
 def _company(ticker="kgh"):
     return GpwCompany(ticker=ticker, name=ticker.upper(), sector="Test")

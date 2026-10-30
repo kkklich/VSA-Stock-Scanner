@@ -1,6 +1,6 @@
 // Watchlist / ranking table page — the app's home page ("/").
 // Backed by GET /api/stocks/ranking via the useRanking hook.
-// Favorites (stars) persist in localStorage, sort to the top, and can be
+// Favorites (stars) use the active account list, or local storage for guests, and can be
 // filtered to "favorites only". Clicking a row opens /stock/:ticker.
 //
 // Header actions (all functional):
@@ -8,6 +8,7 @@
 //   Refresh   — run the backend refresh pipeline (Yahoo → ratings → DB), then refetch
 //   Export    — download the current view as CSV
 
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -96,7 +97,7 @@ export function WatchlistPage() {
   // first column's order (see `lib/sorting.ts`). Text columns read best
   // ascending, metrics best descending — that is `initialSortDir`.
   const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
-    useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir)
+    useTableSort<RankingSortKey>({ key: CLASSIC_VSA_ENABLED ? 'currentRating' : 'combinedScore', dir: 'desc' }, initialSortDir)
 
   // Membership of the selected account list (local favorites for guests).
   const { stars, toggleStar, activeId } = useWatchlists()
@@ -141,8 +142,8 @@ export function WatchlistPage() {
       pageSize: PAGE_SIZE,
       sort,
       q: debouncedSearch || undefined,
-      minRating: minRating || undefined,
-      signal: signalFilter,
+      minRating: CLASSIC_VSA_ENABLED ? minRating || undefined : undefined,
+      signal: CLASSIC_VSA_ENABLED ? signalFilter : 'all',
       tickers: favoritesOnly ? favTickers : undefined,
       market: marketParam,
     }),
@@ -212,8 +213,8 @@ export function WatchlistPage() {
         pageSize: 500,
         sort,
         q: debouncedSearch || undefined,
-        minRating: minRating || undefined,
-        signal: signalFilter,
+        minRating: CLASSIC_VSA_ENABLED ? minRating || undefined : undefined,
+        signal: CLASSIC_VSA_ENABLED ? signalFilter : 'all',
         tickers: favoritesOnly ? favTickers : undefined,
         settings: settingsQueryValue(),
         market: marketParam,
@@ -234,9 +235,7 @@ export function WatchlistPage() {
         'Currency',
         'Last Price',
         'Change %',
-        'VSA Rating',
-        'Last Signal',
-        'Days Since Signal',
+        ...(CLASSIC_VSA_ENABLED ? ['VSA Rating', 'Last Signal', 'Days Since Signal'] : []),
         'Favorite',
       ]
       // Quote-escape, and prefix leading =, +, -, @ with ' so spreadsheet
@@ -251,9 +250,7 @@ export function WatchlistPage() {
           s.currency ?? 'PLN',
           s.lastPrice,
           s.priceChangePct,
-          s.currentRating,
-          esc(s.lastSignal),
-          s.daysSinceSignal === 999 ? '' : s.daysSinceSignal,
+          ...(CLASSIC_VSA_ENABLED ? [s.currentRating, esc(s.lastSignal), s.daysSinceSignal === 999 ? '' : s.daysSinceSignal] : []),
           stars[s.ticker] ? 'yes' : 'no',
         ].join(','),
       )
@@ -325,6 +322,7 @@ export function WatchlistPage() {
 
           {/* Filter dropdown */}
           <div className="relative">
+            {CLASSIC_VSA_ENABLED && (
             <button
               ref={filterButtonRef}
               onClick={() => setFilterOpen((v) => !v)}
@@ -341,8 +339,9 @@ export function WatchlistPage() {
                 <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
               )}
             </button>
+            )}
 
-            {filterOpen && (
+            {CLASSIC_VSA_ENABLED && filterOpen && (
               <>
                 <div
                   className="fixed inset-0 z-10"

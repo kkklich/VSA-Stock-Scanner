@@ -7,6 +7,7 @@
 // range, a report date when one explains the surge, and the stock's VSA
 // rating/verdict with the age of the signal behind it.
 
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Loader2 } from 'lucide-react'
@@ -60,8 +61,8 @@ const SORT_OPTIONS: SortOption<VolumeSurgeSortKey>[] = [
   { key: 'peakVolumeRatio', label: 'Peak day' },
   { key: 'priceChangePct', label: 'Price move' },
   { key: 'lastPrice', label: 'Price' },
-  { key: 'currentRating', label: 'VSA' },
-  { key: 'lastSignal', label: 'Signal' },
+  ...(CLASSIC_VSA_ENABLED ? [{ key: 'currentRating' as const, label: 'VSA' }] : []),
+  ...(CLASSIC_VSA_ENABLED ? [{ key: 'lastSignal' as const, label: 'Signal' }] : []),
 ]
 
 /* ── Screen parameter presets ───────────────────────────────────────────── */
@@ -381,6 +382,7 @@ export function VolumeSurgePage() {
                     align="right"
                     className="hidden text-right sm:table-cell"
                   />
+                  {CLASSIC_VSA_ENABLED && (
                   <SortHeader
                     label="VSA"
                     col="currentRating"
@@ -389,6 +391,8 @@ export function VolumeSurgePage() {
                     align="right"
                     className="text-right"
                   />
+                  )}
+                  {CLASSIC_VSA_ENABLED && (
                   <SortHeader
                     label="Signal"
                     col="lastSignal"
@@ -397,6 +401,7 @@ export function VolumeSurgePage() {
                     info="The stock's VSA verdict — a score over its signals of the last four months, not a reading of the surge alone. The line under it says how old the latest signal is and whether it happened during the surge."
                     className="hidden sm:table-cell"
                   />
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -613,6 +618,7 @@ function SurgeRow({
         {fmtMoney(item.lastPrice, item.currency)}
         {plnLine(item.lastPrice, item.currency, pooled)}
       </td>
+      {CLASSIC_VSA_ENABLED && <>
       <td className="px-4 py-3 text-right">
         <span
           className={
@@ -627,6 +633,7 @@ function SurgeRow({
         <SignalBadge verdict={item.lastSignal as SignalVerdict} />
         <SignalAgeLine item={item} />
       </td>
+      </>}
     </tr>
   )
 }
@@ -726,6 +733,7 @@ function SurgeCard({
         </div>
       </div>
 
+      {CLASSIC_VSA_ENABLED && (
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-800/60 pt-2">
         <span
           className={
@@ -740,6 +748,7 @@ function SurgeCard({
           <SignalAgeLine item={item} />
         </div>
       </div>
+      )}
     </div>
   )
 }

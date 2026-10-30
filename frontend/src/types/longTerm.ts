@@ -17,6 +17,24 @@ export interface LongTermItem {
   fundamentalsObservedAt: string | null
   comparisonGroup: string
   peerCount: number
+  fundamentalAnalysis?: FundamentalAssessment | null
+}
+
+export interface FundamentalAssessment {
+  modelVersion: string
+  profile: 'corporate' | 'bank' | 'insurance' | 'financial'
+  score: number | null
+  pillars: Record<string, number | null>
+  inputs: Record<string, number | null>
+  metricScores: Record<string, number>
+  coverage: number
+  missing: string[]
+  warnings: string[]
+  notApplicable: string[]
+  comparisonGroup: string
+  peerCount: number
+  latestPeriodEnd: string | null
+  annualPeriodEnd: string | null
 }
 
 export interface LongTermRanking {

@@ -19,12 +19,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from statistics import median
 
-from app.analysis.vsa import (
-    VsaConfig,
-    compute_rating,
-    detect_signals,
-    verdict_from_signals,
-)
+from app.analysis.method_status import is_method_active
+from app.analysis.runtime_vsa import detect_signals
+from app.analysis.vsa import VsaConfig, compute_rating, verdict_from_signals
 from app.models import StooqDailyQuote
 
 # Minimum number of weekly bars before a weekly reading is trusted. The VSA
@@ -227,6 +224,10 @@ def compute_weekly_view(
     **The window is capped** at ``_MAX_WEEKLY_BARS``, so the weekly read depends
     only on this module, not on how much history the caller happened to fetch.
     """
+    # This is the archived Classic VSA weekly rating, not Weinstein's weekly
+    # candles. Do not resample or detect legacy signals while it is inactive.
+    if not is_method_active("vsa"):
+        return WeeklyView(available=False)
     weekly = resample_weekly(quotes)
 
     # Drop the trailing bar while its week is still being built.

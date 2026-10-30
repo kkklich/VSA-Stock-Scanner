@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchMethods, type ApiTradingMethod } from '../api/stocksApi'
+import { isMethodActive } from '../lib/methodStatus'
 
 export interface UseMethodsResult {
   methods: ApiTradingMethod[]
@@ -21,7 +22,8 @@ export function useMethods(): UseMethodsResult {
     fetchMethods()
       .then((m) => {
         if (!cancelled) {
-          setMethods(m)
+          // Also protect against an older server/catalogue during deployment.
+          setMethods(m.filter((method) => isMethodActive(method.id)))
           setLoading(false)
         }
       })

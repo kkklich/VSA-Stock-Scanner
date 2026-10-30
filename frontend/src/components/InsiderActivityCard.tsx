@@ -161,6 +161,7 @@ export function InsiderActivityCard({
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
+                  <th className="pb-2 pr-3 font-semibold">{t('insider.colTradeDate')}</th>
                   <th className="pb-2 pr-3 font-semibold">{t('insider.colDate')}</th>
                   <th className="pb-2 pr-3 font-semibold">{t('insider.colRole')}</th>
                   <th className="pb-2 pr-3 font-semibold">{t('insider.colType')}</th>
@@ -184,6 +185,9 @@ export function InsiderActivityCard({
 
                   return (
                     <tr key={`${tx.publicationDate}-${idx}`} className="hover:bg-slate-900/40">
+                      <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-slate-300">
+                        {tx.tradeDate ?? '—'}
+                      </td>
                       <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-slate-300">
                         {tx.publicationDate}
                       </td>

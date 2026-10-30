@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, within } from '../test/utils'
 import i18n from '../i18n'
-import type { LongTermItem } from '../types/longTerm'
+import type { FundamentalAssessment, LongTermItem } from '../types/longTerm'
 import { LongTermPage } from './LongTermPage'
 import { FAVORITES_KEY } from '../lib/favorites'
 
@@ -32,6 +32,29 @@ beforeEach(() => {
 afterEach(async () => { await i18n.changeLanguage('en') })
 
 describe('Long-term ranking', () => {
+  it('sorts by fundamentals independently of QVM and filters incomplete assessments', async () => {
+    const analysis = (score: number | null): FundamentalAssessment => ({
+      modelVersion: 'fundamentals-v1', profile: 'corporate', score,
+      pillars: { profitability: 80, growth: 60, cashflow: 70, debt: 70, valuation: 80 },
+      inputs: {}, metricScores: {}, coverage: 80, missing: [], warnings: [],
+      notApplicable: [], comparisonGroup: 'sector', peerCount: 6,
+      latestPeriodEnd: '2026-06-30', annualPeriodEnd: '2025-12-31',
+    })
+    const extended = items.map((row) => ({ ...row,
+      fundamentalAnalysis: analysis(row.ticker === 'low' ? 90 : row.ticker === 'high' ? 20 : null),
+    }))
+    mocks.ranking.mockReturnValue(result({ market: 'gpw', modelVersion: 'qvm-v1',
+      dbEnabled: true, items: extended, totalCount: 3, scoredCount: 2 }))
+    renderWithProviders(<LongTermPage />)
+    expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['LOW', 'HIGH', 'MISSING'])
+    expect(screen.getByRole('columnheader', { name: /Fundamentals/ })).toHaveAttribute('aria-sort', 'descending')
+    await userEvent.click(screen.getByRole('button', { name: /Descending/ }))
+    expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['HIGH', 'LOW', 'MISSING'])
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Scored only' }))
+    expect(rows()).toHaveLength(2)
+    await userEvent.click(screen.getByRole('button', { name: /Inputs and history for LOW/ }))
+    expect(screen.getByRole('region', { name: 'Fundamental assessment' })).toBeVisible()
+  })
   it('ranks high scores first and leaves missing values last in both directions', async () => {
     renderWithProviders(<LongTermPage />)
     expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['HIGH', 'LOW', 'MISSING'])

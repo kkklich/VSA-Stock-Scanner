@@ -103,6 +103,7 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     # 2026-09-26, alembic 008 — report calendar, for the volume-surge flag.
     ("company_fundamentals", "last_report_date", "DATE"),
     ("company_fundamentals", "next_report_date", "DATE"),
+    ("company_fundamentals", "fundamental_details", "JSON"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is
@@ -122,6 +123,7 @@ _ALLOWED_COLUMN_TYPES = frozenset(
         "NUMERIC",
         "DATE",
         "VARCHAR(8)",
+        "JSON",
     }
 )
 

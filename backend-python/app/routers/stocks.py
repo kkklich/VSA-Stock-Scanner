@@ -26,6 +26,7 @@ from collections.abc import Callable, Iterable
 from datetime import date, datetime, timedelta
 from threading import BoundedSemaphore
 from typing import Annotated, TypeVar
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import ValidationError
@@ -33,8 +34,10 @@ from pydantic import ValidationError
 from app.analysis.ai_insight import analyze_stock
 from app.analysis.analytics_summary import build_analytics_summary
 from app.analysis.corporate_actions import detect_adjustment
+from app.analysis.method_status import is_method_active
 from app.analysis.methods import all_methods, get_method, method_ids
 from app.analysis.returns import compute_price_returns
+from app.analysis.runtime_vsa import detect_signals
 from app.analysis.timeframe import (
     TimeframeSpec,
     bars_per_session,
@@ -44,13 +47,7 @@ from app.analysis.timeframe import (
     timeframe_ids,
 )
 from app.analysis.trust_score import compute_trust_score
-from app.analysis.vsa import (
-    VsaConfig,
-    compute_rating,
-    config_from_settings,
-    detect_signals,
-    verdict_from_signals,
-)
+from app.analysis.vsa import VsaConfig, compute_rating, config_from_settings, verdict_from_signals
 from app.analysis.vsa4.adapter import (
     DEFAULT_COMMISSION_BPS,
     DEFAULT_SLIPPAGE_BPS,
@@ -121,6 +118,7 @@ from app.services.espi_client import EspiClient
 from app.services.exceptions import NoIntradayDataError, StooqAccessError
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.heatmap_service import compute_heatmap
+from app.services.insider_screen_service import InsiderActivity, screen_insider_activity
 from app.services.insider_service import build_insider_response
 from app.services.live_prices import LivePriceService
 from app.services.market_overview import DEFAULT_MOVERS, build_market_overview
@@ -460,7 +458,8 @@ def _with_combined_score(
     """
     results = row.method_results
     ids = selected_methods if selected_methods is not None else list(results.keys())
-    scores = [results[m].score for m in ids if m in results and results[m].available]
+    scores = [results[m].score for m in ids
+              if is_method_active(m) and m in results and results[m].available]
     combined = round(sum(scores) / len(scores)) if scores else None
     return row.model_copy(update={"combined_score": combined})
 
@@ -505,6 +504,14 @@ def _query_ranking(
     in — its own quote currency; the odd row quoted in another (a London line
     in dollars) is converted to it, every other row keeps its exact figure.
     """
+    # Older saved filters must not make the active-method ranking disappear
+    # merely because Classic VSA no longer publishes a rating or verdict.
+    if not is_method_active("vsa"):
+        min_rating, max_rating = 0, 100
+        signal, max_days_since_signal, weekly_confirms = None, None, False
+        sort = [(key, desc) for key, desc in sort if key not in {
+            "current_rating", "rating_change", "last_signal", "days_since_signal", "ai_confidence"
+        }] or [("combined_score", True)]
     rows = items
     if tickers is not None:
         rows = [r for r in rows if r.ticker.casefold() in tickers]
@@ -591,6 +598,13 @@ def _query_ranking(
         sort,
         lambda r, attr: _sort_value(r, attr, pooled=pooled, price_unit=price_unit),
     )
+
+
+def _require_classic_vsa() -> None:
+    # Archived endpoints stay in source, but cannot trigger expensive legacy
+    # calculations or publish old cached ratings while the method is inactive.
+    if not is_method_active("vsa"):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Classic VSA is inactive.")
 
 
 def _parse_vsa_settings(raw: str | None) -> VsaConfig:
@@ -1082,6 +1096,11 @@ async def get_ranking(
     new_52w_high: Annotated[bool, Query(alias="new52wHigh")] = False,
     new_52w_low: Annotated[bool, Query(alias="new52wLow")] = False,
     weekly_confirms: Annotated[bool, Query(alias="weeklyConfirms")] = False,
+    insider_activity: Annotated[InsiderActivity, Query(alias="insiderActivity")] = "all",
+    insider_days: Annotated[int, Query(alias="insiderDays", ge=1, le=365)] = 90,
+    min_insider_value: Annotated[
+        float | None, Query(alias="minInsiderValue", ge=0, allow_inf_nan=False)
+    ] = None,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     methods: Annotated[str | None, Query(max_length=512)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
@@ -1151,6 +1170,24 @@ async def get_ranking(
         pooled=len(markets) > 1,
         price_unit=markets[0].currency if len(markets) == 1 else None,
     )
+
+    if insider_activity != "all" or min_insider_value is not None:
+        if repo is None:
+            raise HTTPException(503, "Insider screening requires stored transaction data.")
+        today = datetime.now(ZoneInfo("Europe/Warsaw")).date()
+        try:
+            transactions = await repo.get_insider_transactions_bulk(
+                [r.ticker for r in filtered],
+                today - timedelta(days=insider_days - 1), today,
+            )
+        except Exception as exc:
+            logger.exception("Insider screener database lookup failed.")
+            raise HTTPException(
+                503, "Insider transaction data is temporarily unavailable."
+            ) from exc
+        filtered = screen_insider_activity(
+            filtered, transactions, insider_activity, min_insider_value,
+        )
 
     # Total matching rows before pagination — the frontend reads this to build
     # its pager. Exposed to the browser via CORS (see main.py).
@@ -1366,6 +1403,7 @@ async def get_scanner_stats(
 ) -> list[SignalEffectiveness]:
     # ``all`` pools every served market into one back-test: each signal is
     # judged against its own stock's baseline, so pooling mixes nothing.
+    _require_classic_vsa()
     markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
     cache_key = f"scanner:stats:{_scope_id(markets)}{config.cache_suffix()}"
@@ -2269,6 +2307,7 @@ async def get_rating_history(
     is derived on-the-fly from the stored OHLCV bars instead, so the chart
     always has data.
     """
+    _require_classic_vsa()
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
     if from_date is not None and to_date is not None and from_date > to_date:
@@ -2355,6 +2394,7 @@ async def get_ai_analysis(
     each signal by its follow-through, volume behaviour, trend background and
     historical track record on this stock, then explains it in plain language.
     """
+    _require_classic_vsa()
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
@@ -2422,6 +2462,7 @@ async def get_trust_score(
     a single 0–100 trust score. Computed locally by
     ``app/analysis/trust_score.py``; deterministic, no external services.
     """
+    _require_classic_vsa()
     if not ticker.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A ticker is required.")
 
@@ -2940,6 +2981,9 @@ async def _load_ticker_insider_transactions(
 ) -> list[InsiderTransactionItem]:
     """Load stored insider transactions from DB first, falling back to live fetch."""
     stored: list[InsiderTransactionItem] = []
+    data_key = f"insider-data:{ticker}"
+    if repo is None:
+        stored = cache.get(data_key) or []
     if repo is not None:
         try:
             stored = await repo.get_insider_transactions(
@@ -2984,6 +3028,7 @@ async def _load_ticker_insider_transactions(
                     stored = fetched
             else:
                 stored = fetched
+                cache.set(data_key, fetched, _INSIDER_MISS_TTL_SECONDS)
 
     if from_date is not None:
         stored = [

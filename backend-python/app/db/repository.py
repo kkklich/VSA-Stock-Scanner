@@ -261,6 +261,12 @@ class QuoteRepository(Protocol):
         """Return insider transactions for a ticker, newest publication date first."""
         ...
 
+    async def get_insider_transactions_bulk(
+        self, tickers: Sequence[str], from_date: date, to_date: date
+    ) -> dict[str, list[InsiderTransactionItem]]:
+        """Open-market buys/sells for a screener window in one database read."""
+        ...
+
 
 # ── Shared row → model mapping ────────────────────────────────────────────────
 
@@ -465,6 +471,10 @@ class PostgresQuoteRepository(PostgresLongTermRepository):
             "return_on_assets": metrics.return_on_assets,
             "last_report_date": metrics.last_report_date,
             "next_report_date": metrics.next_report_date,
+            "fundamental_details": (
+                financial_payload(metrics.fundamental_details)
+                if metrics.fundamental_details is not None else None
+            ),
         }
         async with self._sf() as session, session.begin():
             insert = pg_insert(CompanyFundamentalsRow).values([values])
@@ -701,6 +711,7 @@ class PostgresQuoteRepository(PostgresLongTermRepository):
                 return_on_assets=fund_row.return_on_assets,
                 last_report_date=fund_row.last_report_date,
                 next_report_date=fund_row.next_report_date,
+                fundamental_details=fund_row.fundamental_details,
             )
 
         quarterly = [
@@ -758,9 +769,13 @@ class PostgresQuoteRepository(PostgresLongTermRepository):
                     InsiderTransactionRow.publication_date == t.publication_date,
                     InsiderTransactionRow.transaction_type == t.transaction_type,
                     InsiderTransactionRow.shares == t.shares,
+                    InsiderTransactionRow.trade_date == t.trade_date,
+                    InsiderTransactionRow.price == (
+                        Decimal(str(t.price)) if t.price is not None else None
+                    ),
+                    InsiderTransactionRow.source_url == t.source_url,
+                    InsiderTransactionRow.insider_name == t.insider_name,
                 )
-                if t.insider_name:
-                    query = query.where(InsiderTransactionRow.insider_name == t.insider_name)
                 exists = (await session.execute(query.limit(1))).scalar() is not None
                 if not exists:
                     row = InsiderTransactionRow(
@@ -805,6 +820,25 @@ class PostgresQuoteRepository(PostgresLongTermRepository):
         async with self._sf() as session:
             rows = (await session.execute(stmt)).scalars().all()
         return [_insider_item(r) for r in rows]
+
+    async def get_insider_transactions_bulk(
+        self, tickers: Sequence[str], from_date: date, to_date: date
+    ) -> dict[str, list[InsiderTransactionItem]]:
+        if not tickers:
+            return {}
+        stmt = select(InsiderTransactionRow).where(
+            InsiderTransactionRow.ticker.in_([t.strip().casefold() for t in tickers]),
+            InsiderTransactionRow.publication_date >= from_date,
+            InsiderTransactionRow.publication_date <= to_date,
+            InsiderTransactionRow.is_open_market.is_(True),
+            InsiderTransactionRow.transaction_type.in_(("buy", "sell")),
+        )
+        async with self._sf() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+        result: dict[str, list[InsiderTransactionItem]] = {}
+        for row in rows:
+            result.setdefault(row.ticker, []).append(_insider_item(row))
+        return result
 
 
 # ── In-memory implementation (used in tests) ─────────────────────────────────
@@ -938,7 +972,7 @@ class InMemoryQuoteRepository:
         })
 
     async def get_long_term_inputs(self, tickers: list[str]) -> dict[str, dict]:
-        return {
+        output = {
             ticker: {
                 "metrics": self._fundamentals[ticker].model_copy(deep=True),
                 "observed_at": self._fundamentals_observed_at[ticker],
@@ -946,6 +980,13 @@ class InMemoryQuoteRepository:
             for ticker in {t.lower() for t in tickers}
             if ticker in self._fundamentals and ticker in self._fundamentals_observed_at
         }
+        for row in self._financial_observations:
+            if row["ticker"] in output and row["kind"] in ("quarterly", "cashflow"):
+                output[row["ticker"]].setdefault("statements", {})[row["kind"]] = {
+                    "payload": deepcopy(row["payload"]),
+                    "observed_at": datetime.fromisoformat(row["observedAt"]),
+                }
+        return output
 
     async def append_long_term_snapshots(
         self, items: list[dict], recorded_at: datetime, model_version: str
@@ -1064,7 +1105,10 @@ class InMemoryQuoteRepository:
                 c.publication_date == t.publication_date
                 and c.transaction_type == t.transaction_type
                 and c.shares == t.shares
-                and (c.insider_name == t.insider_name or not t.insider_name)
+                and c.trade_date == t.trade_date
+                and c.price == t.price
+                and c.source_url == t.source_url
+                and c.insider_name == t.insider_name
                 for c in current
             ):
                 current.append(t)
@@ -1082,4 +1126,16 @@ class InMemoryQuoteRepository:
         if open_market_only:
             items = [i for i in items if i.is_open_market]
         return items
+
+    async def get_insider_transactions_bulk(
+        self, tickers: Sequence[str], from_date: date, to_date: date
+    ) -> dict[str, list[InsiderTransactionItem]]:
+        return {
+            ticker.strip().casefold(): [
+                tx for tx in self._insider_transactions.get(ticker.strip().casefold(), [])
+                if from_date <= tx.publication_date <= to_date
+                and tx.is_open_market and tx.transaction_type in ("buy", "sell")
+            ]
+            for ticker in tickers
+        }
 

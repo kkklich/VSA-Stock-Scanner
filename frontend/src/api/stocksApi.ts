@@ -81,6 +81,18 @@ export interface ApiMethodResult {
   available: boolean
 }
 
+export type InsiderActivity = 'all' | 'any' | 'buy' | 'sell' | 'netBuy' | 'netSell'
+
+export interface ApiInsiderScreenSummary {
+  purchasesCount: number
+  salesCount: number
+  purchasesShares: number
+  salesShares: number
+  purchasesValuePln: number | null
+  salesValuePln: number | null
+  netValuePln: number | null
+}
+
 export interface ApiRankingItem {
   ticker: string
   name: string
@@ -130,6 +142,8 @@ export interface ApiRankingItem {
    * (`lastSession`). Absent (null) otherwise, and on older backends.
    */
   live?: ApiLivePrice | null
+  /** Present when an insider activity filter is requested. */
+  insiderActivity?: ApiInsiderScreenSummary | null
 }
 
 /**
@@ -233,6 +247,11 @@ export interface RankingQuery {
   new52wLow?: boolean
   /** Only stocks whose weekly VSA verdict confirms their daily one. */
   weeklyConfirms?: boolean
+  /** Stored open-market filings, selected by publication date. */
+  insiderActivity?: InsiderActivity
+  insiderDays?: number
+  /** Minimum selected-side value (or absolute net value), in indicative PLN. */
+  minInsiderValue?: number
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
   /**
@@ -272,6 +291,9 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     new52wHigh,
     new52wLow,
     weeklyConfirms,
+    insiderActivity,
+    insiderDays,
+    minInsiderValue,
     tickers,
     methods,
     settings,
@@ -311,6 +333,9 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (new52wHigh) params.set('new52wHigh', 'true')
   if (new52wLow) params.set('new52wLow', 'true')
   if (weeklyConfirms) params.set('weeklyConfirms', 'true')
+  if (insiderActivity && insiderActivity !== 'all') params.set('insiderActivity', insiderActivity)
+  if (insiderDays !== undefined) params.set('insiderDays', String(insiderDays))
+  if (minInsiderValue !== undefined) params.set('minInsiderValue', String(minInsiderValue))
   if (tickers) params.set('tickers', tickers.join(','))
   if (methods && methods.length) params.set('methods', methods.join(','))
   if (settings) params.set('settings', settings)
@@ -1010,6 +1035,25 @@ export interface ApiFinancialMetrics {
   /** Profitability ratios as fractions (0.184 = 18.4%). */
   returnOnEquity: number | null
   returnOnAssets: number | null
+  fundamentalDetails?: ApiFundamentalDetails | null
+}
+
+export interface ApiFundamentalDetails {
+  operatingMargin: number | null
+  returnOnInvestedCapital: number | null
+  revenueCagr3y: number | null
+  epsCagr3y: number | null
+  operatingMarginVolatility: number | null
+  netDebtToEbitda: number | null
+  interestCoverage: number | null
+  enterpriseToEbitda: number | null
+  priceToBook: number | null
+  bookValue: number | null
+  totalDebt: number | null
+  totalCash: number | null
+  ebitda: number | null
+  latestPeriodEnd: string | null
+  annualPeriodEnd: string | null
 }
 
 /**

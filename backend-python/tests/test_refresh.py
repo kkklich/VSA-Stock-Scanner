@@ -7,6 +7,7 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.repository import InMemoryQuoteRepository
@@ -22,6 +23,8 @@ from app.models import GpwCompany, RatingPoint, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.refresh_service import RefreshService, build_rating_points
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
 

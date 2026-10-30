@@ -14,7 +14,7 @@ import { useLongTermRanking } from '../hooks/useLongTerm'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
 import type { LongTermItem } from '../types/longTerm'
 
-type SortKey = 'ticker' | 'score' | 'qualityScore' | 'valueScore' | 'momentumScore' | 'coverage'
+type SortKey = 'ticker' | 'score' | 'qualityScore' | 'valueScore' | 'momentumScore' | 'coverage' | 'fundamentalScore'
 const SORT_KEYS: SortKey[] = ['score', 'qualityScore', 'valueScore', 'momentumScore', 'coverage', 'ticker']
 const SCORE_KEYS = ['score', 'qualityScore', 'valueScore', 'momentumScore'] as const
 const UNKNOWN_SECTOR = '__unknown_sector__'
@@ -34,7 +34,11 @@ export function LongTermPage() {
   const [watchlistOnly, setWatchlistOnly] = useState(false)
   const { stars: favorites } = useWatchlists()
   const [sectorFilter, setSectorFilter] = useState<{ market: string | null; value: string }>({ market: null, value: '' })
-  const [sortKey, setSortKey] = useState<SortKey>('score')
+  const [selectedSortKey, setSortKey] = useState<SortKey>('fundamentalScore')
+  const hasFundamentals = data?.items.some((item) => item.fundamentalAnalysis != null) ?? false
+  const sortKey = selectedSortKey === 'fundamentalScore' && !hasFundamentals ? 'score' : selectedSortKey
+  const sortKeys = hasFundamentals ? ['fundamentalScore' as const, ...SORT_KEYS] : SORT_KEYS
+  const fundamentalCount = data?.items.filter((item) => item.fundamentalAnalysis?.score != null).length ?? 0
   const [ascending, setAscending] = useState(false)
   const [selected, setSelected] = useState<{ market: string; ticker: string } | null>(null)
   const historyButtons = useRef(new Map<string, HTMLButtonElement>())
@@ -52,18 +56,19 @@ export function LongTermPage() {
     const search = query.trim().toLocaleLowerCase()
     return (data?.items ?? []).filter((item) =>
       `${item.ticker} ${item.name}`.toLocaleLowerCase().includes(search)
-      && (!scoredOnly || (item.eligible && item.score !== null))
+      && (!scoredOnly || (hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible && item.score !== null))
       && (!watchlistOnly || favorites[item.ticker] === true)
       && (!sector || (item.sector?.trim() || UNKNOWN_SECTOR) === sector)
     ).sort((a, b) => {
-      const left = a[sortKey], right = b[sortKey]
+      const left = sortKey === 'fundamentalScore' ? a.fundamentalAnalysis?.score : a[sortKey]
+      const right = sortKey === 'fundamentalScore' ? b.fundamentalAnalysis?.score : b[sortKey]
       // A missing figure always goes last, including ascending order.
       if (left == null) return right == null ? a.ticker.localeCompare(b.ticker) : 1
       if (right == null) return -1
       const delta = typeof left === 'string' && typeof right === 'string' ? left.localeCompare(right) : Number(left) - Number(right)
       return (ascending ? delta : -delta) || a.ticker.localeCompare(b.ticker)
     })
-  }, [data, query, sortKey, ascending, scoredOnly, watchlistOnly, favorites, sector])
+  }, [data, query, sortKey, ascending, scoredOnly, watchlistOnly, favorites, sector, hasFundamentals])
   const selectedItem = selected?.market === market ? data?.items.find((item) => item.ticker === selected.ticker) : undefined
   function selectItem(item: LongTermItem) {
     setSelected((previous) => previous?.ticker === item.ticker && previous.market === item.market ? null : { ticker: item.ticker, market: item.market })
@@ -77,6 +82,7 @@ export function LongTermPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-100">{t('longTerm.title')}</h2>
       <p className="mt-1 max-w-4xl text-sm leading-relaxed text-slate-400">{t('longTerm.shortDescription')}</p>
+      {hasFundamentals && <p className="mt-2 max-w-4xl text-sm leading-relaxed text-slate-300">{t('fundamentals.introduction')}</p>}
     </div>
     <details className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
       <summary className="cursor-pointer text-sm font-medium text-slate-300">{t('longTerm.howScoringWorks')}</summary>
@@ -109,7 +115,7 @@ export function LongTermPage() {
       <label className="flex flex-col gap-1 text-xs text-slate-400">
         {t('common.sortHeading')}
         <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-          {SORT_KEYS.map((key) => <option key={key} value={key}>{t(`longTerm.${key}`)}</option>)}
+          {sortKeys.map((key) => <option key={key} value={key}>{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}</option>)}
         </select>
       </label>
       <button type="button" onClick={() => setAscending((value) => !value)} className="mt-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">{t(ascending ? 'common.sortAsc' : 'common.sortDesc')} {ascending ? '↑' : '↓'}</button>
@@ -142,10 +148,10 @@ export function LongTermPage() {
         {(freshness.missingFinancialCount > 0 || freshness.staleFinancialCount > 0) && <p className="mt-1 text-amber-400">{t('longTerm.freshness.issues', { missing: freshness.missingFinancialCount, stale: freshness.staleFinancialCount })}</p>}
       </section>
       <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-400">
-        <p>{t('longTerm.counts', { scored: data.scoredCount, total: data.totalCount })}</p>
+        <p>{hasFundamentals ? t('fundamentals.counts', { scored: fundamentalCount, total: data.totalCount }) : t('longTerm.counts', { scored: data.scoredCount, total: data.totalCount })}</p>
         <p>{t('longTerm.modelVersion')}: {data.modelVersion}</p>
       </div>
-      {data.items.length > 0 && data.scoredCount === 0 && <p className="text-sm text-amber-400">{t('longTerm.noneScored')}</p>}
+      {data.items.length > 0 && (hasFundamentals ? fundamentalCount : data.scoredCount) === 0 && <p className="text-sm text-amber-400">{t(hasFundamentals ? 'fundamentals.noneScored' : 'longTerm.noneScored')}</p>}
       <Card className="overflow-hidden">
         <div className="lg:overflow-x-auto">
           {/* The same semantic rows reflow into cards below lg, including the
@@ -154,8 +160,11 @@ export function LongTermPage() {
           <table className="block w-full text-left text-sm lg:table lg:min-w-[780px]" aria-label={t('longTerm.title')}>
             <thead className="hidden border-b border-slate-800 bg-slate-800/30 text-xs text-slate-400 lg:table-header-group"><tr>
               <th scope="col" className="px-4 py-3">{t('longTerm.ticker')}</th>
+              {hasFundamentals && <th scope="col" className="px-3 py-3 text-right" aria-sort={sortKey === 'fundamentalScore' ? (ascending ? 'ascending' : 'descending') : 'none'}>
+                <button type="button" onClick={() => { if (sortKey === 'fundamentalScore') setAscending(!ascending); else { setSortKey('fundamentalScore'); setAscending(false) } }}>{t('longTerm.fundamentalScore')}{sortKey === 'fundamentalScore' ? (ascending ? ' ↑' : ' ↓') : ''}</button>
+              </th>}
               {SCORE_KEYS.map((key) => <th scope="col" key={key} className="px-3 py-3 text-right" aria-sort={sortKey === key ? (ascending ? 'ascending' : 'descending') : 'none'}>
-                <button type="button" onClick={() => { if (sortKey === key) setAscending(!ascending); else { setSortKey(key); setAscending(false) } }}>{t(`longTerm.${key}`)}{sortKey === key ? (ascending ? ' ↑' : ' ↓') : ''}</button>
+                <button type="button" onClick={() => { if (sortKey === key) setAscending(!ascending); else { setSortKey(key); setAscending(false) } }}>{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}{sortKey === key ? (ascending ? ' ↑' : ' ↓') : ''}</button>
               </th>)}
               <th scope="col" className="px-3 py-3 text-right">{t('longTerm.coverage')}</th>
               <th scope="col" className="px-4 py-3">{t('longTerm.status')}</th>
@@ -166,17 +175,29 @@ export function LongTermPage() {
                 <p className="truncate text-xs text-slate-400" title={item.name}>{item.name}</p>
                 <p className="mt-1 text-[11px] text-slate-500">{t('longTerm.session')}: {item.asOf ?? '—'}</p>
               </td>
+              {hasFundamentals && <td className="col-span-4 block min-w-0 border-b border-slate-800 px-4 py-3 lg:table-cell lg:border-0 lg:text-right">
+                <span className="mb-1 block text-xs text-slate-400 lg:hidden">{t('longTerm.fundamentalScore')}</span>
+                <span className="text-lg font-semibold tabular-nums text-slate-100">{scoreText(item.fundamentalAnalysis?.score ?? null, i18n.language)}</span>
+                {item.fundamentalAnalysis && <>
+                  <p className="mt-1 text-[11px] text-slate-400">{t(`fundamentals.profiles.${item.fundamentalAnalysis.profile}`)}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">{t('fundamentals.coverage')}: {scoreText(item.fundamentalAnalysis.coverage, i18n.language)}%</p>
+                </>}
+              </td>}
               {SCORE_KEYS.map((key) => <td key={key} className={`block min-w-0 px-2 py-3 tabular-nums lg:table-cell lg:px-3 lg:text-right ${item[key] === null ? 'text-slate-500' : key === 'score' ? `font-semibold ${ratingTone(item[key]).text}` : 'text-slate-300'}`}>
-                <span className="mb-1 block min-h-8 break-words text-[10px] font-normal leading-4 text-slate-400 lg:hidden">{t(`longTerm.${key}`)}</span>
+                <span className="mb-1 block min-h-8 break-words text-[10px] font-normal leading-4 text-slate-400 lg:hidden">{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}</span>
                 {key === 'score' ? scoreText(item[key], i18n.language) : <LongTermFactorBar value={item[key]} label={t(`longTerm.${key}`)} />}
               </td>)}
               <td className="block min-w-0 px-3 py-3 text-slate-300 lg:table-cell lg:text-right"><span className="mb-1 block text-[11px] text-slate-400 lg:hidden">{t('longTerm.coverage')}</span>{scoreText(item.coverage, i18n.language)}%</td>
               <td className="col-span-3 block min-w-0 px-4 py-3 text-xs lg:table-cell lg:max-w-64">
-                <p className={item.eligible ? 'text-slate-400' : 'text-amber-400'}>{item.eligible ? t('longTerm.scored') : t('longTerm.unscored')}</p>
-                {item.missing.length > 0 && <p className="mt-1 text-slate-400">{item.missing.map((key) => t(`longTerm.missing.${key}`, { defaultValue: t('longTerm.missing.unknown') })).join(' · ')}</p>}
+                <p className={(hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible) ? 'text-slate-400' : 'text-amber-400'}>{(hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible) ? t('longTerm.scored') : t('longTerm.unscored')}</p>
+                {hasFundamentals && item.fundamentalAnalysis && <>
+                  {item.fundamentalAnalysis.missing.length > 0 && <p className="mt-1 text-xs text-amber-400">{item.fundamentalAnalysis.missing.map((key) => t(`fundamentals.missing.${key}`, { defaultValue: t(`longTerm.missing.${key}`, { defaultValue: t('longTerm.missing.unknown') }) })).join(' · ')}</p>}
+                  {item.fundamentalAnalysis.warnings.length > 0 && <p className="mt-1 text-xs text-amber-400">{t('fundamentals.warningCount', { count: item.fundamentalAnalysis.warnings.length })}</p>}
+                </>}
+                {item.missing.length > 0 && <p className="mt-1 text-slate-400">{hasFundamentals && 'QVM: '}{item.missing.map((key) => t(`longTerm.missing.${key}`, { defaultValue: t('longTerm.missing.unknown') })).join(' · ')}</p>}
                 <button ref={(button) => { if (button) historyButtons.current.set(item.ticker, button); else historyButtons.current.delete(item.ticker) }} type="button" aria-expanded={selectedItem?.ticker === item.ticker} aria-controls={selectedItem?.ticker === item.ticker ? `long-term-history-${item.ticker}` : undefined} onClick={() => selectItem(item)} className="mt-2 text-emerald-400 hover:underline" aria-label={t('longTerm.openHistory', { ticker: displayTicker(item.ticker).toUpperCase() })}>{t('longTerm.history')}</button>
               </td>
-            </tr>{selectedItem?.ticker === item.ticker && <tr className="block lg:table-row"><td colSpan={7} className="block min-w-0 lg:table-cell lg:p-3"><div id={`long-term-history-${item.ticker}`}><LongTermHistory item={item} close={() => closeHistory(item.ticker)} /></div></td></tr>}</Fragment>)}</tbody>
+            </tr>{selectedItem?.ticker === item.ticker && <tr className="block lg:table-row"><td colSpan={hasFundamentals ? 8 : 7} className="block min-w-0 lg:table-cell lg:p-3"><div id={`long-term-history-${item.ticker}`}><LongTermHistory item={item} close={() => closeHistory(item.ticker)} /></div></td></tr>}</Fragment>)}</tbody>
           </table>
         </div>
         {items.length === 0 && <p className="p-6 text-center text-sm text-slate-400">{t(data.items.length ? 'longTerm.noMatches' : 'longTerm.empty')}</p>}

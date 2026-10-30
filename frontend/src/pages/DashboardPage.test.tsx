@@ -307,3 +307,9 @@ describe('DashboardPage ranking table', () => {
     })
   })
 })
+
+// Keep the archived view covered for deliberate reactivation.
+vi.mock("../lib/methodStatus", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../lib/methodStatus")>(),
+  CLASSIC_VSA_ENABLED: true,
+}))

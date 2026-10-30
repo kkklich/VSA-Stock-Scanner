@@ -18,6 +18,9 @@ from app.dependencies import get_stooq_client, history_cache, ranking_cache
 from app.main import app
 from app.models import StooqDailyQuote
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

@@ -29,6 +29,7 @@ import { EducationArticlePage } from './pages/EducationArticlePage'
 import { LegalPage } from './pages/LegalPage'
 import { LoginPage } from './pages/LoginPage'
 import { usePageSeo } from './lib/seo'
+import { CLASSIC_VSA_ENABLED } from './lib/methodStatus'
 
 /** Translation key (under `pageTitles`) for the top-bar title of the current path. */
 function titleKeyForPath(pathname: string): string {
@@ -91,7 +92,7 @@ export default function App() {
         <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="journal" element={<JournalPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
-        <Route path="scanner" element={<ScannerPage />} />
+        <Route path="scanner" element={CLASSIC_VSA_ENABLED ? <ScannerPage /> : <Navigate to="/" replace />} />
         <Route path="heatmap" element={<SectorHeatmapPage />} />
         <Route path="volume-surge" element={<VolumeSurgePage />} />
         <Route path="capex" element={<CapexPage />} />

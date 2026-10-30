@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import create_engine, event, inspect, select
+from sqlalchemy import Integer, MetaData, create_engine, event, inspect, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,33 @@ from app.db.models import (
 )
 from app.db.repository import InMemoryQuoteRepository, PostgresQuoteRepository
 from app.models import CashflowPeriod, FinancialMetrics, QuarterlyReport
+from app.models.stocks import FundamentalDetails
+
+
+@pytest.mark.parametrize("backend", ["memory", "sql"])
+async def test_extended_metrics_and_statement_evidence_survive_storage(backend, sql_repo):
+    repo = InMemoryQuoteRepository() if backend == "memory" else sql_repo[0]
+    metrics = FinancialMetrics(fundamental_details=FundamentalDetails(
+        return_on_invested_capital=.15, interest_coverage=3,
+        latest_period_end="2026-06-30", annual_period_end="2025-12-31",
+    ))
+    await repo.upsert_fundamentals("test", metrics)
+    await repo.upsert_quarterly("test", [QuarterlyReport(period_end="2026-06-30", eps=1.25)])
+    await repo.upsert_quarterly("test", [QuarterlyReport(period_end="2026-06-30", eps=1.5)])
+    await repo.upsert_cashflow("test", [CashflowPeriod(
+        period_end="2026-06-30", period_type="quarterly", operating_cash_flow=120,
+    )])
+    restored = (await repo.get_fundamentals("test")).metrics
+    assert restored.fundamental_details == metrics.fundamental_details
+    inputs = (await repo.get_long_term_inputs(["TEST"]))["test"]
+    assert inputs["metrics"].fundamental_details == metrics.fundamental_details
+    assert inputs["statements"]["quarterly"]["payload"]["reports"][0]["eps"] == 1.5
+    assert inputs["statements"]["cashflow"]["payload"]["periods"][0]["operatingCashFlow"] == 120
+    assert inputs["statements"]["quarterly"]["observed_at"].tzinfo is not None
+    history = await repo.get_financial_history("test")
+    archived = next(r for r in history if r["kind"] == "fundamentals")
+    assert archived["payload"]["fundamentalDetails"]["returnOnInvestedCapital"] == .15
+    assert archived["payload"]["fundamentalDetails"]["latestPeriodEnd"] == "2026-06-30"
 
 
 class _AsyncSessionAdapter:
@@ -60,7 +87,13 @@ def sql_repo():
         CompanyFundamentalsRow, CompanyQuarterlyRow, CompanyCashflowRow,
         FinancialObservationRow, LongTermSnapshotRow,
     ):
-        model.__table__.create(engine)
+        table = model.__table__
+        if model in (CompanyQuarterlyRow, CompanyCashflowRow):
+            # SQLite requires the literal INTEGER type for generated primary
+            # keys; PostgreSQL uses BIGSERIAL. Adapt this test schema only.
+            table = table.to_metadata(MetaData())
+            table.c.id.type = Integer()
+        table.create(engine)
     yield PostgresQuoteRepository(lambda: _AsyncSessionAdapter(engine)), engine
     engine.dispose()
 
@@ -328,5 +361,31 @@ def test_migration_creates_same_history_schema_as_models_and_no_backfill(monkeyp
                 assert connection.execute(select(table)).all() == []
             module.downgrade()
             assert inspect(connection).get_table_names() == []
+    finally:
+        engine.dispose()
+
+
+def test_fundamental_migration_preserves_legacy_rows_without_inventing_evidence(monkeypatch):
+    from sqlalchemy import text
+
+    path = Path(__file__).parents[1] / "alembic/versions/012_fundamental_details.py"
+    spec = spec_from_file_location("fundamental_details_migration", path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    engine = create_engine("sqlite://")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE company_fundamentals (ticker VARCHAR(20))"))
+            connection.execute(text("INSERT INTO company_fundamentals (ticker) VALUES ('legacy')"))
+            monkeypatch.setattr(module, "op", Operations(MigrationContext.configure(connection)))
+            module.upgrade()
+            row = connection.execute(text(
+                "SELECT ticker, fundamental_details FROM company_fundamentals"
+            )).one()
+            assert tuple(row) == ("legacy", None)
+            module.downgrade()
+            assert {c["name"] for c in inspect(connection).get_columns("company_fundamentals")} == {
+                "ticker",
+            }
     finally:
         engine.dispose()

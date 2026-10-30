@@ -38,6 +38,9 @@ from app.services.ranking_service import compute_ranking
 from app.services.refresh_service import build_rating_points
 from app.services.volume_surge_service import compute_volume_surge
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 _DATA_DIR = Path(__file__).resolve().parent.parent / "app" / "data"
 
 _APPLE = {

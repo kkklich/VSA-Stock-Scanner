@@ -25,6 +25,9 @@ from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import TTLCache
 from app.services.scanner_service import compute_scanner_stats
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

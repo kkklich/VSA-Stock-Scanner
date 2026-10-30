@@ -3,7 +3,8 @@
 // (sector, rating band, signal + recency, price range, liquidity); a named
 // combination can be saved as a preset (localStorage) and re-run in one click.
 
-import { useEffect, useMemo, useState } from 'react'
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
+import { cloneElement, useEffect, useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BookmarkPlus, Loader2, RotateCcw, X } from 'lucide-react'
@@ -17,14 +18,14 @@ import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
 import { useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
-import { currencyLabel } from '../lib/format'
+import { currencyLabel, fmtMoney } from '../lib/format'
 import {
   sortOptionsFrom,
   useRankingColumns,
 } from '../hooks/useRankingColumns'
 import { useTableSort } from '../hooks/useTableSort'
-import { initialSortDir, tableMinWidth } from '../lib/rankingColumns'
-import type { RankingSortKey } from '../api/stocksApi'
+import { initialSortDir, tableMinWidth, toRenderColumns, type RankingColumn } from '../lib/rankingColumns'
+import type { InsiderActivity, RankingSortKey } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
 import { SIGNAL_OPTIONS } from '../lib/filterOptions'
 import {
@@ -41,6 +42,40 @@ import {
 } from '../lib/filterPresets'
 
 const PAGE_SIZE = 25
+
+const INSIDER_ACTIVITIES: InsiderActivity[] = ['all', 'any', 'buy', 'sell', 'netBuy', 'netSell']
+const INSIDER_COLUMN: RankingColumn = {
+  id: 'insiderActivity',
+  labelKey: 'insiderFilters.amounts',
+  infoKey: 'insiderFilters.info',
+  sortKey: null,
+  align: 'right',
+  sortAscFirst: false,
+  defaultVisible: true,
+  width: 260,
+  cell: (row, { t }) => {
+    const summary = row.insiderActivity
+    if (!summary) return '—'
+    const money = (value: number | null) => value === null ? t('insiderFilters.unknown') : fmtMoney(value, 'PLN')
+    return (
+      <div className="space-y-1 text-xs tabular-nums">
+        <div className="text-emerald-400">
+          {t('insider.purchases')}: {money(summary.purchasesValuePln)}
+          <span className="block text-[10px] text-slate-500">
+            {t('insider.tradesAndShares', { count: summary.purchasesCount, shares: summary.purchasesShares.toLocaleString('en-US') })}
+          </span>
+        </div>
+        <div className="text-rose-400">
+          {t('insider.sales')}: {money(summary.salesValuePln)}
+          <span className="block text-[10px] text-slate-500">
+            {t('insider.tradesAndShares', { count: summary.salesCount, shares: summary.salesShares.toLocaleString('en-US') })}
+          </span>
+        </div>
+        <div>{t('insider.netBalance')}: {money(summary.netValuePln)}</div>
+      </div>
+    )
+  },
+}
 
 const RECENCY_OPTIONS = [
   { value: null, label: 'Any time' },
@@ -77,16 +112,17 @@ function Field({
 }: {
   label: string
   info?: string
-  children: React.ReactNode
+  children: React.ReactElement<{ id?: string }>
 }) {
+  const id = useId()
   return (
-    <label className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        {label}
+        <label htmlFor={id}>{label}</label>
         {info && <InfoTip text={info} />}
       </span>
-      {children}
-    </label>
+      {cloneElement(children, { id })}
+    </div>
   )
 }
 
@@ -167,16 +203,20 @@ export function FiltersPage() {
       pageSize: PAGE_SIZE,
       sort,
       q: applied.q.trim() || undefined,
-      minRating: applied.minRating || undefined,
-      maxRating: applied.maxRating < 100 ? applied.maxRating : undefined,
-      signal: applied.signal,
+      minRating: CLASSIC_VSA_ENABLED ? applied.minRating || undefined : undefined,
+      maxRating: CLASSIC_VSA_ENABLED && applied.maxRating < 100 ? applied.maxRating : undefined,
+      signal: CLASSIC_VSA_ENABLED ? applied.signal : 'all',
       sector: applied.sector !== 'all' ? applied.sector : undefined,
-      maxDaysSinceSignal: applied.maxDaysSinceSignal ?? undefined,
+      maxDaysSinceSignal: CLASSIC_VSA_ENABLED ? applied.maxDaysSinceSignal ?? undefined : undefined,
       minPrice: applied.minPrice ?? undefined,
       maxPrice: applied.maxPrice ?? undefined,
       minVolume: applied.minVolume ?? undefined,
       ...range52wParams(applied.range52w),
-      weeklyConfirms: applied.weeklyConfirms || undefined,
+      weeklyConfirms: CLASSIC_VSA_ENABLED ? applied.weeklyConfirms || undefined : undefined,
+      insiderActivity: applied.insiderActivity !== 'all' ? applied.insiderActivity : undefined,
+      insiderDays: applied.insiderActivity !== 'all' || applied.minInsiderValue !== null
+        ? applied.insiderDays : undefined,
+      minInsiderValue: applied.minInsiderValue ?? undefined,
       market: marketParam,
     }),
     [page, sort, applied, marketParam],
@@ -194,6 +234,11 @@ export function FiltersPage() {
   // Which columns to show — shared with the Dashboard and Watchlist, and used
   // by both the wide table and the card list below `lg`.
   const columns = useRankingColumns()
+  const showInsiders = applied.insiderActivity !== 'all' || applied.minInsiderValue !== null
+  const renderColumns = useMemo(
+    () => showInsiders ? [...columns.renderColumns, ...toRenderColumns([INSIDER_COLUMN], t)] : columns.renderColumns,
+    [columns.renderColumns, showInsiders, t],
+  )
   const sortOptions = useMemo(
     () => sortOptionsFrom(columns.renderColumns, sort, t),
     [columns.renderColumns, sort, t],
@@ -232,7 +277,7 @@ export function FiltersPage() {
           Filters — screen the market your way
         </h2>
         <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-400">
-          Combine sector, VSA rating, signal, price and liquidity criteria to
+          Combine sector, price, liquidity and insider activity criteria to
           screen every tracked stock. Save a combination as a preset to re-run
           it with one click.
         </p>
@@ -353,6 +398,7 @@ export function FiltersPage() {
             </select>
           </Field>
 
+          {CLASSIC_VSA_ENABLED && (
           <Field
             label="Signal"
             info="Verdict from the most recent VSA pattern: Spring / SOS → Strong Buy, Successful Test → Buy, No Demand → Sell, Upthrust / SOW → Strong Sell."
@@ -369,7 +415,9 @@ export function FiltersPage() {
               ))}
             </select>
           </Field>
+          )}
 
+          {CLASSIC_VSA_ENABLED && (
           <Field
             label="Signal age"
             info="Only stocks whose last VSA pattern fired within this many sessions. Fresh signals matter most in VSA — old ones fade."
@@ -391,6 +439,7 @@ export function FiltersPage() {
               ))}
             </select>
           </Field>
+          )}
 
           <Field
             label="52-week range"
@@ -409,6 +458,7 @@ export function FiltersPage() {
             </select>
           </Field>
 
+          {CLASSIC_VSA_ENABLED && (
           <Field
             label="Weekly timeframe"
             info="Multi-timeframe confirmation. The stored daily bars are resampled into weekly candles and run through the same VSA engine; 'Confirms daily' keeps only stocks whose weekly verdict leans the same way as the daily one (both bullish, or both bearish). VSA traders treat a daily signal the weekly chart agrees with as far more reliable. Stocks with under ~30 weeks of stored history have no weekly reading and are excluded by this filter."
@@ -422,6 +472,7 @@ export function FiltersPage() {
               <option value="confirms">Confirms daily</option>
             </select>
           </Field>
+          )}
 
           <Field
             label="Min. volume"
@@ -442,6 +493,7 @@ export function FiltersPage() {
             </select>
           </Field>
 
+          {CLASSIC_VSA_ENABLED && (
           <Field
             label="Rating from"
             info="Lower bound of the VSA rating band (0–100). Above 70 = strong accumulation."
@@ -458,7 +510,9 @@ export function FiltersPage() {
               className={inputClass}
             />
           </Field>
+          )}
 
+          {CLASSIC_VSA_ENABLED && (
           <Field
             label="Rating to"
             info="Upper bound of the VSA rating band. Below 30 = distribution (weakness) — useful for finding short candidates."
@@ -478,6 +532,7 @@ export function FiltersPage() {
               className={inputClass}
             />
           </Field>
+          )}
 
           <Field label={`Price from (${priceUnit})`} info={priceInfo}>
             <input
@@ -503,6 +558,42 @@ export function FiltersPage() {
             />
           </Field>
 
+          <Field label={t('insiderFilters.activity')} info={t('insiderFilters.info')}>
+            <select
+              value={filters.insiderActivity}
+              onChange={(e) => set('insiderActivity', e.target.value as InsiderActivity)}
+              className={inputClass}
+            >
+              {INSIDER_ACTIVITIES.map((activity) => (
+                <option key={activity} value={activity}>{t(`insiderFilters.options.${activity}`)}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t('insiderFilters.period')} info={t('insiderFilters.periodInfo')}>
+            <select
+              value={filters.insiderDays}
+              onChange={(e) => set('insiderDays', Number(e.target.value))}
+              className={inputClass}
+            >
+              {[30, 90, 180, 365].map((days) => (
+                <option key={days} value={days}>{t('insiderFilters.days', { count: days })}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t('insiderFilters.minValue')} info={t('insiderFilters.valueInfo')}>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={filters.minInsiderValue ?? ''}
+              onChange={(e) => set('minInsiderValue', numOrNull(e.target.value))}
+              placeholder={t('insiderFilters.anyValue')}
+              className={inputClass}
+            />
+          </Field>
+
           <div className="flex items-end">
             <button
               type="button"
@@ -514,6 +605,7 @@ export function FiltersPage() {
             </button>
           </div>
         </div>
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">{t('insiderFilters.coverage')}</p>
       </Card>
 
       {/* Results */}
@@ -573,17 +665,17 @@ export function FiltersPage() {
           <LiveNote rows={rows} />
 
           <RankingTable
-            columns={columns.renderColumns}
+            columns={renderColumns}
             rows={rows}
             onOpen={openTicker}
             pooled={market === ALL_MARKETS}
             sort={sort}
             onSort={onSort}
-            minWidth={tableMinWidth(columns.renderColumns)}
+            minWidth={tableMinWidth(renderColumns)}
           />
 
           <RankingCardList
-            columns={columns.renderColumns}
+            columns={renderColumns}
             rows={rows}
             onOpen={openTicker}
             pooled={market === ALL_MARKETS}

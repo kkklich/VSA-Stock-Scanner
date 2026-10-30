@@ -20,16 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.method_status import is_method_active
 from app.analysis.methods import MethodResult, all_methods
 from app.analysis.methods.vsa_method import vsa_result_from_signals
+from app.analysis.runtime_vsa import detect_signals
 from app.analysis.statistics import median_turnover
-from app.analysis.vsa import (
-    VsaConfig,
-    VsaSignal,
-    compute_rating,
-    detect_signals,
-    verdict_from_signals,
-)
+from app.analysis.vsa import VsaConfig, VsaSignal, compute_rating, verdict_from_signals
 from app.analysis.weekly import compute_weekly_view, weekly_agreement
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
@@ -431,7 +427,7 @@ async def compute_ranking(
                 quotes=recent,
                 signals=signals,
                 rating=rating_today,
-            )
+            ) if is_method_active("vsa") else None
 
             last_close = float(recent[-1].close)
             prev_close = float(recent[-2].close) if len(recent) >= 2 else last_close
@@ -481,7 +477,7 @@ async def compute_ranking(
                 days_since_signal=days_since,
                 sparkline=sparkline,
                 volume=median_vol_shares,
-                ai_confidence=ai.confidence,
+                ai_confidence=ai.confidence if ai is not None else 0,
                 dist_from_52w_high_pct=dist_high,
                 dist_from_52w_low_pct=dist_low,
                 is_new_52w_high=new_high,

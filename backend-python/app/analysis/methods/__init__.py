@@ -1,7 +1,8 @@
 """Trading-method framework: the pluggable engine behind the multi-method list.
 
-Importing this package registers every concrete method (in display order) so
-``all_methods()`` / ``get_method()`` see them. Adding a new method is just
+Importing this package preserves every concrete implementation. The runtime
+policy in ``method_status.py`` hides archived methods from ``all_methods()`` /
+``get_method()`` without deleting their source. Adding a new method is just
 dropping a module here and importing it below — no other wiring needed.
 """
 

@@ -19,6 +19,9 @@ from app.analysis.methods import vsa3 as v3
 from app.analysis.methods.base import NEVER_FIRED
 from app.models import StooqDailyQuote
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 _Row = tuple[float, float, float, float, int]  # open, high, low, close, volume
 
 

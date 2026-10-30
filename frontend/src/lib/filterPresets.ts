@@ -3,6 +3,7 @@
 // approach as favorites) so presets survive reloads on this browser.
 
 import type { SignalVerdict } from '../types'
+import type { InsiderActivity } from '../api/stocksApi'
 
 export const FILTER_PRESETS_KEY = 'stockpilot:filter-presets'
 
@@ -42,6 +43,9 @@ export interface ScreenFilters {
    * the same way) — the higher-timeframe agreement VSA traders look for.
    */
   weeklyConfirms: boolean
+  insiderActivity: InsiderActivity
+  insiderDays: number
+  minInsiderValue: number | null
 }
 
 export interface FilterPreset {
@@ -65,6 +69,9 @@ export const EMPTY_FILTERS: ScreenFilters = {
   minVolume: null,
   range52w: 'any',
   weeklyConfirms: false,
+  insiderActivity: 'all',
+  insiderDays: 90,
+  minInsiderValue: null,
 }
 
 /** Read the persisted presets (safe if localStorage is unavailable). */
@@ -117,7 +124,10 @@ export function filtersActive(f: ScreenFilters): boolean {
     f.maxPrice !== null ||
     f.minVolume !== null ||
     f.range52w !== 'any' ||
-    f.weeklyConfirms
+    f.weeklyConfirms ||
+    f.insiderActivity !== 'all' ||
+    f.insiderDays !== 90 ||
+    f.minInsiderValue !== null
   )
 }
 

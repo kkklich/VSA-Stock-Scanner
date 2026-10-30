@@ -28,6 +28,9 @@ from app.services.volume_surge_service import (
     report_in_window,
 )
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

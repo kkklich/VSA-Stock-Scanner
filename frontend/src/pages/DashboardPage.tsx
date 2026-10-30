@@ -7,6 +7,7 @@
 // GET /api/stocks/ranking (server-side sorted, filtered and paginated) and
 // persisted per browser. Rows load in pages of 25 with infinite scroll.
 
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -299,7 +300,7 @@ export function DashboardPage() {
 
         {/* Always about the whole market, so the search/filter/favorites below
             do not change the breadth or the biggest rating movers. */}
-        <MarketOverview market={market} />
+        {CLASSIC_VSA_ENABLED && <MarketOverview market={market} />}
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
@@ -375,6 +376,7 @@ export function DashboardPage() {
 
           {/* Filter dropdown */}
           <div className="relative">
+            {CLASSIC_VSA_ENABLED && (
             <button
               ref={filterButtonRef}
               onClick={() => setFilterOpen((v) => !v)}
@@ -391,8 +393,9 @@ export function DashboardPage() {
                 <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
               )}
             </button>
+            )}
 
-            {filterOpen && (
+            {CLASSIC_VSA_ENABLED && filterOpen && (
               <>
                 <div
                   className="fixed inset-0 z-10"

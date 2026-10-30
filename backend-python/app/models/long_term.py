@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from app.models.fundamentals import FundamentalAssessment
 from app.models.stocks import _CamelModel
 
 MODEL_VERSION = "qvm-v1"
@@ -32,6 +33,7 @@ class LongTermItem(_CamelModel):
     comparison_group: Literal["market", "sector", "mixed"] = "market"
     # Smallest reference cohort used; includes the company itself.
     peer_count: int = 0
+    fundamental_analysis: FundamentalAssessment | None = None
 
 
 class LongTermRankingResponse(_CamelModel):

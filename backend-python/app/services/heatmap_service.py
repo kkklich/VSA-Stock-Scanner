@@ -25,13 +25,9 @@ from datetime import date, timedelta
 
 from app.analysis.returns import baseline_close as _baseline_close
 from app.analysis.returns import pct_change as _pct_change
+from app.analysis.runtime_vsa import detect_signals
 from app.analysis.statistics import median_turnover
-from app.analysis.vsa import (
-    VsaConfig,
-    compute_rating,
-    detect_signals,
-    verdict_from_signals,
-)
+from app.analysis.vsa import VsaConfig, compute_rating, verdict_from_signals
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.markets import (

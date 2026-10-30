@@ -11,6 +11,8 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
 from app.analysis.methods import get_method, method_ids
 from app.analysis.methods.base import NEVER_FIRED, MethodResult
 from app.models import GpwCompany, StooqDailyQuote
@@ -18,6 +20,8 @@ from app.routers.stocks import _with_combined_score
 from app.services.cache import TTLCache
 from app.services.ranking_service import compute_ranking
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

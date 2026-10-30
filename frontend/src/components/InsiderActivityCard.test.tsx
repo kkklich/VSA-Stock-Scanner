@@ -84,6 +84,23 @@ describe('InsiderActivityCard', () => {
     expect(screen.getByText('Członek Rady Nadzorczej')).toBeInTheDocument()
     expect(screen.getByText('2026-04-02')).toBeInTheDocument()
     expect(screen.getByText('2026-04-06')).toBeInTheDocument()
+    expect(screen.getByText('2026-04-01')).toBeInTheDocument()
+    expect(screen.getByText('2026-04-05')).toBeInTheDocument()
+    expect(screen.getByText('Jan Kowalski')).toBeInTheDocument()
+  })
+
+  it('does not substitute the publication date for an unknown trade date', () => {
+    renderWithProviders(
+      <InsiderActivityCard
+        data={{ ...SAMPLE_DATA, transactions: [{ ...SAMPLE_DATA.transactions[0], tradeDate: null }] }}
+        loading={false}
+        includeAll={false}
+        onToggleIncludeAll={() => {}}
+      />,
+    )
+    const cells = screen.getAllByRole('cell')
+    expect(cells[0]).toHaveTextContent('—')
+    expect(cells[1]).toHaveTextContent('2026-04-02')
   })
 
   it('calls onToggleIncludeAll when the checkbox is clicked', async () => {

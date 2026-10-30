@@ -48,8 +48,10 @@ import time
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from app.analysis.method_status import is_method_active
+from app.analysis.runtime_vsa import detect_signals
 from app.analysis.statistics import median_turnover
-from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
+from app.analysis.vsa import compute_rating, verdict_from_signals
 from app.config import settings
 from app.db.repository import QuoteRepository
 from app.jobs.daily_ingest import IngestService, IngestStats, markets_in
@@ -495,6 +497,9 @@ class RefreshService:
     async def _snapshot_ratings(
         self, ranking: list[StockRankingItem], today: date
     ) -> int:
+        # Skip the legacy backfill entirely, including per-stock history reads.
+        if not is_method_active("vsa"):
+            return 0
         assert self._repo is not None
         from_date = today - timedelta(days=_HISTORY_DAYS)
         context_from = today - timedelta(days=CONTEXT_HISTORY_DAYS)
@@ -600,6 +605,10 @@ def build_rating_points(
     ``currency`` is the stock's quote currency — the liquidity floor is
     judged in it (złoty unless said otherwise).
     """
+    # Retain the historical rating builder, but do not run the archived classic
+    # engine or write neutral placeholder snapshots during refresh/backfill.
+    if not is_method_active("vsa"):
+        return []
     if len(quotes) < _MIN_BARS:
         return []
     ordered = sorted(quotes, key=lambda q: q.date)

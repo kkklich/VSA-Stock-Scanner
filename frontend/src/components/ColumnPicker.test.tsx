@@ -3,7 +3,7 @@
 // page (a localStorage-backed hook), so the test drives a tiny harness that
 // holds it the same way.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, within } from '../test/utils'
@@ -108,3 +108,9 @@ describe('ColumnPicker', () => {
     ).toBeDisabled()
   })
 })
+
+// Keep the archived view covered for deliberate reactivation.
+vi.mock("../lib/methodStatus", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../lib/methodStatus")>(),
+  CLASSIC_VSA_ENABLED: true,
+}))

@@ -32,6 +32,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.analysis.ai_insight import analyze_stock
+from app.analysis.method_status import is_method_active
 from app.analysis.methods import all_methods
 from app.analysis.methods.base import MethodResult, TradingMethod
 from app.analysis.methods.vsa_method import vsa_result_from_signals
@@ -432,6 +433,29 @@ def build_analytics_summary(
 
     display_name = name or ticker.upper()
     as_of = quotes[-1].date
+    if not is_method_active("vsa"):
+        # Classic rating, its AI second opinion and its trust score belong to
+        # the archived engine. They must neither run nor vote in the consensus.
+        # Keep the original branch below intact for a deliberate reactivation.
+        active_sources: list[_Directional] = []
+        method_window = method_quotes if method_quotes else quotes
+        for method in all_methods():
+            try:
+                result = method.evaluate(method_window, config)
+            except Exception:  # noqa: BLE001
+                result = MethodResult.unavailable("evaluation failed")
+            entry = _method_source(method, result)
+            if entry is not None:
+                active_sources.append(entry)
+        stance, agreement, _mean = _consensus(active_sources)
+        return AnalyticsSummaryResponse(
+            ticker=ticker.upper(), name=name, as_of=as_of,
+            stance=stance, agreement=agreement,
+            headline=_headline(display_name, stance, agreement),
+            summary=" ".join(d.source.detail for d in active_sources),
+            sources=[d.source for d in active_sources],
+            engine=ENGINE_VERSION,
+        )
     rating = compute_rating(signals, as_of)
     verdict, _vsa_days_since = verdict_from_signals(signals, as_of)
     vsa_result = vsa_result_from_signals(signals, rating, verdict, as_of)

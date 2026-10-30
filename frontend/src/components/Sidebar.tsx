@@ -3,6 +3,7 @@
 // Navigation uses react-router <Link>s; the active item is derived from the
 // current path.
 
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import {
   Activity,
   BookOpen,
@@ -20,12 +21,14 @@ import {
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../hooks/useAuth'
 
 type NavItem = {
   to: string
   /** Key under the `nav` namespace in the translation files. */
   labelKey: string
   icon: React.ElementType
+  requiresAuth?: boolean
   /** Returns true when this item should appear active for the given path. */
   match: (pathname: string) => boolean
 }
@@ -33,7 +36,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, match: (p) => p === '/' },
   { to: '/journal', labelKey: 'journal.title', icon: BookOpen, match: (p) => p.startsWith('/journal') },
-  { to: '/portfolio', labelKey: 'portfolio.title', icon: Wallet, match: (p) => p.startsWith('/portfolio') },
+  { to: '/portfolio', labelKey: 'portfolio.title', icon: Wallet, requiresAuth: true, match: (p) => p.startsWith('/portfolio') },
   { to: '/long-term', labelKey: 'nav.longTerm', icon: Layers, match: (p) => p.startsWith('/long-term') },
   {
     to: '/watchlist',
@@ -88,6 +91,11 @@ export function Sidebar({
 }) {
   const { pathname } = useLocation()
   const { t } = useTranslation()
+  const { user, loading } = useAuth()
+  const visibleItems = navItems.filter((item) =>
+    (CLASSIC_VSA_ENABLED || item.to !== '/scanner') &&
+    (!item.requiresAuth || (!loading && user !== null)),
+  )
 
   const linkClass = (isActive: boolean) =>
     'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
@@ -133,7 +141,7 @@ export function Sidebar({
 
         {/* Primary nav */}
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {navItems.map(({ to, labelKey, icon: Icon, match }) => {
+          {visibleItems.map(({ to, labelKey, icon: Icon, match }) => {
             const isActive = match(pathname)
             return (
               <Link

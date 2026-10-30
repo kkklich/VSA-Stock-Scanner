@@ -31,7 +31,8 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from statistics import median
 
-from app.analysis.vsa import SignalType, VsaConfig, detect_signals
+from app.analysis.runtime_vsa import detect_signals
+from app.analysis.vsa import SignalType, VsaConfig
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.models import GpwCompany, StooqDailyQuote

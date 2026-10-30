@@ -22,6 +22,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
+from app.analysis.method_status import is_method_active
 from app.analysis.vsa import VsaConfig
 from app.models import StooqDailyQuote
 
@@ -185,8 +186,11 @@ def register_method(cls: type[TradingMethod]) -> type[TradingMethod]:
 
 
 def all_methods() -> list[TradingMethod]:
-    """Every registered method, in display order (by ``order`` then ``id``)."""
-    return sorted(_REGISTRY.values(), key=lambda m: (m.order, m.id))
+    """Active methods only; archived implementations stay registered for reference."""
+    return sorted(
+        (m for m in _REGISTRY.values() if is_method_active(m.id)),
+        key=lambda m: (m.order, m.id),
+    )
 
 
 def method_ids() -> list[str]:
@@ -195,5 +199,7 @@ def method_ids() -> list[str]:
 
 
 def get_method(method_id: str) -> TradingMethod | None:
-    """Look up one method by id, or ``None`` if unknown."""
+    """Inactive ids behave like unknown ids, including direct backtest requests."""
+    if not is_method_active(method_id):
+        return None
     return _REGISTRY.get(method_id)

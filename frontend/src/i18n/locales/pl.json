@@ -4,18 +4,30 @@
     "shortDescription": "Ocena względna 0–100 do analizy w horyzoncie 1–3 lat; nie jest prawdopodobieństwem wzrostu ani prognozą stopy zwrotu.",
     "howScoringWorks": "Jak działa ocena",
     "filters": {
-      "sector": "Sektor", "allSectors": "Wszystkie sektory", "unknownSector": "Brak sektora",
-      "scoredOnly": "Tylko ocenione", "watchlistOnly": "Tylko obserwowane", "clear": "Wyczyść filtry",
+      "sector": "Sektor",
+      "allSectors": "Wszystkie sektory",
+      "unknownSector": "Brak sektora",
+      "scoredOnly": "Tylko ocenione",
+      "watchlistOnly": "Tylko obserwowane",
+      "clear": "Wyczyść filtry",
       "matches": "Wyświetlono {{count}} z {{total}} spółek"
     },
     "freshness": {
-      "label": "Stan danych", "lastLoaded": "Ostatnie wczytanie", "financials": "Obserwacje finansowe · od najstarszej do najnowszej",
-      "reload": "Wczytaj ponownie", "reloading": "Ponowne wczytywanie…",
+      "label": "Stan danych",
+      "lastLoaded": "Ostatnie wczytanie",
+      "financials": "Obserwacje finansowe · od najstarszej do najnowszej",
+      "reload": "Wczytaj ponownie",
+      "reloading": "Ponowne wczytywanie…",
       "stale": "Ponowne wczytanie nie powiodło się. Wyświetlamy ostatnio pobrane wyniki; mogą być nieaktualne.",
       "explanation": "Daty dotyczą całego wybranego rynku. Ostatnie wczytanie to moment pobrania rankingu przez tę stronę; daty obserwacji finansowych oznaczają otrzymanie danych przez StockPilota, a nie ich publikację.",
       "issues": "Dane finansowe: {{missing}} spółek bez danych lub daty obserwacji; {{stale}} z danymi oznaczonymi jako nieaktualne."
     },
-    "tabs": { "label": "Szczegóły spółki", "overview": "Przegląd", "scores": "Historia ocen", "financials": "Dane finansowe" },
+    "tabs": {
+      "label": "Szczegóły spółki",
+      "overview": "Przegląd",
+      "scores": "Historia ocen",
+      "financials": "Dane finansowe"
+    },
     "chart": {
       "title": "Zapisane oceny w czasie",
       "description": "Oś czasu pokazuje moment zapisu oceny. Każdy punkt to rzeczywista obserwacja; braki oceny i zmiany wersji modelu przerywają linię. Rewizje z tego samego dnia są zachowane.",
@@ -55,7 +67,11 @@
     "details": "Wskaźniki i historia — {{name}}",
     "close": "Zamknij szczegóły",
     "comparison": "Grupa porównawcza wskaźników finansowych: {{group}}. Momentum porównuje spółki w całym rynku. Minimalna liczebność grupy porównawczej, z uwzględnieniem tej spółki: {{peers}}.",
-    "groups": { "market": "rynek", "sector": "sektor", "mixed": "sektor lub rynek, zależnie od wskaźnika" },
+    "groups": {
+      "market": "rynek",
+      "sector": "sektor",
+      "mixed": "sektor lub rynek, zależnie od wskaźnika"
+    },
     "financialObservedAt": "Obserwacja danych finansowych",
     "recordedAt": "Zapis oceny",
     "observedAt": "Zaobserwowano w StockPilocie",
@@ -73,7 +89,14 @@
     "latestScores": "Pokazujemy do 100 ostatnich zapisów ocen, od najnowszego.",
     "latestFinancials": "Pokazujemy do 50 ostatnich obserwacji finansowych, od najnowszej.",
     "loadError": "Nie udało się pobrać tych danych.",
-    "inputs": { "roe": "Rentowność kapitału (ROE)", "roa": "Rentowność aktywów (ROA)", "netMargin": "Marża zysku netto", "earningsYield": "Rentowność zysku (Z/C)", "momentum12_1": "Momentum: od 12 do 1 miesiąca temu", "momentum6_1": "Momentum: od 6 do 1 miesiąca temu" },
+    "inputs": {
+      "roe": "Rentowność kapitału (ROE)",
+      "roa": "Rentowność aktywów (ROA)",
+      "netMargin": "Marża zysku netto",
+      "earningsYield": "Rentowność zysku (Z/C)",
+      "momentum12_1": "Momentum: od 12 do 1 miesiąca temu",
+      "momentum6_1": "Momentum: od 6 do 1 miesiąca temu"
+    },
     "missing": {
       "fundamentals_missing": "Brak danych finansowych",
       "fundamentals_stale": "Nieaktualne dane finansowe",
@@ -86,12 +109,38 @@
       "market_cap": "Niespełniony próg kapitalizacji",
       "unknown": "Niespełniony warunek oceny"
     },
-    "kinds": { "fundamentals": "Wskaźniki finansowe", "quarterly": "Raporty kwartalne", "cashflow": "Raporty przepływów pieniężnych" },
-    "periods": { "annual": "Roczny", "quarterly": "Kwartalny" },
+    "kinds": {
+      "fundamentals": "Wskaźniki finansowe",
+      "quarterly": "Raporty kwartalne",
+      "cashflow": "Raporty przepływów pieniężnych"
+    },
+    "periods": {
+      "annual": "Roczny",
+      "quarterly": "Kwartalny"
+    },
     "fields": {
-      "periodEnd": "Koniec okresu sprawozdawczego", "periodType": "Rodzaj okresu", "financialCurrency": "Waluta sprawozdawcza", "currency": "Waluta sprawozdawcza",
-      "marketCap": "Kapitalizacja", "peRatio": "C/Z", "forwardPe": "Prognozowane C/Z", "eps": "Zysk na akcję", "dividendYield": "Stopa dywidendy", "totalRevenue": "Przychody", "netIncome": "Zysk netto", "operatingIncome": "Zysk operacyjny", "sharesOutstanding": "Liczba akcji", "returnOnEquity": "Rentowność kapitału (ROE)", "returnOnAssets": "Rentowność aktywów (ROA)", "capex": "Nakłady inwestycyjne", "operatingCashFlow": "Przepływy operacyjne", "freeCashFlow": "Wolne przepływy pieniężne", "lastReportDate": "Ostatnia data raportu podana przez źródło", "nextReportDate": "Następna data raportu podana przez źródło"
-    }
+      "periodEnd": "Koniec okresu sprawozdawczego",
+      "periodType": "Rodzaj okresu",
+      "financialCurrency": "Waluta sprawozdawcza",
+      "currency": "Waluta sprawozdawcza",
+      "marketCap": "Kapitalizacja",
+      "peRatio": "C/Z",
+      "forwardPe": "Prognozowane C/Z",
+      "eps": "Zysk na akcję",
+      "dividendYield": "Stopa dywidendy",
+      "totalRevenue": "Przychody",
+      "netIncome": "Zysk netto",
+      "operatingIncome": "Zysk operacyjny",
+      "sharesOutstanding": "Liczba akcji",
+      "returnOnEquity": "Rentowność kapitału (ROE)",
+      "returnOnAssets": "Rentowność aktywów (ROA)",
+      "capex": "Nakłady inwestycyjne",
+      "operatingCashFlow": "Przepływy operacyjne",
+      "freeCashFlow": "Wolne przepływy pieniężne",
+      "lastReportDate": "Ostatnia data raportu podana przez źródło",
+      "nextReportDate": "Następna data raportu podana przez źródło"
+    },
+    "fundamentalScore": "Fundamenty"
   },
   "common": {
     "appName": "StockPilot",
@@ -857,6 +906,27 @@
       "offline": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie."
     }
   },
+  "insiderFilters": {
+    "activity": "Aktywność insiderów",
+    "info": "Tylko zgłoszone zakupy i sprzedaże na otwartym rynku. Kupno netto oznacza przewagę wartości zakupów nad sprzedażą; sprzedaż netto — odwrotnie. Bez przydziałów, opcji, darowizn i skupu akcji własnych.",
+    "period": "Okres zgłoszeń insiderów",
+    "periodInfo": "Dni kalendarzowe do dzisiaj, według daty publikacji, a nie daty transakcji. Wybierz aktywność lub minimalną wartość, aby zastosować okres.",
+    "days": "Ostatnie {{count}} dni",
+    "minValue": "Min. wartość transakcji (PLN)",
+    "valueInfo": "Minimalna łączna wartość zakupów lub sprzedaży dla wybranej strony. Dla kupna/sprzedaży netto: wartość bezwzględna salda. Dla dowolnej aktywności: suma zakupów i sprzedaży. Waluty obce według orientacyjnych kursów PLN aplikacji. Nieznane wartości nie spełniają filtra kwotowego.",
+    "anyValue": "Dowolna wartość",
+    "amounts": "Aktywność insiderów (PLN)",
+    "unknown": "Nieznana wartość",
+    "coverage": "Filtry insiderów korzystają z zapisanych publicznych zgłoszeń, odświeżanych codziennie. Brak zgłoszeń nie dowodzi braku transakcji. Kwoty przeliczamy według orientacyjnych kursów PLN; nieznane wartości wykluczamy z filtrów kwotowych i netto.",
+    "options": {
+      "all": "Bez filtra insiderów",
+      "any": "Dowolne zgłoszone kupno lub sprzedaż",
+      "buy": "Insiderzy kupują",
+      "sell": "Insiderzy sprzedają",
+      "netBuy": "Kupno insiderów netto",
+      "netSell": "Sprzedaż insiderów netto"
+    }
+  },
   "insider": {
     "legendLabel": "Insiderzy",
     "title": "Transakcje insiderów (kupno i sprzedaż)",
@@ -873,6 +943,7 @@
     "tradesAndShares": "{{count}} transakcji · {{shares}} akcji",
     "netSharesLabel": "Saldo akcji: {{shares}} szt.",
     "colDate": "Data publikacji",
+    "colTradeDate": "Data transakcji",
     "colRole": "Osoba / funkcja",
     "colType": "Kierunek",
     "colShares": "Wolumen",
@@ -981,6 +1052,94 @@
       "conflict": "Wpis zmienił się na innym urządzeniu. Wczytaj jego najnowszą wersję przed ponownym zapisem.",
       "not_found": "Ta obserwacja już nie istnieje albo nie jest dostępna dla tego konta.",
       "entry_limit": "Dziennik może zawierać do 500 obserwacji. Usuń starszy wpis, aby dodać kolejny."
+    }
+  },
+  "fundamentals": {
+    "title": "Ocena fundamentalna",
+    "introduction": "Nowa ocena fundamentalna obejmuje rentowność, wzrost, gotówkę, zadłużenie i wycenę. Ranking domyślnie sortuje według tej oceny. Dotychczasowy wynik QVM pozostaje osobną miarą.",
+    "methodology": "Każdy obszar ma taką samą wagę. Wyniki odnoszą się do spółek o tym samym profilu na danym rynku, w pierwszej kolejności w tym samym sektorze. Potrzeba co najmniej 5 porównywalnych spółek na wskaźnik. Rentowność, gotówka i wycena wymagają co najmniej 2 wskaźników, wzrost i zadłużenie — 1. Ocena łączna powstaje dopiero po ocenieniu wszystkich właściwych obszarów. To model porównawczy, nie prognoza stopy zwrotu.",
+    "coverage": "Dostępność wskaźników",
+    "latestPeriod": "Ostatni okres sprawozdawczy",
+    "annualPeriod": "Okres danych rocznych",
+    "notApplicable": "Nie stosujemy dla tego profilu: {{pillars}}. Wagi rozkładają się równo na 3 pozostałe obszary.",
+    "showInputs": "Pokaż wskaźniki i ich punktację",
+    "metricScore": "Punktacja: {{score}} / 100",
+    "counts": "Pełna ocena fundamentalna: {{scored}} z {{total}} spółek",
+    "noneScored": "Brak pełnych ocen fundamentalnych. Rozwiń szczegóły spółki, aby zobaczyć dostępne obszary i braki. Nowe dane pojawią się po pobraniu danych finansowych.",
+    "warningCount_one": "{{count}} ostrzeżenie — szczegóły poniżej",
+    "warningCount_few": "{{count}} ostrzeżenia — szczegóły poniżej",
+    "warningCount_many": "{{count}} ostrzeżeń — szczegóły poniżej",
+    "profiles": {
+      "corporate": "Spółka operacyjna",
+      "bank": "Bank",
+      "insurance": "Ubezpieczyciel",
+      "financial": "Spółka finansowa"
+    },
+    "pillars": {
+      "profitability": "Rentowność",
+      "growth": "Wzrost",
+      "cashflow": "Przepływy pieniężne",
+      "debt": "Zadłużenie",
+      "valuation": "Wycena"
+    },
+    "missing": {
+      "profitability_missing": "Za mało danych do oceny rentowności",
+      "growth_missing": "Brak porównywalnych danych o wzroście",
+      "cashflow_missing": "Brak pełnych, zgodnych okresów przepływów i wyników",
+      "debt_missing": "Za mało danych o zadłużeniu",
+      "valuation_missing": "Za mało porównywalnych miar wyceny",
+      "report_stale": "Okres sprawozdawczy jest nieaktualny lub z przyszłości"
+    },
+    "warnings": {
+      "loss_making": "Spółka wykazuje niedodatni zysk. Dochodowość C/Z otrzymuje 0 punktów; nie traktujemy jej jako okazji cenowej.",
+      "nonpositive_ebitda": "EBITDA jest niedodatnia. Dług netto/EBITDA jest niedostępny, a wycena oparta na EBITDA otrzymuje 0 punktów.",
+      "nonpositive_fcf": "Wolne przepływy pieniężne są niedodatnie.",
+      "weak_cash_conversion": "Gotówka operacyjna jest niższa niż zysk netto za te same cztery kwartały.",
+      "high_debt": "Dług netto przekracza trzykrotność EBITDA. Próg jest pomocniczy i wymaga oceny branżowej.",
+      "interest_not_covered": "Roczny EBIT nie pokrywa rocznych kosztów odsetek.",
+      "valuation_currency_mismatch": "Nie obliczamy FCF/kapitalizacja bez zgodności waluty raportowania i kapitalizacji.",
+      "report_date_unknown": "Źródło nie podało daty ostatniego okresu sprawozdawczego. Data pobrania nie potwierdza aktualności raportu.",
+      "limited_financial_profile": "Profil finansowy jest ograniczony do rentowności, wzrostu i C/Z oraz C/WK. Nie obejmuje adekwatności kapitałowej banków ani wypłacalności i wskaźnika mieszanego ubezpieczycieli."
+    },
+    "inputs": {
+      "roe": "ROE",
+      "roa": "ROA",
+      "operatingMargin": "Marża operacyjna",
+      "netMargin": "Marża netto",
+      "roic": "ROIC (dane roczne)",
+      "marginVolatility": "Zmienność rocznej marży operacyjnej (niższa jest lepsza)",
+      "revenueGrowthYoy": "Przychody: ostatni kwartał r/r",
+      "epsGrowthYoy": "Zysk na akcję: ostatni kwartał r/r",
+      "revenueCagr3y": "Przychody: średni roczny wzrost z 3 lat",
+      "epsCagr3y": "Zysk na akcję: średni roczny wzrost z 3 lat",
+      "fcfMargin": "Wolne przepływy / przychody (12 miesięcy)",
+      "ocfMargin": "Gotówka operacyjna / przychody (12 miesięcy)",
+      "cashConversion": "Gotówka operacyjna / zysk netto (12 miesięcy)",
+      "netDebtToEbitda": "Dług netto / EBITDA (niższy jest lepszy)",
+      "interestCoverage": "EBIT / koszty odsetek (dane roczne)",
+      "earningsYield": "Dochód z zysku (odwrotność C/Z)",
+      "ebitdaYield": "EBITDA / EV (odwrotność EV/EBITDA)",
+      "fcfYield": "Wolne przepływy / kapitalizacja",
+      "bookYield": "Wartość księgowa / cena (odwrotność C/WK)"
+    },
+    "qvmScore": "Wynik QVM",
+    "extendedInputs": "Rozszerzone dane fundamentalne",
+    "fields": {
+      "operatingMargin": "Marża operacyjna",
+      "returnOnInvestedCapital": "ROIC (dane roczne)",
+      "revenueCagr3y": "Przychody: średni roczny wzrost z 3 lat",
+      "epsCagr3y": "Zysk na akcję: średni roczny wzrost z 3 lat",
+      "operatingMarginVolatility": "Zmienność rocznej marży operacyjnej (niższa jest lepsza)",
+      "netDebtToEbitda": "Dług netto / EBITDA (niższy jest lepszy)",
+      "interestCoverage": "EBIT / koszty odsetek (dane roczne)",
+      "enterpriseToEbitda": "EV / EBITDA",
+      "priceToBook": "C/WK",
+      "bookValue": "Wartość księgowa na akcję",
+      "totalDebt": "Zadłużenie ogółem",
+      "totalCash": "Środki pieniężne",
+      "ebitda": "EBITDA",
+      "latestPeriodEnd": "Ostatni okres sprawozdawczy",
+      "annualPeriodEnd": "Okres danych rocznych"
     }
   },
   "portfolio": {

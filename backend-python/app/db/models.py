@@ -166,6 +166,7 @@ class CompanyFundamentalsRow(Base):
     # that returns no date keeps the stored one (see upsert_fundamentals).
     last_report_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     next_report_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    fundamental_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class RatingSnapshotRow(Base):

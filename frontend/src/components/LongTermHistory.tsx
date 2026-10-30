@@ -6,6 +6,7 @@ import { Card } from './ui'
 import { scoreText } from '../lib/longTerm'
 import { LongTermHistoryChart } from './LongTermHistoryChart'
 import { LongTermFactorBar } from './LongTermFactorBar'
+import { FundamentalAnalysisCard } from './FundamentalAnalysisCard'
 
 const INPUT_KEYS = ['roe', 'roa', 'netMargin', 'earningsYield', 'momentum12_1', 'momentum6_1'] as const
 
@@ -55,9 +56,12 @@ const FINANCIAL_FIELDS = [
   'dividendYield', 'totalRevenue', 'netIncome', 'operatingIncome', 'sharesOutstanding',
   'returnOnEquity', 'returnOnAssets', 'capex', 'operatingCashFlow', 'freeCashFlow',
   'lastReportDate', 'nextReportDate',
+  'operatingMargin', 'returnOnInvestedCapital', 'revenueCagr3y', 'epsCagr3y',
+  'operatingMarginVolatility', 'netDebtToEbitda', 'interestCoverage', 'enterpriseToEbitda',
+  'priceToBook', 'bookValue', 'totalDebt', 'totalCash', 'ebitda', 'latestPeriodEnd', 'annualPeriodEnd',
 ] as const
-const RATIO_FIELDS = new Set(['returnOnEquity', 'returnOnAssets'])
-const MONEY_FIELDS = new Set(['marketCap', 'eps', 'totalRevenue', 'netIncome', 'operatingIncome', 'capex', 'operatingCashFlow', 'freeCashFlow'])
+const RATIO_FIELDS = new Set(['returnOnEquity', 'returnOnAssets', 'operatingMargin', 'returnOnInvestedCapital', 'revenueCagr3y', 'epsCagr3y', 'operatingMarginVolatility'])
+const MONEY_FIELDS = new Set(['marketCap', 'eps', 'totalRevenue', 'netIncome', 'operatingIncome', 'capex', 'operatingCashFlow', 'freeCashFlow', 'totalDebt', 'totalCash', 'ebitda', 'bookValue'])
 
 function FinancialValues({ values, reportingCurrency }: {
   values: Record<string, unknown>
@@ -76,7 +80,7 @@ function FinancialValues({ values, reportingCurrency }: {
           // FinancialMetrics stores a reporting currency but no currency for
           // marketCap or trailing EPS. Never infer an archived quote currency
           // from today's ticker metadata or label all figures with one unit.
-          const currencyKnown = key !== 'marketCap' && key !== 'eps'
+          const currencyKnown = key !== 'marketCap' && key !== 'eps' && key !== 'bookValue'
             && typeof reportingCurrency === 'string' && reportingCurrency.trim() !== ''
           formatted += ` ${currencyKnown ? reportingCurrency : `(${t('longTerm.currencyUnknown')})`}`
         }
@@ -84,7 +88,7 @@ function FinancialValues({ values, reportingCurrency }: {
         formatted = key === 'periodType' ? t(`longTerm.periods.${value}`, { defaultValue: value }) : value
       }
       return <div key={key} className="min-w-0">
-        <dt className="text-xs text-slate-400">{t(`longTerm.fields.${key}`)}</dt>
+        <dt className="text-xs text-slate-400">{t(`longTerm.fields.${key}`, { defaultValue: t(`fundamentals.fields.${key}`) })}</dt>
         <dd className="mt-1 break-words text-sm tabular-nums text-slate-200">{formatted}</dd>
       </div>
     })}
@@ -93,7 +97,13 @@ function FinancialValues({ values, reportingCurrency }: {
 
 function FinancialPayload({ observation }: { observation: FinancialObservation }) {
   const { t } = useTranslation()
-  if (observation.kind === 'fundamentals') return <FinancialValues values={observation.payload} reportingCurrency={observation.payload.financialCurrency} />
+  if (observation.kind === 'fundamentals') return <div className="space-y-4">
+    <FinancialValues values={observation.payload} reportingCurrency={observation.payload.financialCurrency} />
+    {isRecord(observation.payload.fundamentalDetails) && <div className="space-y-3 border-t border-slate-800 pt-3">
+      <h5 className="text-sm font-semibold text-slate-200">{t('fundamentals.extendedInputs')}</h5>
+      <FinancialValues values={observation.payload.fundamentalDetails} reportingCurrency={observation.payload.financialCurrency} />
+    </div>}
+  </div>
   const values = observation.kind === 'quarterly' ? observation.payload.reports : observation.payload.periods
   const periods = Array.isArray(values) ? values.filter(isRecord) : []
   return <div className="space-y-4">
@@ -147,6 +157,8 @@ export function LongTermHistory({ item, close }: { item: LongTermItem; close: ()
     </div>
     <div role="tabpanel" id={`${id}-panel-${activeTab}`} aria-labelledby={`${id}-tab-${activeTab}`} tabIndex={0} className="min-w-0 space-y-4 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">
     {activeTab === 'overview' && <>
+      {item.fundamentalAnalysis && <FundamentalAnalysisCard analysis={item.fundamentalAnalysis} />}
+      {item.fundamentalAnalysis && <h4 className="text-sm font-semibold text-slate-300">{t('fundamentals.qvmScore')}</h4>}
       <div className="grid gap-4 sm:grid-cols-3">
         {(['qualityScore', 'valueScore', 'momentumScore'] as const).map((key) => <div key={key} className="min-w-0 space-y-1 text-xs">
           <p className="text-slate-400">{t(`longTerm.${key}`)}</p>
@@ -172,6 +184,7 @@ export function LongTermHistory({ item, close }: { item: LongTermItem; close: ()
           <p className="text-xs text-slate-200">{(['qualityScore', 'valueScore', 'momentumScore'] as const).map((key) => `${t(`longTerm.${key}`)}: ${scoreText(entry[key], i18n.language)}`).join(' · ')}</p>
           <p className="text-xs text-slate-400">{t('longTerm.coverage')}: {scoreText(entry.coverage, i18n.language)}%</p>
           <LongTermInputs item={entry} />
+          {entry.fundamentalAnalysis && <FundamentalAnalysisCard analysis={entry.fundamentalAnalysis} />}
         </div>
       </details>)}
       {!!scores.data?.items.length && <p className="text-xs text-slate-500">{t('longTerm.latestScores')}</p>}

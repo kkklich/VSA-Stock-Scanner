@@ -7,7 +7,7 @@ from copy import deepcopy
 from datetime import UTC, date, datetime
 
 from pydantic import BaseModel
-from sqlalchemy import insert, literal, select, union_all
+from sqlalchemy import func, insert, literal, select, union_all
 
 from app.db.models import (
     CompanyCashflowRow,
@@ -79,13 +79,30 @@ class PostgresLongTermRepository:
                     )
                 )
             ).scalars().all()
-        return {
+            latest = (
+                select(func.max(FinancialObservationRow.id))
+                .where(
+                    FinancialObservationRow.ticker.in_([t.lower() for t in tickers]),
+                    FinancialObservationRow.kind.in_(("quarterly", "cashflow")),
+                )
+                .group_by(FinancialObservationRow.ticker, FinancialObservationRow.kind)
+            )
+            statements = (await session.execute(
+                select(FinancialObservationRow).where(FinancialObservationRow.id.in_(latest))
+            )).scalars().all()
+        output = {
             row.ticker: {
                 "metrics": metrics_from_row(row),
                 "observed_at": stored_utc(row.updated_at),
             }
             for row in rows
         }
+        for row in statements:
+            if row.ticker in output:
+                output[row.ticker].setdefault("statements", {})[row.kind] = {
+                    "payload": deepcopy(row.payload), "observed_at": stored_utc(row.observed_at),
+                }
+        return output
 
     async def append_long_term_snapshots(
         self, items: list[dict], recorded_at: datetime, model_version: str

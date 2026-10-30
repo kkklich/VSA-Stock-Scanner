@@ -245,9 +245,12 @@ class TestPeriodsFromFrame:
         assert [p.period_end for p in periods] == ["2024-12-31"]
         assert periods[0].capex == 800
 
-    def test_no_capex_row_yields_nothing(self) -> None:
+    def test_cash_flow_is_retained_even_without_a_capex_row(self) -> None:
         frame = self._frame({"Operating Cash Flow": [5_000.0]}, ["2025-12-31"])
-        assert _periods_from_frame(frame, "annual", "PLN", 5) == []
+        periods = _periods_from_frame(frame, "annual", "PLN", 5)
+        assert len(periods) == 1
+        assert periods[0].capex is None
+        assert periods[0].operating_cash_flow == 5_000
 
     def test_empty_frame_is_handled(self) -> None:
         assert _periods_from_frame(None, "annual", "PLN", 5) == []

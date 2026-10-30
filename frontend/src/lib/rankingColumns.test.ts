@@ -1,7 +1,7 @@
 // Unit tests for the shared ranking-column registry — the visibility rules AND
 // the column order that the Dashboard, Watchlist and Filters pages all read.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   RANKING_COLUMNS,
   canMoveColumn,
@@ -238,3 +238,9 @@ describe('moving a shown column past hidden ones', () => {
     expect(canMoveColumn([], 'daysSinceSignal', 1, shownByDefault)).toBe(false)
   })
 })
+
+// Preserve legacy column-layout coverage when this engine is reactivated.
+vi.mock("./methodStatus", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./methodStatus")>(),
+  CLASSIC_VSA_ENABLED: true,
+}))

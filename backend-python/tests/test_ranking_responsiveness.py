@@ -50,8 +50,14 @@ def _inputs(count=3, warm=False):
     (ranking, "analyze_stock"), (ranking, "_evaluate_methods"),
     (scanner, "detect_signals"),
 ])
-def test_health_responds_while_ranking_analysis_is_blocked(monkeypatch, warm, service, stage):
+def test_health_responds_while_ranking_analysis_is_blocked(
+    monkeypatch, warm, service, stage, request,
+):
     """A handshake proves overlap without depending on a millisecond threshold."""
+    if service is ranking and stage == "analyze_stock":
+        # This stage belongs to Classic VSA; test its preserved scheduling
+        # behavior only when explicitly reactivated, never in the live app.
+        request.getfixturevalue("archived_methods_enabled")
     async def scenario():
         loop = asyncio.get_running_loop()
         loop_thread = threading.get_ident()

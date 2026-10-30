@@ -34,6 +34,9 @@ from app.models import GpwCompany, StockRankingItem
 from app.routers import stocks
 from app.services.cache import TTLCache
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

@@ -4,6 +4,7 @@
 // selected horizon (1D / 1M / 1Y / MAX of stored history). Clicking a tile
 // opens the stock's chart page.
 
+import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
@@ -261,7 +262,7 @@ function HeatmapTooltip({
         ? '—'
         : `${fmtCompactPln(tip.item.marketCap)} ${majorCurrency(tip.item.currency)}`,
     ],
-    ['VSA rating', String(tip.item.currentRating)],
+    ...(CLASSIC_VSA_ENABLED ? [['VSA rating', String(tip.item.currentRating)] as [string, string]] : []),
     ['Signal', tip.item.lastSignal],
     ['1D', tip.item.change1D === null ? '—' : fmtPct(tip.item.change1D)],
     ['1M', tip.item.change1M === null ? '—' : fmtPct(tip.item.change1M)],
@@ -308,10 +309,12 @@ export function SectorHeatmapPage() {
   const { market, markets, needsPicker, pick } = useSingleMarket()
   const { data, loading, error, refetch } = useHeatmap(market)
   const palette = useChartPalette()
-  const [mode, setMode] = usePersistentState<ColorMode>(
+  const [storedMode, setMode] = usePersistentState<ColorMode>(
     'stockpilot:heatmap:colorMode',
-    'rating',
+    CLASSIC_VSA_ENABLED ? 'rating' : '1d',
   )
+  // A persisted classic-rating mode must not display neutral placeholders.
+  const mode = !CLASSIC_VSA_ENABLED && storedMode === 'rating' ? '1d' : storedMode
   const [tip, setTip] = useState<TooltipState | null>(null)
   const navigate = useNavigate()
 
@@ -397,7 +400,7 @@ export function SectorHeatmapPage() {
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
             Sector heatmap
-            <InfoTip text="Every ranked stock of the selected market as one tile, grouped by sector. Tile size = market cap. Tile color = VSA rating, or the price change over the selected period. Click a tile to open the stock's chart." />
+            <InfoTip text="Every ranked stock of the selected market as one tile, grouped by sector. Tile size = market cap. Tile color = price change over the selected period. Click a tile to open the stock's chart." />
           </h2>
           <p className="text-sm text-slate-500">
             Size = market cap · {activeHint.toLowerCase()}
@@ -418,7 +421,7 @@ export function SectorHeatmapPage() {
             aria-label="Tile color"
             className="flex overflow-hidden rounded-lg border border-slate-700"
           >
-            {MODES.map(({ id, label }) => (
+            {MODES.filter((m) => CLASSIC_VSA_ENABLED || m.id !== 'rating').map(({ id, label }) => (
               <button
                 key={id}
                 type="button"

@@ -54,13 +54,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from app.analysis.runtime_vsa import detect_signals
 from app.analysis.statistics import close_position, median_turnover, median_volume
-from app.analysis.vsa import (
-    VsaConfig,
-    compute_rating,
-    detect_signals,
-    verdict_from_signals,
-)
+from app.analysis.vsa import VsaConfig, compute_rating, verdict_from_signals
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.markets import (

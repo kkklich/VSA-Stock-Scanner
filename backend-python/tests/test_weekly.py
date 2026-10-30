@@ -27,6 +27,9 @@ from app.analysis.weekly import (
 )
 from app.models import StooqDailyQuote
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 # The VSA engine's own default half-life, in calendar days. It was chosen for
 # DAILY bars (~21 sessions of memory) and is what the weekly read used to
 # inherit — the comparison the tests below turn on.

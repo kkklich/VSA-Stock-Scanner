@@ -27,6 +27,7 @@ export function useInsiderTransactions(
     }
 
     let cancelled = false
+    setData(null)
     setLoading(true)
 
     fetchInsiderTransactions(ticker, { includeAll })

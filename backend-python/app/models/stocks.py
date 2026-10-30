@@ -244,6 +244,22 @@ class LivePrice(_CamelModel):
 
 # ── New models: ranking endpoint ──────────────────────────────────────────────
 
+class InsiderScreenSummary(_CamelModel):
+    """Stored open-market filings in the requested publication-date window.
+
+    Values use the app's indicative PLN conversion rates. A side is unknown
+    when any of its filings lacks an amount or a supported currency.
+    """
+
+    purchases_count: int = 0
+    sales_count: int = 0
+    purchases_shares: int = 0
+    sales_shares: int = 0
+    purchases_value_pln: float | None = 0
+    sales_value_pln: float | None = 0
+    net_value_pln: float | None = 0
+
+
 class StockRankingItem(_CamelModel):
     """One row in the ranking / watchlist feed (``GET /api/stocks/ranking``)."""
 
@@ -329,6 +345,7 @@ class StockRankingItem(_CamelModel):
     # its figures; ``last_session`` and everything else still describe the
     # last FINISHED session. Attached per request, never cached.
     live: LivePrice | None = None
+    insider_activity: InsiderScreenSummary | None = None
 
 
 # ── New models: sector heatmap endpoint ───────────────────────────────────────
@@ -797,6 +814,28 @@ class StockSignalsResponse(_CamelModel):
 # ── New models: fundamentals endpoint ─────────────────────────────────────────
 
 
+class FundamentalDetails(_CamelModel):
+    """Additional observed inputs; ratios are fractions, multiples are unitless."""
+
+    operating_margin: float | None = None
+    return_on_invested_capital: float | None = None
+    revenue_cagr_3y: float | None = Field(default=None, alias="revenueCagr3y")
+    eps_cagr_3y: float | None = Field(default=None, alias="epsCagr3y")
+    # Population standard deviation of annual operating margins (lower is steadier).
+    operating_margin_volatility: float | None = None
+    net_debt_to_ebitda: float | None = None
+    interest_coverage: float | None = None
+    enterprise_to_ebitda: float | None = None
+    price_to_book: float | None = None
+    book_value: float | None = None
+    # These have the company's reporting currency, not the listing currency.
+    total_debt: float | None = None
+    total_cash: float | None = None
+    ebitda: float | None = None
+    latest_period_end: date | None = None
+    annual_period_end: date | None = None
+
+
 class FinancialMetrics(_CamelModel):
     """Current financial ratios for a stock (refreshed daily)."""
 
@@ -827,6 +866,7 @@ class FinancialMetrics(_CamelModel):
     # reason. Added 2026-09-26 (roadmap #15b).
     last_report_date: date | None = None
     next_report_date: date | None = None
+    fundamental_details: FundamentalDetails | None = None
 
 
 class PriceReturns(_CamelModel):

@@ -30,6 +30,7 @@ import type { TFunction } from 'i18next'
 import type { RankingSortKey } from '../api/stocksApi'
 import type { SortLevel } from '../lib/sorting'
 import type { SortOption } from '../components/SortMenu'
+import { CLASSIC_RANKING_COLUMNS, CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 
 export function useRankingColumns() {
   const { t } = useTranslation()
@@ -108,7 +109,9 @@ export function sortOptionsFrom(
     for (const level of activeSort) {
       if (options.some((o) => o.key === level.key)) continue
       const hidden = RANKING_COLUMNS.find((c) => c.sortKey === level.key)
-      if (hidden) options.push({ key: level.key, label: columnLabel(hidden, t) })
+      if (hidden && (CLASSIC_VSA_ENABLED || !CLASSIC_RANKING_COLUMNS.has(hidden.id))) {
+        options.push({ key: level.key, label: columnLabel(hidden, t) })
+      }
     }
   }
   return options

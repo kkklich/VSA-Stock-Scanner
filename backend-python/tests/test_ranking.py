@@ -17,6 +17,8 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
 from app.analysis.vsa import compute_rating, detect_signals, verdict_from_signals
 from app.models import GpwCompany, StooqDailyQuote
 from app.services.cache import NEGATIVE_CACHE_SECONDS, TTLCache
@@ -33,6 +35,8 @@ from app.services.ranking_service import (
 from app.services.scanner_service import compute_scanner_stats
 from app.services.volume_surge_service import compute_volume_surge
 
+# Exercise the preserved legacy behavior only through an explicit opt-in.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
