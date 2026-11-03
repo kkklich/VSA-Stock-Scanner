@@ -1,6 +1,6 @@
 // App shell + client-side routing (react-router-dom).
 // The Layout renders the persistent sidebar + top bar and an <Outlet> for the
-// active route. "/" is the home page (Watchlist). Each stock has its own URL
+// active route. "/" is the home page (Dashboard). Each stock has its own URL
 // at /stock/:ticker so links are shareable and indexable.
 
 import { useState } from 'react'
@@ -10,7 +10,6 @@ import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { Footer } from './components/Footer'
 import { DashboardPage } from './pages/DashboardPage'
-import { WatchlistPage } from './pages/WatchlistPage'
 import { JournalPage } from './pages/JournalPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { ChartsPage } from './pages/ChartsPage'
@@ -34,7 +33,6 @@ import { CLASSIC_VSA_ENABLED } from './lib/methodStatus'
 /** Translation key (under `pageTitles`) for the top-bar title of the current path. */
 function titleKeyForPath(pathname: string): string {
   if (pathname === '/') return 'pageTitles.dashboard'
-  if (pathname.startsWith('/watchlist')) return 'pageTitles.watchlist'
   if (pathname.startsWith('/journal')) return 'journal.title'
   if (pathname.startsWith('/portfolio')) return 'portfolio.title'
   if (pathname.startsWith('/scanner')) return 'pageTitles.scanner'
@@ -89,7 +87,6 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         {/* /dashboard is an alias for the home page */}
         <Route path="dashboard" element={<Navigate to="/" replace />} />
-        <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="journal" element={<JournalPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="scanner" element={CLASSIC_VSA_ENABLED ? <ScannerPage /> : <Navigate to="/" replace />} />

@@ -15,7 +15,6 @@ import {
   Layers,
   LineChart,
   Settings,
-  Star,
   TrendingUp,
   Wallet,
 } from 'lucide-react'
@@ -38,12 +37,6 @@ const navItems: NavItem[] = [
   { to: '/journal', labelKey: 'journal.title', icon: BookOpen, match: (p) => p.startsWith('/journal') },
   { to: '/portfolio', labelKey: 'portfolio.title', icon: Wallet, requiresAuth: true, match: (p) => p.startsWith('/portfolio') },
   { to: '/long-term', labelKey: 'nav.longTerm', icon: Layers, match: (p) => p.startsWith('/long-term') },
-  {
-    to: '/watchlist',
-    labelKey: 'nav.watchlist',
-    icon: Star,
-    match: (p) => p.startsWith('/watchlist'),
-  },
   {
     to: '/scanner',
     labelKey: 'nav.scanner',

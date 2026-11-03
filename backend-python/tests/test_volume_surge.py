@@ -509,6 +509,33 @@ class TestReportDatesMerge:
 
 
 class TestGetVolumeSurge:
+    @pytest.mark.parametrize(
+        ("tickers", "expected"), [(" cCc, AAA,aaa ", ["CCC", "AAA"]), ("", []), ("missing", [])]
+    )
+    def test_favorites_filter_precedes_pagination_and_preserves_cached_scan(
+        self, tickers: str, expected: list[str]
+    ) -> None:
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService([_company(t) for t in ("aaa", "bbb", "ccc")])
+        )
+        stooq = _CountingStooqClient(quotes=_surge_series())
+        app.dependency_overrides[get_stooq_client] = lambda: stooq
+        params = {"tickers": tickers, "sortBy": "ticker", "sortDir": "desc", "pageSize": 1}
+        with TestClient(app) as client:
+            first = client.get("/api/stocks/volume-surge", params=params)
+            second = client.get("/api/stocks/volume-surge", params={**params, "page": 2})
+            # Filtering must not overwrite the shared cached scan.
+            unfiltered = client.get("/api/stocks/volume-surge")
+
+        assert first.status_code == second.status_code == unfiltered.status_code == 200
+        assert [item["ticker"] for item in first.json()["items"]] == expected[:1]
+        assert [item["ticker"] for item in second.json()["items"]] == expected[1:]
+        assert first.json()["totalCount"] == second.json()["totalCount"] == len(expected)
+        assert first.json()["scannedCount"] == 3
+        assert unfiltered.json()["totalCount"] == 3
+        assert len(unfiltered.json()["items"]) == 3
+        assert stooq.calls == 3
+
     def test_surging_stock_returned_with_expected_fields(self) -> None:
         app.dependency_overrides[get_gpw_company_service] = lambda: (
             _FakeCompanyService([_company()])

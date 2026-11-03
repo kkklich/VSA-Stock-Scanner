@@ -58,7 +58,7 @@ A moving average (MA) is the average closing price over the last N sessions; a "
 <!-- /definition-diagrams -->
 
 
-**Rule 8, relative strength.** Minervini wants a stock that is stronger than most others. StockPilot computes it the way Investor's Business Daily does: a weighted return — **40%** of the return over the last 3 months plus **20%** each of the returns over the last 6, 9 and 12 months — and then ranks every company **within the same market** from 0 (weakest) to 100 (strongest). Rule 8 passes at **70 or more**. Because it compares a stock with all the others, it exists only on the pages that rank the whole market (the Dashboard, Watchlist and Filters). The stock page, which looks at one company alone, uses rules 1–7.
+**Rule 8, relative strength.** Minervini wants a stock that is stronger than most others. StockPilot computes it the way Investor's Business Daily does: a weighted return — **40%** of the return over the last 3 months plus **20%** each of the returns over the last 6, 9 and 12 months — and then ranks every company **within the same market** from 0 (weakest) to 100 (strongest). Rule 8 passes at **70 or more**. Because it compares a stock with all the others, it exists only on the pages that rank the whole market (the Dashboard and Filters). The stock page, which looks at one company alone, uses rules 1–7.
 
 A stock needs **at least 252 sessions** (about a year) of history. With less, the method says "not enough history" rather than guessing — otherwise a three-month high would pass for a 52-week high.
 

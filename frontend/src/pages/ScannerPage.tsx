@@ -774,7 +774,7 @@ export function ScannerPage() {
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold text-slate-100">
             VSA Engine
-            <InfoTip text="This is the live configuration of the VSA engine. Everything you change here is applied to the real calculation: the Dashboard ranking, the Watchlist, the chart markers and the stats on the right all use these thresholds." />
+            <InfoTip text="This is the live configuration of the VSA engine. Everything you change here is applied to the real calculation: the Dashboard ranking, the chart markers and the stats on the right all use these thresholds." />
           </h2>
           <p className="text-sm text-slate-500">
             {enabledCount} of {SIGNAL_IDS.length} signals active · applies to the

@@ -5,7 +5,8 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from app.db.models import UserRow
 from app.db.user_repository import UserRepository
@@ -14,6 +15,7 @@ from app.markets import market_of, quote_currency
 from app.models.portfolio import AddTransaction, CreatePortfolio, UpdatePortfolio
 from app.routers.auth import get_current_user
 from app.services.portfolio import PortfolioError, valuation
+from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
 
 router = APIRouter(prefix="/api/portfolios", tags=["portfolios"])
 Owner = Annotated[UserRow, Depends(get_current_user)]
@@ -74,6 +76,64 @@ async def portfolios(user: Owner, repo: Repository, response: Response):
 @router.post("", status_code=201)
 async def create(payload: CreatePortfolio, user: Owner, repo: Repository, response: Response):
     return await execute(response, repo.portfolios.change(user.id, "create", payload=payload))
+
+
+async def import_file(request: Request, filename: str):
+    # Raw bounded uploads avoid buffering an arbitrarily large multipart request.
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_FILE_BYTES:
+            raise PortfolioError("import_file_too_large", 413)
+    return await run_in_threadpool(parse_xtb, bytes(data), filename, gpw_company_service)
+
+
+@router.post("/{portfolio_id}/imports/xtb/preview")
+async def preview_xtb(
+    portfolio_id: UUID,
+    request: Request,
+    user: Owner,
+    repo: Repository,
+    response: Response,
+    filename: Annotated[str, Query(min_length=1, max_length=200)],
+):
+    async def preview():
+        portfolio = await repo.portfolios.get(user.id, str(portfolio_id))
+        parsed = await import_file(request, filename)
+        plan = prepare_import(parsed, portfolio["transactions"], portfolio["costMethod"])
+        return {
+            key: value
+            for key, value in {**plan, "version": portfolio["version"]}.items()
+            if key not in {"additions", "ledger"}
+        }
+
+    return await execute(response, preview())
+
+
+@router.post("/{portfolio_id}/imports/xtb")
+async def import_xtb(
+    portfolio_id: UUID,
+    request: Request,
+    user: Owner,
+    repo: Repository,
+    response: Response,
+    filename: Annotated[str, Query(min_length=1, max_length=200)],
+    version: Annotated[int, Query(ge=1)],
+    allow_partial: bool = False,
+):
+    async def commit():
+        await repo.portfolios.get(user.id, str(portfolio_id))
+        parsed = await import_file(request, filename)
+        return await repo.portfolios.change(
+            user.id,
+            "import",
+            portfolio_id=str(portfolio_id),
+            version=version,
+            parsed=parsed,
+            allow_partial=allow_partial,
+        )
+
+    return await execute(response, commit())
 
 
 @router.patch("/{portfolio_id}")

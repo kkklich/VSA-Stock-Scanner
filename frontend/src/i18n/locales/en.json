@@ -185,7 +185,6 @@
   "nav": {
     "longTerm": "Long-term ranking",
     "dashboard": "Dashboard",
-    "watchlist": "Watchlist",
     "scanner": "Scanner",
     "heatmap": "Sector heatmap",
     "volumeSurge": "Volume surge",
@@ -207,7 +206,6 @@
   "pageTitles": {
     "longTerm": "Long-term ranking",
     "dashboard": "Dashboard",
-    "watchlist": "Watchlist",
     "scanner": "VSA Scanner",
     "heatmap": "Sector Heatmap",
     "volumeSurge": "Volume Surge",
@@ -255,6 +253,9 @@
     "favoritesTooltip": "Show only the companies you starred",
     "showAll": "Show all companies",
     "emptyNoFavorites": "You have not starred any company yet. Click the star next to a company to add it here."
+  },
+  "volumeSurge": {
+    "emptyFavorites": "None of your favorite companies in the selected market match the current volume surge criteria. Try a lower minimum ratio, a shorter surge window or another market."
   },
   "overview": {
     "heading": "Market overview",
@@ -1174,7 +1175,14 @@
       "currency_mismatch": "Transaction currency must match the instrument’s quote currency.",
       "unknown_ticker": "Choose an instrument supported by the app.",
       "portfolio_limit": "You can have up to 20 portfolios.",
-      "transaction_limit": "This portfolio has reached the 1,000 transaction limit."
+      "transaction_limit": "This portfolio has reached the 1,000 transaction limit.",
+      "import_file_too_large": "The file is too large. Maximum size is 5 MB.",
+      "import_file_type": "Choose an XLSX, XLS or CSV file. Extract ZIP archives before importing.",
+      "import_invalid_file": "Could not read the file. Choose an unencrypted Excel or CSV report exported from XTB.",
+      "import_too_many_rows": "The report exceeds 20,000 rows or 80 columns. Export a smaller range.",
+      "import_unrecognized_format": "Transaction history was not recognized. Export XTB cash-operation history with operation reference, date, ticker and execution comment. Open or closed positions alone are insufficient.",
+      "import_no_transactions": "No purchase or sale transactions were found.",
+      "import_rows_invalid": "The report contains invalid rows. Review the preview before saving."
     },
     "costMethod": "Cost basis method",
     "fifo": "FIFO (oldest purchase first)",
@@ -1188,6 +1196,44 @@
     "priceHint": "Position value is quantity × latest available price. Each quote shows its date and type. Quotes older than 7 days are flagged; this is an informational threshold, not an exchange calendar. Refreshing the page reads application data rather than requesting a new market quote.",
     "returnHint": "The percentage result of an open position is unrealized profit or loss divided by remaining cost basis. It is not an annualized return or total account performance adjusted for deposits, withdrawals and currencies.",
     "scopeHint": "Supports stock purchases and sales without short positions. Currencies are kept separate. Dividends, splits and taxes are not automatically included; share-count changes require reconciling trade history. This is not a tax report.",
-    "editChanged": "The portfolio changed while you were editing. Cancel and reopen the editor to use current data."
+    "editChanged": "The portfolio changed while you were editing. Cancel and reopen the editor to use current data.",
+    "xtb": {
+      "title": "Import from XTB",
+      "hint": "Choose an xStation cash-operation history report or a CSV of executed trades. Supported files: XLSX, XLS and CSV, up to 5 MB. Use one portfolio per XTB account. Open positions or pending orders alone are not a transaction history.",
+      "file": "XTB report file",
+      "preview": "Preview file",
+      "working": "Processing…",
+      "summary": "New trades: {{ready}} · Already saved: {{duplicates}} · Rows needing attention: {{errors}}",
+      "ignored": "Cash operations and summary rows omitted: {{count}}.",
+      "source": "Sheet / row",
+      "status": "Validation result",
+      "ready": "Ready to import",
+      "duplicate": "Already saved — skipped",
+      "partial": "Import only valid trades and skip the identified invalid rows. I understand that the history may be incomplete.",
+      "confirm": "Import {{count}} trades into “{{name}}”",
+      "saved": "Import complete. Added: {{imported}}, duplicates: {{duplicates}}, skipped: {{skipped}}.",
+      "changed": "This portfolio changed after the preview. Click “Preview file” again.",
+      "reconcile": "Before saving, compare dates, quantities, prices and fees with the XTB report. Only purchases and sales of supported instruments are imported. Cash, dividends, taxes, separate charges and open-position summaries are not added. Manual date-only trades are processed before imported trades on the same date.",
+      "codes": {
+        "fees_missing": "Some trades have no commission in the report — zero was assumed. Check costs before importing; separate cash-operation charges are not allocated automatically.",
+        "unknown_ticker": "This instrument is not supported by the app.",
+        "invalid_number": "Invalid number.",
+        "invalid_date": "Invalid execution date.",
+        "invalid_transaction": "Invalid quantity, price, fee or transaction date.",
+        "unsupported_operation": "Unsupported operation (for example a CFD or short position).",
+        "unexecuted_order": "This order is not marked as executed.",
+        "missing_execution": "Missing execution quantity or price.",
+        "currency_mismatch": "Price currency does not match the instrument’s quote currency.",
+        "missing_reference": "Missing an unambiguous XTB transaction reference.",
+        "fee_currency_missing": "Commission currency is missing.",
+        "fee_currency_mismatch": "Commission is in another currency. No automatic FX conversion was applied.",
+        "price_currency_missing": "The price must explicitly identify pounds (GBP) or pence (GBX).",
+        "formula_cell": "The row contains a formula instead of a stored value.",
+        "reference_conflict": "The same XTB reference has different trade details. Resolve the conflict before importing.",
+        "manual_overlap": "A similar trade was recorded manually. Check it to avoid duplicating history.",
+        "import_reference_conflict": "Conflicting data for the same XTB reference. No changes were saved.",
+        "execution_mismatch": "Quantity or price columns disagree with the execution comment. Check the report."
+      }
+    }
   }
 }

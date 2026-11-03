@@ -542,6 +542,8 @@ export type VolumeSurgeSortKey =
   | 'lastSignal'
 
 export interface VolumeSurgeQuery {
+  /** Restrict to starred tickers; an empty array matches no companies. */
+  tickers?: string[]
   /** Sessions in the "now" window (1–10, default 3). */
   recentDays?: number
   /** Sessions in the reference window before it (10–60, default 20). */
@@ -565,6 +567,7 @@ export async function fetchVolumeSurge(
   if (query.recentDays) params.set('recentDays', String(query.recentDays))
   if (query.baselineDays) params.set('baselineDays', String(query.baselineDays))
   if (query.minRatio) params.set('minRatio', String(query.minRatio))
+  if (query.tickers !== undefined) params.set('tickers', query.tickers.join(','))
   if (query.page) params.set('page', String(query.page))
   if (query.pageSize) params.set('pageSize', String(query.pageSize))
   const surgeSort = query.sort && serializeSort(query.sort)

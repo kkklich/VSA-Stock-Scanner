@@ -5,6 +5,7 @@ import { ApiError } from '../api/client'
 import { portfolioRequest, type Instrument, type Portfolio, type Portfolios, type Transaction } from '../api/portfoliosApi'
 import { useAuth } from '../hooks/useAuth'
 import { currencyLabel, fmtMoney, fmtPct } from '../lib/format'
+import { XtbImport } from '../components/XtbImport'
 
 const input = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-sm'
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
@@ -61,7 +62,7 @@ function TradeForm({ portfolio, instruments, busy, save }: { portfolio: Portfoli
   </form>
 }
 
-function PortfolioDetail({ portfolio, instruments, save, busy }: { portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean }) {
+function PortfolioDetail({ portfolio, instruments, save, busy, onImported }: { portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean; onImported: () => Promise<void> }) {
   const { t, i18n } = useTranslation()
   const [editing, setEditing] = useState(false)
   const money = (n: number | null, currency: string) => n === null ? '—' : fmtMoney(n, currency)
@@ -90,6 +91,7 @@ function PortfolioDetail({ portfolio, instruments, save, busy }: { portfolio: Po
       {!!total.missingQuotes && <p className="mt-3 text-sm text-amber-400">{t('portfolio.missingQuotes', { count: total.missingQuotes })}</p>}
     </section>)}</div>
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
+    <XtbImport portfolio={portfolio} disabled={busy} onImported={onImported} />
     <section><h3 className="mb-3 font-semibold">{t('portfolio.holdings')}</h3>
       {!portfolio.positions.length ? <p className="text-sm text-slate-400">{t('portfolio.emptyHoldings')}</p> : <div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="text-xs text-slate-400"><tr>{['instrument', 'quantity', 'averagePrice', 'currentPrice', 'marketValue', 'unrealized', 'realized', 'quoteDate'].map(key => <th key={key} className="p-3">{t(`portfolio.${key}`)}</th>)}</tr></thead><tbody>{portfolio.positions.map(p => <tr key={`${p.ticker}:${p.currency}`} className="border-t border-slate-800">
         <td className="p-3"><Link className="text-emerald-400 hover:underline" to={`/stock/${encodeURIComponent(p.ticker)}`}>{p.ticker.toUpperCase()}</Link></td><td className="p-3">{quantity(p.quantity)}</td><td className="p-3">{money(p.averagePrice, p.currency)}</td><td className="p-3">{money(p.currentPrice, p.currency)}</td><td className="p-3">{money(p.marketValue, p.currency)}</td><td className="p-3">{pnl(p.unrealizedPnl, p.unrealizedPnlPct, p.currency)}</td><td className="p-3">{money(p.realizedPnl, p.currency)}</td><td className="p-3">{p.quoteDate ?? t('portfolio.noQuote')}{p.quoteAsOf && <span className="block text-xs text-slate-400">{new Date(p.quoteAsOf).toLocaleTimeString(i18n.language)}</span>}{p.quoteSource && <span className="block text-xs text-slate-400">{t(`portfolio.quote_${p.quoteSource}`)}</span>}{p.quantity > 0 && p.quoteAgeDays !== null && p.quoteAgeDays > 7 && <span className="block text-xs text-amber-400">{t('portfolio.oldQuote', { count: p.quoteAgeDays })}</span>}</td>
@@ -173,7 +175,7 @@ function AccountPortfolios() {
     {data && <>
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
       {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{p.name} · {p.broker}</option>)}</select></label>}
-      {active && <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} />}
+      {active && <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} onImported={reload} />}
       <p className="text-xs text-slate-500">{t('portfolio.valuedAt')}: {new Date(data.valuedAt).toLocaleString(i18n.language)}</p>
     </>}
   </div>

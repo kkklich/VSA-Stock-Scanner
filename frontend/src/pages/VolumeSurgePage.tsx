@@ -8,9 +8,10 @@
 // rating/verdict with the age of the signal behind it.
 
 import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { FileText, Loader2, Star } from 'lucide-react'
 import {
   Card,
   CompanyLink,
@@ -22,6 +23,8 @@ import {
 } from '../components/ui'
 import { useVolumeSurge } from '../hooks/useVolumeSurge'
 import { useMarketScope } from '../hooks/useMarkets'
+import { useWatchlists } from '../hooks/useWatchlists'
+import { WatchlistControls } from '../components/WatchlistControls'
 import { ALL_MARKETS, displayTicker, GPW_MARKET } from '../lib/markets'
 import { plnLine } from '../lib/rankingColumns'
 import { usePersistentState } from '../hooks/usePersistentState'
@@ -130,6 +133,14 @@ function ButtonGroup<T extends number>({
 
 export function VolumeSurgePage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { stars, busy: watchlistsBusy } = useWatchlists()
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const favTickers = useMemo(
+    () => Object.keys(stars).filter((ticker) => stars[ticker]).sort(),
+    [stars],
+  )
+  const favoritesKey = favoritesOnly ? favTickers.join(',') : undefined
   const [recentDays, setRecentDays] = usePersistentState(
     'stockpilot:volume-surge:recentDays',
     3,
@@ -162,7 +173,7 @@ export function VolumeSurgePage() {
   const pooled = market === ALL_MARKETS
   useEffect(() => {
     setPage(1)
-  }, [marketParam])
+  }, [marketParam, favoritesKey])
 
   const { items, meta, loading, loadingMore, error, hasMore, refetch } =
     useVolumeSurge(
@@ -174,8 +185,9 @@ export function VolumeSurgePage() {
         pageSize: PAGE_SIZE,
         sort,
         market: marketParam,
+        tickers: favoritesOnly ? favTickers : undefined,
       },
-      { enabled: market !== null },
+      { enabled: market !== null && (!favoritesOnly || !watchlistsBusy) },
     )
 
   const totalCount = meta?.totalCount ?? 0
@@ -264,6 +276,26 @@ export function VolumeSurgePage() {
             onChange={applyParam(setMinRatio)}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => { setFavoritesOnly((value) => !value); setPage(1) }}
+          aria-pressed={favoritesOnly}
+          title={t('dashboard.favoritesTooltip')}
+          className={
+            'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ' +
+            (favoritesOnly
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800')
+          }
+        >
+          <Star size={14} aria-hidden className={favoritesOnly ? 'fill-amber-400 text-amber-400' : ''} />
+          {t('dashboard.favorites')}
+          {favTickers.length > 0 && (
+            <span className="rounded bg-slate-800/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-400">
+              {favTickers.length}
+            </span>
+          )}
+        </button>
         {meta && !loading && (
           <span className="ml-auto text-xs text-slate-500">
             {totalCount} of {meta.scannedCount} scanned stocks
@@ -271,8 +303,10 @@ export function VolumeSurgePage() {
         )}
       </Card>
 
+      {favoritesOnly && <WatchlistControls compact />}
+
       {/* Results */}
-      {loading ? (
+      {loading || (favoritesOnly && watchlistsBusy) ? (
         <div className="flex items-center justify-center gap-2 py-24 text-slate-400">
           <Loader2 className="animate-spin" size={18} />
           Scanning volume…
@@ -290,8 +324,21 @@ export function VolumeSurgePage() {
         </div>
       ) : totalCount === 0 ? (
         <div className="py-24 text-center text-sm text-slate-400">
-          No stock currently trades at {minRatio}× its normal volume. Try a
-          lower minimum ratio or a shorter surge window.
+          {favoritesOnly
+            ? favTickers.length === 0
+              ? t('dashboard.emptyNoFavorites')
+              : t('volumeSurge.emptyFavorites')
+            : <>No stock currently trades at {minRatio}× its normal volume. Try a
+              lower minimum ratio or a shorter surge window.</>}
+          {favoritesOnly && (
+            <button
+              type="button"
+              onClick={() => { setFavoritesOnly(false); setPage(1) }}
+              className="mt-2 block w-full text-xs text-amber-400 hover:text-amber-300"
+            >
+              {t('dashboard.showAll')}
+            </button>
+          )}
         </div>
       ) : (
         <>

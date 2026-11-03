@@ -185,7 +185,6 @@
   "nav": {
     "longTerm": "Ranking długoterminowy",
     "dashboard": "Pulpit",
-    "watchlist": "Obserwowane",
     "scanner": "Skaner",
     "heatmap": "Mapa sektorów",
     "volumeSurge": "Skok wolumenu",
@@ -207,7 +206,6 @@
   "pageTitles": {
     "longTerm": "Ranking długoterminowy",
     "dashboard": "Pulpit",
-    "watchlist": "Obserwowane",
     "scanner": "Skaner VSA",
     "heatmap": "Mapa cieplna sektorów",
     "volumeSurge": "Skok wolumenu",
@@ -255,6 +253,9 @@
     "favoritesTooltip": "Pokaż tylko spółki oznaczone gwiazdką",
     "showAll": "Pokaż wszystkie spółki",
     "emptyNoFavorites": "Nie masz jeszcze ulubionych spółek. Kliknij gwiazdkę obok spółki, żeby dodać ją tutaj."
+  },
+  "volumeSurge": {
+    "emptyFavorites": "Żadna z Twoich ulubionych spółek na wybranym rynku nie spełnia obecnych kryteriów wzrostu wolumenu. Zmniejsz minimalny mnożnik, skróć okno lub zmień rynek."
   },
   "overview": {
     "heading": "Przegląd rynku",
@@ -1193,7 +1194,14 @@
       "currency_mismatch": "Waluta transakcji musi odpowiadać walucie notowania waloru.",
       "unknown_ticker": "Wybierz walor obsługiwany przez aplikację.",
       "portfolio_limit": "Możesz mieć maksymalnie 20 portfeli.",
-      "transaction_limit": "Osiągnięto limit 1000 transakcji w portfelu."
+      "transaction_limit": "Osiągnięto limit 1000 transakcji w portfelu.",
+      "import_file_too_large": "Plik jest za duży. Maksymalny rozmiar to 5 MB.",
+      "import_file_type": "Wybierz plik XLSX, XLS lub CSV. Rozpakuj archiwum ZIP przed importem.",
+      "import_invalid_file": "Nie można odczytać pliku. Wybierz niezaszyfrowany raport Excel lub CSV wyeksportowany z XTB.",
+      "import_too_many_rows": "Raport przekracza limit 20 000 wierszy lub 80 kolumn. Wyeksportuj mniejszy zakres.",
+      "import_unrecognized_format": "Nie rozpoznano historii transakcji. Wyeksportuj historię operacji gotówkowych z XTB z numerem operacji, datą, tickerem i komentarzem wykonania. Same otwarte lub zamknięte pozycje nie wystarczą.",
+      "import_no_transactions": "W raporcie nie znaleziono transakcji kupna ani sprzedaży.",
+      "import_rows_invalid": "Raport zawiera błędne wiersze. Sprawdź podgląd przed zapisaniem."
     },
     "costMethod": "Metoda rozliczania kosztu",
     "fifo": "FIFO (najstarszy zakup pierwszy)",
@@ -1207,6 +1215,44 @@
     "priceHint": "Wartość pozycji to liczba sztuk × ostatni dostępny kurs. Przy każdym kursie podajemy datę i rodzaj notowania. Kurs starszy niż 7 dni jest oznaczony ostrzeżeniem; to próg informacyjny, nie kalendarz sesji. Odświeżenie strony pobiera dane aplikacji, nie zamawia nowego notowania.",
     "returnHint": "Procentowy wynik otwartej pozycji to niezrealizowany zysk lub strata podzielone przez jej pozostały koszt. Nie jest to roczna stopa zwrotu ani wynik całego rachunku uwzględniający wpłaty, wypłaty i waluty.",
     "scopeHint": "Obsługiwane są kupno i sprzedaż akcji bez krótkich pozycji. Waluty liczymy oddzielnie. Wynik nie uwzględnia automatycznie dywidend, splitów ani podatków; zmiany liczby akcji wymagają uzgodnienia historii. Nie jest to raport podatkowy.",
-    "editChanged": "Portfel zmienił się podczas edycji. Anuluj edycję i otwórz ją ponownie, aby pracować na aktualnych danych."
+    "editChanged": "Portfel zmienił się podczas edycji. Anuluj edycję i otwórz ją ponownie, aby pracować na aktualnych danych.",
+    "xtb": {
+      "title": "Import z XTB",
+      "hint": "Wybierz raport historii operacji gotówkowych z xStation albo CSV z wykonanymi transakcjami. Obsługiwane pliki: XLSX, XLS i CSV, do 5 MB. Importuj jeden rachunek XTB do jednego portfela. Same otwarte pozycje lub oczekujące zlecenia nie są historią transakcji.",
+      "file": "Plik raportu XTB",
+      "preview": "Sprawdź plik",
+      "working": "Przetwarzanie…",
+      "summary": "Nowe transakcje: {{ready}} · Już zapisane: {{duplicates}} · Wiersze wymagające uwagi: {{errors}}",
+      "ignored": "Pominięte operacje gotówkowe i podsumowania: {{count}}.",
+      "source": "Arkusz / wiersz",
+      "status": "Wynik sprawdzenia",
+      "ready": "Gotowe do importu",
+      "duplicate": "Już zapisane — pominięto",
+      "partial": "Chcę zaimportować tylko poprawne transakcje i pominąć wskazane błędne wiersze. Rozumiem, że historia może być niepełna.",
+      "confirm": "Importuj {{count}} transakcji do „{{name}}”",
+      "saved": "Import zakończony. Dodano: {{imported}}, duplikaty: {{duplicates}}, pominięto: {{skipped}}.",
+      "changed": "Portfel zmienił się od przygotowania podglądu. Kliknij ponownie „Sprawdź plik”.",
+      "reconcile": "Przed zapisem porównaj daty, ilości, ceny i prowizje z raportem XTB. Import obejmuje zakupy i sprzedaże obsługiwanych walorów. Gotówka, dywidendy, podatki, osobne opłaty i zestawienia otwartych pozycji nie są dodawane. Ręcznie zapisane transakcje z tego samego dnia są liczone przed transakcjami z raportu.",
+      "codes": {
+        "fees_missing": "W części transakcji raport nie podaje prowizji — przyjęto 0. Sprawdź koszty przed importem; osobne opłaty z operacji gotówkowych nie są doliczane automatycznie.",
+        "unknown_ticker": "Walor nie jest obsługiwany przez aplikację.",
+        "invalid_number": "Nieprawidłowa liczba.",
+        "invalid_date": "Nieprawidłowa data wykonania.",
+        "invalid_transaction": "Nieprawidłowa ilość, cena, prowizja lub data transakcji.",
+        "unsupported_operation": "Nieobsługiwany rodzaj operacji (np. CFD lub krótka pozycja).",
+        "unexecuted_order": "Zlecenie nie ma statusu wykonania.",
+        "missing_execution": "Brak ilości lub ceny wykonania.",
+        "currency_mismatch": "Waluta ceny nie odpowiada walucie notowania.",
+        "missing_reference": "Brak jednoznacznego numeru transakcji XTB.",
+        "fee_currency_missing": "Nie podano waluty prowizji.",
+        "fee_currency_mismatch": "Prowizja jest w innej walucie. Nie zastosowano automatycznego przewalutowania.",
+        "price_currency_missing": "Trzeba jednoznacznie określić, czy cena jest w funtach (GBP), czy pensach (GBX).",
+        "formula_cell": "Wiersz zawiera formułę zamiast zapisanej wartości.",
+        "reference_conflict": "Ten sam numer XTB ma inne dane. Import wymaga wyjaśnienia.",
+        "manual_overlap": "Podobna transakcja jest już zapisana ręcznie. Sprawdź ją, aby nie zdublować historii.",
+        "import_reference_conflict": "Raport zawiera sprzeczne dane dla tego samego numeru XTB. Żadne zmiany nie zostały zapisane.",
+        "execution_mismatch": "Ilość lub cena w kolumnach różni się od komentarza wykonania. Sprawdź dane raportu."
+      }
+    }
   }
 }

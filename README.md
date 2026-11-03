@@ -29,11 +29,11 @@ cd frontend; npm run build                                    # frontend build
 
 ## Account watchlists
 
-Sign in and use **New list** on the dashboard or Watchlist page to create named
+Sign in and use **New list** on the dashboard to create named
 watchlists. The active list is shared by the ranking, stock-detail star and
 long-term watchlist filter. Stars add/remove a company in that list; the same
-company can belong to multiple lists. Switch off **Active list only** on the
-Watchlist page to browse and add other companies.
+company can belong to multiple lists. Use the dashboard ranking to browse and
+add other companies.
 
 Lists are private to the account and stored in the database (up to 20 lists,
 500 companies each). They refresh when the browser tab regains focus and every
@@ -109,6 +109,48 @@ every minute while visible. Version checks prevent overwriting edits from anothe
 device; unchanged creation and trade requests can be retried without duplicates.
 Guests are prompted to sign in. Startup creates the new table; Alembic-managed
 deployments should apply revision `013` (`alembic upgrade head`).
+
+### Importing XTB account history
+
+Open **My portfolio**, select or create the destination portfolio, then use
+**Import from XTB** below the transaction form. Choose an `.xlsx`, `.xls` or `.csv`
+file (up to 5 MiB) and click **Preview file**. Review the recognized trades,
+existing duplicates, warnings and rejected rows before confirming the import.
+The whole batch is saved atomically; no preview changes account data.
+
+Export the full **Cash Operations** history from xStation, including operation
+IDs, execution dates, tickers and execution comments. English and Polish column
+names are recognized, with headers up to row 40. A CSV of executed trades can
+instead contain `ID, Type, Time, Symbol, Quantity, Price, Currency, Commission`.
+Use an unambiguous date (`YYYY-MM-DD HH:MM:SS` or `DD.MM.YYYY HH:MM:SS`). Extract
+ZIP reports before uploading. Open/closed-position snapshots and pending orders
+are not substitutes for execution history. When a workbook contains Cash
+Operations, other sheets are not used to reconstruct the same trades again.
+
+Use a separate portfolio for each XTB account. Original operation IDs and trade
+sides identify repeated imports, independently of filenames and row order.
+Overlapping reports and retrying an uncertain save do not duplicate imported
+trades. Conflicting data for an existing reference blocks the batch. Similar
+manual transactions are flagged for review rather than silently matched.
+Imported fills retain their reported execution times; manual date-only entries
+are processed first on the same date. Include enough purchase history to cover
+every sale. A batch that would create a historical short position is rejected.
+
+Only tracked instruments are supported. Unsupported or invalid rows are listed;
+skipping them requires an explicit choice. Cash, dividends, taxes, separate fees
+and corporate actions are not imported. Missing inline commissions are shown as
+zero with a warning. Prices come from execution fields/comments, never from an
+account-currency cash amount. Foreign-currency commission conversion requires
+manual reconciliation; the exact GBP/GBX unit conversion is supported when the
+price currency is explicit. Nothing is downloaded from XTB or sent to a third
+party during parsing, and the uploaded file is not stored.
+
+Deploy the updated backend dependencies and frontend together. No new database
+migration is needed: import identifiers live in the portfolio trade ledger.
+The bundled Nginx configurations allow 5 MiB uploads. On an existing VPS, also
+set `client_max_body_size 5m;` in the active host Nginx site and reload Nginx
+after a successful `nginx -t`; otherwise its default 1 MiB limit may reject
+larger reports before they reach the application.
 
 ## Deploy to production
 

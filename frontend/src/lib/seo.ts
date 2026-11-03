@@ -47,14 +47,6 @@ const STATIC_ENTRIES: { test: (p: string) => boolean; entry: SeoEntry }[] = [
     },
   },
   {
-    test: (p) => p.startsWith('/watchlist'),
-    entry: {
-      title: 'GPW Watchlist — VSA ranking',
-      description:
-        'Your watchlist and the GPW stock ranking by VSA rating 0–100: price, signal, days since signal and change. StockPilot Volume Spread Analysis scanner.',
-    },
-  },
-  {
     test: (p) => p.startsWith('/scanner'),
     entry: {
       title: 'GPW VSA Scanner',

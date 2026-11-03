@@ -1,6 +1,6 @@
 ## What the VSA rating is
 
-The VSA rating is the number from 0 to 100 shown next to every company on the Dashboard, the Watchlist and the stock page. It is StockPilot's own reading of **Volume Spread Analysis** (VSA) — a way of looking at a chart that compares how much was traded (volume) with how far the price moved (the spread) and where the day closed.
+The VSA rating is the number from 0 to 100 shown next to every company on the Dashboard and the stock page. It is StockPilot's own reading of **Volume Spread Analysis** (VSA) — a way of looking at a chart that compares how much was traded (volume) with how far the price moved (the spread) and where the day closed.
 
 - **50** means nothing notable has happened lately.
 - **Above 70** (green) means recent bars showed signs of strength.
@@ -97,7 +97,7 @@ Every pattern carries its weight (the last column of the first table), and that 
 
 ## Where you see it in the app
 
-- **Dashboard, Watchlist, Filters:** the *Rating* column, the verdict badge and "days ago" (how long since the last signal of any kind).
+- **Dashboard, Filters:** the *Rating* column, the verdict badge and "days ago" (how long since the last signal of any kind).
 - **The "1W" chip:** the same engine run on **weekly** candles built from the same daily bars. A green "1W ✓" means the weekly chart leans the same way as the daily one; a red "1W ✗" means it leans the other way. Nothing is shown when either side is neutral.
 - **The stock chart:** green arrows for bullish patterns, red arrows for bearish ones.
 - **The Scanner page:** switch individual patterns on or off, change their thresholds, and see back-test statistics for each pattern.

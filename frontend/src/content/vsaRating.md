@@ -1,6 +1,6 @@
 ## Czym jest rating VSA
 
-Rating VSA to liczba od 0 do 100 widoczna przy każdej spółce na Pulpicie, na liście Obserwowanych i na stronie spółki. To własny odczyt aplikacji StockPilot według metody **Volume Spread Analysis** (VSA) — sposobu czytania wykresu, który porównuje, ile obrócono akcjami (wolumen), z tym, jak daleko przesunęła się cena (spread) i gdzie zamknęła się sesja.
+Rating VSA to liczba od 0 do 100 widoczna przy każdej spółce na Pulpicie i na stronie spółki. To własny odczyt aplikacji StockPilot według metody **Volume Spread Analysis** (VSA) — sposobu czytania wykresu, który porównuje, ile obrócono akcjami (wolumen), z tym, jak daleko przesunęła się cena (spread) i gdzie zamknęła się sesja.
 
 - **50** oznacza, że ostatnio nie wydarzyło się nic istotnego.
 - **Powyżej 70** (zielony) oznacza, że ostatnie sesje pokazały oznaki siły.
@@ -97,7 +97,7 @@ Każda formacja ma swoją wagę (ostatnia kolumna pierwszej tabeli), a ta waga *
 
 ## Gdzie widać go w aplikacji
 
-- **Pulpit, Obserwowane, Filtry:** kolumna *Rating*, plakietka werdyktu i „dni temu” (ile minęło od ostatniego sygnału dowolnego rodzaju).
+- **Pulpit, Filtry:** kolumna *Rating*, plakietka werdyktu i „dni temu” (ile minęło od ostatniego sygnału dowolnego rodzaju).
 - **Znaczek „1W”:** ten sam silnik uruchomiony na świecach **tygodniowych** zbudowanych z tych samych notowań dziennych. Zielony „1W ✓” oznacza, że wykres tygodniowy wskazuje ten sam kierunek co dzienny; czerwony „1W ✗” — kierunek przeciwny. Gdy któraś strona jest neutralna, znaczka nie ma.
 - **Wykres spółki:** zielone strzałki dla formacji wzrostowych, czerwone dla spadkowych.
 - **Strona Skaner:** włączanie i wyłączanie poszczególnych formacji, zmiana ich progów i statystyki testu wstecznego dla każdej formacji.

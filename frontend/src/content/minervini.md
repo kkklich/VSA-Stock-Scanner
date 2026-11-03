@@ -58,7 +58,7 @@ Mark Minervini, *Trade Like a Stock Market Wizard* (2013). Minervini dwukrotnie 
 <!-- /definition-diagrams -->
 
 
-**Reguła 8, siła względna.** Minervini chce spółki silniejszej od większości innych. StockPilot liczy ją tak, jak robi to Investor's Business Daily: ważona stopa zwrotu — **40%** zwrotu z ostatnich 3 miesięcy plus po **20%** zwrotów z ostatnich 6, 9 i 12 miesięcy — a potem szereguje wszystkie spółki **z tego samego rynku** od 0 (najsłabsza) do 100 (najsilniejsza). Reguła 8 jest spełniona przy wyniku **70 lub więcej**. Ponieważ porównuje spółkę ze wszystkimi innymi, istnieje tylko na stronach, które szeregują cały rynek (Pulpit, Obserwowane i Filtry). Strona spółki, która patrzy na jedną firmę, używa reguł 1–7.
+**Reguła 8, siła względna.** Minervini chce spółki silniejszej od większości innych. StockPilot liczy ją tak, jak robi to Investor's Business Daily: ważona stopa zwrotu — **40%** zwrotu z ostatnich 3 miesięcy plus po **20%** zwrotów z ostatnich 6, 9 i 12 miesięcy — a potem szereguje wszystkie spółki **z tego samego rynku** od 0 (najsłabsza) do 100 (najsilniejsza). Reguła 8 jest spełniona przy wyniku **70 lub więcej**. Ponieważ porównuje spółkę ze wszystkimi innymi, istnieje tylko na stronach, które szeregują cały rynek (Pulpit i Filtry). Strona spółki, która patrzy na jedną firmę, używa reguł 1–7.
 
 Spółka potrzebuje **co najmniej 252 sesji** (ok. roku) historii. Przy krótszej metoda pisze „za mało historii” zamiast zgadywać — inaczej trzymiesięczne maksimum uchodziłoby za 52-tygodniowe.
 

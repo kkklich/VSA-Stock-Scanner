@@ -26,13 +26,6 @@ export function HelpPage() {
           Dashboard & Ranking
         </a>
         <a
-          href="#watchlist"
-          className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-emerald-400 hover:bg-slate-800"
-        >
-          <Star size={16} />
-          Watchlist
-        </a>
-        <a
           href="#scanner"
           className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-emerald-400 hover:bg-slate-800"
         >
@@ -134,54 +127,12 @@ export function HelpPage() {
               Click any stock to open its interactive chart and detailed metrics.
               Use the{' '}
               <Star size={13} className="inline text-amber-400 fill-amber-400" />
-              {' '}star icon to add stocks to your Watchlist.
+              {' '}star icon to add stocks to Favorites on the Dashboard.
             </p>
           </div>
         </section>
 
-        {/* Section 2: Watchlist */}
-        <section id="watchlist" className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Star
-              size={24}
-              className="text-amber-400"
-              strokeWidth={1.5}
-            />
-            <h2 className="text-xl font-bold text-slate-100">
-              Watchlist
-            </h2>
-          </div>
-
-          <div className="space-y-3 text-sm text-slate-300">
-            <p>
-              Your <span className="font-semibold text-slate-200">Watchlist</span>{' '}
-              is a personal collection of stocks you want to monitor. Add stocks
-              by clicking the star icon (
-              <Star size={13} className="inline text-slate-400" />
-              ) on any stock in the Dashboard or Scanner.
-            </p>
-
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-3">
-              <h3 className="font-semibold text-slate-100">Features:</h3>
-              <ul className="space-y-2 list-disc list-inside text-slate-400">
-                <li>All starred stocks automatically appear in the Watchlist</li>
-                <li>
-                  Sortable by any column — click a header to sort (rating,
-                  price, signal, …)
-                </li>
-                <li>Persisted in your browser — stays across sessions</li>
-                <li>Quick way to check your favorite stocks</li>
-              </ul>
-            </div>
-
-            <p className="text-slate-400">
-              The Watchlist is saved locally in your browser. Clearing your
-              browser data will reset your list.
-            </p>
-          </div>
-        </section>
-
-        {/* Section 3: Scanner */}
+        {/* Section 2: Scanner */}
         <section id="scanner" className="space-y-4">
           <div className="flex items-center gap-2">
             <Zap
@@ -253,7 +204,7 @@ export function HelpPage() {
           </div>
         </section>
 
-        {/* Section 4: Stock Charts */}
+        {/* Section 3: Stock Charts */}
         <section id="charts" className="space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3
@@ -268,7 +219,7 @@ export function HelpPage() {
 
           <div className="space-y-3 text-sm text-slate-300">
             <p>
-              Click any stock from the Dashboard or Watchlist to open its
+              Click any stock from the Dashboard to open its
               interactive candlestick chart with VSA signal overlays.
             </p>
 
@@ -322,7 +273,7 @@ export function HelpPage() {
           </div>
         </section>
 
-        {/* Section 5: VSA Basics */}
+        {/* Section 4: VSA Basics */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Info
@@ -384,7 +335,7 @@ export function HelpPage() {
           </div>
         </section>
 
-        {/* Section 6: Tips & Tricks */}
+        {/* Section 5: Tips & Tricks */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Settings
@@ -433,23 +384,12 @@ export function HelpPage() {
 
             <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
               <h4 className="font-semibold text-emerald-400">
-                Q: My Watchlist disappeared. Why?
+                Q: My favorites disappeared. Why?
               </h4>
               <p className="text-slate-400">
-                Your Watchlist is stored in your browser's local storage. If you
-                clear your browser data or use a private window, it will reset.
-                Future versions will sync to an account.
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
-              <h4 className="font-semibold text-emerald-400">
-                Q: Can I export data?
-              </h4>
-              <p className="text-slate-400">
-                Yes — on the Watchlist page, the Export button downloads a CSV
-                file of the current view (with your filters, search and sorting
-                applied). API access is a planned feature.
+                When signed in, select the correct active list to see its stocks.
+                Guest favorites are stored in your browser; clearing browser data
+                or using a private window resets them.
               </p>
             </div>
 

@@ -13,7 +13,7 @@ export function PlaceholderPage({ title }: { title: string }) {
         <h2 className="text-lg font-semibold text-slate-200">{title}</h2>
         <p className="max-w-sm text-sm text-slate-500">
           This screen is part of the StockPilot blueprint and will be built out
-          next. The Watchlist, Charts, and Scanner views are ready to explore.
+          next. The Dashboard, Charts, and Scanner views are ready to explore.
         </p>
       </div>
     </div>

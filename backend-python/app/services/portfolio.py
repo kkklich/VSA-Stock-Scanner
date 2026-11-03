@@ -9,13 +9,18 @@ class PortfolioError(Exception):
         self.code, self.status = code, status
 
 
+def trade_order(trade: dict):
+    """Imported fills retain execution order; manual date-only entries keep stable order."""
+    return trade["date"], trade.get("executedAt", trade["date"] + "T00:00:00")
+
+
 def holdings(transactions: list[dict], cost_method: str = "moving_average") -> list[dict]:
     positions = {}
     lots = {}
     # Preserve insertion order on a single date: the UI records trades in execution order.
     with localcontext() as context:
         context.prec = 50
-        for trade in sorted(transactions, key=lambda t: t["date"]):
+        for trade in sorted(transactions, key=trade_order):
             key = (trade["ticker"], trade["currency"])
             position = positions.setdefault(
                 key,

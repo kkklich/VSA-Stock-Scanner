@@ -1588,6 +1588,7 @@ async def get_volume_surge(
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
     sort_by: Annotated[str, Query(alias="sortBy", max_length=128)] = "volumeRatio",
     sort_dir: Annotated[str, Query(alias="sortDir", max_length=32)] = "desc",
+    tickers: Annotated[str | None, Query(max_length=4000)] = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -1607,6 +1608,9 @@ async def get_volume_surge(
     the window — so the surge can be read in VSA terms rather than from the
     price move alone. Server-side sorted (default: strongest surge first) and
     paginated; ``totalCount`` carries the matching-row total.
+
+    ``tickers`` narrows the cached scan to a comma-separated favorites list
+    before sorting and pagination. Omitted means all; empty matches nothing.
 
     ``sortBy``/``sortDir`` accept up to ``MAX_SORT_LEVELS`` comma-separated
     columns, each with its own direction, so "sector A→Z, biggest surge first"
@@ -1646,16 +1650,22 @@ async def get_volume_surge(
 
     # Cheap per-request pass over the cached full scan — same split as the
     # ranking: the expensive computation stays fully cached, only this
-    # in-memory sort + slice runs per request.
+    # in-memory filter + sort + slice runs per request.
+    items = full.items
+    if tickers is not None:
+        ticker_set = {t.strip().casefold() for t in tickers.split(",") if t.strip()}
+        items = [item for item in items if item.ticker.casefold() in ticker_set]
     pooled = len(markets) > 1
     price_unit = markets[0].currency if len(markets) == 1 else None
     ordered = _apply_sort(
-        full.items,
+        items,
         sort,
         lambda i, attr: _sort_value(i, attr, pooled=pooled, price_unit=price_unit),
     )
     start = (page - 1) * page_size
-    return full.model_copy(update={"items": ordered[start : start + page_size]})
+    return full.model_copy(
+        update={"total_count": len(ordered), "items": ordered[start : start + page_size]}
+    )
 
 
 async def _market_volume_surge(

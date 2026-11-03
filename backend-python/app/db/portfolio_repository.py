@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.db.models import DailyQuoteRow, PortfolioRow, UserRow
 from app.services.portfolio import PortfolioError, holdings
+from app.services.xtb_import import prepare_import
 
 
 def response(row):
@@ -23,6 +24,20 @@ def response(row):
 class PortfolioRepository:
     def __init__(self, session_factory):
         self._session_factory = session_factory
+
+    async def get(self, owner, portfolio_id):
+        async with self._session_factory() as session:
+            row = (
+                await session.execute(
+                    select(PortfolioRow).where(
+                        PortfolioRow.user_id == owner,
+                        PortfolioRow.id == portfolio_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                raise PortfolioError("not_found", 404)
+            return response(row)
 
     async def list(self, owner):
         async with self._session_factory() as session:
@@ -78,6 +93,8 @@ class PortfolioRepository:
         payload=None,
         version=None,
         transaction_id=None,
+        parsed=None,
+        allow_partial=False,
     ):
         async with self._session_factory() as session:
             async with session.begin():
@@ -143,6 +160,24 @@ class PortfolioRepository:
                     return response(row)
                 if row is None:
                     raise PortfolioError("not_found", 404)
+                if operation == "import":
+                    plan = prepare_import(parsed, row.transactions, row.cost_method)
+                    if plan["errors"] and not allow_partial:
+                        raise PortfolioError("import_rows_invalid", 422)
+                    if plan["ledgerError"]:
+                        raise PortfolioError(plan["ledgerError"])
+                    # An uncertain save can be retried with the original version safely.
+                    if plan["ready"] and row.version != version:
+                        raise PortfolioError("conflict")
+                    if plan["ready"]:
+                        row.transactions = plan["ledger"]
+                        row.version += 1
+                    return {
+                        "imported": plan["ready"],
+                        "duplicates": plan["duplicates"],
+                        "skipped": plan["errors"],
+                        "version": row.version,
+                    }
                 if operation == "add":
                     trade = payload.model_dump(mode="json", exclude={"version"})
                     existing = next((t for t in row.transactions if t["id"] == trade["id"]), None)

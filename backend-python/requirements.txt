@@ -11,6 +11,11 @@ pydantic-settings>=2.2,<3.0
 pandas>=2.2,<3.0
 numpy>=1.26,<3.0
 
+# Account history imports (XTB Excel reports); defusedxml protects XML parsing.
+openpyxl>=3.1.5,<4.0
+xlrd>=2.0.2,<3.0
+defusedxml>=0.7.1,<1.0
+
 # Database — SQLAlchemy async core + PostgreSQL drivers.
 # asyncpg is the async driver used at runtime; psycopg2-binary is the sync
 # driver used only by Alembic migrations (which run synchronously).
