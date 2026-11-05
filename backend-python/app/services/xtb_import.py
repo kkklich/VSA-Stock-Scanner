@@ -3,6 +3,7 @@
 import csv
 import io
 import re
+import struct
 import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -16,9 +17,11 @@ import xlrd
 from defusedxml.common import DefusedXmlException
 from openpyxl.utils.exceptions import InvalidFileException
 from pydantic import ValidationError
+from xlrd.compdoc import CompDocError
 
 from app.markets import normalize_ticker, quote_currency
 from app.models.portfolio import AddTransaction
+from app.services.bounded_xls import open_bounded_xls
 from app.services.portfolio import PortfolioError, holdings, trade_order
 
 MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -106,11 +109,7 @@ FILLED = {
     "zrealizowana",
     "wykonana",
 }
-COMMENT_TRADE = re.compile(
-    r"\b(OPEN|CLOSE)\s+(BUY|SELL)\s+([\d.,\xa0\u202f ]+)"
-    r"(?:\s*/\s*[\d.,]+)?\s*@\s*([\d.,\xa0\u202f ]+)(?![\w.,])",
-    re.IGNORECASE,
-)
+COMMENT_START = re.compile(r"\b(OPEN|CLOSE)\s+(BUY|SELL)\s+", re.IGNORECASE)
 
 
 class RowError(Exception):
@@ -122,6 +121,57 @@ class ParsedImport:
     rows: list[dict]
     ignored: int
     warnings: list[str]
+
+
+@dataclass(frozen=True)
+class CommentTrade:
+    action: str
+    side: str
+    quantity: str
+    price: str
+
+
+def _comment_trade(comment: str) -> CommentTrade | None:
+    """Scan each numeric span once; overlapping whitespace regexes can backtrack."""
+    size = len(comment)
+
+    def whitespace(position):
+        while position < size and comment[position].isspace():
+            position += 1
+        return position
+
+    def number(position, *, grouped=True):
+        start = position
+        separators = "., \xa0\u202f" if grouped else ".,"
+        while position < size and (
+            comment[position].isdecimal() or comment[position] in separators
+        ):
+            position += 1
+        return comment[start:position], position
+
+    for start in COMMENT_START.finditer(comment):
+        quantity, position = number(start.end())
+        if not quantity:
+            continue
+        position = whitespace(position)
+        if position < size and comment[position] == "/":
+            denominator, position = number(whitespace(position + 1), grouped=False)
+            if not denominator:
+                continue
+            position = whitespace(position)
+        if position >= size or comment[position] != "@":
+            continue
+        price, position = number(whitespace(position + 1))
+        if not price:
+            continue
+        if (
+            position < size
+            and (comment[position].isalnum() or comment[position] in "_.,")
+            and not price[-1].isspace()
+        ):
+            continue
+        return CommentTrade(start[1].upper(), start[2].upper(), quantity, price)
+    return None
 
 
 def decimal_value(value) -> Decimal:
@@ -220,12 +270,20 @@ def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
                 )
             return [("CSV", _checked_rows(csv.reader(io.StringIO(text), delimiter=delimiter)))]
         if extension == ".xls":
-            book = xlrd.open_workbook(file_contents=data, on_demand=True)
+            book = open_bounded_xls(
+                data,
+                max_rows=MAX_ROWS,
+                max_columns=MAX_COLUMNS,
+                max_cell=MAX_CELL,
+                max_sheets=12,
+                max_cells=MAX_ROWS * MAX_COLUMNS,
+            )
             try:
                 if book.nsheets > 12:
                     raise PortfolioError("import_invalid_file", 422)
                 tables = []
-                for sheet in book.sheets():
+                for sheet_index in range(book.nsheets):
+                    sheet = book.sheet_by_index(sheet_index)
                     if sheet.nrows > MAX_ROWS or sheet.ncols > MAX_COLUMNS:
                         raise PortfolioError("import_too_many_rows", 413)
                     rows = [
@@ -238,6 +296,8 @@ def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
                         for i in range(sheet.nrows)
                     ]
                     tables.append((sheet.name, _checked_rows(rows)))
+                    book.unload_sheet(sheet_index)
+                    del sheet
                 return tables
             finally:
                 book.release_resources()
@@ -274,13 +334,17 @@ def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
     except (
         ValueError,
         OSError,
-        KeyError,
+        LookupError,
         BadZipFile,
         csv.Error,
         xlrd.XLRDError,
         UnicodeError,
         SyntaxError,
         TypeError,
+        AssertionError,
+        OverflowError,
+        struct.error,
+        CompDocError,
         DefusedXmlException,
         InvalidFileException,
     ) as exc:
@@ -320,7 +384,7 @@ def _company(raw, companies):
 def _trade(get, companies, cash_history):
     side_text = normalized(get("side"))
     comment = str(get("comment") or "")
-    match = COMMENT_TRADE.search(comment)
+    match = _comment_trade(comment)
     if side_text in CASH:
         return None, []
     if normalized(get("assetType")) in {
@@ -347,11 +411,10 @@ def _trade(get, companies, cash_history):
         raise RowError("missing_execution")
     # A CLOSE BUY comment may accompany Stock sell: the operation type wins.
     if match and (
-        (side == "buy" and match[1].upper() != "OPEN")
-        or (side == "sell" and match[1].upper() != "CLOSE")
+        (side == "buy" and match.action != "OPEN") or (side == "sell" and match.action != "CLOSE")
     ):
         raise RowError("unsupported_operation")
-    if match and side == "buy" and match[2].upper() != "BUY":
+    if match and side == "buy" and match.side != "BUY":
         raise RowError("unsupported_operation")
     company = _company(get("ticker"), companies)
     quote_ccy = quote_currency(company)
@@ -371,9 +434,11 @@ def _trade(get, companies, cash_history):
     executed = timestamp(get("time"))
     if (get("quantity") in (None, "") or get("price") in (None, "")) and not match:
         raise RowError("missing_execution")
-    quantity = decimal_value(get("quantity") if get("quantity") not in (None, "") else match[3])
-    price = decimal_value(get("price") if get("price") not in (None, "") else match[4])
-    if match and (quantity != decimal_value(match[3]) or price != decimal_value(match[4])):
+    quantity = decimal_value(
+        get("quantity") if get("quantity") not in (None, "") else match.quantity
+    )
+    price = decimal_value(get("price") if get("price") not in (None, "") else match.price)
+    if match and (quantity != decimal_value(match.quantity) or price != decimal_value(match.price)):
         raise RowError("execution_mismatch")
     if explicit_ccy == "GBP" and quote_ccy == "GBp":
         price *= 100

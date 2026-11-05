@@ -136,6 +136,7 @@ from app.services.refresh_service import (
     RefreshService,
     build_rating_points,
 )
+from app.services.scan_work import ScanWorkBudget
 from app.services.scanner_service import compute_scanner_stats
 from app.services.stooq_client import StooqClient
 from app.services.trade_simulation_service import build_trade_simulation
@@ -151,6 +152,10 @@ from app.services.yahoo_finance_client import YahooFinanceClient
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
+
+# Shared across public ranking, overview, heatmap, volume and scanner requests.
+# A third cold page can run alongside two others; excess new scans fail fast.
+_scan_work = ScanWorkBudget()
 
 _SIGNALS_DEFAULT_DAYS = 365
 
@@ -662,6 +667,17 @@ def _parse_vsa_settings(raw: str | None) -> VsaConfig:
     return config_from_settings(payload)
 
 
+def _scan_vsa_config(config: VsaConfig) -> VsaConfig:
+    """Inactive Classic VSA thresholds cannot change a full-market scan."""
+    return config if is_method_active("vsa") else VsaConfig.default()
+
+
+def _scan_client(request: Request | None) -> str | None:
+    # Direct/internal calls retain the global work ceiling without impersonating
+    # an HTTP client. FastAPI supplies Request on every public endpoint call.
+    return (_client_ip(request) or "unknown") if request is not None else None
+
+
 # ``market=all`` on the screens that can combine markets.
 _ALL_MARKETS = "all"
 
@@ -1081,21 +1097,8 @@ async def get_method_backtest(
 
 # ── Endpoint 2: VSA ranking ───────────────────────────────────────────────────
 
-# One in-flight ranking computation per cache key, with the same generation
-# guard the heatmap/volume-surge use. Two bugs live here, and both are worth
-# spelling out because neither shows up as an error anywhere:
-#
-#   * Without the lock, N browser tabs (or one user reloading) arriving while
-#     the cache is cold each started their OWN full 290-ticker scan. The work is
-#     identical, so N-1 of them were pure waste — and each one holds database
-#     connections and Yahoo slots the others are waiting for, so the cold page
-#     got slower the more people wanted it.
-#
-#   * Without the generation guard, a scan that STARTED before the nightly
-#     refresh cleared the caches happily wrote its now-stale result back
-#     afterwards, with a fresh 24-hour TTL. The dashboard then served
-#     pre-refresh numbers for the whole next day, and nothing looked wrong.
-_ranking_locks = LockRegistry()
+# Shared admission deduplicates a cache key and bounds different keys together.
+# The generation guard below also prevents stale write-back after a refresh.
 
 
 @router.get(
@@ -1107,6 +1110,7 @@ _ranking_locks = LockRegistry()
 )
 async def get_ranking(
     response: Response,
+    request: Request = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=500, alias="pageSize")] = 25,
     sort_by: Annotated[str, Query(alias="sortBy", max_length=128)] = "currentRating",
@@ -1174,7 +1178,8 @@ async def get_ranking(
     for scope in markets:
         full_ranking.extend(
             await _market_ranking(
-                scope, config, companies, stooq, cache, history_cache, repo
+                scope, config, companies, stooq, cache, history_cache, repo,
+                request=request,
             )
         )
 
@@ -1283,18 +1288,16 @@ async def _market_ranking(
     cache: TTLCache,
     history_cache: TTLCache,
     repo: QuoteRepository | None,
+    request: Request = None,
 ) -> list[StockRankingItem]:
     """One market's full ranking, from the cache or computed once."""
+    config = _scan_vsa_config(config)
     cache_key = ranking_cache_key(scope.id, config)
     full_ranking: list[StockRankingItem] | None = cache.get(cache_key)
     if full_ranking is not None:
         return full_ranking
 
-    async with _ranking_locks.get(cache_key):
-        # A concurrent request may have finished computing while we waited.
-        full_ranking = cache.get(cache_key)
-        if full_ranking is not None:
-            return full_ranking
+    async def compute_and_cache() -> list[StockRankingItem]:
         generation = cache.generation
         logger.info("Ranking cache cold — computing the %s ranking.", scope.id)
         full_ranking = await compute_ranking(
@@ -1324,6 +1327,10 @@ async def _market_ranking(
         )
         return full_ranking
 
+    return await _scan_work.run(
+        cache, cache_key, compute_and_cache, client_key=_scan_client(request)
+    )
+
 
 @router.get(
     "/market-overview",
@@ -1332,6 +1339,7 @@ async def _market_ranking(
     summary="Market breadth and the biggest rating movers",
 )
 async def get_market_overview(
+    request: Request = None,
     limit: Annotated[int, Query(ge=1, le=25)] = DEFAULT_MOVERS,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     market: MarketParam = None,
@@ -1356,7 +1364,8 @@ async def get_market_overview(
     for scope in markets:
         rows.extend(
             await _market_ranking(
-                scope, config, companies, stooq, cache, history_cache, repo
+                scope, config, companies, stooq, cache, history_cache, repo,
+                request=request,
             )
         )
     # Today's price moves while an exchange trades; the ratings underneath (and
@@ -1458,10 +1467,8 @@ async def get_refresh_status(
 # ── Endpoint 3: scanner back-test statistics ─────────────────────────────────
 
 # Same in-flight/staleness discipline as the ranking above: the back-test is
-# another full-universe scan, so concurrent cold requests must share one
-# computation, and a result built from pre-refresh data must not be written
-# back with a fresh TTL. See the note above ``_ranking_locks``.
-_scanner_stats_locks = LockRegistry()
+# another full-universe scan, so it shares public scan admission and keeps
+# the generation guard against stale write-back after a refresh.
 
 
 @router.get(
@@ -1471,6 +1478,7 @@ _scanner_stats_locks = LockRegistry()
     summary="Back-test effectiveness stats for each VSA signal type",
 )
 async def get_scanner_stats(
+    request: Request = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -1489,12 +1497,7 @@ async def get_scanner_stats(
     if cached is not None:
         return cached
 
-    async with _scanner_stats_locks.get(cache_key):
-        # A concurrent request may have finished computing while we waited.
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
-
+    async def compute_and_cache() -> list[SignalEffectiveness]:
         generation = cache.generation
         logger.info("Scanner stats cache cold — computing.")
         raw = await compute_scanner_stats(
@@ -1530,15 +1533,14 @@ async def get_scanner_stats(
         logger.info("Scanner stats ready: %d signal types.", len(result))
         return result
 
+    return await _scan_work.run(
+        cache, cache_key, compute_and_cache, client_key=_scan_client(request)
+    )
+
 
 # ── Endpoint: sector heatmap ──────────────────────────────────────────────────
 
-# One in-flight computation per heatmap cache key: a cold heatmap is one of the
-# most expensive requests in the app (full-universe history fetch), so
-# concurrent misses wait for the first computation instead of each starting
-# their own. LockRegistry caps how many keys are remembered — the key embeds
-# the caller's settings hash, which is user-supplied and therefore unbounded.
-_heatmap_locks = LockRegistry()
+# Heatmap uses the same bounded registry as ranking and volume scans.
 
 
 @router.get(
@@ -1548,6 +1550,7 @@ _heatmap_locks = LockRegistry()
     summary="Sector heatmap tiles (market cap, VSA rating, price changes)",
 )
 async def get_heatmap(
+    request: Request = None,
     vsa_settings: Annotated[str | None, Query(alias="settings")] = None,
     market: MarketParam = None,
     companies: Annotated[GpwCompanyService, Depends(get_gpw_company_service)] = ...,
@@ -1568,19 +1571,13 @@ async def get_heatmap(
     # One market: tiles are sized by market cap, and caps in different
     # currencies cannot share one treemap.
     [scope] = _resolve_markets(market, allow_all=False)
-    config = _parse_vsa_settings(vsa_settings)
+    config = _scan_vsa_config(_parse_vsa_settings(vsa_settings))
     cache_key = f"heatmap:{scope.id}{config.cache_suffix()}"
     cached: HeatmapResponse | None = cache.get(cache_key)
     if cached is not None:
         return _with_live_tiles(cached, live)
 
-    lock = _heatmap_locks.get(cache_key)
-    async with lock:
-        # A concurrent request may have finished computing while we waited.
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return _with_live_tiles(cached, live)
-
+    async def compute_and_cache() -> HeatmapResponse:
         generation = cache.generation
         logger.info("Heatmap cache cold — computing.")
         result = await compute_heatmap(
@@ -1603,7 +1600,12 @@ async def get_heatmap(
         ):
             logger.info("Heatmap cache invalidated during computation — not cached.")
         logger.info("Heatmap ready: %d tiles.", len(result.items))
-        return _with_live_tiles(result, live)
+        return result
+
+    result = await _scan_work.run(
+        cache, cache_key, compute_and_cache, client_key=_scan_client(request)
+    )
+    return _with_live_tiles(result, live)
 
 
 def _with_live_tiles(
@@ -1625,7 +1627,6 @@ def _with_live_tiles(
 # key at a time, and a result computed while the nightly refresh cleared the
 # cache is served but not cached (nothing re-warms this cache after a refresh,
 # so a stale write would look fresh for hours).
-_volume_surge_locks = LockRegistry()
 
 # Sortable volume-surge columns: camelCase key (as the frontend sends it) →
 # the VolumeSurgeItem attribute name (same whitelist idea as the ranking).
@@ -1653,6 +1654,7 @@ _SURGE_SORT_KEYS: dict[str, str] = {
     summary="Stocks trading on unusually high volume (multi-day relative volume)",
 )
 async def get_volume_surge(
+    request: Request = None,
     recent_days: Annotated[int, Query(alias="recentDays", ge=1, le=10)] = (
         DEFAULT_RECENT_DAYS
     ),
@@ -1712,6 +1714,7 @@ async def get_volume_surge(
             cache,
             history_cache,
             repo,
+            request=request,
         )
         for scope in markets
     ]
@@ -1757,8 +1760,10 @@ async def _market_volume_surge(
     cache: TTLCache,
     history_cache: TTLCache,
     repo: QuoteRepository | None,
+    request: Request = None,
 ) -> VolumeSurgeResponse:
     """One market's full volume-surge scan, from the cache or computed once."""
+    config = _scan_vsa_config(config)
     cache_key = (
         f"volume-surge:{scope.id}:{recent_days}:{baseline_days}:{min_ratio}"
         f"{config.cache_suffix()}"
@@ -1767,11 +1772,7 @@ async def _market_volume_surge(
     if full is not None:
         return full
 
-    async with _volume_surge_locks.get(cache_key):
-        # A concurrent request may have finished computing while we waited.
-        full = cache.get(cache_key)
-        if full is not None:
-            return full
+    async def compute_and_cache() -> VolumeSurgeResponse:
         generation = cache.generation
         logger.info("Volume-surge cache cold — computing the %s scan.", scope.id)
         full = await compute_volume_surge(
@@ -1797,6 +1798,10 @@ async def _market_volume_surge(
             min_ratio,
         )
         return full
+
+    return await _scan_work.run(
+        cache, cache_key, compute_and_cache, client_key=_scan_client(request)
+    )
 
 
 # ── Endpoint: capital-expenditure screen ─────────────────────────────────────

@@ -23,6 +23,15 @@ os.environ["STOCKPILOT_MARKETS"] = "gpw"
 os.environ.setdefault("STOCKPILOT_ACTION_LOG_TO_FILE", "false")
 
 
+@pytest.fixture(autouse=True)
+def isolated_scan_work_budget(monkeypatch):
+    """Keep process-wide scan admission state independent between tests."""
+    from app.routers import stocks
+    from app.services.scan_work import ScanWorkBudget
+
+    monkeypatch.setattr(stocks, "_scan_work", ScanWorkBudget())
+
+
 @pytest.fixture
 def archived_methods_enabled(monkeypatch):
     """Explicit reactivation for preserved legacy algorithm/contract tests only.
