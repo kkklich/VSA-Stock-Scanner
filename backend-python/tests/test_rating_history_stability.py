@@ -16,6 +16,9 @@ from app.services.ranking_service import CONTEXT_HISTORY_DAYS
 from app.services.refresh_service import RefreshService, build_rating_points
 from tests.data_alr_2026 import ALR_BARS
 
+# Historical Classic VSA contracts opt in; the production policy stays inactive.
+pytestmark = pytest.mark.usefixtures("archived_methods_enabled")
+
 
 def _bars():
     return [

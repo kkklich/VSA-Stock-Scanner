@@ -8,6 +8,9 @@ readme = "README.md"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Dump every thread and stop if a test or its cleanup gets stuck.
+timeout = 120
+timeout_method = "thread"
 
 [tool.ruff]
 line-length = 100

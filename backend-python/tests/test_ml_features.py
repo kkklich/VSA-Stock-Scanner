@@ -47,8 +47,9 @@ class TestShape:
         doubled = series[:80] + series[79:80]
         assert len(stock_features(doubled)) == 80
 
-    def test_mature_rows_are_filled(self, frame):
-        last = frame.iloc[-1]
+    def test_mature_rows_are_filled(self, series, archived_methods_enabled):
+        # The retained research feature set includes archived weekly VSA reads.
+        last = stock_features(series).iloc[-1]
         missing = [c for c in STOCK_FEATURE_COLUMNS if np.isnan(last[c])]
         # 420 weekdays span ~20 months: everything, including the 52-week
         # context and the weekly read, is available by the last row.

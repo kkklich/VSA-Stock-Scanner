@@ -395,6 +395,7 @@ class TestRefreshPerMarket:
         assert ranking.get("ranking:gpw:full") is not None
         assert ranking.get("ranking:us:full") is not None
 
+    @pytest.mark.usefixtures("archived_methods_enabled")
     def test_snapshots_use_each_stocks_currency(self, all_markets: None) -> None:
         # 10 × 3,000 = 30,000 a day: liquid in dollars, too thin in złoty.
         class _Thin:

@@ -411,6 +411,7 @@ async def test_irrelevant_settings_reuse_backtest_result(backtests, monkeypatch,
     assert calls[0]["config"].is_default()
 
 
+@pytest.mark.usefixtures("archived_methods_enabled")
 async def test_real_settings_are_limited_but_cache_hits_and_other_clients_work(
     backtests,
     monkeypatch,
@@ -432,28 +433,34 @@ async def test_real_settings_are_limited_but_cache_hits_and_other_clients_work(
     assert len(calls) == 3
 
 
+@pytest.mark.usefixtures("archived_methods_enabled")
 async def test_distinct_jobs_fail_fast_and_disconnect_does_not_release_work(backtests, monkeypatch):
     entered, release = asyncio.Event(), asyncio.Event()
+    workers = []
 
     async def compute(**kwargs):
+        workers.append(asyncio.current_task())
         entered.set()
         await release.wait()
         return fake_stats(kwargs)
 
     monkeypatch.setattr(stocks, "compute_method_backtest", compute)
     first = asyncio.create_task(backtests("vsa", 1.200001))
-    await entered.wait()
-    first.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await first
     try:
+        # A rejected method must fail the handshake instead of hanging CI.
+        await asyncio.wait_for(entered.wait(), 5)
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(first, 5)
         with pytest.raises(HTTPException) as busy:
             await backtests("vsa", 1.200002)
         assert busy.value.status_code == 429
     finally:
         release.set()
-        for _ in range(5):
-            await asyncio.sleep(0)
+        first.cancel()
+        await asyncio.wait_for(asyncio.gather(first, return_exceptions=True), 5)
+        if workers:
+            await asyncio.wait_for(asyncio.gather(*workers), 5)
     await backtests("vsa", 1.200002)
 
 

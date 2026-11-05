@@ -2,4 +2,5 @@
 #   pip install -r requirements.txt -r requirements-dev.txt
 pytest>=8.0,<9.0
 pytest-asyncio>=0.23,<1.0
+pytest-timeout>=2.3,<3.0  # bound stalled test workers and async handshakes
 respx>=0.21,<1.0          # mocks httpx requests in tests

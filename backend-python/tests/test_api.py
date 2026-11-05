@@ -291,6 +291,7 @@ class TestGetRanking:
         assert body  # KGHM et al. are Basic Materials
         assert all(item["sector"] == "Basic Materials" for item in body)
 
+    @pytest.mark.usefixtures("archived_methods_enabled")
     def test_max_days_since_signal_filter(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()
@@ -666,6 +667,7 @@ class TestGetSignals:
     # The ranking has carried this since 2026-09-04; the stock-detail page now
     # shows it too, so the endpoint that feeds that page has to send it.
 
+    @pytest.mark.usefixtures("archived_methods_enabled")
     def test_weekly_read_present_with_enough_history(self) -> None:
         # ~43 ISO weeks of bars — comfortably past the ~30 weekly bars the
         # weekly engine needs before it will answer at all.
@@ -736,6 +738,7 @@ class TestGetSignals:
 
 
 class TestGetOpinionSummary:
+    @pytest.mark.usefixtures("archived_methods_enabled")
     def test_returns_consolidated_shape(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()
