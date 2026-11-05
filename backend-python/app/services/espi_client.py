@@ -470,11 +470,16 @@ class EspiClient:
         method: str, url: str, data: dict | None = None, binary: bool = False
     ) -> str | bytes | None:
         # Browser TLS also works on the Linux production image (no curl.exe).
-        from curl_cffi import requests
+        from curl_cffi import CurlOpt, requests
 
         try:
             resp = requests.request(
-                method, url, data=data, headers=_HEADERS, impersonate="chrome", timeout=15
+                method, url, data=data, headers=_HEADERS, impersonate="chrome", timeout=15,
+                verify=True,
+                curl_options={
+                    CurlOpt.PROTOCOLS_STR: "https",
+                    CurlOpt.REDIR_PROTOCOLS_STR: "https",
+                },
             )
             if resp.status_code == 200:
                 if binary:

@@ -142,11 +142,11 @@ def _method():
 
 
 class TestWeinsteinRegistration:
-    def test_registered_last_and_long_only(self) -> None:
+    def test_registered_after_vsa4_and_long_only(self) -> None:
         ids = method_ids()
         assert "weinstein" in ids
-        # Display order: after the VSA methods (vsa3 is 60, weinstein 70).
-        assert ids.index("weinstein") > ids.index("vsa3")
+        # Compare active methods; archived VSA V3 is absent from this catalogue.
+        assert ids.index("weinstein") > ids.index("vsa4")
         m = _method()
         assert m.direction == "Bullish"
         assert m.name and m.description and m.source and m.source_url

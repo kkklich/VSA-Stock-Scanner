@@ -467,6 +467,7 @@ async def test_distinct_jobs_fail_fast_and_disconnect_does_not_release_work(back
 async def test_provider_clients_use_real_certificate_validation(monkeypatch):
     original = httpx.AsyncClient
     contexts = []
+    browser_calls = []
 
     def factory(**kwargs):
         client = original(**kwargs)
@@ -476,28 +477,39 @@ async def test_provider_clients_use_real_certificate_validation(monkeypatch):
         return client
 
     monkeypatch.setattr("app.services.espi_client.httpx.AsyncClient", factory)
+
+    def browser_request(*args, **kwargs):
+        browser_calls.append(kwargs)
+        return SimpleNamespace(status_code=200, content=b"report " * 20)
+
+    monkeypatch.setattr("curl_cffi.requests.request", browser_request)
     client = EspiClient()
     assert await client._post_form("https://www.gpw.pl/ajaxindex.php", {})
     assert await client._get_url("https://www.gpw.pl/espi-ebi-report?geru_id=1")
-    assert len(contexts) == 2
+    assert len(contexts) == 1
     assert all(ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname for ctx in contexts)
+    assert len(browser_calls) == 1
+    assert browser_calls[0]["verify"] is True
 
 
-def test_curl_fallback_cannot_disable_tls_or_downgrade_redirects(monkeypatch):
-    commands = []
+def test_browser_fallback_validates_tls_and_forbids_downgrade_redirects(monkeypatch):
+    from curl_cffi import CurlOpt
 
-    def check_output(command, **kwargs):
-        commands.append(command)
-        return b"test response"
+    calls = []
 
-    monkeypatch.setattr("subprocess.check_output", check_output)
-    EspiClient._curl_post_sync("https://www.gpw.pl/ajaxindex.php", {})
-    EspiClient._curl_get_sync("https://www.gpw.pl/espi-ebi-report?geru_id=1")
-    for command in commands:
-        assert command[command.index("--proto") + 1] == "=https"
-        assert "-k" not in command and "--insecure" not in command
-    get = commands[1]
-    assert get[get.index("--proto-redir") + 1] == "=https"
+    def browser_request(method, url, **kwargs):
+        calls.append((method, kwargs))
+        return SimpleNamespace(status_code=200, content=b"test response")
+
+    monkeypatch.setattr("curl_cffi.requests.request", browser_request)
+    assert EspiClient._curl_post_sync("https://www.gpw.pl/ajaxindex.php", {}) == "test response"
+    report = EspiClient._curl_get_sync("https://www.gpw.pl/espi-ebi-report?geru_id=1")
+    assert report == "test response"
+    assert [method for method, _ in calls] == ["POST", "GET"]
+    for _, kwargs in calls:
+        assert kwargs["verify"] is True
+        assert kwargs["curl_options"][CurlOpt.PROTOCOLS_STR] == "https"
+        assert kwargs["curl_options"][CurlOpt.REDIR_PROTOCOLS_STR] == "https"
 
 
 async def test_noon_refresh_downloads_and_invalidates_only_insider_cache(monkeypatch):
