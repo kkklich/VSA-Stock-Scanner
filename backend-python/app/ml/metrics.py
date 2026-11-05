@@ -34,14 +34,6 @@ def brier(y: np.ndarray, p: np.ndarray) -> float:
     return float(np.mean((p - y) ** 2)) if len(y) else float("nan")
 
 
-def log_loss(y: np.ndarray, p: np.ndarray) -> float:
-    y, p = _clean(y, p)
-    if not len(y):
-        return float("nan")
-    p = np.clip(p, 1e-12, 1 - 1e-12)
-    return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
-
-
 def top_fraction_precision(y: np.ndarray, score: np.ndarray, fraction: float = 0.1) -> float:
     """Share of successes among the ``fraction`` highest-scored rows."""
     y, score = _clean(y, score)

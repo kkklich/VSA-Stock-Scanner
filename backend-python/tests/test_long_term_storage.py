@@ -147,7 +147,7 @@ async def test_snapshots_are_immutable_revisions_with_full_inputs(backend, sql_r
 async def test_financial_revisions_keep_raw_nulls_and_real_observation_time(backend, sql_repo):
     repo = InMemoryQuoteRepository() if backend == "memory" else sql_repo[0]
     before = datetime.now(UTC)
-    assert not await repo.has_financial_observations()
+    assert await repo.get_financial_history("test") == []
     first = FinancialMetrics(
         updated_at="2000-01-01T00:00:00+00:00", market_cap=100, financial_currency="USD",
         last_report_date="2025-12-31",
@@ -169,7 +169,6 @@ async def test_financial_revisions_keep_raw_nulls_and_real_observation_time(back
     assert inputs["test"]["metrics"].market_cap == 200
     assert inputs["test"]["observed_at"] >= before
     assert inputs["test"]["observed_at"].utcoffset() == timedelta(0)
-    assert await repo.has_financial_observations()
     history[0]["payload"]["marketCap"] = -1
     assert (await repo.get_financial_history("test", 1))[0]["payload"]["marketCap"] == 200
 
@@ -296,7 +295,6 @@ async def test_archive_coverage_requires_each_available_kind_for_each_ticker(bac
 
     # On-demand metrics for one company must not initialise the entire archive.
     await repo.upsert_fundamentals("complete", FinancialMetrics(market_cap=100))
-    assert await repo.has_financial_observations()
     wanted = ["complete", "OLD.US", "absent", "old.us"]
     assert await repo.get_missing_financial_observation_tickers(wanted) == {"old.us", "absent"}
     # Repeated metrics observations do not count as quarterly/cashflow coverage.

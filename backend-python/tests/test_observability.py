@@ -130,11 +130,11 @@ class TestErrorGrouping:
         assert tracker.record_message("nope") is None
         assert tracker.groups() == []
 
-    def test_count_since_ignores_older_groups(self) -> None:
+    def test_groups_since_ignores_older_groups(self) -> None:
         tracker = ErrorTracker()
         tracker.record_message("recent", template="recent")
-        assert tracker.count_since(datetime.now(tz=UTC) - timedelta(hours=1)) == 1
-        assert tracker.count_since(datetime.now(tz=UTC) + timedelta(hours=1)) == 0
+        assert len(tracker.groups(since=datetime.now(tz=UTC) - timedelta(hours=1))) == 1
+        assert tracker.groups(since=datetime.now(tz=UTC) + timedelta(hours=1)) == []
 
 
 # ── The logging bridge ────────────────────────────────────────────────────────

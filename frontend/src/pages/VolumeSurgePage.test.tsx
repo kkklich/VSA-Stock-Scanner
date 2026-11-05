@@ -71,6 +71,27 @@ function mockScan(items: ApiVolumeSurgeItem[]) {
 }
 
 describe('VolumeSurgePage surge context', () => {
+  it('restores URL choices ahead of saved volume preferences', () => {
+    mockScan([])
+    localStorage.setItem('stockpilot:volume-surge:recentDays', '1')
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify({ KGH: true }))
+    renderWithProviders(<VolumeSurgePage />, {
+      initialEntries: ['/volume-surge?recentDays=5&baselineDays=60&minRatio=3&favorites=1&sortBy=priceChangePct&sortDir=asc'],
+    })
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      recentDays: 5, baselineDays: 60, minRatio: 3, tickers: ['KGH'], page: 1,
+      sort: [{ key: 'priceChangePct', dir: 'asc' }],
+    })
+  })
+
+  it('uses safe volume defaults for invalid URL values', () => {
+    mockScan([])
+    renderWithProviders(<VolumeSurgePage />, {
+      initialEntries: ['/volume-surge?recentDays=-1&baselineDays=Infinity&minRatio=oops'],
+    })
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({ recentDays: 3, baselineDays: 20, minRatio: 1.5 })
+  })
+
   beforeEach(() => {
     localStorage.clear()
     useVolumeSurgeMock.mockClear()

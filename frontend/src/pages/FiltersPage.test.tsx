@@ -24,6 +24,35 @@ beforeEach(() => {
 })
 
 describe('insider filters', () => {
+  it.each(['insiderLatestTransaction', 'insiderTotalValue', 'insiderValueLast30Days'])(
+    'selects %s as the primary order and restores it from a link', async (key) => {
+      const user = userEvent.setup()
+      const view = renderWithProviders(<FiltersPage />)
+      await user.selectOptions(screen.getByRole('combobox', { name: /^Sort insider activity/ }), key)
+      expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
+        sort: [{ key, dir: 'desc' }], insiderDays: 90,
+      }), expect.anything())
+      view.unmount()
+      renderWithProviders(<FiltersPage />, {
+        initialEntries: [`/filters?sortBy=${key}&sortDir=asc&insiderDays=365`],
+      })
+      expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
+        sort: [{ key, dir: 'asc' }], insiderDays: 365,
+      }), expect.anything())
+    },
+  )
+
+  it('restores screener criteria and sorting from the URL on the first request', () => {
+    renderWithProviders(<FiltersPage />, {
+      initialEntries: ['/filters?q=KGH&minPrice=20&maxPrice=250&minVolume=1000&range52w=newHigh&insiderActivity=buy&insiderDays=180&minInsiderValue=250000&sortBy=lastPrice&sortDir=asc'],
+    })
+    expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      q: 'KGH', minPrice: 20, maxPrice: 250, minVolume: 1000, new52wHigh: true,
+      insiderActivity: 'buy', insiderDays: 180, minInsiderValue: 250000,
+      sort: [{ key: 'lastPrice', dir: 'asc' }],
+    }), expect.anything())
+  })
+
   it('sends activity, period and amount, persists a preset and clears all', async () => {
     const user = userEvent.setup()
     renderWithProviders(<FiltersPage />)
@@ -31,7 +60,10 @@ describe('insider filters', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: /^Insider reporting period/ }), '180')
     await user.type(screen.getByRole('spinbutton', { name: /^Min\. insider value/ }), '250000')
     await waitFor(() => expect(useRankingMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ insiderActivity: 'netSell', insiderDays: 180, minInsiderValue: 250000 }),
+      expect.objectContaining({
+        insiderActivity: 'netSell', insiderDays: 180, minInsiderValue: 250000,
+        sort: [{ key: 'insiderLatestTransaction', dir: 'desc' }],
+      }),
       expect.anything(),
     ))
     await user.click(screen.getByRole('button', { name: /Save preset/ }))
@@ -69,6 +101,7 @@ describe('insider filters', () => {
         ticker: 'kgh', name: 'KGHM', insiderActivity: {
           purchasesCount: 2, salesCount: 1, purchasesShares: 5000, salesShares: 500,
           purchasesValuePln: 250000, salesValuePln: null, netValuePln: null,
+          latestTransactionDate: '2026-11-04', totalValuePln: 250000, valueLast30DaysPln: 125000,
         },
       }],
       total: 1, loading: false, error: null, refetch: vi.fn(),
@@ -76,7 +109,9 @@ describe('insider filters', () => {
     const user = userEvent.setup()
     renderWithProviders(<FiltersPage />)
     await user.click(screen.getByRole('button', { name: 'Insider buys', exact: true }))
-    await waitFor(() => expect(screen.getAllByText(/250,000\.00 PLN/)).toHaveLength(2))
+    await waitFor(() => expect(screen.getAllByText(/250,000\.00 PLN/)).toHaveLength(4))
+    expect(screen.getAllByText('2026-11-04')).toHaveLength(2)
+    expect(screen.getAllByText(/125,000\.00 PLN/)).toHaveLength(2)
     expect(screen.getAllByText(/2 trades · 5,000 shares/)).toHaveLength(2)
     expect(screen.getAllByText(/Unknown value/).length).toBeGreaterThanOrEqual(2)
   })

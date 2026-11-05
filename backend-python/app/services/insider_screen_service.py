@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from datetime import date
 from typing import Literal
 
 from app.markets import to_pln_or_none
@@ -13,16 +14,24 @@ InsiderActivity = Literal["all", "any", "buy", "sell", "netBuy", "netSell"]
 
 def summarize_insider_activity(
     transactions: list[InsiderTransactionItem],
+    activity: InsiderActivity = "any",
 ) -> InsiderScreenSummary:
     counts = {"buy": 0, "sell": 0}
     shares = {"buy": 0, "sell": 0}
     values = {"buy": 0.0, "sell": 0.0}
     unknown: set[str] = set()
+    latest: date | None = None
+    selected_side = "buy" if activity in ("buy", "netBuy") else (
+        "sell" if activity in ("sell", "netSell") else None
+    )
     for tx in transactions:
         side = tx.transaction_type
         if not tx.is_open_market or side not in counts:
             continue
         counts[side] += 1
+        if selected_side is None or side == selected_side:
+            when = tx.trade_date or tx.publication_date
+            latest = max(latest, when) if latest else when
         shares[side] += tx.shares or 0
         amount = tx.value
         if amount is None and tx.shares is not None and tx.price is not None:
@@ -34,11 +43,20 @@ def summarize_insider_activity(
             values[side] += pln
     buy = None if "buy" in unknown else round(values["buy"], 2)
     sell = None if "sell" in unknown else round(values["sell"], 2)
+    net = round(buy - sell, 2) if buy is not None and sell is not None else None
+    if activity == "buy":
+        total = buy
+    elif activity == "sell":
+        total = sell
+    elif activity in ("netBuy", "netSell"):
+        total = None if net is None else net if activity == "netBuy" else -net
+    else:
+        total = round(buy + sell, 2) if buy is not None and sell is not None else None
     return InsiderScreenSummary(
         purchases_count=counts["buy"], sales_count=counts["sell"],
         purchases_shares=shares["buy"], sales_shares=shares["sell"],
         purchases_value_pln=buy, sales_value_pln=sell,
-        net_value_pln=round(buy - sell, 2) if buy is not None and sell is not None else None,
+        net_value_pln=net, latest_transaction_date=latest, total_value_pln=total,
     )
 
 
@@ -47,11 +65,42 @@ def screen_insider_activity(
     transactions: dict[str, list[InsiderTransactionItem]],
     activity: InsiderActivity,
     min_value: float | None,
+    transactions_last30: dict[str, list[InsiderTransactionItem]] | None = None,
+    *,
+    min_trades: int | None = None,
+    max_trade_age: int | None = None,
+    min_value_last30: float | None = None,
+    as_of: date | None = None,
 ) -> list[StockRankingItem]:
     """Apply the selected side/threshold before pagination, without mutating cached rows."""
     result = []
     for row in rows:
-        summary = summarize_insider_activity(transactions.get(row.ticker.casefold(), []))
+        ticker = row.ticker.casefold()
+        summary = summarize_insider_activity(transactions.get(ticker, []), activity)
+        value_last30 = (
+            summarize_insider_activity(
+                transactions_last30.get(ticker, []), activity,
+            ).total_value_pln
+            if transactions_last30 is not None else None
+        )
+        summary = summary.model_copy(update={"value_last30_days_pln": value_last30})
+        trade_count = (
+            summary.purchases_count if activity in ("buy", "netBuy") else
+            summary.sales_count if activity in ("sell", "netSell") else
+            summary.purchases_count + summary.sales_count
+        )
+        if min_trades is not None and trade_count < min_trades:
+            continue
+        if max_trade_age is not None:
+            if as_of is None:
+                raise ValueError("as_of is required when filtering insider transaction age")
+            latest = summary.latest_transaction_date
+            if latest is None or not 0 <= (as_of - latest).days <= max_trade_age:
+                continue
+        if min_value_last30 is not None and (
+            value_last30 is None or value_last30 < min_value_last30
+        ):
+            continue
         buy, sell = summary.purchases_value_pln, summary.sales_value_pln
         if activity == "buy":
             matches = summary.purchases_count > 0
@@ -64,7 +113,9 @@ def screen_insider_activity(
             value = None if net is None else net if activity == "netBuy" else -net
             matches = value is not None and value > 0
         else:
-            matches = summary.purchases_count + summary.sales_count > 0
+            matches = (activity == "all" and min_value is None) or (
+                summary.purchases_count + summary.sales_count > 0
+            )
             value = buy + sell if buy is not None and sell is not None else None
         if matches and (min_value is None or (value is not None and value >= min_value)):
             result.append(row.model_copy(update={"insider_activity": summary}))

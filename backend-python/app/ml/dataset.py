@@ -87,26 +87,6 @@ class StockInput:
     bars: Sequence[StooqDailyQuote]
 
 
-def label_columns(horizons: Sequence[int] = HORIZONS) -> list[str]:
-    """Every label column a panel carries, for the horizons it was built with."""
-    cols: list[str] = []
-    for n in horizons:
-        cols += [
-            f"fwd_r_{n}",
-            f"fwd_end_{n}",
-            f"l1_excess_{n}",
-            f"l1_y_{n}",
-            f"l2_pct_{n}",
-            f"l2_base_{n}",
-            f"l2_excess_{n}",
-            f"l2_y_{n}",
-            f"l3_r_{n}",
-            f"l3_exit_{n}",
-            f"l3_y_{n}",
-        ]
-    return cols
-
-
 # ── Per stock ─────────────────────────────────────────────────────────────────
 
 

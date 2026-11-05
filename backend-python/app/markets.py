@@ -437,11 +437,6 @@ def enabled_markets() -> tuple[Market, ...]:
     return tuple(m for m in MARKETS if m.id in ids)
 
 
-def is_enabled(market_id: str) -> bool:
-    """True when the market with this id is switched on."""
-    return any(m.id == market_id for m in enabled_markets())
-
-
 def major_currency(currency: str) -> str:
     """The currency whole amounts are stated in — "GBP" for a pence quote."""
     return "GBP" if currency == "GBp" else currency

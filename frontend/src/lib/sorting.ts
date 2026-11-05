@@ -112,15 +112,6 @@ export function removeLevel<K extends string>(
   return next.length ? next : levels
 }
 
-/** Append a column as the next level (the phone menu's "then by" list). */
-export function addLevel<K extends string>(
-  levels: SortLevel<K>[],
-  key: K,
-  initialDir: InitialDir<K>,
-): SortLevel<K>[] {
-  return applySortClick(levels, key, { additive: true, initialDir })
-}
-
 /**
  * The levels as the two query parameters the API takes
  * (`sortBy=sector,currentRating&sortDir=asc,desc`). One level serialises to a
@@ -143,19 +134,4 @@ export function serializeSort<K extends string>(
  */
 export function sortKey<K extends string>(levels: SortLevel<K>[]): string {
   return levels.map((l) => `${l.key}:${l.dir}`).join(',')
-}
-
-/** Drop levels whose column no longer exists (e.g. a renamed sort key). */
-export function normalizeSort<K extends string>(
-  levels: SortLevel<K>[],
-  isValid: (key: K) => boolean,
-  fallback: SortLevel<K>,
-): SortLevel<K>[] {
-  const seen = new Set<K>()
-  const kept = levels.filter((l) => {
-    if (!isValid(l.key) || seen.has(l.key)) return false
-    seen.add(l.key)
-    return true
-  })
-  return kept.length ? kept.slice(0, MAX_SORT_LEVELS) : [fallback]
 }

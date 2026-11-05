@@ -104,6 +104,8 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("company_fundamentals", "last_report_date", "DATE"),
     ("company_fundamentals", "next_report_date", "DATE"),
     ("company_fundamentals", "fundamental_details", "JSON"),
+    # Alembic 014 — user-selected observation dates, backfilled below.
+    ("journal_entries", "observation_date", "DATE"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is
@@ -213,6 +215,14 @@ async def lifespan(_app: FastAPI):
                                 f"ADD COLUMN IF NOT EXISTS {column} {coltype}"
                             )
                         )
+                    await conn.execute(text(
+                        "UPDATE journal_entries "
+                        "SET observation_date = (created_at AT TIME ZONE 'UTC')::date "
+                        "WHERE observation_date IS NULL"
+                    ))
+                    await conn.execute(text(
+                        "ALTER TABLE journal_entries ALTER COLUMN observation_date SET NOT NULL"
+                    ))
                 logger.info("Database schema verified (missing tables created).")
 
                 repo = PostgresQuoteRepository(session_factory)

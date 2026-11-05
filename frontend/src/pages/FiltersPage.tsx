@@ -24,6 +24,8 @@ import {
   useRankingColumns,
 } from '../hooks/useRankingColumns'
 import { useTableSort } from '../hooks/useTableSort'
+import { useUrlState, textParam, booleanParam, numberParam, enumParam } from '../hooks/useUrlState'
+import { RANKING_SORT_KEYS, sortParam } from '../lib/urlSort'
 import { initialSortDir, tableMinWidth, toRenderColumns, type RankingColumn } from '../lib/rankingColumns'
 import type { InsiderActivity, RankingSortKey } from '../api/stocksApi'
 import type { SignalVerdict } from '../types'
@@ -44,6 +46,20 @@ import {
 const PAGE_SIZE = 25
 
 const INSIDER_ACTIVITIES: InsiderActivity[] = ['all', 'any', 'buy', 'sell', 'netBuy', 'netSell']
+const INSIDER_SORT_KEYS = ['insiderLatestTransaction', 'insiderTotalValue', 'insiderValueLast30Days'] as const
+const isInsiderSort = (key: RankingSortKey) => INSIDER_SORT_KEYS.some((value) => value === key)
+const INSIDER_SORT_COLUMNS: RankingColumn[] = INSIDER_SORT_KEYS.map((key) => ({
+  id: key, sortKey: key, labelKey: `insiderFilters.${key}`,
+  infoKey: 'insiderFilters.sortInfo', align: 'right', sortAscFirst: false,
+  defaultVisible: true, width: 170,
+  cell: (row, { t }) => {
+    const summary = row.insiderActivity
+    if (!summary) return '—'
+    if (key === 'insiderLatestTransaction') return summary.latestTransactionDate ?? '—'
+    const value = key === 'insiderTotalValue' ? summary.totalValuePln : summary.valueLast30DaysPln
+    return value == null ? t('insiderFilters.unknown') : fmtMoney(value, 'PLN')
+  },
+}))
 const INSIDER_COLUMN: RankingColumn = {
   id: 'insiderActivity',
   labelKey: 'insiderFilters.amounts',
@@ -104,6 +120,30 @@ const RANGE_52W_OPTIONS: { value: Range52w; label: string }[] = [
 const inputClass =
   'w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none'
 
+const EXTRA_FILTER_GROUPS = [
+  { title: 'market', fields: [
+    { key: 'minPriceChangePct', min: -100, step: 0.01, info: 'priceChangeInfo' },
+    { key: 'maxPriceChangePct', min: -100, step: 0.01, info: 'priceChangeInfo' },
+    { key: 'maxVolume', min: 0, step: 1, info: 'volumeInfo' },
+    { key: 'minCombinedScore', min: 0, max: 100, step: 1, info: 'scoreInfo' },
+    { key: 'maxCombinedScore', min: 0, max: 100, step: 1, info: 'scoreInfo' },
+  ] },
+  { title: 'insiders', fields: [
+    { key: 'minInsiderTrades', min: 1, step: 1, info: 'tradesInfo' },
+    { key: 'maxInsiderTradeAge', min: 0, max: 365, step: 1, info: 'ageInfo' },
+    { key: 'minInsiderValueLast30Days', min: 0, step: 0.01, info: 'value30Info' },
+  ] },
+] satisfies { title: string; fields: {
+  key: keyof Pick<ScreenFilters, 'minPriceChangePct' | 'maxPriceChangePct' | 'maxVolume'
+    | 'minCombinedScore' | 'maxCombinedScore' | 'minInsiderTrades'
+    | 'maxInsiderTradeAge' | 'minInsiderValueLast30Days'>
+  min: number; max?: number; step: number; info: string
+}[] }[]
+
+const hasInsiderFilter = (filters: ScreenFilters) => filters.insiderActivity !== 'all'
+  || filters.minInsiderValue !== null || filters.minInsiderTrades !== null
+  || filters.maxInsiderTradeAge !== null || filters.minInsiderValueLast30Days !== null
+
 /** Labelled wrapper so every control lines up in the filter grid. */
 function Field({
   label,
@@ -133,18 +173,47 @@ function numOrNull(raw: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null
 }
 
+const URL_FIELDS = {
+  q: textParam(), sector: textParam('all'),
+  minRating: numberParam(0, { max: 100, integer: true }), maxRating: numberParam(100, { max: 100, integer: true }),
+  signal: enumParam<SignalVerdict | 'all'>('all', SIGNAL_OPTIONS),
+  maxDaysSinceSignal: numberParam(null, { integer: true }),
+  minPrice: numberParam(null), maxPrice: numberParam(null), minVolume: numberParam(null, { integer: true }),
+  maxVolume: numberParam(null, { integer: true }),
+  minPriceChangePct: numberParam(null, { min: -100 }),
+  maxPriceChangePct: numberParam(null, { min: -100 }),
+  minCombinedScore: numberParam(null, { max: 100, integer: true }),
+  maxCombinedScore: numberParam(null, { max: 100, integer: true }),
+  range52w: enumParam<Range52w>('any', ['any', 'newHigh', 'nearHigh', 'newLow', 'nearLow']),
+  weeklyConfirms: booleanParam(),
+  insiderActivity: enumParam<InsiderActivity>('all', INSIDER_ACTIVITIES),
+  insiderDays: numberParam(90, { min: 1, max: 365, integer: true }),
+  minInsiderValue: numberParam(null),
+  minInsiderTrades: numberParam(null, { min: 1, integer: true }),
+  maxInsiderTradeAge: numberParam(null, { max: 365, integer: true }),
+  minInsiderValueLast30Days: numberParam(null),
+  sort: sortParam<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, [...RANKING_SORT_KEYS, ...INSIDER_SORT_KEYS]),
+}
+
 export function FiltersPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
-  const [filters, setFilters] = useState<ScreenFilters>(EMPTY_FILTERS)
+  const url = useUrlState(URL_FIELDS)
+  const filters = useMemo(() => Object.fromEntries(
+    Object.keys(EMPTY_FILTERS).map((key) => [key, url.state[key as keyof ScreenFilters]]),
+  ) as unknown as ScreenFilters, [url.state])
+  const setFilters = (action: React.SetStateAction<ScreenFilters>) => url.setState((previous) => ({
+    ...previous, ...(typeof action === 'function' ? action(previous) : action),
+  }))
   // Debounced copy — typing in the text/number inputs shouldn't fire a
   // request per keystroke.
-  const [applied, setApplied] = useState<ScreenFilters>(EMPTY_FILTERS)
+  const [applied, setApplied] = useState<ScreenFilters>(filters)
   // The sort is a list of levels — a shift-click on a second header adds a
   // tie-break ("sector A→Z, best rating first") — and starts as one column.
   const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
-    useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir)
+    useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir, undefined, url.field('sort'))
+  const sortingInsiders = sort.some((level) => isInsiderSort(level.key))
   const [page, setPage] = useState(1)
 
   // Saved presets (localStorage) + the "save as…" inline form.
@@ -211,15 +280,23 @@ export function FiltersPage() {
       minPrice: applied.minPrice ?? undefined,
       maxPrice: applied.maxPrice ?? undefined,
       minVolume: applied.minVolume ?? undefined,
+      maxVolume: applied.maxVolume ?? undefined,
+      minPriceChangePct: applied.minPriceChangePct ?? undefined,
+      maxPriceChangePct: applied.maxPriceChangePct ?? undefined,
+      minCombinedScore: applied.minCombinedScore ?? undefined,
+      maxCombinedScore: applied.maxCombinedScore ?? undefined,
       ...range52wParams(applied.range52w),
       weeklyConfirms: CLASSIC_VSA_ENABLED ? applied.weeklyConfirms || undefined : undefined,
       insiderActivity: applied.insiderActivity !== 'all' ? applied.insiderActivity : undefined,
-      insiderDays: applied.insiderActivity !== 'all' || applied.minInsiderValue !== null
+      insiderDays: sortingInsiders || hasInsiderFilter(applied)
         ? applied.insiderDays : undefined,
       minInsiderValue: applied.minInsiderValue ?? undefined,
+      minInsiderTrades: applied.minInsiderTrades ?? undefined,
+      maxInsiderTradeAge: applied.maxInsiderTradeAge ?? undefined,
+      minInsiderValueLast30Days: applied.minInsiderValueLast30Days ?? undefined,
       market: marketParam,
     }),
-    [page, sort, applied, marketParam],
+    [page, sort, applied, marketParam, sortingInsiders],
   )
 
   const { data, total, loading, error, refetch } = useRanking(rankingParams, {
@@ -234,18 +311,25 @@ export function FiltersPage() {
   // Which columns to show — shared with the Dashboard and Watchlist, and used
   // by both the wide table and the card list below `lg`.
   const columns = useRankingColumns()
-  const showInsiders = applied.insiderActivity !== 'all' || applied.minInsiderValue !== null
+  const showInsiders = sortingInsiders || hasInsiderFilter(applied)
   const renderColumns = useMemo(
-    () => showInsiders ? [...columns.renderColumns, ...toRenderColumns([INSIDER_COLUMN], t)] : columns.renderColumns,
+    () => showInsiders ? [...columns.renderColumns, ...toRenderColumns([...INSIDER_SORT_COLUMNS, INSIDER_COLUMN], t)] : columns.renderColumns,
     [columns.renderColumns, showInsiders, t],
   )
   const sortOptions = useMemo(
-    () => sortOptionsFrom(columns.renderColumns, sort, t),
+    () => [
+      ...sortOptionsFrom(columns.renderColumns, sort, t),
+      ...INSIDER_SORT_KEYS.map((key) => ({ key, label: t(`insiderFilters.${key}`) })),
+    ],
     [columns.renderColumns, sort, t],
   )
 
   const applyPreset = (preset: FilterPreset) => {
-    setFilters({ ...preset.filters })
+    url.setState((previous) => ({
+      ...previous, ...preset.filters,
+      sort: preset.filters.insiderActivity !== 'all'
+        ? [{ key: 'insiderLatestTransaction', dir: 'desc' }] : previous.sort,
+    }))
     setActivePresetId(preset.id)
   }
 
@@ -265,7 +349,11 @@ export function FiltersPage() {
   }
 
   const clearFilters = () => {
-    setFilters(EMPTY_FILTERS)
+    url.setState((previous) => ({
+      ...previous, ...EMPTY_FILTERS,
+      sort: previous.sort.some((level) => isInsiderSort(level.key))
+        ? [{ key: 'currentRating', dir: 'desc' }] : previous.sort,
+    }))
     setActivePresetId(null)
   }
 
@@ -561,11 +649,35 @@ export function FiltersPage() {
           <Field label={t('insiderFilters.activity')} info={t('insiderFilters.info')}>
             <select
               value={filters.insiderActivity}
-              onChange={(e) => set('insiderActivity', e.target.value as InsiderActivity)}
+              onChange={(e) => {
+                const activity = e.target.value as InsiderActivity
+                url.setState((previous) => ({
+                  ...previous, insiderActivity: activity,
+                  sort: activity !== 'all'
+                    ? [{ key: 'insiderLatestTransaction', dir: 'desc' }] : previous.sort,
+                }))
+                setActivePresetId(null)
+              }}
               className={inputClass}
             >
               {INSIDER_ACTIVITIES.map((activity) => (
                 <option key={activity} value={activity}>{t(`insiderFilters.options.${activity}`)}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t('insiderFilters.sort')} info={t('insiderFilters.sortInfo')}>
+            <select
+              value={isInsiderSort(sort[0].key) ? sort[0].key : ''}
+              onChange={(e) => url.setState((previous) => ({
+                ...previous,
+                sort: [{ key: (e.target.value || 'currentRating') as RankingSortKey, dir: 'desc' }],
+              }))}
+              className={inputClass}
+            >
+              <option value="">{t('insiderFilters.defaultSort')}</option>
+              {INSIDER_SORT_KEYS.map((key) => (
+                <option key={key} value={key}>{t(`insiderFilters.${key}`)}</option>
               ))}
             </select>
           </Field>
@@ -606,6 +718,39 @@ export function FiltersPage() {
           </div>
         </div>
         <p className="mt-4 text-xs leading-relaxed text-slate-500">{t('insiderFilters.coverage')}</p>
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">{t('insiderFilters.sortInfo')}</p>
+      </Card>
+
+      <Card className="space-y-5 px-4 py-4">
+        {EXTRA_FILTER_GROUPS.map((group) => (
+          <fieldset key={group.title}>
+            <legend className="mb-3 text-sm font-semibold text-slate-200">
+              {t(`screenerFilters.${group.title}`)}
+            </legend>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {group.fields.map((field) => (
+                <Field key={field.key} label={t(`screenerFilters.${field.key}`)} info={t(`screenerFilters.${field.info}`)}>
+                  <input
+                    type="number"
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    value={filters[field.key] ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      const value = raw.trim() === '' ? NaN : Number(raw)
+                      set(field.key, Number.isFinite(value) && value >= field.min
+                        && (field.max === undefined || value <= field.max)
+                        && (field.step !== 1 || Number.isInteger(value)) ? value : null)
+                    }}
+                    placeholder={t('screenerFilters.any')}
+                    className={inputClass}
+                  />
+                </Field>
+              ))}
+            </div>
+          </fieldset>
+        ))}
       </Card>
 
       {/* Results */}

@@ -157,3 +157,86 @@ def test_unavailable_storage_is_an_error_not_empty_results(client):
 def test_invalid_query_is_rejected(client, query):
     http, _ = client
     assert http.get(f"/api/stocks/ranking?{query}").status_code == 422
+
+
+@pytest.mark.parametrize(("activity", "days_ago", "value"), [
+    ("buy", 10, 1000), ("sell", 2, 300),
+    ("netBuy", 10, 700), ("netSell", 2, -700), ("any", 2, 1300),
+])
+def test_summary_dates_and_totals_follow_selected_side(activity, days_ago, value):
+    today = date.today()
+    summary = summarize_insider_activity([
+        trade(trade_date=today - timedelta(days=10), value=1000),
+        trade("sell", publication_date=today - timedelta(days=2), value=300),
+        trade("grant", trade_date=today, value=9000),
+        trade(trade_date=today, value=9000, is_open_market=False),
+    ], activity)
+    assert summary.latest_transaction_date == today - timedelta(days=days_ago)
+    assert summary.total_value_pln == value
+
+
+@pytest.mark.parametrize(("sort_by", "direction", "expected"), [
+    ("insiderTotalValue", "desc", ["aaa", "bbb", "ccc"]),
+    ("insiderTotalValue", "asc", ["bbb", "aaa", "ccc"]),
+    ("insiderValueLast30Days", "desc", ["bbb", "aaa", "ccc"]),
+    ("insiderValueLast30Days", "asc", ["aaa", "bbb", "ccc"]),
+    ("insiderLatestTransaction", "desc", ["bbb", "ccc", "aaa"]),
+    ("insiderLatestTransaction", "asc", ["aaa", "ccc", "bbb"]),
+])
+async def test_insider_sorting_precedes_pagination_and_keeps_unknown_amounts_last(
+    client, sort_by, direction, expected,
+):
+    http, repo = client
+    today = date.today()
+    await repo.upsert_insider_transactions("aaa", [
+        trade(publication_date=today - timedelta(days=29), value=100),
+        trade(publication_date=today - timedelta(days=30), value=1000),
+    ])
+    await repo.upsert_insider_transactions("bbb", [trade(value=200)])
+    await repo.upsert_insider_transactions("ccc", [
+        trade(trade_date=today - timedelta(days=1), price=None),
+    ])
+    for page, ticker in enumerate(expected, 1):
+        response = http.get("/api/stocks/ranking", params={
+            "insiderActivity": "buy", "sortBy": sort_by, "sortDir": direction,
+            "pageSize": 1, "page": page,
+        })
+        assert response.status_code == 200
+        assert response.headers["X-Total-Count"] == "3"
+        assert response.json()[0]["ticker"] == ticker
+        if ticker == "aaa":
+            summary = response.json()[0]["insiderActivity"]
+            assert summary["totalValuePln"] == 1100
+            assert summary["valueLast30DaysPln"] == 100
+
+
+@pytest.mark.parametrize("direction", ["asc", "desc"])
+async def test_sort_without_filter_keeps_stocks_without_filings_and_missing_dates_last(
+    client, direction,
+):
+    http, repo = client
+    await repo.upsert_insider_transactions("bbb", [trade()])
+    await repo.upsert_insider_transactions("ccc", [trade()])
+    response = http.get("/api/stocks/ranking", params={
+        "sortBy": "insiderLatestTransaction,ticker", "sortDir": f"{direction},desc",
+    })
+    assert response.status_code == 200
+    assert response.headers["X-Total-Count"] == "3"
+    assert [r["ticker"] for r in response.json()] == ["ccc", "bbb", "aaa"]
+    assert response.json()[-1]["insiderActivity"]["latestTransactionDate"] is None
+
+
+async def test_last30_total_is_independent_of_shorter_selected_period(client):
+    http, repo = client
+    await repo.upsert_insider_transactions("bbb", [
+        trade(value=200),
+        trade(publication_date=date.today() - timedelta(days=29), value=500),
+        trade(publication_date=date.today() - timedelta(days=30), value=1000),
+    ])
+    response = http.get("/api/stocks/ranking", params={
+        "insiderActivity": "buy", "insiderDays": 1, "sortBy": "insiderValueLast30Days",
+    })
+    assert response.status_code == 200
+    [item] = response.json()
+    assert item["insiderActivity"]["totalValuePln"] == 200
+    assert item["insiderActivity"]["valueLast30DaysPln"] == 700

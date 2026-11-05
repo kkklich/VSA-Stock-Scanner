@@ -258,6 +258,9 @@ class InsiderScreenSummary(_CamelModel):
     purchases_value_pln: float | None = 0
     sales_value_pln: float | None = 0
     net_value_pln: float | None = 0
+    latest_transaction_date: date | None = None
+    total_value_pln: float | None = 0
+    value_last30_days_pln: float | None = None
 
 
 class StockRankingItem(_CamelModel):

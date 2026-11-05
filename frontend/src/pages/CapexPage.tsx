@@ -27,6 +27,8 @@ import { useCapex } from '../hooks/useCapex'
 import { useCompanies } from '../hooks/useCompanies'
 import { SortMenu, type SortOption } from '../components/SortMenu'
 import { useTableSort } from '../hooks/useTableSort'
+import { useUrlState, textParam, booleanParam, enumParam } from '../hooks/useUrlState'
+import { sortParam } from '../lib/urlSort'
 import type { ApiCapexItem, CapexSortKey, SortDir } from '../api/stocksApi'
 import { deltaTone, fmtCompactPln, fmtPct, majorCurrency } from '../lib/format'
 
@@ -72,11 +74,22 @@ function Blank() {
   return <span className="text-slate-600">—</span>
 }
 
+const URL_FIELDS = {
+  q: textParam(), sector: textParam('all'),
+  currency: enumParam<'market' | 'all'>('market', ['market', 'all']),
+  withData: booleanParam(true),
+  sort: sortParam<CapexSortKey>({ key: 'capex', dir: 'desc' }, [
+    'ticker', 'name', 'sector', 'capex', 'capexTtm', 'capexAnnual',
+    'capexGrowthYoyPct', 'capexToRevenuePct', 'capexToOcfPct', 'operatingCashFlow',
+  ]),
+}
+
 export function CapexPage() {
   const navigate = useNavigate()
-  const [q, setQ] = useState('')
-  const [search, setSearch] = useState('')
-  const [sector, setSector] = useState('all')
+  const url = useUrlState(URL_FIELDS)
+  const [q, setQ] = url.field('q')
+  const [search, setSearch] = useState(q)
+  const [sector, setSector] = url.field('sector')
   // One market at a time — amounts in different currencies don't compare.
   const { market, markets, needsPicker, pick } = useSingleMarket()
   const marketCurrency = majorCurrency(
@@ -86,8 +99,8 @@ export function CapexPage() {
   // its own currency (a forint figure would top a zloty list on unit size
   // alone). 'market' leaves the currency to the backend, which applies the
   // market's own; 'all' lifts the filter.
-  const [currency, setCurrency] = useState<'market' | 'all'>('market')
-  const [withData, setWithData] = useState(true)
+  const [currency, setCurrency] = url.field('currency')
+  const [withData, setWithData] = url.field('withData')
   const [page, setPage] = useState(1)
   // Changing the ordering starts a fresh list: the pages accumulate, so page 2
   // of the old order can't be appended under the new one.
@@ -96,6 +109,7 @@ export function CapexPage() {
     { key: 'capex', dir: 'desc' },
     initialSortDir,
     backToFirstPage,
+    url.field('sort'),
   )
 
   // Debounce the search box so typing doesn't fire a request per keystroke.
@@ -128,7 +142,7 @@ export function CapexPage() {
   // A different market is a different list — start again from its first page.
   useEffect(() => {
     setPage(1)
-  }, [market])
+  }, [market, sector, currency, withData, sort])
 
   const totalCount = meta?.totalCount ?? 0
 

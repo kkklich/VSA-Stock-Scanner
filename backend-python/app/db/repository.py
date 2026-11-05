@@ -185,10 +185,6 @@ class QuoteRepository(Protocol):
         """True if a ranking has been recorded, optionally within one market."""
         ...
 
-    async def has_financial_observations(self) -> bool:
-        """True if real financial data has been observed since history was enabled."""
-        ...
-
     async def get_missing_financial_observation_tickers(self, tickers: list[str]) -> set[str]:
         """Missing archives of metrics or of optional statement kinds already stored."""
         ...
@@ -1019,9 +1015,6 @@ class InMemoryQuoteRepository:
         return any(
             market is None or row["market"] == market for row in self._long_term_snapshots
         )
-
-    async def has_financial_observations(self) -> bool:
-        return bool(self._financial_observations)
 
     async def get_missing_financial_observation_tickers(self, tickers: list[str]) -> set[str]:
         wanted = {ticker.lower() for ticker in tickers}

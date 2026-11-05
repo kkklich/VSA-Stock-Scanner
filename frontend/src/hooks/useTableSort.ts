@@ -6,7 +6,7 @@
 // They now share this, so "sort by one column, then by another" behaves the
 // same everywhere and the rules live in one place (`lib/sorting.ts`).
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type SetStateAction } from 'react'
 import {
   applySortClick,
   removeLevel,
@@ -37,15 +37,17 @@ export function useTableSort<K extends string>(
   initialDir: InitialDir<K>,
   /** Called after any change; the paginated pages use it to go back to page 1. */
   onChange?: () => void,
+  controlled?: readonly [SortLevel<K>[], (action: SetStateAction<SortLevel<K>[]>) => void],
 ): TableSort<K> {
-  const [sort, setSort] = useState<SortLevel<K>[]>([initial])
+  const local = useState<SortLevel<K>[]>([initial])
+  const [sort, setSort] = controlled ?? local
 
   const onSort = useCallback(
     (col: K, additive = false) => {
       setSort((levels) => applySortClick(levels, col, { additive, initialDir }))
       onChange?.()
     },
-    [initialDir, onChange],
+    [initialDir, onChange, setSort],
   )
 
   const onSortDirChange = useCallback(
@@ -53,7 +55,7 @@ export function useTableSort<K extends string>(
       setSort((levels) => setLevelDir(levels, col, dir))
       onChange?.()
     },
-    [onChange],
+    [onChange, setSort],
   )
 
   const onRemoveLevel = useCallback(
@@ -61,7 +63,7 @@ export function useTableSort<K extends string>(
       setSort((levels) => removeLevel(levels, col))
       onChange?.()
     },
-    [onChange],
+    [onChange, setSort],
   )
 
   const key = useMemo(() => sortKey(sort), [sort])

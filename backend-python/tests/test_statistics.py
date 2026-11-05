@@ -11,7 +11,6 @@ from app.analysis.statistics import (
     close_position,
     median_turnover,
     median_volume,
-    relative_volume,
 )
 from app.models import StooqDailyQuote
 
@@ -71,22 +70,6 @@ class TestMedianVolume:
 
     def test_empty_returns_none(self) -> None:
         assert median_volume([]) is None
-
-
-class TestRelativeVolume:
-    def test_above_average(self) -> None:
-        bars = [_bar(volume=100)] * 20 + [_bar(volume=200)]
-        result = relative_volume(bars, lookback=20)
-        assert result is not None
-        assert float(result) == pytest.approx(2.0)
-
-    def test_insufficient_history_returns_none(self) -> None:
-        bars = [_bar(volume=100)] * 10
-        assert relative_volume(bars, lookback=20) is None
-
-    def test_zero_average_returns_none(self) -> None:
-        bars = [_bar(volume=0)] * 21
-        assert relative_volume(bars, lookback=20) is None
 
 
 class TestMedianTurnover:

@@ -37,12 +37,9 @@ Every column is computed from bars strictly *before* the bar being judged
 from __future__ import annotations
 
 import enum
-from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-
-from app.models import StooqDailyQuote
 
 
 class Phase(enum.StrEnum):
@@ -278,33 +275,6 @@ def classify_row(row: pd.Series) -> Phase:
     # precisely the case Williams warns is not what it looks like, and saying
     # so is more honest than naming a phase for it.
     return Phase.NEUTRAL
-
-
-def classify_bars(bars: Sequence[StooqDailyQuote]) -> Phase:
-    """The background phase leading into the LAST bar of a series.
-
-    Convenience wrapper for callers that hold quotes rather than a frame (the
-    per-stock cards, tests). Returns ``Phase.NEUTRAL`` on too little history.
-    """
-    if len(bars) < _MIN_BARS + 1:
-        return Phase.NEUTRAL
-
-    df = pd.DataFrame(
-        [
-            {
-                "high": float(b.high),
-                "low": float(b.low),
-                "close": float(b.close),
-                "volume": float(b.volume),
-                "date": b.date,
-            }
-            for b in bars
-        ]
-    ).sort_values("date").reset_index(drop=True)
-    df["spread"] = df["high"] - df["low"]
-    df["close_pos"] = ((df["close"] - df["low"]) / df["spread"]).where(df["spread"] > 0)
-    add_phase_columns(df)
-    return classify_row(df.iloc[-1])
 
 
 # ── How a phase bears on a signal ────────────────────────────────────────────

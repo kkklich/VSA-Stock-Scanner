@@ -12,7 +12,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -74,6 +74,7 @@ def test_frozen_evidence_survives_review_and_duplicate_submission(client):
     assert created.status_code == 201
     assert created.headers["cache-control"] == "private, no-store"
     saved = created.json()
+    assert saved["observationDate"] == saved["createdAt"][:10]
     assert saved["ticker"] == "PKN"
     original["snapshot"]["combinedScore"] = 1
     repeated = client.post("/api/journal", json=original)
@@ -148,6 +149,67 @@ def test_pagination_and_ticker_filter(client):
     second = client.get("/api/journal?limit=1&offset=1").json()
     assert first["total"] == second["total"] == 3
     assert first["items"][0]["id"] != second["items"][0]["id"]
+
+
+def test_observation_date_persists_and_orders_entries(client):
+    for day in ("2026-10-20", "2026-10-22", "2026-10-21"):
+        item = {**payload(), "observationDate": day}
+        saved = client.post("/api/journal", json=item).json()
+        assert saved["observationDate"] == day
+        assert saved["createdAt"][:10] == datetime.now(UTC).date().isoformat()
+        path = f'/api/journal/{saved["id"]}'
+        assert client.get(path).json()["observationDate"] == day
+        repeated = client.post("/api/journal", json={**item, "observationDate": "2026-10-01"})
+        assert repeated.json()["observationDate"] == day
+        reviewed = client.patch(path, json={"version": 1, "status": "confirmed"})
+        assert reviewed.json()["observationDate"] == day
+    listing = client.get("/api/journal?limit=2").json()
+    assert [row["observationDate"] for row in listing["items"]] == [
+        "2026-10-22", "2026-10-21",
+    ]
+    assert client.get("/api/journal?offset=2").json()["items"][0]["observationDate"] == (
+        "2026-10-20"
+    )
+
+
+@pytest.mark.parametrize("day", ["", "not-a-date", "2026-02-30", None])
+def test_rejects_invalid_observation_dates(client, day):
+    result = client.post("/api/journal", json={**payload(), "observationDate": day})
+    assert result.status_code == 422
+
+
+def test_observation_date_migration_preserves_existing_entries():
+    migrations = []
+    for name in ("011_observation_journal", "014_journal_observation_date"):
+        path = Path(__file__).parents[1] / f"alembic/versions/{name}.py"
+        spec = spec_from_file_location(name, path)
+        migration = module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        migrations.append(migration)
+    engine = create_engine("sqlite://")
+    UserRow.__table__.create(engine)
+    with engine.begin() as connection:
+        with Operations.context(MigrationContext.configure(connection)):
+            migrations[0].upgrade()
+            connection.execute(text("""
+                INSERT INTO journal_entries
+                    (id, user_id, ticker, note, confirmation, invalidation, snapshot,
+                     status, review, version, created_at, updated_at)
+                VALUES ('old-entry', 1, 'PKN', 'Original note', '', '', '{}',
+                        'observing', '', 1, '2026-10-20 23:30:00', '2026-10-22 12:00:00')
+            """))
+            migrations[1].upgrade()
+            row = connection.execute(text("SELECT * FROM journal_entries")).mappings().one()
+            assert row["observation_date"] == "2026-10-20"
+            assert row["created_at"] == "2026-10-20 23:30:00"
+            assert row["note"] == "Original note"
+            columns = inspect(connection).get_columns("journal_entries")
+            assert not next(c for c in columns if c["name"] == "observation_date")["nullable"]
+            migrations[1].downgrade()
+            assert connection.execute(text("SELECT note FROM journal_entries")).scalar_one() == (
+                "Original note"
+            )
+    engine.dispose()
 
 
 def test_migration_round_trip():

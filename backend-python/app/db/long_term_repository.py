@@ -195,9 +195,3 @@ class PostgresLongTermRepository:
             query = query.where(LongTermSnapshotRow.market == market)
         async with self._sf() as session:
             return (await session.execute(query)).scalar_one_or_none() is not None
-
-    async def has_financial_observations(self) -> bool:
-        async with self._sf() as session:
-            return (
-                await session.execute(select(FinancialObservationRow.id).limit(1))
-            ).scalar_one_or_none() is not None

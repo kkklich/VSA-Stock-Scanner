@@ -47,11 +47,6 @@ export function getAccessToken(): string {
   return read(ACCESS_KEY)
 }
 
-/** Refresh tokens are now stored exclusively in HttpOnly cookies. */
-export function getRefreshToken(): string {
-  return ''
-}
-
 /** Store the access token. The refresh token travels only in an HttpOnly
  *  cookie now, so the second argument — what the server returned, which
  *  callers still pass — is accepted and deliberately ignored. */

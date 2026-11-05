@@ -27,7 +27,8 @@ import { useWatchlists } from '../hooks/useWatchlists'
 import { WatchlistControls } from '../components/WatchlistControls'
 import { ALL_MARKETS, displayTicker, GPW_MARKET } from '../lib/markets'
 import { plnLine } from '../lib/rankingColumns'
-import { usePersistentState } from '../hooks/usePersistentState'
+import { useUrlState, booleanParam, numberParam, type UrlField } from '../hooks/useUrlState'
+import { sortParam } from '../lib/urlSort'
 import { SortMenu, type SortOption } from '../components/SortMenu'
 import { useTableSort } from '../hooks/useTableSort'
 import type {
@@ -131,28 +132,55 @@ function ButtonGroup<T extends number>({
 
 /* ── Page ───────────────────────────────────────────────────────────────── */
 
+// Keep existing browser preferences as a fallback; URLs carry explicit values
+// so opening the same link in another browser restores the same screen.
+function volumeParam(key: string, fallback: number, values: number[]): UrlField<number> {
+  const codec = numberParam(fallback, { values })
+  return {
+    read(params, name) {
+      if (params.has(name)) return codec.read(params, name)
+      try {
+        const stored = JSON.parse(localStorage.getItem(key) ?? 'null')
+        return typeof stored === 'number' && values.includes(stored) ? stored : fallback
+      } catch { return fallback }
+    },
+    write(params, name, value) { params.set(name, String(value)) },
+  }
+}
+
+const URL_FIELDS = {
+  favorites: booleanParam(),
+  recentDays: volumeParam('stockpilot:volume-surge:recentDays', 3, [1, 3, 5, 10]),
+  baselineDays: volumeParam('stockpilot:volume-surge:baselineDays', 20, [10, 20, 30, 60]),
+  minRatio: volumeParam('stockpilot:volume-surge:minRatio', 1.5, [1.5, 2, 3, 5]),
+  sort: sortParam<VolumeSurgeSortKey>({ key: 'volumeRatio', dir: 'desc' }, [
+    'ticker', 'name', 'sector', 'lastPrice', 'recentAvgVolume', 'baselineAvgVolume',
+    'volumeRatio', 'lastDayRatio', 'daysAboveBaseline', 'peakVolumeRatio',
+    'priceChangePct', 'currentRating', 'lastSignal',
+  ]),
+}
+
 export function VolumeSurgePage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { stars, busy: watchlistsBusy } = useWatchlists()
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const url = useUrlState(URL_FIELDS)
+  const [favoritesOnly, setFavoritesOnly] = url.field('favorites')
   const favTickers = useMemo(
     () => Object.keys(stars).filter((ticker) => stars[ticker]).sort(),
     [stars],
   )
   const favoritesKey = favoritesOnly ? favTickers.join(',') : undefined
-  const [recentDays, setRecentDays] = usePersistentState(
-    'stockpilot:volume-surge:recentDays',
-    3,
-  )
-  const [baselineDays, setBaselineDays] = usePersistentState(
-    'stockpilot:volume-surge:baselineDays',
-    20,
-  )
-  const [minRatio, setMinRatio] = usePersistentState(
-    'stockpilot:volume-surge:minRatio',
-    1.5,
-  )
+  const [recentDays, setRecentDays] = url.field('recentDays')
+  const [baselineDays, setBaselineDays] = url.field('baselineDays')
+  const [minRatio, setMinRatio] = url.field('minRatio')
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockpilot:volume-surge:recentDays', JSON.stringify(recentDays))
+      localStorage.setItem('stockpilot:volume-surge:baselineDays', JSON.stringify(baselineDays))
+      localStorage.setItem('stockpilot:volume-surge:minRatio', JSON.stringify(minRatio))
+    } catch { /* Storage may be unavailable. */ }
+  }, [recentDays, baselineDays, minRatio])
   const [page, setPage] = useState(1)
   // Changing the ordering starts a fresh list: the pages accumulate, so page 2
   // of the old order can't be appended under the new one.
@@ -162,6 +190,7 @@ export function VolumeSurgePage() {
       { key: 'volumeRatio', dir: 'desc' },
       initialSortDir,
       backToFirstPage,
+      url.field('sort'),
     )
 
   // The top bar's market; relative volume has no unit, so "all" is fine.
@@ -173,7 +202,7 @@ export function VolumeSurgePage() {
   const pooled = market === ALL_MARKETS
   useEffect(() => {
     setPage(1)
-  }, [marketParam, favoritesKey])
+  }, [marketParam, favoritesKey, recentDays, baselineDays, minRatio, sort])
 
   const { items, meta, loading, loadingMore, error, hasMore, refetch } =
     useVolumeSurge(

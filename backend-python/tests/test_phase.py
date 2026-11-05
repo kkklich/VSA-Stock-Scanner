@@ -10,10 +10,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pandas as pd
+
 from app.analysis.phase import (
     Phase,
     add_phase_columns,
-    classify_bars,
     classify_row,
     stance,
     strength_multiplier,
@@ -90,17 +91,42 @@ def _redate(bars: list[StooqDailyQuote]) -> list[StooqDailyQuote]:
     ]
 
 
+def _frame(bars: list[StooqDailyQuote]) -> pd.DataFrame:
+    df = pd.DataFrame(
+        [
+            {
+                "high": float(b.high),
+                "low": float(b.low),
+                "close": float(b.close),
+                "volume": float(b.volume),
+                "date": b.date,
+            }
+            for b in bars
+        ]
+    )
+    df["spread"] = df["high"] - df["low"]
+    df["close_pos"] = ((df["close"] - df["low"]) / df["spread"]).where(df["spread"] > 0)
+    add_phase_columns(df)
+    return df
+
+
+def _last_phase(bars: list[StooqDailyQuote]) -> Phase:
+    """Run the production frame classifier on the quote fixtures."""
+    row = _frame(bars).iloc[-1] if bars else pd.Series(dtype=float)
+    return classify_row(row)
+
+
 class TestInsufficientHistory:
     def test_too_few_bars_is_neutral(self) -> None:
         """A handful of bars cannot show a campaign — abstain, never guess."""
-        assert classify_bars(_flat(5)) is Phase.NEUTRAL
+        assert _last_phase(_flat(5)) is Phase.NEUTRAL
 
     def test_empty_series_is_neutral(self) -> None:
-        assert classify_bars([]) is Phase.NEUTRAL
+        assert _last_phase([]) is Phase.NEUTRAL
 
     def test_featureless_history_is_neutral(self) -> None:
         """Enough bars, but no story in them: still neutral, not a phase."""
-        assert classify_bars(_flat(40)) is Phase.NEUTRAL
+        assert _last_phase(_flat(40)) is Phase.NEUTRAL
 
 
 class TestAccumulation:
@@ -124,12 +150,12 @@ class TestAccumulation:
                 close = price + 0.2
                 absorb.append(_bar(_START, price, price + 0.6, price - 0.6, close, 25_000))
             price = close
-        assert classify_bars(_redate(bars + absorb)) is Phase.ACCUMULATION
+        assert _last_phase(_redate(bars + absorb)) is Phase.ACCUMULATION
 
     def test_a_decline_without_absorption_is_not_accumulation(self) -> None:
         """Falling on supply with nothing absorbing it is mark-down, not the
         start of a campaign — the distinction the whole module exists for."""
-        assert classify_bars(_decline(40, start_price=140.0)) is not Phase.ACCUMULATION
+        assert _last_phase(_decline(40, start_price=140.0)) is not Phase.ACCUMULATION
 
 
 class TestDistribution:
@@ -152,12 +178,12 @@ class TestDistribution:
                 close = price - 0.2
                 top.append(_bar(_START, price, price + 0.6, price - 0.6, close, 25_000))
             price = close
-        assert classify_bars(_redate(bars + top)) is Phase.DISTRIBUTION
+        assert _last_phase(_redate(bars + top)) is Phase.DISTRIBUTION
 
     def test_a_clean_advance_is_not_distribution(self) -> None:
         """A rise with volume behind it is mark-up. Calling every advance
         'distribution' would reintroduce the bug this module fixes."""
-        assert classify_bars(_advance(40, start_price=80.0)) is not Phase.DISTRIBUTION
+        assert _last_phase(_advance(40, start_price=80.0)) is not Phase.DISTRIBUTION
 
 
 class TestStanceTable:
@@ -206,27 +232,7 @@ class TestNoLookAhead:
     def test_a_bar_never_sees_itself_or_the_future(self) -> None:
         """The phase on bar i must be identical whether or not the bars after i
         exist — the property that makes the back-test honest."""
-        import pandas as pd
-
         full = _redate(_decline(20, start_price=120.0) + _advance(20, start_price=100.0))
-
-        def _frame(bars: list[StooqDailyQuote]) -> pd.DataFrame:
-            df = pd.DataFrame(
-                [
-                    {
-                        "high": float(b.high),
-                        "low": float(b.low),
-                        "close": float(b.close),
-                        "volume": float(b.volume),
-                        "date": b.date,
-                    }
-                    for b in bars
-                ]
-            )
-            df["spread"] = df["high"] - df["low"]
-            df["close_pos"] = ((df["close"] - df["low"]) / df["spread"]).where(df["spread"] > 0)
-            add_phase_columns(df)
-            return df
 
         whole = _frame(full)
         for cut in range(25, len(full) + 1):
@@ -244,7 +250,7 @@ class TestFrozenSeries:
             _bar(_START + timedelta(days=i), 100.0, 100.0, 100.0, 100.0, 0)
             for i in range(40)
         ]
-        assert classify_bars(frozen) is Phase.NEUTRAL
+        assert _last_phase(frozen) is Phase.NEUTRAL
 
 
 class TestEngineIntegration:

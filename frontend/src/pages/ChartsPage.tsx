@@ -3,15 +3,8 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Trans, useTranslation } from 'react-i18next'
-import {
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Loader2,
-  MoreHorizontal,
-  RotateCcw,
-} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ExternalLink, Loader2, MoreHorizontal } from 'lucide-react'
 import {
   StockChart,
   type FormingCandle,
@@ -55,7 +48,6 @@ import type {
   SignalVerdict,
   WeeklyAgreement,
 } from '../api/stocksApi'
-import type { Candle, SignalFlag, VsaSignal } from '../types'
 import {
   deltaTone,
   fmtCompactPln,
@@ -70,11 +62,6 @@ import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { CLASSIC_VSA_ENABLED, isMethodActive } from '../lib/methodStatus'
 import { fmtLiveTime, notTradedYet } from '../lib/live'
-
-// ── Signal filtering (driven by the detection-settings panel) ─────────────────
-
-const DEFAULT_SENSITIVITY = 60
-const DEFAULT_CONTEXT_WINDOW = 120
 
 // ── Trading-method chart overlays ─────────────────────────────────────────────
 
@@ -97,11 +84,6 @@ const CHART_METHODS_KEY = 'stockpilot:chart-methods:v1'
 // ── Chart time ranges ─────────────────────────────────────────────────────────
 
 /**
- * Selectable chart horizons. `months` drives the API `fromDate` (null = as far
- * back as stored data goes); `sessions` is the matching signal context window
- * (~21 trading sessions per month) applied when the user picks the range.
- */
-/**
  * Selectable chart bar sizes, in the order they appear on the toolbar.
  *
  * `1d` is the app's native timeframe — the rating, the ranking and the trading
@@ -111,9 +93,8 @@ const CHART_METHODS_KEY = 'stockpilot:chart-methods:v1'
  * chart (the app does not store intraday history, so how far back they reach is
  * capped by the data provider — see `maxDays`).
  *
- * `barsPerSession` converts a window in calendar days into a bar count for the
- * signal-context window; GPW trades 09:00–17:00, so a session is ~17 half-hour
- * bars, ~9 hourly, ~2 four-hourly, and a week is one weekly bar per 5 sessions.
+ * `barsPerSession` distinguishes daily sessions from other bar sizes in the
+ * chart label.
  */
 const INTERVAL_OPTIONS = [
   { key: '30m', label: '30m', barsPerSession: 17, maxDays: 60 },
@@ -194,17 +175,6 @@ function rangesFor(interval: ChartInterval) {
 }
 
 /**
- * Signal-context window (in bars) that covers a range, so picking a range shows
- * markers across the whole visible chart rather than only its recent end.
- * ~252 trading sessions a year, times the bars each session produces.
- */
-function contextBarsFor(interval: ChartInterval, days: number | null): number {
-  const perSession = intervalOption(interval).barsPerSession
-  const sessions = days == null ? 2520 : Math.round((days * 252) / 365)
-  return Math.max(20, Math.round(sessions * perSession))
-}
-
-/**
  * Scroll-to-change-range tuning. "Show me further back" is either panning more
  * than `PAN_PAST_START_BARS` past the oldest loaded candle, or zooming out
  * until the viewport is `ZOOM_OUT_FACTOR` times wider than the loaded data
@@ -228,244 +198,7 @@ function rangeFromDate(interval: ChartInterval, key: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-/**
- * Relative "strength" of each VSA signal, 0–100. Used by the sensitivity
- * control: a lower sensitivity only surfaces the strongest signals, a higher
- * one also reveals weaker ones. Unknown names fall back to a mid value.
- */
-const SIGNAL_STRENGTH: Record<string, number> = {
-  sos: 90,
-  'sign of strength': 90,
-  sow: 88,
-  'sign of weakness': 88,
-  spring: 85,
-  upthrust: 80,
-  shakeout: 75,
-  'stopping volume': 70,
-  'successful test': 62,
-  test: 55,
-  'no demand': 50,
-}
-
-function signalStrength(name: string): number {
-  return SIGNAL_STRENGTH[name.toLowerCase()] ?? 60
-}
-
-/**
- * Filter the raw signals by the detection settings:
- *  - sensitivity: keep signals whose strength ≥ (100 − sensitivity).
- *  - contextWindow: keep only signals within the last N trading sessions.
- */
-function filterSignals(
-  signals: VsaSignal[],
-  history: Candle[],
-  sensitivity: number,
-  contextWindow: number,
-): VsaSignal[] {
-  const threshold = 100 - sensitivity
-  const cutoff =
-    history.length > contextWindow
-      ? history[history.length - contextWindow].time
-      : ''
-  return signals.filter(
-    (s) =>
-      signalStrength(s.signalName) >= threshold &&
-      (cutoff === '' || s.date >= cutoff),
-  )
-}
-
-// ── Signal checklist derivation ──────────────────────────────────────────────
-
-const STRENGTH_SIGNAL_NAMES = ['Spring', 'Successful Test', 'SOS']
-const WEAKNESS_SIGNAL_NAMES = ['Upthrust', 'No Demand', 'SOW']
-
-/**
- * Display form of a signal's bar time. Daily/weekly markers are already a bare
- * date; an intraday one arrives as a full ISO timestamp, which is far too long
- * for the checklist's right-hand column — trim it to "09-04 13:00", dropping
- * the year and the offset (every bar on the chart is exchange-local anyway).
- */
-function formatSignalDate(value: string): string {
-  if (!value.includes('T')) return value
-  const [day, time = ''] = value.split('T')
-  return `${day.slice(5)} ${time.slice(0, 5)}`
-}
-
-function deriveSignalFlags(vsaSignals: VsaSignal[]): {
-  strength: SignalFlag[]
-  weakness: SignalFlag[]
-} {
-  // Most recent occurrence of each signal name (signals are oldest-first).
-  const lastOccurrence = new Map<string, string>()
-  for (const s of vsaSignals) {
-    lastOccurrence.set(s.signalName, s.date)
-  }
-
-  const strength: SignalFlag[] = STRENGTH_SIGNAL_NAMES.map((name) => ({
-    name,
-    present: lastOccurrence.has(name),
-    date: formatSignalDate(lastOccurrence.get(name) ?? '—'),
-  }))
-
-  const weakness: SignalFlag[] = WEAKNESS_SIGNAL_NAMES.map((name) => ({
-    name,
-    present: lastOccurrence.has(name),
-    date: formatSignalDate(lastOccurrence.get(name) ?? '—'),
-  }))
-
-  return { strength, weakness }
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function SignalRow({ flag }: { flag: SignalFlag }) {
-  return (
-    <li className="flex items-center justify-between py-1.5 text-sm">
-      <span className="flex items-center gap-2">
-        <span
-          className={
-            'grid h-4 w-4 place-items-center rounded-full text-[10px] font-bold ' +
-            (flag.present
-              ? 'bg-emerald-500/20 text-emerald-400'
-              : 'bg-rose-500/15 text-rose-400')
-          }
-        >
-          {flag.present ? '✓' : '✕'}
-        </span>
-        <span className={flag.present ? 'text-slate-200' : 'text-slate-500'}>
-          {flag.name}
-        </span>
-      </span>
-      <span className="text-xs tabular-nums text-slate-500">{flag.date}</span>
-    </li>
-  )
-}
-
-function SignalChecklist({
-  strength,
-  weakness,
-}: {
-  strength: SignalFlag[]
-  weakness: SignalFlag[]
-}) {
-  const { t } = useTranslation()
-  return (
-    <Card className="flex flex-col">
-      <CardTitle>
-        {t('chart.strength.title')}{' '}
-        <InfoTip text={t('chart.strength.info')} />
-      </CardTitle>
-      <ul className="px-4 pb-3">
-        {strength.map((f) => (
-          <SignalRow key={f.name} flag={f} />
-        ))}
-      </ul>
-      <div className="border-t border-slate-800" />
-      <CardTitle>
-        {t('chart.weakness.title')}{' '}
-        <InfoTip text={t('chart.weakness.info')} />
-      </CardTitle>
-      <ul className="px-4 pb-4">
-        {weakness.map((f) => (
-          <SignalRow key={f.name} flag={f} />
-        ))}
-      </ul>
-    </Card>
-  )
-}
-
-function DetectionSettings({
-  sensitivity,
-  contextWindow,
-  maxWindow,
-  shown,
-  total,
-  onSensitivity,
-  onContextWindow,
-  onReset,
-}: {
-  sensitivity: number
-  contextWindow: number
-  maxWindow: number
-  shown: number
-  total: number
-  onSensitivity: (v: number) => void
-  onContextWindow: (v: number) => void
-  onReset: () => void
-}) {
-  const { t } = useTranslation()
-  const [collapsed, setCollapsed] = useState(false)
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium text-slate-300">
-            {t('chart.detection.title')}
-          </span>
-          <InfoTip text={t('chart.detection.info')} />
-        </div>
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="text-slate-500 hover:text-slate-300"
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? t('chart.detection.expand') : t('chart.detection.collapse')}
-        >
-          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-        </button>
-      </div>
-
-      {!collapsed && (
-        <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-xs text-slate-500">{t('chart.detection.sensitivity')}</label>
-            <span className="text-xs tabular-nums text-slate-300">
-              {sensitivity}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={sensitivity}
-            onChange={(e) => onSensitivity(+e.target.value)}
-            className="mb-4 w-full accent-emerald-500"
-          />
-
-          <label className="mb-1 block text-xs text-slate-500">
-            {t('chart.detection.contextWindow')}
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              type="number"
-              min={5}
-              max={maxWindow}
-              value={contextWindow}
-              onChange={(e) => {
-                const n = Number(e.target.value)
-                if (Number.isNaN(n)) return
-                onContextWindow(Math.max(5, Math.min(maxWindow, n)))
-              }}
-              className="w-20 rounded-md border border-slate-800 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 focus:border-emerald-500/50 focus:outline-none"
-            />
-            <button
-              onClick={onReset}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-            >
-              <RotateCcw size={13} /> {t('chart.detection.reset')}
-            </button>
-            <span className="ml-auto text-xs text-slate-500">
-              <Trans
-                i18nKey="chart.detection.showing"
-                values={{ shown, total }}
-                components={[<span className="text-emerald-400" />]}
-              />
-            </span>
-          </div>
-        </div>
-      )}
-    </Card>
-  )
-}
 
 /** Small uppercase divider inside the fundamentals card. */
 function CardSection({ label, info }: { label: string; info?: string }) {
@@ -817,11 +550,6 @@ export function ChartsPage() {
     includeAllInsider,
   )
 
-  // Detection-settings state — drives which signals are shown on the chart
-  // and in the strength/weakness checklist.
-  const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY)
-  const [contextWindow, setContextWindow] = useState(DEFAULT_CONTEXT_WINDOW)
-
   // Tells the chart how to treat the next data swap: `true` keeps the current
   // view (seamless, for a scroll/zoom-driven range change), `false` fits the
   // new range to the view (for an explicit button click). Read by the chart
@@ -829,17 +557,10 @@ export function ChartsPage() {
   // the async gap without its own re-render.
   const preserveViewRef = useRef(false)
 
-  // Picking a range also widens the signal context window to cover it, so
-  // markers appear across the whole visible chart, not just the recent part.
-  const selectRange = useCallback(
-    (key: string, preserveView = false) => {
-      preserveViewRef.current = preserveView
-      setRange(key)
-      const opt = rangesFor(interval).find((r) => r.key === key)
-      if (opt) setContextWindow(contextBarsFor(interval, opt.days))
-    },
-    [interval],
-  )
+  const selectRange = useCallback((key: string, preserveView = false) => {
+    preserveViewRef.current = preserveView
+    setRange(key)
+  }, [])
 
   // Switching bar size also resets the range: the ranges on offer differ per
   // interval, so the one that was selected may not exist on the new one (and
@@ -849,8 +570,6 @@ export function ChartsPage() {
     const nextRange = DEFAULT_RANGE[next]
     setIntervalKey(next)
     setRange(nextRange)
-    const opt = rangesFor(next).find((r) => r.key === nextRange)
-    if (opt) setContextWindow(contextBarsFor(next, opt.days))
   }, [])
 
   // Scroll-driven range switching: scrolling/zooming out past the oldest loaded
@@ -887,19 +606,6 @@ export function ChartsPage() {
       selectRange(next.key, true)
     },
     [loading, interval, range, selectRange],
-  )
-
-  const visibleSignals = useMemo(
-    () =>
-      data
-        ? filterSignals(data.vsaSignals, data.history, sensitivity, contextWindow)
-        : [],
-    [data, sensitivity, contextWindow],
-  )
-
-  const { strength, weakness } = useMemo(
-    () => deriveSignalFlags(visibleSignals),
-    [visibleSignals],
   )
 
   // ── Trading-method chart overlays ───────────────────────────────────────────
@@ -979,11 +685,10 @@ export function ChartsPage() {
     return list
   }, [methodGroups, isMethodShown, visibleInsiderMarkers, palette.bull])
 
-  // VSA arrows show only when VSA is selected (still filtered by the
-  // detection-sensitivity panel, which stays a VSA-only control).
+  // VSA arrows cover the fetched chart range when the method is selected.
   const vsaChartSignals = useMemo(
-    () => (CLASSIC_VSA_ENABLED && isMethodShown(VSA_METHOD_ID) ? visibleSignals : []),
-    [isMethodShown, visibleSignals],
+    () => (CLASSIC_VSA_ENABLED && isMethodShown(VSA_METHOD_ID) ? data?.vsaSignals ?? [] : []),
+    [isMethodShown, data],
   )
 
   // Today's session so far (live prices), drawn after the finished candles on
@@ -1014,7 +719,7 @@ export function ChartsPage() {
         name: vsaName,
         shape: 'arrow' as const,
         color: palette.bull,
-        count: visibleSignals.length,
+        count: data.vsaSignals.length,
         selected: isMethodShown(VSA_METHOD_ID),
       },
       ] : []),
@@ -1043,7 +748,6 @@ export function ChartsPage() {
     data,
     catalogue,
     methodGroups,
-    visibleSignals.length,
     visibleInsiderMarkers.length,
     isMethodShown,
     palette,
@@ -1102,28 +806,9 @@ export function ChartsPage() {
 
       <DisclaimerNote />
 
-      {/* Three-column detail grid */}
-      <div className={`grid grid-cols-1 gap-4 ${CLASSIC_VSA_ENABLED ? "xl:grid-cols-[260px_minmax(0,1fr)_300px]" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
-        {/* Left: signal checklist */}
-        {CLASSIC_VSA_ENABLED && <SignalChecklist strength={strength} weakness={weakness} />}
-
-        {/* Center: detection settings + chart */}
+      {/* Chart and supporting analysis */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-4">
-          {CLASSIC_VSA_ENABLED && (
-          <DetectionSettings
-            sensitivity={sensitivity}
-            contextWindow={contextWindow}
-            maxWindow={Math.max(5, data.history.length)}
-            shown={visibleSignals.length}
-            total={data.vsaSignals.length}
-            onSensitivity={setSensitivity}
-            onContextWindow={setContextWindow}
-            onReset={() => {
-              setSensitivity(DEFAULT_SENSITIVITY)
-              setContextWindow(DEFAULT_CONTEXT_WINDOW)
-            }}
-          />
-          )}
           <Card className="p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="flex items-center gap-2 text-sm font-medium text-slate-300">

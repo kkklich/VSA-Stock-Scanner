@@ -91,6 +91,10 @@ export interface ApiInsiderScreenSummary {
   purchasesValuePln: number | null
   salesValuePln: number | null
   netValuePln: number | null
+  /** Dates use trade date, falling back to publication date. */
+  latestTransactionDate?: string | null
+  totalValuePln?: number | null
+  valueLast30DaysPln?: number | null
 }
 
 export interface ApiRankingItem {
@@ -142,7 +146,7 @@ export interface ApiRankingItem {
    * (`lastSession`). Absent (null) otherwise, and on older backends.
    */
   live?: ApiLivePrice | null
-  /** Present when an insider activity filter is requested. */
+  /** Present when insider activity is filtered or sorted. */
   insiderActivity?: ApiInsiderScreenSummary | null
 }
 
@@ -206,6 +210,9 @@ export type RankingSortKey =
   | 'distFrom52wLowPct'
   | 'weeklyRating'
   | 'combinedScore'
+  | 'insiderLatestTransaction'
+  | 'insiderTotalValue'
+  | 'insiderValueLast30Days'
 
 /** All server-side query options for the ranking feed. */
 export interface RankingQuery {
@@ -238,6 +245,14 @@ export interface RankingQuery {
   maxPrice?: number
   /** Minimum 20-session median volume, shares. */
   minVolume?: number
+  /** Upper bound on 20-session median volume, shares. */
+  maxVolume?: number
+  /** Latest session's price change, including live prices when available. */
+  minPriceChangePct?: number
+  maxPriceChangePct?: number
+  /** Mean score of the selected available active methods, 0–100. */
+  minCombinedScore?: number
+  maxCombinedScore?: number
   /** Only stocks trading within this many % of their 52-week high. */
   maxDistFrom52wHighPct?: number
   /** Only stocks trading within this many % above their 52-week low. */
@@ -252,6 +267,9 @@ export interface RankingQuery {
   insiderDays?: number
   /** Minimum selected-side value (or absolute net value), in indicative PLN. */
   minInsiderValue?: number
+  minInsiderTrades?: number
+  maxInsiderTradeAge?: number
+  minInsiderValueLast30Days?: number
   /** Restrict results to these tickers (used by the "favorites only" view). */
   tickers?: string[]
   /**
@@ -286,6 +304,11 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     minPrice,
     maxPrice,
     minVolume,
+    maxVolume,
+    minPriceChangePct,
+    maxPriceChangePct,
+    minCombinedScore,
+    maxCombinedScore,
     maxDistFrom52wHighPct,
     maxDistFrom52wLowPct,
     new52wHigh,
@@ -294,6 +317,9 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     insiderActivity,
     insiderDays,
     minInsiderValue,
+    minInsiderTrades,
+    maxInsiderTradeAge,
+    minInsiderValueLast30Days,
     tickers,
     methods,
     settings,
@@ -336,6 +362,12 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (insiderActivity && insiderActivity !== 'all') params.set('insiderActivity', insiderActivity)
   if (insiderDays !== undefined) params.set('insiderDays', String(insiderDays))
   if (minInsiderValue !== undefined) params.set('minInsiderValue', String(minInsiderValue))
+  for (const [key, value] of Object.entries({
+    maxVolume, minPriceChangePct, maxPriceChangePct, minCombinedScore, maxCombinedScore,
+    minInsiderTrades, maxInsiderTradeAge, minInsiderValueLast30Days,
+  })) {
+    if (value !== undefined) params.set(key, String(value))
+  }
   if (tickers) params.set('tickers', tickers.join(','))
   if (methods && methods.length) params.set('methods', methods.join(','))
   if (settings) params.set('settings', settings)

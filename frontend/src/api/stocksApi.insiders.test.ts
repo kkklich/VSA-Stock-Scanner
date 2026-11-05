@@ -22,3 +22,14 @@ it('omits inactive insider criteria', async () => {
   expect(url).not.toContain('insider')
   expect(url).not.toContain('Insider')
 })
+
+it('serializes insider sorting with its reporting window and tie-break', async () => {
+  await fetchRanking({
+    insiderDays: 180,
+    sort: [{ key: 'insiderValueLast30Days', dir: 'desc' }, { key: 'ticker', dir: 'asc' }],
+  })
+  const url = new URL(vi.mocked(apiFetchWithHeaders).mock.lastCall![0], 'https://example.test')
+  expect(url.searchParams.get('sortBy')).toBe('insiderValueLast30Days,ticker')
+  expect(url.searchParams.get('sortDir')).toBe('desc,asc')
+  expect(url.searchParams.get('insiderDays')).toBe('180')
+})

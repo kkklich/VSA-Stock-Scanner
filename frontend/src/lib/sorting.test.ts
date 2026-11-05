@@ -4,9 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   MAX_SORT_LEVELS,
-  addLevel,
   applySortClick,
-  normalizeSort,
   removeLevel,
   serializeSort,
   setLevelDir,
@@ -102,13 +100,6 @@ describe('applySortClick — shift-click (additive)', () => {
       { key: 'volume', dir: 'desc' },
     ])
   })
-
-  it('addLevel is the same gesture', () => {
-    expect(addLevel(RATING, 'ticker', initialDir)).toEqual([
-      { key: 'currentRating', dir: 'desc' },
-      { key: 'ticker', dir: 'asc' },
-    ])
-  })
 })
 
 describe('setLevelDir / removeLevel', () => {
@@ -161,42 +152,5 @@ describe('sortKey', () => {
     const b: SortLevel<Key>[] = [{ key: 'sector', dir: 'asc' }]
     expect(sortKey(a)).toBe(sortKey(b))
     expect(sortKey(a)).not.toBe(sortKey(setLevelDir(a, 'sector', 'desc')))
-  })
-})
-
-describe('normalizeSort', () => {
-  const valid = (k: Key) => k !== 'volume'
-  const fallback: SortLevel<Key> = { key: 'currentRating', dir: 'desc' }
-
-  it('drops columns that no longer exist', () => {
-    expect(
-      normalizeSort<Key>(
-        [
-          { key: 'sector', dir: 'asc' },
-          { key: 'volume', dir: 'desc' },
-        ],
-        valid,
-        fallback,
-      ),
-    ).toEqual([{ key: 'sector', dir: 'asc' }])
-  })
-
-  it('drops a repeated column and caps the depth', () => {
-    expect(
-      normalizeSort<Key>(
-        [
-          { key: 'sector', dir: 'asc' },
-          { key: 'sector', dir: 'desc' },
-        ],
-        valid,
-        fallback,
-      ),
-    ).toEqual([{ key: 'sector', dir: 'asc' }])
-  })
-
-  it('falls back rather than leaving the table unordered', () => {
-    expect(normalizeSort<Key>([{ key: 'volume', dir: 'desc' }], valid, fallback)).toEqual(
-      [fallback],
-    )
   })
 })

@@ -1,4 +1,5 @@
-import { Fragment, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useUrlState, textParam, booleanParam, enumParam } from '../hooks/useUrlState'
 import { useTranslation } from 'react-i18next'
 import { Card, CompanyLink } from '../components/ui'
 import { MarketTabs } from '../components/MarketTabs'
@@ -25,32 +26,43 @@ function loadedTime(value: string | null, locale: string) {
   return Number.isFinite(date.getTime()) ? date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '—'
 }
 
+const URL_FIELDS = {
+  q: textParam(), scoredOnly: booleanParam(), favorites: booleanParam(), sector: textParam(),
+  sortBy: enumParam<SortKey>('fundamentalScore', ['fundamentalScore', ...SORT_KEYS]),
+  sortDir: enumParam<'asc' | 'desc'>('desc', ['asc', 'desc']),
+}
+
 export function LongTermPage() {
   const { t, i18n } = useTranslation()
   const { market, markets, needsPicker, pick } = useSingleMarket()
   const { data, loading, error, refetch, lastUpdated, stale } = useLongTermRanking(market)
-  const [query, setQuery] = useState('')
-  const [scoredOnly, setScoredOnly] = useState(false)
-  const [watchlistOnly, setWatchlistOnly] = useState(false)
+  const url = useUrlState(URL_FIELDS)
+  const [query, setQuery] = url.field('q')
+  const [scoredOnly, setScoredOnly] = url.field('scoredOnly')
+  const [watchlistOnly, setWatchlistOnly] = url.field('favorites')
   const { stars: favorites } = useWatchlists()
-  const [sectorFilter, setSectorFilter] = useState<{ market: string | null; value: string }>({ market: null, value: '' })
-  const [selectedSortKey, setSortKey] = useState<SortKey>('fundamentalScore')
+  const [sectorFilter, setSector] = url.field('sector')
+  const [selectedSortKey, setSortKey] = url.field('sortBy')
   const hasFundamentals = data?.items.some((item) => item.fundamentalAnalysis != null) ?? false
   const sortKey = selectedSortKey === 'fundamentalScore' && !hasFundamentals ? 'score' : selectedSortKey
   const sortKeys = hasFundamentals ? ['fundamentalScore' as const, ...SORT_KEYS] : SORT_KEYS
   const fundamentalCount = data?.items.filter((item) => item.fundamentalAnalysis?.score != null).length ?? 0
-  const [ascending, setAscending] = useState(false)
+  const [sortDirection, setSortDirection] = url.field('sortDir')
+  const ascending = sortDirection === 'asc'
+  const setAscending = (value: boolean) => setSortDirection(value ? 'asc' : 'desc')
   const [selected, setSelected] = useState<{ market: string; ticker: string } | null>(null)
   const historyButtons = useRef(new Map<string, HTMLButtonElement>())
   const sectors = useMemo(() => Array.from(new Set((data?.items ?? []).map((item) => item.sector?.trim() || UNKNOWN_SECTOR))).sort((a, b) => a.localeCompare(b, i18n.language)), [data, i18n.language])
-  const sector = sectorFilter.market === market && sectors.includes(sectorFilter.value) ? sectorFilter.value : ''
+  const previousMarket = useRef(market)
+  useEffect(() => {
+    if (previousMarket.current && market && previousMarket.current !== market) setSector('')
+    previousMarket.current = market
+  }, [market, setSector])
+  const sector = sectors.includes(sectorFilter) ? sectorFilter : ''
   const freshness = useMemo(() => summarizeLongTermFreshness(data?.items ?? []), [data])
   const filtersActive = Boolean(query.trim() || scoredOnly || watchlistOnly || sector)
   function clearFilters() {
-    setQuery('')
-    setScoredOnly(false)
-    setWatchlistOnly(false)
-    setSectorFilter({ market, value: '' })
+    url.setState((previous) => ({ ...previous, q: '', scoredOnly: false, favorites: false, sector: '' }))
   }
   const items = useMemo(() => {
     const search = query.trim().toLocaleLowerCase()
@@ -107,7 +119,7 @@ export function LongTermPage() {
       </label>
       <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-400">
         {t('longTerm.filters.sector')}
-        <select value={sector} onChange={(event) => setSectorFilter({ market, value: event.target.value })} className="max-w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 sm:max-w-52">
+        <select value={sector} onChange={(event) => setSector(event.target.value)} className="max-w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 sm:max-w-52">
           <option value="">{t('longTerm.filters.allSectors')}</option>
           {sectors.map((value) => <option key={value} value={value}>{value === UNKNOWN_SECTOR ? t('longTerm.filters.unknownSector') : value}</option>)}
         </select>
@@ -118,7 +130,7 @@ export function LongTermPage() {
           {sortKeys.map((key) => <option key={key} value={key}>{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}</option>)}
         </select>
       </label>
-      <button type="button" onClick={() => setAscending((value) => !value)} className="mt-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">{t(ascending ? 'common.sortAsc' : 'common.sortDesc')} {ascending ? '↑' : '↓'}</button>
+      <button type="button" onClick={() => setAscending(!ascending)} className="mt-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">{t(ascending ? 'common.sortAsc' : 'common.sortDesc')} {ascending ? '↑' : '↓'}</button>
       <p className="text-xs text-slate-400 sm:ml-auto">{t('longTerm.oneMarket', { market: t(`markets.name.${market ?? GPW_MARKET}`, { defaultValue: market ?? 'GPW' }) })}</p>
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-800 pt-3 text-sm text-slate-300">

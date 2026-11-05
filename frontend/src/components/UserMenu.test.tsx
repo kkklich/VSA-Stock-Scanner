@@ -8,7 +8,6 @@ import { AuthProvider } from './AuthProvider'
 import {
   clearTokens,
   getAccessToken,
-  getRefreshToken,
   setTokens,
 } from '../lib/authToken'
 
@@ -33,11 +32,9 @@ describe('the token store', () => {
     setTokens('access-1', 'refresh-1')
     expect(getAccessToken()).toBe('access-1')
     // Refresh tokens are never stored in localStorage — they live in HttpOnly cookies
-    expect(getRefreshToken()).toBe('')
     expect(window.localStorage.getItem('stockpilot:auth:refreshToken')).toBeNull()
     clearTokens()
     expect(getAccessToken()).toBe('')
-    expect(getRefreshToken()).toBe('')
   })
 
   it('survives storage being blocked (private mode)', () => {

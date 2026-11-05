@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
 import { renderWithProviders, screen } from '../test/utils'
 import type { ApiRankingItem } from '../api/stocksApi'
 import type { UseInfiniteRankingResult } from '../hooks/useRanking'
@@ -105,6 +106,35 @@ beforeEach(() => {
 })
 
 describe('DashboardPage ranking table', () => {
+  it('restores search, favorites and multiple sort levels from a shared URL', () => {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify({ PKN: true }))
+    renderWithProviders(<DashboardPage />, {
+      initialEntries: ['/?q=Orlen&favorites=1&minRating=70&signal=Buy&sortBy=sector,priceChangePct&sortDir=asc,desc'],
+    })
+    expect(screen.getByRole('textbox')).toHaveValue('Orlen')
+    expect(screen.getByRole('button', { name: /Favorites/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      q: 'Orlen', tickers: ['PKN'], minRating: 70, signal: 'Buy',
+      sort: [{ key: 'sector', dir: 'asc' }, { key: 'priceChangePct', dir: 'desc' }],
+    })
+  })
+
+  it('writes favorites and header sorting into the URL', async () => {
+    function Location() { return <output aria-label="Current URL">{useLocation().search}</output> }
+    const user = userEvent.setup()
+    renderWithProviders(<><DashboardPage /><Location /></>)
+    await user.click(screen.getByRole('button', { name: /Favorites/i }))
+    let params = new URLSearchParams(screen.getByLabelText('Current URL').textContent!)
+    expect(params.get('favorites')).toBe('1')
+    await user.click(screen.getByRole('button', { name: 'Sort by Company' }))
+    params = new URLSearchParams(screen.getByLabelText('Current URL').textContent!)
+    expect(params.get('favorites')).toBe('1')
+    expect(params.get('sortBy')).toBe('ticker')
+    expect(params.get('sortDir')).toBe('asc')
+    await user.click(screen.getByRole('button', { name: /Favorites/i }))
+    expect(new URLSearchParams(screen.getByLabelText('Current URL').textContent!).has('favorites')).toBe(false)
+  })
+
   it('renders the heading and one row per stock', () => {
     renderWithProviders(<DashboardPage />)
     expect(

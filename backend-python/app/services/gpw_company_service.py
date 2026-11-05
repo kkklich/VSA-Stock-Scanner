@@ -57,9 +57,9 @@ class GpwCompanyService:
     def get_companies(self, market: str = GPW_ID) -> list[GpwCompany]:
         """Every tracked company on one market (the GPW unless another is named).
 
-        Answers whether or not that market is switched on — callers that serve
-        visitors check ``app.markets.is_enabled`` first. An unknown market id
-        has no companies.
+        Answers whether or not that market is switched on. Call
+        ``enabled_companies()`` to respect the deployment's configured markets.
+        An unknown market id has no companies.
         """
         return self._load().get(market, [])
 

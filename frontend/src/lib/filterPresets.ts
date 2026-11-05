@@ -36,6 +36,11 @@ export interface ScreenFilters {
   maxPrice: number | null
   /** Minimum 20-session median volume (shares); null = any. */
   minVolume: number | null
+  maxVolume: number | null
+  minPriceChangePct: number | null
+  maxPriceChangePct: number | null
+  minCombinedScore: number | null
+  maxCombinedScore: number | null
   /** Position in the 52-week range; 'any' = no filter. */
   range52w: Range52w
   /**
@@ -46,6 +51,9 @@ export interface ScreenFilters {
   insiderActivity: InsiderActivity
   insiderDays: number
   minInsiderValue: number | null
+  minInsiderTrades: number | null
+  maxInsiderTradeAge: number | null
+  minInsiderValueLast30Days: number | null
 }
 
 export interface FilterPreset {
@@ -67,11 +75,19 @@ export const EMPTY_FILTERS: ScreenFilters = {
   minPrice: null,
   maxPrice: null,
   minVolume: null,
+  maxVolume: null,
+  minPriceChangePct: null,
+  maxPriceChangePct: null,
+  minCombinedScore: null,
+  maxCombinedScore: null,
   range52w: 'any',
   weeklyConfirms: false,
   insiderActivity: 'all',
   insiderDays: 90,
   minInsiderValue: null,
+  minInsiderTrades: null,
+  maxInsiderTradeAge: null,
+  minInsiderValueLast30Days: null,
 }
 
 /** Read the persisted presets (safe if localStorage is unavailable). */
@@ -123,11 +139,19 @@ export function filtersActive(f: ScreenFilters): boolean {
     f.minPrice !== null ||
     f.maxPrice !== null ||
     f.minVolume !== null ||
+    f.maxVolume !== null ||
+    f.minPriceChangePct !== null ||
+    f.maxPriceChangePct !== null ||
+    f.minCombinedScore !== null ||
+    f.maxCombinedScore !== null ||
     f.range52w !== 'any' ||
     f.weeklyConfirms ||
     f.insiderActivity !== 'all' ||
     f.insiderDays !== 90 ||
-    f.minInsiderValue !== null
+    f.minInsiderValue !== null ||
+    f.minInsiderTrades !== null ||
+    f.maxInsiderTradeAge !== null ||
+    f.minInsiderValueLast30Days !== null
   )
 }
 

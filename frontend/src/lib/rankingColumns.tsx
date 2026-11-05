@@ -58,6 +58,9 @@ export type RankingColumnId =
   | 'aiConfidence'
   | 'trend'
   | 'insiderActivity'
+  | 'insiderLatestTransaction'
+  | 'insiderTotalValue'
+  | 'insiderValueLast30Days'
 
 /**
  * Where a column goes in the phone/tablet card layout.

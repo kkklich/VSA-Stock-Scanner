@@ -29,6 +29,14 @@ cd frontend; npm run build                                    # frontend build
 
 ## Account watchlists
 
+Stock list URLs remember search, filters, favorites-only mode and sorting
+(including multiple sort levels). For example,
+`/?sortBy=priceChangePct&sortDir=desc&favorites=1` opens the dashboard sorted
+by change with favorites only. The dashboard, Filters, Volume surge, Investment
+and Long-term pages restore these choices on refresh and browser Back/Forward.
+Favorites-only links use the viewer's own saved stocks; they do not share private
+watchlist contents.
+
 Sign in and use **New list** on the dashboard to create named
 watchlists. The active list is shared by the ranking, stock-detail star and
 long-term watchlist filter. Stars add/remove a company in that list; the same

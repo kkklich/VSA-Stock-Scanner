@@ -38,7 +38,6 @@ from app.markets import (
     below_market_cap_floor,
     enabled_markets,
     get_market,
-    is_enabled,
     major_currency,
     market_for_yahoo_symbol,
     market_of,
@@ -429,11 +428,8 @@ class TestEnabledMarkets:
     def test_enabled_markets_follows_the_setting(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(settings, "markets", "gpw")
         assert enabled_markets() == (GPW,)
-        assert not is_enabled("us")
         monkeypatch.setattr(settings, "markets", "us,uk")
         assert enabled_markets() == (GPW, US, UNITED_KINGDOM)
-        assert is_enabled("uk")
-        assert is_enabled("gpw")
 
     def test_the_default_serves_the_gpw_only(self) -> None:
         # Nothing changes for visitors until a deployment opts in.

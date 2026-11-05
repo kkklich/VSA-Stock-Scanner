@@ -7,10 +7,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../i18n'
 
-function AllProviders({ children }: { children: ReactNode }) {
+function AllProviders({ children, initialEntries }: { children: ReactNode; initialEntries?: string[] }) {
   return (
     <I18nextProvider i18n={i18n}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
     </I18nextProvider>
   )
 }
@@ -18,9 +18,13 @@ function AllProviders({ children }: { children: ReactNode }) {
 /** render() with the app's router + i18n providers already applied. */
 export function renderWithProviders(
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>,
+  options?: Omit<RenderOptions, 'wrapper'> & { initialEntries?: string[] },
 ) {
-  return render(ui, { wrapper: AllProviders, ...options })
+  const { initialEntries, ...renderOptions } = options ?? {}
+  return render(ui, {
+    wrapper: ({ children }) => <AllProviders initialEntries={initialEntries}>{children}</AllProviders>,
+    ...renderOptions,
+  })
 }
 
 // Re-export the rest of Testing Library so tests import from one place.

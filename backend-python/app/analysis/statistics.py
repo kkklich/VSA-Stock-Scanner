@@ -46,21 +46,6 @@ def median_volume(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> Decima
     return Decimal(str(mid))
 
 
-def relative_volume(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> Decimal | None:
-    """Latest bar's volume divided by the mean volume of the prior ``lookback`` bars.
-
-    A value > 1 means above-average participation. Returns ``None`` when there is
-    not enough history or average volume is zero.
-    """
-    if len(bars) < lookback + 1:
-        return None
-    prior = bars[-(lookback + 1):-1]
-    avg = sum(b.volume for b in prior) / len(prior)
-    if avg == 0:
-        return None
-    return Decimal(str(bars[-1].volume / avg))
-
-
 def median_turnover(bars: Sequence[StooqDailyQuote], lookback: int = 20) -> float:
     """Median of (volume × close) over the trailing ``lookback`` sessions.
 

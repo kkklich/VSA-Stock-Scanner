@@ -92,6 +92,7 @@ class Snapshot(Model):
 class CreateEntry(Model):
     id: UUID
     ticker: Ticker
+    observation_date: date = Field(default_factory=lambda: datetime.now(UTC).date())
     note: Text = Field(min_length=1)
     confirmation: Text = ""
     invalidation: Text = ""

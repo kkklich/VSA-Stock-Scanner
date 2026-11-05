@@ -23,6 +23,8 @@ import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { sortOptionsFrom, useRankingColumns } from '../hooks/useRankingColumns'
 import { useTableSort } from '../hooks/useTableSort'
+import { useUrlState, textParam, booleanParam, numberParam, enumParam } from '../hooks/useUrlState'
+import { RANKING_SORT_KEYS, sortParam } from '../lib/urlSort'
 import type { RankingSortKey } from '../api/stocksApi'
 import { RefreshButton } from '../components/RefreshButton'
 import { ColumnPicker } from '../components/ColumnPicker'
@@ -58,14 +60,22 @@ const RANK_COLUMN_WIDTH = 60
 /** Width one per-method (or the combined) score column gets. */
 const METHOD_COLUMN_WIDTH = 130
 
+const URL_FIELDS = {
+  q: textParam(), favorites: booleanParam(),
+  minRating: numberParam(0, { max: 100, integer: true }),
+  signal: enumParam<SignalVerdict | 'all'>('all', SIGNAL_OPTIONS),
+  sort: sortParam<RankingSortKey>({ key: 'priceChangePct', dir: 'desc' }, RANKING_SORT_KEYS),
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { stars, toggleStar } = useWatchlists()
 
-  const [query, setQuery] = useState('')
+  const url = useUrlState(URL_FIELDS)
+  const [query, setQuery] = url.field('q')
   // Debounced search text — avoids firing a request on every keystroke.
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState(query.trim())
 
   // Debounce the search box (300 ms) before it becomes a query parameter.
   useEffect(() => {
@@ -79,19 +89,21 @@ export function DashboardPage() {
   const { sort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<RankingSortKey>(
     { key: 'priceChangePct', dir: 'desc' },
     initialSortDir,
+    undefined,
+    url.field('sort'),
   )
 
   // "Favorites only": narrows the ranking to the starred tickers. The stars
   // live in localStorage, so the allow-list is sent to the backend as
   // `tickers` rather than filtered client-side (which would only ever see the
   // pages already scrolled into view).
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [favoritesOnly, setFavoritesOnly] = url.field('favorites')
 
   const [filterOpen, setFilterOpen] = useState(false)
   const { buttonRef: filterButtonRef, style: filterStyle } =
     useDropdownPosition(filterOpen, 240)
-  const [minRating, setMinRating] = useState(0)
-  const [signalFilter, setSignalFilter] = useState<SignalVerdict | 'all'>('all')
+  const [minRating, setMinRating] = url.field('minRating')
+  const [signalFilter, setSignalFilter] = url.field('signal')
   const filtersActive = minRating > 0 || signalFilter !== 'all'
 
   // Trading-method catalogue + the user's column selection. `null` = untouched,
@@ -247,8 +259,7 @@ export function DashboardPage() {
   )
 
   const clearFilters = () => {
-    setMinRating(0)
-    setSignalFilter('all')
+    url.setState((previous) => ({ ...previous, minRating: 0, signal: 'all' }))
   }
 
   // Overlay the client-only "starred" flag onto the rows fetched so far.

@@ -16,6 +16,11 @@ const input = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-s
 const statuses: JournalStatus[] = ['observing', 'confirmed', 'invalidated', 'closed']
 type Props = { ticker?: string; data?: ApiStockSignals; overlays?: MethodOverlay[]; signals?: VsaSignal[]; loading?: boolean }
 
+function today() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
 function errorCode(error: unknown) {
   return error instanceof ApiError && error.code ? error.code : 'failed'
 }
@@ -31,6 +36,7 @@ function ErrorNotice({ code, retry }: { code: string; retry?: () => void }) {
 function Composer({ data, overlays = [], signals = [], loading, saved }: Props & { data: ApiStockSignals; saved: () => void }) {
   const { t } = useTranslation()
   const [note, setNote] = useState('')
+  const [observationDate, setObservationDate] = useState(today)
   const [confirmation, setConfirmation] = useState('')
   const [invalidation, setInvalidation] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,7 +49,7 @@ function Composer({ data, overlays = [], signals = [], loading, saved }: Props &
 
   return <form className="flex flex-col gap-3" onSubmit={async (event) => {
     event.preventDefault()
-    if (request.current || loading || !data.history.length || !note.trim()) return
+    if (request.current || loading || !data.history.length || !note.trim() || !observationDate) return
     const abort = new AbortController()
     request.current = abort
     setBusy(true); setError(null); setSuccess(false)
@@ -64,6 +70,7 @@ function Composer({ data, overlays = [], signals = [], loading, saved }: Props &
         const row = ranking.items.find((item) => item.ticker.toUpperCase() === captured.ticker.toUpperCase())
         prepared.current = {
           id: crypto.randomUUID(), ticker: captured.ticker, note: note.trim(), confirmation: confirmation.trim(), invalidation: invalidation.trim(),
+          observationDate,
           snapshot: {
             schemaVersion: 1, name: captured.name ?? captured.ticker, currency: captured.currency ?? 'PLN', market: captured.market ?? 'gpw',
             interval: captured.interval ?? '1d', referencePrice: last.close,
@@ -77,17 +84,19 @@ function Composer({ data, overlays = [], signals = [], loading, saved }: Props &
       await journalRequest<JournalEntry>('POST', '', prepared.current, abort.signal)
       if (abort.signal.aborted) return
       prepared.current = null
+      setObservationDate(today())
       setNote(''); setConfirmation(''); setInvalidation(''); setSuccess(true); saved()
     } catch (failure) { if (!abort.signal.aborted) setError(errorCode(failure)) }
     finally { if (!abort.signal.aborted) { setBusy(false); request.current = null } }
   }}>
     <p className="text-sm text-slate-400">{t('journal.captureHint')}</p>
+    <label className="text-sm sm:max-w-xs">{t('journal.observationDate')}<input type="date" className={input + ' [color-scheme:dark]'} value={observationDate} disabled={busy} required onChange={(event) => { edited(); setObservationDate(event.target.value) }} /></label>
     <label className="text-sm">{t('journal.note')}<textarea className={input} value={note} disabled={busy} required maxLength={5000} rows={3} onChange={(event) => { edited(); setNote(event.target.value) }} /></label>
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-sm">{t('journal.confirmation')}<textarea className={input} value={confirmation} disabled={busy} maxLength={5000} rows={2} onChange={(event) => { edited(); setConfirmation(event.target.value) }} /></label>
       <label className="text-sm">{t('journal.invalidation')}<textarea className={input} value={invalidation} disabled={busy} maxLength={5000} rows={2} onChange={(event) => { edited(); setInvalidation(event.target.value) }} /></label>
     </div>
-    <button className={button + ' self-start text-emerald-400'} disabled={busy || loading || !data.history.length || !note.trim()}>{t(busy ? 'journal.saving' : 'journal.save')}</button>
+    <button className={button + ' self-start text-emerald-400'} disabled={busy || loading || !data.history.length || !note.trim() || !observationDate}>{t(busy ? 'journal.saving' : 'journal.save')}</button>
     {success && <p role="status" className="text-sm text-emerald-400">{t('journal.saved')}</p>}
     {error && <ErrorNotice code={error} />}
   </form>
@@ -208,7 +217,7 @@ function AccountJournal(props: Props) {
     {!result && !error && <p role="status">{t('journal.loading')}</p>}
     {result?.items.length === 0 && <p className="py-4 text-sm text-slate-400">{t('journal.empty')}</p>}
     {result?.items.map((entry) => <article key={entry.id} className="rounded-lg border border-slate-800 p-4">
-      <div className="flex flex-wrap items-center gap-3 text-sm"><Link className="font-semibold text-emerald-400" to={`/stock/${encodeURIComponent(entry.ticker.toLowerCase())}`}>{entry.ticker}</Link><time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString(i18n.language)}</time><span className="rounded bg-slate-800 px-2 py-1">{t(`journal.statuses.${entry.status}`)}</span></div>
+      <div className="flex flex-wrap items-center gap-3 text-sm"><Link className="font-semibold text-emerald-400" to={`/stock/${encodeURIComponent(entry.ticker.toLowerCase())}`}>{entry.ticker}</Link><time dateTime={entry.observationDate}>{new Date(`${entry.observationDate}T00:00:00`).toLocaleDateString(i18n.language)}</time><span className="rounded bg-slate-800 px-2 py-1">{t(`journal.statuses.${entry.status}`)}</span></div>
       <p className="my-3 whitespace-pre-wrap break-words text-sm">{entry.note}</p>
       <button className={button} aria-expanded={expanded === entry.id} onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}>{t(expanded === entry.id ? 'journal.hide' : 'journal.open')}</button>
       {expanded === entry.id && <EntryDetail id={entry.id} changed={(updated) => {

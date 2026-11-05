@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -162,8 +162,3 @@ def clamp_lookback_days(spec: TimeframeSpec, requested_days: int) -> int:
     if spec.max_lookback_days is not None:
         days = min(days, spec.max_lookback_days)
     return days
-
-
-def first_bar_date(bars: Sequence[IntradayBar]) -> date | None:
-    """Calendar date of the oldest bar, or ``None`` for an empty series."""
-    return bars[0].date.date() if bars else None

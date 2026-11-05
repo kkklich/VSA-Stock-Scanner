@@ -80,6 +80,7 @@ class JournalEntryRow(Base):
     note: Mapped[str] = mapped_column(Text, nullable=False)
     confirmation: Mapped[str] = mapped_column(Text, nullable=False)
     invalidation: Mapped[str] = mapped_column(Text, nullable=False)
+    observation_date: Mapped[date] = mapped_column(Date, nullable=False)
     snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="observing")
     review: Mapped[str] = mapped_column(Text, nullable=False, default="")

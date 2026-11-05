@@ -359,24 +359,6 @@
     "rangeTitleMax": "All stored history",
     "rangeTitleLast": "Last {{range}}",
     "vsaBadge": "VSA {{rating}}",
-    "strength": {
-      "title": "Market strength",
-      "info": "Bullish VSA patterns detected for this stock in the shown period, with the date each last fired. ✓ = detected, ✕ = not present. Spring = trapped sellers below support; Successful Test = quiet retest of lows; SOS = strong buying bar."
-    },
-    "weakness": {
-      "title": "Market weakness",
-      "info": "Bearish VSA patterns detected for this stock. Upthrust = trapped buyers above resistance; No Demand = quiet up-bar without professional interest; SOW = strong selling bar."
-    },
-    "detection": {
-      "title": "Adjust context for signal-detection sensitivity",
-      "info": "Filters which VSA signals appear on the chart and in the Strength / Weakness checklist. Sensitivity: higher reveals more (and weaker) signals; lower shows only the strongest. Context window: only signals from the last N trading sessions are shown.",
-      "sensitivity": "Sensitivity",
-      "contextWindow": "Context window (sessions)",
-      "reset": "Reset",
-      "showing": "Showing <0>{{shown}}</0> / {{total}} signals",
-      "expand": "Expand settings",
-      "collapse": "Collapse settings"
-    },
     "fundamentals": {
       "title": "Fundamentals",
       "info": "Company fundamentals from Yahoo Finance, refreshed daily. Market cap = market value of all shares; P/E = price divided by yearly earnings per share (lower can mean cheaper); EPS = earnings per share; Dividend yield = yearly dividend as % of the price.",
@@ -899,11 +881,36 @@
       "offline": "Cannot reach the server. Check your connection and try again."
     }
   },
+  "screenerFilters": {
+    "market": "Price movement, liquidity and scores",
+    "insiders": "More insider filters",
+    "any": "Any",
+    "minPriceChangePct": "Daily change from (%)",
+    "maxPriceChangePct": "Daily change to (%)",
+    "maxVolume": "Max. median volume (shares)",
+    "minCombinedScore": "Combined score from",
+    "maxCombinedScore": "Combined score to",
+    "minInsiderTrades": "Min. insider transactions",
+    "maxInsiderTradeAge": "Latest insider trade within (days)",
+    "minInsiderValueLast30Days": "Min. insider value — 30 days (PLN)",
+    "priceChangeInfo": "Change against the previous close for the latest available session, including live prices when available. Negative values find falling stocks. Different markets may show different sessions.",
+    "volumeInfo": "Upper limit on the 20-session median share volume. Works together with the existing minimum volume filter; this is not today's volume.",
+    "scoreInfo": "Mean score (0–100) of available active trading methods. Stocks without a score are excluded when a score bound is set.",
+    "tradesInfo": "Minimum number of reported open-market transactions in the selected reporting period. Buying and net buying count purchases; selling and net selling count sales; any activity counts both. This counts transactions, not distinct people.",
+    "ageInfo": "The latest matching transaction must be no older than this many calendar days (0 = today). Uses transaction date, or publication date when missing, within the selected reporting period.",
+    "value30Info": "Minimum value reported in the last 30 calendar days, independently of the reporting-period selector. Uses the selected purchase/sale side, directional net balance for net filters, or purchases plus sales for any activity. Indicative PLN conversion; unknown amounts are excluded."
+  },
   "insiderFilters": {
+    "sort": "Sort insider activity",
+    "defaultSort": "Standard stock sorting",
+    "insiderLatestTransaction": "Latest insider transaction",
+    "insiderTotalValue": "Insider value — selected period (PLN)",
+    "insiderValueLast30Days": "Insider value — last 30 days (PLN)",
+    "sortInfo": "Sort by the latest matching transaction, total value in the selected reporting period, or value reported in the last 30 calendar days. Buying uses purchases; selling uses sales; net filters use the balance in that direction (negative means the opposite direction); any activity adds purchases and sales. Dates use the transaction date, or publication date when unavailable. Missing dates and unknown values sort last.",
     "activity": "Insider activity",
     "info": "Reported open-market purchases and sales only. Net buying means purchase value exceeds sale value; net selling means the reverse. Grants, options, gifts and buybacks are excluded.",
     "period": "Insider reporting period",
-    "periodInfo": "Calendar days up to today, selected by publication date rather than trade date. Choose an activity or minimum value to apply this period.",
+    "periodInfo": "Calendar days up to today, selected by publication date rather than trade date. Applies to insider filters and sorting. The last-30-days value always uses 30 days independently of this selection.",
     "days": "Last {{count}} days",
     "minValue": "Min. insider value (PLN)",
     "valueInfo": "Minimum total purchase or sale value for the selected side. For net buying/selling, uses the absolute net value. With any activity, uses purchases plus sales. Foreign currencies use the app's indicative PLN rates. Unknown amounts do not meet value filters.",
@@ -989,6 +996,7 @@
     "title": "Observation journal",
     "captureHint": "Save your scenario with a frozen copy of completed chart candles (up to 5,000), visible signal layers and the current method scores. The original note and evidence cannot be edited; add your conclusions later.",
     "note": "Observation / scenario",
+    "observationDate": "Observation date",
     "confirmation": "Confirmation conditions",
     "invalidation": "Invalidation conditions",
     "save": "Save observation",

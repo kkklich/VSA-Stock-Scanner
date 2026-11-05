@@ -781,11 +781,6 @@ class IngestService:
                 plan.catch_up.append(market_id)
         return plan
 
-    async def needs_bootstrap(self) -> bool:
-        """True when any served market needs a download at startup."""
-        return (await self.bootstrap_plan()).needed
-
-
 INSIDER_JOB_ID = "insider_refresh"
 INSIDER_REFRESH_HOUR = 12
 INSIDER_REFRESH_MINUTE = 0

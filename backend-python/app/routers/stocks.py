@@ -219,7 +219,15 @@ def _bar_day(item) -> date:
 # Sortable ranking columns: camelCase key (as the frontend sends it) → the
 # StockRankingItem attribute name. Anything outside this whitelist is rejected
 # so a bad client can't probe arbitrary attributes.
+_INSIDER_SORT_KEYS = {
+    "insiderLatestTransaction": "latest_transaction_date",
+    "insiderTotalValue": "total_value_pln",
+    "insiderValueLast30Days": "value_last30_days_pln",
+}
+_INSIDER_SORT_ATTRS = {f"insider_activity.{attr}" for attr in _INSIDER_SORT_KEYS.values()}
+
 _RANKING_SORT_KEYS: dict[str, str] = {
+    **{key: f"insider_activity.{attr}" for key, attr in _INSIDER_SORT_KEYS.items()},
     "ticker": "ticker",
     "name": "name",
     "lastPrice": "last_price",
@@ -320,6 +328,12 @@ def _sort_value(
     converted to it, and a row already in it keeps its exact figure. Without
     either, every key is exactly what it always was.
     """
+    if attr in _INSIDER_SORT_ATTRS:
+        summary = getattr(item, "insider_activity", None)
+        value = getattr(summary, attr.split(".")[1], None)
+        if isinstance(value, date):
+            return value.toordinal()
+        return float("-inf") if value is None else value
     value = getattr(item, attr)
     if attr == "last_signal":
         return _SIGNAL_RANK.get(value, 0)
@@ -442,6 +456,10 @@ def _apply_sort(
     ordered = list(rows)
     for attr, reverse in reversed(levels):
         ordered.sort(key=lambda row, a=attr: key_fn(row, a), reverse=reverse)
+        if attr in _INSIDER_SORT_ATTRS:
+            # Keep missing dates/amounts last in either direction, stably so
+            # secondary sort levels continue to break ties.
+            ordered.sort(key=lambda row, a=attr: key_fn(row, a) == float("-inf"))
     return ordered
 
 
@@ -476,6 +494,11 @@ def _query_ranking(
     min_price: float | None = None,
     max_price: float | None = None,
     min_volume: int | None = None,
+    max_volume: int | None = None,
+    min_price_change_pct: float | None = None,
+    max_price_change_pct: float | None = None,
+    min_combined_score: int | None = None,
+    max_combined_score: int | None = None,
     max_dist_from_52w_high_pct: float | None = None,
     max_dist_from_52w_low_pct: float | None = None,
     new_52w_high: bool = False,
@@ -561,6 +584,12 @@ def _query_ranking(
             ]
     if min_volume is not None:
         rows = [r for r in rows if r.volume >= min_volume]
+    if max_volume is not None:
+        rows = [r for r in rows if r.volume <= max_volume]
+    if min_price_change_pct is not None:
+        rows = [r for r in rows if r.price_change_pct >= min_price_change_pct]
+    if max_price_change_pct is not None:
+        rows = [r for r in rows if r.price_change_pct <= max_price_change_pct]
     if max_dist_from_52w_high_pct is not None:
         # "Within N% of the 52-week high": the stored distance is ≤ 0
         # (percent below the high), so within-N means distance ≥ −N.
@@ -592,6 +621,12 @@ def _query_ranking(
     # filters above (no filter reads it; the sort below does). Doing it here
     # instead of up-front avoids copying rows that were just filtered out.
     rows = [_with_combined_score(r, selected_methods) for r in rows]
+    if min_combined_score is not None:
+        rows = [r for r in rows if r.combined_score is not None
+                and r.combined_score >= min_combined_score]
+    if max_combined_score is not None:
+        rows = [r for r in rows if r.combined_score is not None
+                and r.combined_score <= max_combined_score]
 
     return _apply_sort(
         rows,
@@ -1087,6 +1122,15 @@ async def get_ranking(
     min_price: Annotated[float | None, Query(alias="minPrice", ge=0)] = None,
     max_price: Annotated[float | None, Query(alias="maxPrice", ge=0)] = None,
     min_volume: Annotated[int | None, Query(alias="minVolume", ge=0)] = None,
+    max_volume: Annotated[int | None, Query(alias="maxVolume", ge=0)] = None,
+    min_price_change_pct: Annotated[
+        float | None, Query(alias="minPriceChangePct", ge=-100, allow_inf_nan=False)
+    ] = None,
+    max_price_change_pct: Annotated[
+        float | None, Query(alias="maxPriceChangePct", ge=-100, allow_inf_nan=False)
+    ] = None,
+    min_combined_score: Annotated[int | None, Query(alias="minCombinedScore", ge=0, le=100)] = None,
+    max_combined_score: Annotated[int | None, Query(alias="maxCombinedScore", ge=0, le=100)] = None,
     max_dist_from_52w_high_pct: Annotated[
         float | None, Query(alias="maxDistFrom52wHighPct", ge=0, le=100)
     ] = None,
@@ -1100,6 +1144,13 @@ async def get_ranking(
     insider_days: Annotated[int, Query(alias="insiderDays", ge=1, le=365)] = 90,
     min_insider_value: Annotated[
         float | None, Query(alias="minInsiderValue", ge=0, allow_inf_nan=False)
+    ] = None,
+    min_insider_trades: Annotated[int | None, Query(alias="minInsiderTrades", ge=1)] = None,
+    max_insider_trade_age: Annotated[
+        int | None, Query(alias="maxInsiderTradeAge", ge=0, le=365)
+    ] = None,
+    min_insider_value_last30_days: Annotated[
+        float | None, Query(alias="minInsiderValueLast30Days", ge=0, allow_inf_nan=False)
     ] = None,
     tickers: Annotated[str | None, Query(max_length=4000)] = None,
     methods: Annotated[str | None, Query(max_length=512)] = None,
@@ -1159,6 +1210,11 @@ async def get_ranking(
         min_price=min_price,
         max_price=max_price,
         min_volume=min_volume,
+        max_volume=max_volume,
+        min_price_change_pct=min_price_change_pct,
+        max_price_change_pct=max_price_change_pct,
+        min_combined_score=min_combined_score,
+        max_combined_score=max_combined_score,
         max_dist_from_52w_high_pct=max_dist_from_52w_high_pct,
         max_dist_from_52w_low_pct=max_dist_from_52w_low_pct,
         new_52w_high=new_52w_high,
@@ -1171,23 +1227,45 @@ async def get_ranking(
         price_unit=markets[0].currency if len(markets) == 1 else None,
     )
 
-    if insider_activity != "all" or min_insider_value is not None:
+    insider_sort = any(attr in _INSIDER_SORT_ATTRS for attr, _ in sort)
+    if (insider_activity != "all" or min_insider_value is not None or insider_sort
+            or min_insider_trades is not None or max_insider_trade_age is not None
+            or min_insider_value_last30_days is not None):
         if repo is None:
             raise HTTPException(503, "Insider screening requires stored transaction data.")
         today = datetime.now(ZoneInfo("Europe/Warsaw")).date()
         try:
             transactions = await repo.get_insider_transactions_bulk(
                 [r.ticker for r in filtered],
-                today - timedelta(days=insider_days - 1), today,
+                today - timedelta(days=max(insider_days, 30) - 1), today,
             )
         except Exception as exc:
             logger.exception("Insider screener database lookup failed.")
             raise HTTPException(
                 503, "Insider transaction data is temporarily unavailable."
             ) from exc
+        period_start = today - timedelta(days=insider_days - 1)
+        last30_start = today - timedelta(days=29)
         filtered = screen_insider_activity(
-            filtered, transactions, insider_activity, min_insider_value,
+            filtered,
+            {ticker: [tx for tx in items if tx.publication_date >= period_start]
+             for ticker, items in transactions.items()},
+            insider_activity, min_insider_value,
+            {ticker: [tx for tx in items if tx.publication_date >= last30_start]
+             for ticker, items in transactions.items()},
+            min_trades=min_insider_trades,
+            max_trade_age=max_insider_trade_age,
+            min_value_last30=min_insider_value_last30_days,
+            as_of=today,
         )
+        if insider_sort:
+            filtered = _apply_sort(
+                filtered, sort,
+                lambda r, attr: _sort_value(
+                    r, attr, pooled=len(markets) > 1,
+                    price_unit=markets[0].currency if len(markets) == 1 else None,
+                ),
+            )
 
     # Total matching rows before pagination — the frontend reads this to build
     # its pager. Exposed to the browser via CORS (see main.py).

@@ -363,24 +363,6 @@
     "rangeTitleMax": "Cała zapisana historia",
     "rangeTitleLast": "Ostatnie {{range}}",
     "vsaBadge": "VSA {{rating}}",
-    "strength": {
-      "title": "Siła rynku",
-      "info": "Wzorce VSA byka wykryte dla tej spółki w pokazanym okresie, z datą ostatniego wystąpienia. ✓ = wykryto, ✕ = brak. Spring = uwięzieni sprzedający poniżej wsparcia; Udany test = spokojny retest dołków; SOS = silna świeca kupna."
-    },
-    "weakness": {
-      "title": "Słabość rynku",
-      "info": "Wzorce VSA niedźwiedzia wykryte dla tej spółki. Upthrust = uwięzieni kupujący powyżej oporu; No Demand = spokojna świeca wzrostowa bez zainteresowania profesjonalistów; SOW = silna świeca sprzedaży."
-    },
-    "detection": {
-      "title": "Dostosuj kontekst czułości detekcji sygnałów",
-      "info": "Filtruje, które sygnały VSA pojawiają się na wykresie oraz na liście Siła / Słabość. Czułość: wyższa ujawnia więcej (i słabszych) sygnałów; niższa pokazuje tylko najsilniejsze. Okno kontekstu: pokazywane są tylko sygnały z ostatnich N sesji giełdowych.",
-      "sensitivity": "Czułość",
-      "contextWindow": "Okno kontekstu (sesje)",
-      "reset": "Resetuj",
-      "showing": "Wyświetlono <0>{{shown}}</0> / {{total}} sygnałów",
-      "expand": "Rozwiń ustawienia",
-      "collapse": "Zwiń ustawienia"
-    },
     "fundamentals": {
       "title": "Wskaźniki fundamentalne",
       "info": "Dane fundamentalne spółki z Yahoo Finance, odświeżane codziennie. Kapitalizacja = wartość rynkowa wszystkich akcji; C/Z = cena podzielona przez roczny zysk na akcję (niższa może oznaczać taniej); EPS = zysk na akcję; Stopa dywidendy = roczna dywidenda jako % ceny.",
@@ -907,11 +889,36 @@
       "offline": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie."
     }
   },
+  "screenerFilters": {
+    "market": "Zmiana kursu, płynność i oceny",
+    "insiders": "Dodatkowe filtry insiderów",
+    "any": "Dowolnie",
+    "minPriceChangePct": "Zmiana dzienna od (%)",
+    "maxPriceChangePct": "Zmiana dzienna do (%)",
+    "maxVolume": "Maks. mediana wolumenu (akcje)",
+    "minCombinedScore": "Ocena łączna od",
+    "maxCombinedScore": "Ocena łączna do",
+    "minInsiderTrades": "Min. liczba transakcji insiderów",
+    "maxInsiderTradeAge": "Ostatnia transakcja w ciągu (dni)",
+    "minInsiderValueLast30Days": "Min. wartość insiderów — 30 dni (PLN)",
+    "priceChangeInfo": "Zmiana względem poprzedniego zamknięcia dla ostatniej dostępnej sesji, z cenami bieżącymi, jeśli są dostępne. Wartości ujemne wyszukują spadające akcje. Różne rynki mogą pokazywać różne sesje.",
+    "volumeInfo": "Górny limit mediany wolumenu akcji z 20 sesji. Działa razem z istniejącym filtrem minimalnego wolumenu; nie jest to wolumen dzisiejszej sesji.",
+    "scoreInfo": "Średnia ocena (0–100) dostępnych aktywnych metod. Po ustawieniu granicy oceny spółki bez oceny są pomijane.",
+    "tradesInfo": "Minimalna liczba zgłoszonych transakcji na otwartym rynku w wybranym okresie zgłoszeń. Kupno i kupno netto zliczają zakupy, sprzedaż i sprzedaż netto — sprzedaże, a dowolna aktywność — obie strony. Liczone są transakcje, nie różne osoby.",
+    "ageInfo": "Ostatnia pasująca transakcja nie może być starsza niż podana liczba dni kalendarzowych (0 = dzisiaj). Używana jest data transakcji, a przy jej braku data publikacji, w wybranym okresie zgłoszeń.",
+    "value30Info": "Minimalna wartość zgłoszona w ostatnich 30 dniach kalendarzowych, niezależnie od wyboru okresu. Uwzględnia wybraną stronę kupna/sprzedaży, saldo w wybranym kierunku dla filtrów netto albo sumę zakupów i sprzedaży dla dowolnej aktywności. Przeliczenie na PLN jest orientacyjne; nieznane kwoty są pomijane."
+  },
   "insiderFilters": {
+    "sort": "Sortowanie aktywności insiderów",
+    "defaultSort": "Standardowe sortowanie spółek",
+    "insiderLatestTransaction": "Ostatnia transakcja insiderów",
+    "insiderTotalValue": "Wartość insiderów — wybrany okres (PLN)",
+    "insiderValueLast30Days": "Wartość insiderów — ostatnie 30 dni (PLN)",
+    "sortInfo": "Sortuj według ostatniej pasującej transakcji, łącznej wartości w wybranym okresie zgłoszeń lub wartości zgłoszonej w ostatnich 30 dniach kalendarzowych. Kupno obejmuje zakupy, sprzedaż — sprzedaże, filtry netto — saldo w danym kierunku (wartość ujemna oznacza przeciwny kierunek), a dowolna aktywność — sumę zakupów i sprzedaży. Używana jest data transakcji, a przy jej braku data publikacji. Brakujące daty i nieznane wartości trafiają na koniec.",
     "activity": "Aktywność insiderów",
     "info": "Tylko zgłoszone zakupy i sprzedaże na otwartym rynku. Kupno netto oznacza przewagę wartości zakupów nad sprzedażą; sprzedaż netto — odwrotnie. Bez przydziałów, opcji, darowizn i skupu akcji własnych.",
     "period": "Okres zgłoszeń insiderów",
-    "periodInfo": "Dni kalendarzowe do dzisiaj, według daty publikacji, a nie daty transakcji. Wybierz aktywność lub minimalną wartość, aby zastosować okres.",
+    "periodInfo": "Dni kalendarzowe do dzisiaj, według daty publikacji, a nie daty transakcji. Dotyczy filtrów i sortowania insiderów. Wartość z ostatnich 30 dni zawsze obejmuje 30 dni, niezależnie od tego wyboru.",
     "days": "Ostatnie {{count}} dni",
     "minValue": "Min. wartość transakcji (PLN)",
     "valueInfo": "Minimalna łączna wartość zakupów lub sprzedaży dla wybranej strony. Dla kupna/sprzedaży netto: wartość bezwzględna salda. Dla dowolnej aktywności: suma zakupów i sprzedaży. Waluty obce według orientacyjnych kursów PLN aplikacji. Nieznane wartości nie spełniają filtra kwotowego.",
@@ -1007,6 +1014,7 @@
     "title": "Dziennik obserwacji",
     "captureHint": "Zapisz scenariusz z niezmienną kopią zakończonych świec wykresu (do 5000), widocznych warstw sygnałów i aktualnych ocen metod. Pierwotnej notatki i danych nie można zmienić; wnioski dopiszesz później.",
     "note": "Obserwacja / scenariusz",
+    "observationDate": "Data obserwacji",
     "confirmation": "Warunki potwierdzenia",
     "invalidation": "Warunki unieważnienia",
     "save": "Zapisz obserwację",

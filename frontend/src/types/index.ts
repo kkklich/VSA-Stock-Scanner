@@ -73,19 +73,6 @@ export interface MethodResult {
   available: boolean
 }
 
-/** A selectable trading method in the dashboard's method picker. */
-export interface TradingMethod {
-  id: string
-  name: string
-  /** Plain-language explainer shown in the UI. */
-  description: string
-  /** Evidence source (book / paper / verified track record). */
-  source: string
-  sourceUrl: string | null
-  /** "Bullish" — long-only setups for now. */
-  direction: string
-}
-
 /** The badge verdict derived from the strongest active VSA structure. */
 export type SignalVerdict = 'Strong Buy' | 'Buy' | 'Hold' | 'Sell' | 'Strong Sell'
 
@@ -110,55 +97,6 @@ export interface VsaSignal {
   date: string
   signalName: string
   type: 'Bullish' | 'Bearish'
-}
-
-/** A row in the strength / weakness signal checklist (detail view). */
-export interface SignalFlag {
-  name: string
-  /** Whether the pattern was detected for this asset. */
-  present: boolean
-  date: string
-}
-
-/** Fundamentals shown in the "Fundamentals" card. */
-export interface StockFundamentals {
-  sector: string
-  industry: string
-  marketCap: string
-}
-
-/** Aggregated detail payload for a single ticker (detail / charts page). */
-export interface StockDetail {
-  ticker: string
-  name: string
-  lastPrice: number
-  priceChangePct: number
-  currentRating: number
-  ratingChange: number
-  fundamentals: StockFundamentals
-  strength: SignalFlag[]
-  weakness: SignalFlag[]
-  candles: Candle[]
-  signals: VsaSignal[]
-}
-
-/** A toggleable rule in the scanner's VSA engine list. */
-export interface EngineRule {
-  id: string
-  /** 'Strength' or 'Weakness'. */
-  side: 'Strength' | 'Weakness'
-  name: string
-  enabled: boolean
-}
-
-/** One row in the effectiveness statistics table. */
-export interface EffectivenessRow {
-  signal: string
-  successPct: number
-  /** null = undefined ratio (wins with no losses, or no judged trades). */
-  rewardRisk: number | null
-  /** Historical sample size the stats are computed from. */
-  trades: number
 }
 
 /** One reported trade in a company's shares by an insider (MAR Art. 19 / Form 4). */

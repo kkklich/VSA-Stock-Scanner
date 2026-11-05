@@ -57,13 +57,6 @@ export function login(email: string, password: string): Promise<AuthSession> {
   return post<AuthSession>('/api/auth/login', { email, password })
 }
 
-export function refreshSession(refreshToken?: string): Promise<AuthSession> {
-  return post<AuthSession>(
-    '/api/auth/refresh',
-    refreshToken ? { refreshToken } : {},
-  )
-}
-
 export function logout(): Promise<{ ok: boolean }> {
   return post<{ ok: boolean }>('/api/auth/logout', {})
 }

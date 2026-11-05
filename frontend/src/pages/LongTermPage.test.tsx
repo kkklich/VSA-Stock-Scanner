@@ -32,6 +32,18 @@ beforeEach(() => {
 afterEach(async () => { await i18n.changeLanguage('en') })
 
 describe('Long-term ranking', () => {
+  it('restores URL filters and sort direction together', () => {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify({ low: true, high: true }))
+    renderWithProviders(<LongTermPage />, {
+      initialEntries: ['/long-term?favorites=1&scoredOnly=1&sector=Industry&sortBy=score&sortDir=asc'],
+    })
+    expect(screen.getByRole('checkbox', { name: 'Watchlist only' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Scored only' })).toBeChecked()
+    expect(screen.getByRole('combobox', { name: 'Sector' })).toHaveValue('Industry')
+    expect(rows()).toHaveLength(2)
+    expect(within(rows()[0]).getByRole('link')).toHaveTextContent('LOW')
+  })
+
   it('sorts by fundamentals independently of QVM and filters incomplete assessments', async () => {
     const analysis = (score: number | null): FundamentalAssessment => ({
       modelVersion: 'fundamentals-v1', profile: 'corporate', score,

@@ -28,12 +28,14 @@ export interface JournalSummary {
   review: string
   version: number
   createdAt: string
+  observationDate: string
   updatedAt: string
 }
 export interface JournalEntry extends JournalSummary { snapshot: JournalSnapshot }
 export interface JournalPage { items: JournalSummary[]; total: number }
 export interface NewJournalEntry {
   id: string; ticker: string; note: string; confirmation: string; invalidation: string
+  observationDate: string
   snapshot: JournalSnapshot
 }
 export function journalRequest<T>(method: string, path = '', body?: unknown, signal?: AbortSignal) {

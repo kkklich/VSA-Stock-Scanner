@@ -132,10 +132,6 @@ export const CHART_THEME: Record<ResolvedTheme, ChartPalette> = {
   light: LIGHT,
 }
 
-export function chartPalette(theme: ResolvedTheme): ChartPalette {
-  return CHART_THEME[theme]
-}
-
 /** Which way a stock-chart signal points. */
 export type MarkerType = 'Bullish' | 'Bearish' | 'Watch'
 

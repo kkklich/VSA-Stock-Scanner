@@ -19,6 +19,7 @@ def response(row, *, full=True):
         "confirmation": row.confirmation, "invalidation": row.invalidation,
         "status": row.status, "review": row.review, "version": row.version,
         "createdAt": row.created_at, "updatedAt": row.updated_at,
+        "observationDate": row.observation_date,
     }
     if full:
         result["snapshot"] = row.snapshot
@@ -40,11 +41,14 @@ class JournalRepository:
             # Do not fetch chart blobs when rendering the diary index.
             fields = [getattr(JournalEntryRow, key) for key in (
                 "id", "ticker", "note", "confirmation", "invalidation", "status", "review",
-                "version", "created_at", "updated_at",
+                "version", "created_at", "updated_at", "observation_date",
             )]
             rows = (await session.execute(
                 select(*fields).where(*condition)
-                .order_by(JournalEntryRow.created_at.desc(), JournalEntryRow.id)
+                .order_by(
+                    JournalEntryRow.observation_date.desc(),
+                    JournalEntryRow.created_at.desc(), JournalEntryRow.id,
+                )
                 .offset(offset).limit(limit)
             )).all()
             return {"items": [response(row, full=False) for row in rows], "total": total}
@@ -82,6 +86,7 @@ class JournalRepository:
                     id=str(payload.id), user_id=owner, ticker=payload.ticker,
                     note=payload.note, confirmation=payload.confirmation,
                     invalidation=payload.invalidation,
+                    observation_date=payload.observation_date,
                     snapshot=payload.snapshot.model_dump(mode="json", by_alias=True),
                     status="observing", review="", version=1, created_at=now, updated_at=now,
                 )

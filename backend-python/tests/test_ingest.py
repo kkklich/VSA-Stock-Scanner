@@ -212,16 +212,16 @@ class TestIngestService:
         assert kgh_stored == []
         assert len(pko_stored) == 1
 
-    def test_needs_bootstrap_true_when_no_data(self) -> None:
+    def test_bootstrap_plan_needs_data_when_empty(self) -> None:
         svc, _, _, _, _ = self._make_service()
-        assert asyncio.run(svc.needs_bootstrap()) is True
+        assert asyncio.run(svc.bootstrap_plan()).needed is True
 
-    def test_needs_bootstrap_false_after_todays_ingest(self) -> None:
+    def test_bootstrap_plan_needs_no_data_after_todays_ingest(self) -> None:
         repo = InMemoryQuoteRepository()
         today = date.today()
         asyncio.run(repo.upsert_quotes("kgh", [_quote(today.isoformat())]))
         svc, _, _, _, _ = self._make_service(repo=repo)
-        assert asyncio.run(svc.needs_bootstrap()) is False
+        assert asyncio.run(svc.bootstrap_plan()).needed is False
 
     def test_full_ingest_requests_more_history(self) -> None:
         """Verify the ``full`` flag causes a different ``from_date`` in the request."""

@@ -15,7 +15,6 @@ import { apiFetch, apiFetchWithHeaders, ApiError } from './client'
 import {
   clearTokens,
   getAccessToken,
-  getRefreshToken,
   setTokens,
 } from '../lib/authToken'
 
@@ -184,7 +183,6 @@ describe('bearer token and silent refresh', () => {
     // every later request would pay two round trips to fail.
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(getAccessToken()).toBe('')
-    expect(getRefreshToken()).toBe('')
   })
 
   it('does not try to refresh the sign-in calls themselves', async () => {
