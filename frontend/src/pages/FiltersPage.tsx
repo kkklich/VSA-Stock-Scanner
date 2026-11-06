@@ -44,6 +44,8 @@ import {
 } from '../lib/filterPresets'
 
 const PAGE_SIZE = 25
+const INSIDER_PERIODS = [1, 7, 30, 90, EMPTY_FILTERS.insiderDays, 180, 365]
+const warsawDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' })
 
 const INSIDER_ACTIVITIES: InsiderActivity[] = ['all', 'any', 'buy', 'sell', 'netBuy', 'netSell']
 const INSIDER_SORT_KEYS = ['insiderLatestTransaction', 'insiderTotalValue', 'insiderValueLast30Days'] as const
@@ -72,6 +74,7 @@ const INSIDER_COLUMN: RankingColumn = {
   cell: (row, { t }) => {
     const summary = row.insiderActivity
     if (!summary) return '—'
+    const sales = summary.salesValuePln
     const money = (value: number | null) => value === null ? t('insiderFilters.unknown') : fmtMoney(value, 'PLN')
     return (
       <div className="space-y-1 text-xs tabular-nums">
@@ -82,7 +85,7 @@ const INSIDER_COLUMN: RankingColumn = {
           </span>
         </div>
         <div className="text-rose-400">
-          {t('insider.sales')}: {money(summary.salesValuePln)}
+          {t('insider.sales')}: {money(sales ? -sales : sales)}
           <span className="block text-[10px] text-slate-500">
             {t('insider.tradesAndShares', { count: summary.salesCount, shares: summary.salesShares.toLocaleString('en-US') })}
           </span>
@@ -187,7 +190,8 @@ const URL_FIELDS = {
   range52w: enumParam<Range52w>('any', ['any', 'newHigh', 'nearHigh', 'newLow', 'nearLow']),
   weeklyConfirms: booleanParam(),
   insiderActivity: enumParam<InsiderActivity>('all', INSIDER_ACTIVITIES),
-  insiderDays: numberParam(90, { min: 1, max: 365, integer: true }),
+  insiderEnd: textParam(),
+  insiderDays: numberParam(EMPTY_FILTERS.insiderDays, { min: 1, max: 365, integer: true }),
   minInsiderValue: numberParam(null),
   minInsiderTrades: numberParam(null, { min: 1, integer: true }),
   maxInsiderTradeAge: numberParam(null, { max: 365, integer: true }),
@@ -258,6 +262,14 @@ export function FiltersPage() {
     setActivePresetId(null)
   }
 
+  const setInsiderWindow = (window: Partial<Pick<ScreenFilters, 'insiderEnd' | 'insiderDays'>>) => {
+    setFilters((f) => ({
+      ...f, ...window,
+      insiderActivity: f.insiderActivity === 'all' && !sortingInsiders ? 'any' : f.insiderActivity,
+    }))
+    setActivePresetId(null)
+  }
+
   // Distinct sectors from the tracked-companies list, alphabetical.
   const { companies } = useCompanies()
   const sectors = useMemo(() => {
@@ -265,6 +277,10 @@ export function FiltersPage() {
     for (const c of companies) if (c.sector) set.add(c.sector)
     return [...set].sort((a, b) => a.localeCompare(b))
   }, [companies])
+
+  const showInsiders = sortingInsiders || hasInsiderFilter(applied)
+  const periodChoices = INSIDER_PERIODS.includes(filters.insiderDays)
+    ? INSIDER_PERIODS : [...INSIDER_PERIODS, filters.insiderDays].sort((a, b) => a - b)
 
   const rankingParams = useMemo<RankingParams>(
     () => ({
@@ -288,15 +304,15 @@ export function FiltersPage() {
       ...range52wParams(applied.range52w),
       weeklyConfirms: CLASSIC_VSA_ENABLED ? applied.weeklyConfirms || undefined : undefined,
       insiderActivity: applied.insiderActivity !== 'all' ? applied.insiderActivity : undefined,
-      insiderDays: sortingInsiders || hasInsiderFilter(applied)
-        ? applied.insiderDays : undefined,
+      insiderEnd: showInsiders && applied.insiderEnd || undefined,
+      insiderDays: showInsiders ? applied.insiderDays : undefined,
       minInsiderValue: applied.minInsiderValue ?? undefined,
       minInsiderTrades: applied.minInsiderTrades ?? undefined,
       maxInsiderTradeAge: applied.maxInsiderTradeAge ?? undefined,
       minInsiderValueLast30Days: applied.minInsiderValueLast30Days ?? undefined,
       market: marketParam,
     }),
-    [page, sort, applied, marketParam, sortingInsiders],
+    [page, sort, applied, marketParam, showInsiders],
   )
 
   const { data, total, loading, error, refetch } = useRanking(rankingParams, {
@@ -311,7 +327,6 @@ export function FiltersPage() {
   // Which columns to show — shared with the Dashboard and Watchlist, and used
   // by both the wide table and the card list below `lg`.
   const columns = useRankingColumns()
-  const showInsiders = sortingInsiders || hasInsiderFilter(applied)
   const renderColumns = useMemo(
     () => showInsiders ? [...columns.renderColumns, ...toRenderColumns([...INSIDER_SORT_COLUMNS, INSIDER_COLUMN], t)] : columns.renderColumns,
     [columns.renderColumns, showInsiders, t],
@@ -653,7 +668,7 @@ export function FiltersPage() {
                 const activity = e.target.value as InsiderActivity
                 url.setState((previous) => ({
                   ...previous, insiderActivity: activity,
-                  sort: activity !== 'all'
+                  sort: activity !== 'all' && !isInsiderSort(previous.sort[0].key)
                     ? [{ key: 'insiderLatestTransaction', dir: 'desc' }] : previous.sort,
                 }))
                 setActivePresetId(null)
@@ -682,16 +697,32 @@ export function FiltersPage() {
             </select>
           </Field>
 
+          {isInsiderSort(sort[0].key) && (
+            <Field label={t('insiderFilters.direction')}>
+              <select value={sort[0].dir} className={inputClass}
+                onChange={(e) => onSortDirChange(sort[0].key, e.target.value === 'asc' ? 'asc' : 'desc')}>
+                <option value="desc">{t('common.sortDesc')}</option>
+                <option value="asc">{t('common.sortAsc')}</option>
+              </select>
+            </Field>
+          )}
+
           <Field label={t('insiderFilters.period')} info={t('insiderFilters.periodInfo')}>
             <select
               value={filters.insiderDays}
-              onChange={(e) => set('insiderDays', Number(e.target.value))}
+              onChange={(e) => setInsiderWindow({ insiderDays: Number(e.target.value) })}
               className={inputClass}
             >
-              {[30, 90, 180, 365].map((days) => (
+              {periodChoices.map((days) => (
                 <option key={days} value={days}>{t('insiderFilters.days', { count: days })}</option>
               ))}
             </select>
+          </Field>
+
+          <Field label={t('insiderFilters.end')} info={t('insiderFilters.endInfo')}>
+            <input type="date" className={inputClass} value={filters.insiderEnd}
+              min="1900-01-01" max={warsawDate.format(new Date())}
+              onChange={(e) => setInsiderWindow({ insiderEnd: e.target.value })} />
           </Field>
 
           <Field label={t('insiderFilters.minValue')} info={t('insiderFilters.valueInfo')}>

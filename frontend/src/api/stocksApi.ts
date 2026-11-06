@@ -262,8 +262,9 @@ export interface RankingQuery {
   new52wLow?: boolean
   /** Only stocks whose weekly VSA verdict confirms their daily one. */
   weeklyConfirms?: boolean
-  /** Stored open-market filings, selected by publication date. */
+  /** Stored open-market filings, selected by trade date with a publication-date fallback. */
   insiderActivity?: InsiderActivity
+  insiderEnd?: string
   insiderDays?: number
   /** Minimum selected-side value (or absolute net value), in indicative PLN. */
   minInsiderValue?: number
@@ -315,6 +316,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
     new52wLow,
     weeklyConfirms,
     insiderActivity,
+    insiderEnd,
     insiderDays,
     minInsiderValue,
     minInsiderTrades,
@@ -360,6 +362,7 @@ export async function fetchRanking(query: RankingQuery = {}): Promise<RankingPag
   if (new52wLow) params.set('new52wLow', 'true')
   if (weeklyConfirms) params.set('weeklyConfirms', 'true')
   if (insiderActivity && insiderActivity !== 'all') params.set('insiderActivity', insiderActivity)
+  if (insiderEnd) params.set('insiderEnd', insiderEnd)
   if (insiderDays !== undefined) params.set('insiderDays', String(insiderDays))
   if (minInsiderValue !== undefined) params.set('minInsiderValue', String(minInsiderValue))
   for (const [key, value] of Object.entries({

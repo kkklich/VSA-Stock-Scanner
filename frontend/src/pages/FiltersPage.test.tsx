@@ -30,7 +30,11 @@ describe('insider filters', () => {
       const view = renderWithProviders(<FiltersPage />)
       await user.selectOptions(screen.getByRole('combobox', { name: /^Sort insider activity/ }), key)
       expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
-        sort: [{ key, dir: 'desc' }], insiderDays: 90,
+        sort: [{ key, dir: 'desc' }], insiderDays: 100,
+      }), expect.anything())
+      await user.selectOptions(screen.getByRole('combobox', { name: /^Insider sort direction/ }), 'asc')
+      expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
+        sort: [{ key, dir: 'asc' }],
       }), expect.anything())
       view.unmount()
       renderWithProviders(<FiltersPage />, {
@@ -44,11 +48,11 @@ describe('insider filters', () => {
 
   it('restores screener criteria and sorting from the URL on the first request', () => {
     renderWithProviders(<FiltersPage />, {
-      initialEntries: ['/filters?q=KGH&minPrice=20&maxPrice=250&minVolume=1000&range52w=newHigh&insiderActivity=buy&insiderDays=180&minInsiderValue=250000&sortBy=lastPrice&sortDir=asc'],
+      initialEntries: ['/filters?q=KGH&minPrice=20&maxPrice=250&minVolume=1000&range52w=newHigh&insiderActivity=buy&insiderDays=180&insiderEnd=2025-06-01&minInsiderValue=250000&sortBy=lastPrice&sortDir=asc'],
     })
     expect(useRankingMock).toHaveBeenLastCalledWith(expect.objectContaining({
       q: 'KGH', minPrice: 20, maxPrice: 250, minVolume: 1000, new52wHigh: true,
-      insiderActivity: 'buy', insiderDays: 180, minInsiderValue: 250000,
+      insiderActivity: 'buy', insiderDays: 180, insiderEnd: '2025-06-01', minInsiderValue: 250000,
       sort: [{ key: 'lastPrice', dir: 'asc' }],
     }), expect.anything())
   })
@@ -57,8 +61,8 @@ describe('insider filters', () => {
     const user = userEvent.setup()
     renderWithProviders(<FiltersPage />)
     await user.selectOptions(screen.getByRole('combobox', { name: /^Insider activity/ }), 'netSell')
-    await user.selectOptions(screen.getByRole('combobox', { name: /^Insider reporting period/ }), '180')
-    await user.type(screen.getByRole('spinbutton', { name: /^Min\. insider value/ }), '250000')
+    await user.selectOptions(screen.getByRole('combobox', { name: /^Insider transaction period/ }), '180')
+    await user.type(screen.getByRole('spinbutton', { name: 'Min. insider value (PLN)' }), '250000')
     await waitFor(() => expect(useRankingMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
         insiderActivity: 'netSell', insiderDays: 180, minInsiderValue: 250000,
@@ -100,8 +104,8 @@ describe('insider filters', () => {
       data: [{
         ticker: 'kgh', name: 'KGHM', insiderActivity: {
           purchasesCount: 2, salesCount: 1, purchasesShares: 5000, salesShares: 500,
-          purchasesValuePln: 250000, salesValuePln: null, netValuePln: null,
-          latestTransactionDate: '2026-11-04', totalValuePln: 250000, valueLast30DaysPln: 125000,
+          purchasesValuePln: 250000, salesValuePln: 500, netValuePln: 249500,
+          latestTransactionDate: '2026-11-04', totalValuePln: 250000, valueLast30DaysPln: null,
         },
       }],
       total: 1, loading: false, error: null, refetch: vi.fn(),
@@ -111,7 +115,7 @@ describe('insider filters', () => {
     await user.click(screen.getByRole('button', { name: 'Insider buys', exact: true }))
     await waitFor(() => expect(screen.getAllByText(/250,000\.00 PLN/)).toHaveLength(4))
     expect(screen.getAllByText('2026-11-04')).toHaveLength(2)
-    expect(screen.getAllByText(/125,000\.00 PLN/)).toHaveLength(2)
+    expect(screen.getAllByText(/-500\.00 PLN/)).toHaveLength(2)
     expect(screen.getAllByText(/2 trades · 5,000 shares/)).toHaveLength(2)
     expect(screen.getAllByText(/Unknown value/).length).toBeGreaterThanOrEqual(2)
   })

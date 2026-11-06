@@ -245,7 +245,7 @@ class LivePrice(_CamelModel):
 # ── New models: ranking endpoint ──────────────────────────────────────────────
 
 class InsiderScreenSummary(_CamelModel):
-    """Stored open-market filings in the requested publication-date window.
+    """Stored open-market filings in the requested transaction-date window.
 
     Values use the app's indicative PLN conversion rates. A side is unknown
     when any of its filings lacks an amount or a supported currency.
@@ -1308,6 +1308,10 @@ class InsiderTransactionItem(_CamelModel):
     source: str
     source_url: str | None = None
     notes: str | None = None
+
+    @property
+    def effective_trade_date(self) -> date:
+        return self.trade_date or self.publication_date
 
 
 class InsiderChartMarker(_CamelModel):

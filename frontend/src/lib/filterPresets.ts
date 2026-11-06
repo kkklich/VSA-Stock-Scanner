@@ -49,6 +49,7 @@ export interface ScreenFilters {
    */
   weeklyConfirms: boolean
   insiderActivity: InsiderActivity
+  insiderEnd: string
   insiderDays: number
   minInsiderValue: number | null
   minInsiderTrades: number | null
@@ -83,7 +84,8 @@ export const EMPTY_FILTERS: ScreenFilters = {
   range52w: 'any',
   weeklyConfirms: false,
   insiderActivity: 'all',
-  insiderDays: 90,
+  insiderEnd: '',
+  insiderDays: 100,
   minInsiderValue: null,
   minInsiderTrades: null,
   maxInsiderTradeAge: null,
@@ -147,7 +149,8 @@ export function filtersActive(f: ScreenFilters): boolean {
     f.range52w !== 'any' ||
     f.weeklyConfirms ||
     f.insiderActivity !== 'all' ||
-    f.insiderDays !== 90 ||
+    f.insiderEnd !== '' ||
+    f.insiderDays !== EMPTY_FILTERS.insiderDays ||
     f.minInsiderValue !== null ||
     f.minInsiderTrades !== null ||
     f.maxInsiderTradeAge !== null ||

@@ -30,7 +30,7 @@ def summarize_insider_activity(
             continue
         counts[side] += 1
         if selected_side is None or side == selected_side:
-            when = tx.trade_date or tx.publication_date
+            when = tx.effective_trade_date
             latest = max(latest, when) if latest else when
         shares[side] += tx.shares or 0
         amount = tx.value
@@ -47,17 +47,28 @@ def summarize_insider_activity(
     if activity == "buy":
         total = buy
     elif activity == "sell":
-        total = sell
-    elif activity in ("netBuy", "netSell"):
-        total = None if net is None else net if activity == "netBuy" else -net
+        total = -sell if sell else sell
     else:
-        total = round(buy + sell, 2) if buy is not None and sell is not None else None
+        total = net
     return InsiderScreenSummary(
         purchases_count=counts["buy"], sales_count=counts["sell"],
         purchases_shares=shares["buy"], sales_shares=shares["sell"],
         purchases_value_pln=buy, sales_value_pln=sell,
         net_value_pln=net, latest_transaction_date=latest, total_value_pln=total,
     )
+
+
+def _threshold_value(summary: InsiderScreenSummary, activity: InsiderActivity) -> float | None:
+    """Minimums use unsigned turnover or the balance in the selected net direction."""
+    buy, sell = summary.purchases_value_pln, summary.sales_value_pln
+    if activity == "buy":
+        return buy
+    if activity == "sell":
+        return sell
+    if activity in ("netBuy", "netSell"):
+        net = summary.net_value_pln
+        return -net if activity == "netSell" and net is not None else net
+    return buy + sell if buy is not None and sell is not None else None
 
 
 def screen_insider_activity(
@@ -77,13 +88,19 @@ def screen_insider_activity(
     for row in rows:
         ticker = row.ticker.casefold()
         summary = summarize_insider_activity(transactions.get(ticker, []), activity)
-        value_last30 = (
+        last30 = (
             summarize_insider_activity(
                 transactions_last30.get(ticker, []), activity,
-            ).total_value_pln
+            )
             if transactions_last30 is not None else None
         )
-        summary = summary.model_copy(update={"value_last30_days_pln": value_last30})
+        if min_value_last30 is not None:
+            amount = _threshold_value(last30, activity) if last30 is not None else None
+            if amount is None or amount < min_value_last30:
+                continue
+        summary = summary.model_copy(update={
+            "value_last30_days_pln": last30.total_value_pln if last30 is not None else None,
+        })
         trade_count = (
             summary.purchases_count if activity in ("buy", "netBuy") else
             summary.sales_count if activity in ("sell", "netSell") else
@@ -97,26 +114,11 @@ def screen_insider_activity(
             latest = summary.latest_transaction_date
             if latest is None or not 0 <= (as_of - latest).days <= max_trade_age:
                 continue
-        if min_value_last30 is not None and (
-            value_last30 is None or value_last30 < min_value_last30
-        ):
-            continue
-        buy, sell = summary.purchases_value_pln, summary.sales_value_pln
-        if activity == "buy":
-            matches = summary.purchases_count > 0
-            value = buy
-        elif activity == "sell":
-            matches = summary.sales_count > 0
-            value = sell
-        elif activity in ("netBuy", "netSell"):
-            net = summary.net_value_pln
-            value = None if net is None else net if activity == "netBuy" else -net
+        value = _threshold_value(summary, activity)
+        if activity in ("netBuy", "netSell"):
             matches = value is not None and value > 0
         else:
-            matches = (activity == "all" and min_value is None) or (
-                summary.purchases_count + summary.sales_count > 0
-            )
-            value = buy + sell if buy is not None and sell is not None else None
+            matches = trade_count > 0 or (activity == "all" and min_value is None)
         if matches and (min_value is None or (value is not None and value >= min_value)):
             result.append(row.model_copy(update={"insider_activity": summary}))
     return result

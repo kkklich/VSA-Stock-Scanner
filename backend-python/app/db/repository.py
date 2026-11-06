@@ -824,8 +824,8 @@ class PostgresQuoteRepository(PostgresLongTermRepository):
             return {}
         stmt = select(InsiderTransactionRow).where(
             InsiderTransactionRow.ticker.in_([t.strip().casefold() for t in tickers]),
-            InsiderTransactionRow.publication_date >= from_date,
-            InsiderTransactionRow.publication_date <= to_date,
+            func.coalesce(InsiderTransactionRow.trade_date, InsiderTransactionRow.publication_date)
+            .between(from_date, to_date),
             InsiderTransactionRow.is_open_market.is_(True),
             InsiderTransactionRow.transaction_type.in_(("buy", "sell")),
         )
@@ -1126,7 +1126,7 @@ class InMemoryQuoteRepository:
         return {
             ticker.strip().casefold(): [
                 tx for tx in self._insider_transactions.get(ticker.strip().casefold(), [])
-                if from_date <= tx.publication_date <= to_date
+                if from_date <= tx.effective_trade_date <= to_date
                 and tx.is_open_market and tx.transaction_type in ("buy", "sell")
             ]
             for ticker in tickers

@@ -25,11 +25,12 @@ it('omits inactive insider criteria', async () => {
 
 it('serializes insider sorting with its reporting window and tie-break', async () => {
   await fetchRanking({
-    insiderDays: 180,
+    insiderDays: 180, insiderEnd: '2025-06-01',
     sort: [{ key: 'insiderValueLast30Days', dir: 'desc' }, { key: 'ticker', dir: 'asc' }],
   })
   const url = new URL(vi.mocked(apiFetchWithHeaders).mock.lastCall![0], 'https://example.test')
   expect(url.searchParams.get('sortBy')).toBe('insiderValueLast30Days,ticker')
   expect(url.searchParams.get('sortDir')).toBe('desc,asc')
   expect(url.searchParams.get('insiderDays')).toBe('180')
+  expect(url.searchParams.get('insiderEnd')).toBe('2025-06-01')
 })

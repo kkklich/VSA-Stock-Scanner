@@ -82,7 +82,7 @@ def test_directions_and_inclusive_thresholds(activity, minimum, expected):
     assert all(r.insider_activity is None for r in rows)
 
 
-async def test_bulk_repository_filters_publication_dates_sides_and_tickers():
+async def test_bulk_repository_filters_trade_dates_sides_and_tickers():
     repo = InMemoryQuoteRepository()
     today = date(2026, 10, 30)
     start = today - timedelta(days=29)
@@ -96,7 +96,7 @@ async def test_bulk_repository_filters_publication_dates_sides_and_tickers():
     ])
     await repo.upsert_insider_transactions("other", [trade(publication_date=today)])
     result = await repo.get_insider_transactions_bulk([" AAA ", "none"], start, today)
-    assert len(result["aaa"]) == 2
+    assert [tx.transaction_type for tx in result["aaa"]] == ["sell"]
     assert result["none"] == []
     assert "other" not in result
 
@@ -152,6 +152,7 @@ def test_unavailable_storage_is_an_error_not_empty_results(client):
 
 @pytest.mark.parametrize("query", [
     "insiderActivity=invalid", "insiderDays=0", "insiderDays=366",
+    "insiderEnd=0001-01-01", "insiderEnd=9999-01-01",
     "minInsiderValue=-1", "minInsiderValue=nan", "minInsiderValue=inf",
 ])
 def test_invalid_query_is_rejected(client, query):
@@ -160,8 +161,8 @@ def test_invalid_query_is_rejected(client, query):
 
 
 @pytest.mark.parametrize(("activity", "days_ago", "value"), [
-    ("buy", 10, 1000), ("sell", 2, 300),
-    ("netBuy", 10, 700), ("netSell", 2, -700), ("any", 2, 1300),
+    ("buy", 10, 1000), ("sell", 2, -300),
+    ("netBuy", 10, 700), ("netSell", 2, 700), ("any", 2, 700),
 ])
 def test_summary_dates_and_totals_follow_selected_side(activity, days_ago, value):
     today = date.today()
@@ -240,3 +241,33 @@ async def test_last30_total_is_independent_of_shorter_selected_period(client):
     [item] = response.json()
     assert item["insiderActivity"]["totalValuePln"] == 200
     assert item["insiderActivity"]["valueLast30DaysPln"] == 700
+
+
+@pytest.mark.parametrize(("direction", "expected"), [
+    ("asc", [("bbb", -900), ("aaa", -400)]),
+    ("desc", [("aaa", -400), ("bbb", -900)]),
+])
+async def test_signed_sales_in_historical_default_window(client, direction, expected):
+    http, repo = client
+    end = date(2025, 6, 1)
+    await repo.upsert_insider_transactions("aaa", [
+        trade("sell", publication_date=end, trade_date=end - timedelta(days=99), value=150),
+        trade("sell", publication_date=end, trade_date=end - timedelta(days=100), value=5000),
+        trade("sell", publication_date=end, value=200),
+        trade("sell", publication_date=end + timedelta(days=1), trade_date=end, value=50),
+        trade("buy", publication_date=end, value=700),
+    ])
+    await repo.upsert_insider_transactions("bbb", [trade("sell", publication_date=end, value=900)])
+    for page, (ticker, total) in enumerate(expected, 1):
+        response = http.get("/api/stocks/ranking", params={
+            "insiderActivity": "sell", "insiderEnd": end.isoformat(),
+            "minInsiderValueLast30Days": 200, "minInsiderValue": 350,
+            "sortBy": "insiderTotalValue", "sortDir": direction, "pageSize": 1, "page": page,
+        })
+        assert response.status_code == 200
+        assert response.headers["X-Total-Count"] == "2"
+        [item] = response.json()
+        assert item["ticker"] == ticker
+        assert item["insiderActivity"]["totalValuePln"] == total
+        if ticker == "aaa":
+            assert item["insiderActivity"]["valueLast30DaysPln"] == -250

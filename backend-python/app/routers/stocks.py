@@ -1145,7 +1145,8 @@ async def get_ranking(
     new_52w_low: Annotated[bool, Query(alias="new52wLow")] = False,
     weekly_confirms: Annotated[bool, Query(alias="weeklyConfirms")] = False,
     insider_activity: Annotated[InsiderActivity, Query(alias="insiderActivity")] = "all",
-    insider_days: Annotated[int, Query(alias="insiderDays", ge=1, le=365)] = 90,
+    insider_days: Annotated[int, Query(alias="insiderDays", ge=1, le=365)] = 100,
+    insider_end: Annotated[date | None, Query(alias="insiderEnd")] = None,
     min_insider_value: Annotated[
         float | None, Query(alias="minInsiderValue", ge=0, allow_inf_nan=False)
     ] = None,
@@ -1233,35 +1234,38 @@ async def get_ranking(
     )
 
     insider_sort = any(attr in _INSIDER_SORT_ATTRS for attr, _ in sort)
-    if (insider_activity != "all" or min_insider_value is not None or insider_sort
-            or min_insider_trades is not None or max_insider_trade_age is not None
+    if (insider_activity != "all" or insider_end is not None or min_insider_value is not None
+            or insider_sort or min_insider_trades is not None or max_insider_trade_age is not None
             or min_insider_value_last30_days is not None):
         if repo is None:
             raise HTTPException(503, "Insider screening requires stored transaction data.")
         today = datetime.now(ZoneInfo("Europe/Warsaw")).date()
+        period_end = insider_end or today
+        if not date(1900, 1, 1) <= period_end <= today:
+            raise HTTPException(422, "Insider period end must be between 1900-01-01 and today.")
         try:
             transactions = await repo.get_insider_transactions_bulk(
                 [r.ticker for r in filtered],
-                today - timedelta(days=max(insider_days, 30) - 1), today,
+                period_end - timedelta(days=max(insider_days, 30) - 1), period_end,
             )
         except Exception as exc:
             logger.exception("Insider screener database lookup failed.")
             raise HTTPException(
                 503, "Insider transaction data is temporarily unavailable."
             ) from exc
-        period_start = today - timedelta(days=insider_days - 1)
-        last30_start = today - timedelta(days=29)
+        period_start = period_end - timedelta(days=insider_days - 1)
+        last30_start = period_end - timedelta(days=29)
         filtered = screen_insider_activity(
             filtered,
-            {ticker: [tx for tx in items if tx.publication_date >= period_start]
+            {ticker: [tx for tx in items if tx.effective_trade_date >= period_start]
              for ticker, items in transactions.items()},
             insider_activity, min_insider_value,
-            {ticker: [tx for tx in items if tx.publication_date >= last30_start]
+            {ticker: [tx for tx in items if tx.effective_trade_date >= last30_start]
              for ticker, items in transactions.items()},
             min_trades=min_insider_trades,
             max_trade_age=max_insider_trade_age,
             min_value_last30=min_insider_value_last30_days,
-            as_of=today,
+            as_of=period_end,
         )
         if insider_sort:
             filtered = _apply_sort(
