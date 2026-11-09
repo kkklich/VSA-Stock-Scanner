@@ -100,6 +100,24 @@ def test_unknown_currency_has_no_money_marker_and_incomplete_share_balance_is_ne
     assert incomplete.chart_markers[0].shares is None
 
 
+def test_same_currency_unknown_buy_amount_does_not_create_a_partial_sell_signal():
+    response = build_insider_response("TEST", transactions=[
+        trade(currency="PLN", shares=None, price=None, value=None),
+        trade(transaction_type="sell", currency="PLN", shares=100, price=2, value=200),
+    ])
+    marker, = response.chart_markers
+    assert marker.type == "Watch"
+    assert marker.shares is None
+    assert marker.value is None
+
+    complete_values = build_insider_response("TEST", transactions=[
+        trade(currency="PLN", shares=None, price=None, value=500),
+        trade(transaction_type="sell", currency="PLN", shares=100, price=2, value=200),
+    ])
+    assert complete_values.chart_markers[0].type == "Bullish"
+    assert complete_values.chart_markers[0].value == 300
+
+
 def test_api_returns_espi_details_and_person_balance_with_refresh(monkeypatch):
     cache = TTLCache()
     rows = [trade()]

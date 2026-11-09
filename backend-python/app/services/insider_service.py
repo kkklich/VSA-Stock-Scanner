@@ -234,7 +234,7 @@ def build_insider_response(
         elif sell_cnt > 0 and buy_cnt == 0:
             marker_type = "Bearish"
         elif buy_cnt > 0 and sell_cnt > 0:
-            if not comparable_values and not complete_shares:
+            if not complete_shares and not (comparable_values and complete_values):
                 marker_type = "Watch"
             elif net_val > 0 or (net_val == 0 and net_sh > 0):
                 marker_type = "Bullish"
