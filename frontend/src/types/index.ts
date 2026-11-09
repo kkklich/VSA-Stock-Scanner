@@ -143,6 +143,19 @@ export interface InsiderSummary {
 }
 
 /** Response payload for GET /api/stocks/{ticker}/insider-transactions. */
+export interface InsiderPersonSummary {
+  insiderName: string
+  currency: string | null
+  totalPurchasesCount: number
+  totalSalesCount: number
+  totalPurchasesShares: number | null
+  totalSalesShares: number | null
+  totalPurchasesValue: number | null
+  totalSalesValue: number | null
+  netShares: number | null
+  netValue: number | null
+}
+
 export interface InsiderTransactionsResponse {
   ticker: string
   name: string | null
@@ -151,5 +164,7 @@ export interface InsiderTransactionsResponse {
   summary: InsiderSummary
   transactions: InsiderTransactionItem[]
   chartMarkers: InsiderChartMarker[]
+  byInsider?: InsiderPersonSummary[]
+  warnings?: string[]
 }
 

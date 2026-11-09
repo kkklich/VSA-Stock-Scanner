@@ -1280,6 +1280,7 @@ export async function fetchTradeSimulation(
 export type {
   InsiderChartMarker as ApiInsiderChartMarker,
   InsiderSummary as ApiInsiderSummary,
+  InsiderPersonSummary as ApiInsiderPersonSummary,
   InsiderTransactionItem as ApiInsiderTransactionItem,
   InsiderTransactionsResponse as ApiInsiderTransactionsResponse,
 } from '../types'
@@ -1287,11 +1288,12 @@ import type { InsiderTransactionsResponse } from '../types'
 
 export async function fetchInsiderTransactions(
   ticker: string,
-  options?: { includeAll?: boolean; fromDate?: string },
+  options?: { includeAll?: boolean; fromDate?: string; refresh?: boolean },
 ): Promise<InsiderTransactionsResponse> {
   const params = new URLSearchParams()
   if (options?.includeAll) params.set('includeAll', 'true')
   if (options?.fromDate) params.set('fromDate', options.fromDate)
+  if (options?.refresh) params.set('refresh', 'true')
   const qs = params.size > 0 ? `?${params}` : ''
   return apiFetch<InsiderTransactionsResponse>(
     `/api/stocks/${encodeURIComponent(ticker)}/insider-transactions${qs}`,

@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Loader2, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react'
+import { ExternalLink, Loader2, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react'
 import { Card, CardTitle, InfoTip } from './ui'
 import type { ApiInsiderTransactionsResponse } from '../api/stocksApi'
 import { fmtMoney, safeHttpUrl } from '../lib/format'
@@ -13,7 +13,7 @@ import { fmtMoney, safeHttpUrl } from '../lib/format'
 const INITIAL_VISIBLE_ROWS = 8
 
 function fmtShares(n: number | null | undefined): string {
-  if (n == null || n === 0) return '—'
+  if (n == null) return '—'
   return n.toLocaleString()
 }
 
@@ -22,37 +22,81 @@ export function InsiderActivityCard({
   loading,
   includeAll,
   onToggleIncludeAll,
+  error,
+  onRefresh,
 }: {
   data: ApiInsiderTransactionsResponse | null
   loading: boolean
   includeAll: boolean
   onToggleIncludeAll: (next: boolean) => void
+  error?: string | null
+  onRefresh?: () => void
 }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   const summary = data?.summary
   const transactions = data?.transactions ?? []
+  const byInsider = data?.byInsider ?? []
+  const warnings = data?.warnings ?? []
   const currency = summary?.currency ?? data?.currency ?? 'PLN'
+  const mixedCurrencies = new Set(
+    transactions
+      .filter((tx) => tx.transactionType === 'buy' || tx.transactionType === 'sell')
+      .map((tx) => tx.currency ?? currency),
+  ).size > 1
+  const purchases = transactions.filter((tx) => tx.transactionType === 'buy')
+  const sales = transactions.filter((tx) => tx.transactionType === 'sell')
+  const purchasesSharesKnown = purchases.every((tx) => tx.shares != null)
+  const salesSharesKnown = sales.every((tx) => tx.shares != null)
+  const purchasesValueKnown = purchases.every(
+    (tx) => tx.value != null || (tx.shares != null && tx.price != null),
+  )
+  const salesValueKnown = sales.every(
+    (tx) => tx.value != null || (tx.shares != null && tx.price != null),
+  )
+  const netSharesKnown = purchasesSharesKnown && salesSharesKnown
+  const netValueKnown = !mixedCurrencies && purchasesValueKnown && salesValueKnown
+  const purchasesSharesText = purchasesSharesKnown
+    ? fmtShares(summary?.totalPurchasesShares)
+    : t('insider.unknown')
+  const salesSharesText = salesSharesKnown
+    ? fmtShares(summary?.totalSalesShares)
+    : t('insider.unknown')
+  const netSharesText = netSharesKnown
+    ? `${(summary?.netShares ?? 0) > 0 ? '+' : ''}${fmtShares(summary?.netShares)}`
+    : t('insider.unknown')
   const visibleRows = expanded
     ? transactions
     : transactions.slice(0, INITIAL_VISIBLE_ROWS)
 
-  const netPositive =
-    (summary?.netValue ?? 0) > 0 ||
-    ((summary?.netValue ?? 0) === 0 && (summary?.netShares ?? 0) > 0)
-  const netNegative =
-    (summary?.netValue ?? 0) < 0 ||
-    ((summary?.netValue ?? 0) === 0 && (summary?.netShares ?? 0) < 0)
+  const directionAmount = netValueKnown && summary?.netValue !== 0
+    ? summary?.netValue
+    : netSharesKnown
+      ? summary?.netShares
+      : netValueKnown ? 0 : undefined
+  const netPositive = (directionAmount ?? 0) > 0
+  const netNegative = (directionAmount ?? 0) < 0
 
   return (
     <Card className="p-4">
       <div data-testid="insider-activity-card">
         <CardTitle
           right={
-            <div className="flex items-center gap-3">
-              {loading && (
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {loading && !onRefresh && (
                 <Loader2 size={14} className="animate-spin text-slate-500" />
+              )}
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 rounded border border-slate-700 px-2 py-1 text-xs font-medium normal-case tracking-normal text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:cursor-wait disabled:opacity-50"
+                >
+                  <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                  {t('insider.refresh')}
+                </button>
               )}
               <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-normal normal-case tracking-normal text-slate-400 hover:text-slate-200">
                 <input
@@ -72,6 +116,37 @@ export function InsiderActivityCard({
 
       <p className="mt-1.5 text-xs text-slate-500">{t('insider.asymmetryNote')}</p>
 
+      {data?.market === 'gpw' && (
+        <p className="mt-2 text-xs text-slate-400">{t('insider.gpwSourceNote')}</p>
+      )}
+
+      {error && (
+        <div role="alert" className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-300">
+          <p>{error || t('insider.loadError')}</p>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="mt-2 font-semibold underline underline-offset-2 disabled:opacity-50"
+            >
+              {t('insider.retry')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {warnings.length > 0 && (
+        <details className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-200">
+          <summary className="cursor-pointer font-medium">
+            {t('insider.warningsTitle')} ({warnings.length})
+          </summary>
+          <ul className="mt-2 list-disc space-y-1 break-words pl-4 text-amber-200/80">
+            {warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
+          </ul>
+        </details>
+      )}
+
       {summary && (summary.totalPurchasesCount > 0 || summary.totalSalesCount > 0 || transactions.length > 0) ? (
         <>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -82,14 +157,16 @@ export function InsiderActivityCard({
                 <TrendingUp size={14} />
               </div>
               <div className="mt-1 text-base font-semibold tabular-nums text-emerald-300">
-                {summary.totalPurchasesValue > 0
+                {!mixedCurrencies && purchasesValueKnown && (summary.totalPurchasesValue > 0 || !purchasesSharesKnown)
                   ? fmtMoney(summary.totalPurchasesValue, currency)
-                  : `${fmtShares(summary.totalPurchasesShares)} ${t('insider.sharesUnit')}`}
+                  : purchasesSharesKnown
+                    ? `${purchasesSharesText} ${t('insider.sharesUnit')}`
+                    : t('insider.unknown')}
               </div>
               <div className="mt-0.5 text-[11px] tabular-nums text-slate-400">
                 {t('insider.tradesAndShares', {
                   count: summary.totalPurchasesCount,
-                  shares: fmtShares(summary.totalPurchasesShares),
+                  shares: purchasesSharesText,
                 })}
               </div>
             </div>
@@ -101,14 +178,16 @@ export function InsiderActivityCard({
                 <TrendingDown size={14} />
               </div>
               <div className="mt-1 text-base font-semibold tabular-nums text-rose-300">
-                {summary.totalSalesValue > 0
+                {!mixedCurrencies && salesValueKnown && (summary.totalSalesValue > 0 || !salesSharesKnown)
                   ? fmtMoney(summary.totalSalesValue, currency)
-                  : `${fmtShares(summary.totalSalesShares)} ${t('insider.sharesUnit')}`}
+                  : salesSharesKnown
+                    ? `${salesSharesText} ${t('insider.sharesUnit')}`
+                    : t('insider.unknown')}
               </div>
               <div className="mt-0.5 text-[11px] tabular-nums text-slate-400">
                 {t('insider.tradesAndShares', {
                   count: summary.totalSalesCount,
-                  shares: fmtShares(summary.totalSalesShares),
+                  shares: salesSharesText,
                 })}
               </div>
             </div>
@@ -131,7 +210,9 @@ export function InsiderActivityCard({
                     ? t('insider.netBuying')
                     : netNegative
                       ? t('insider.netSelling')
-                      : t('insider.netNeutral')}
+                      : directionAmount == null
+                        ? t('insider.unknown')
+                        : t('insider.netNeutral')}
                 </span>
               </div>
               <div
@@ -144,21 +225,66 @@ export function InsiderActivityCard({
                       : 'text-slate-300')
                 }
               >
-                {summary.netValue !== 0
+                {netValueKnown && summary.netValue !== 0
                   ? `${summary.netValue > 0 ? '+' : ''}${fmtMoney(summary.netValue, currency)}`
-                  : `${summary.netShares > 0 ? '+' : ''}${fmtShares(summary.netShares)} ${t('insider.sharesUnit')}`}
+                  : netSharesKnown
+                    ? `${netSharesText} ${t('insider.sharesUnit')}`
+                    : netValueKnown ? fmtMoney(0, currency) : t('insider.unknown')}
               </div>
               <div className="mt-0.5 text-[11px] tabular-nums text-slate-400">
                 {t('insider.netSharesLabel', {
-                  shares: `${summary.netShares > 0 ? '+' : ''}${fmtShares(summary.netShares)}`,
+                  shares: netSharesText,
                 })}
               </div>
             </div>
           </div>
 
+          {mixedCurrencies && (
+            <p className="mt-2 text-[11px] text-slate-400">{t('insider.mixedCurrenciesNote')}</p>
+          )}
+
+          {byInsider.length > 0 && (
+            <section className="mt-4" aria-label={t('insider.byPersonTitle')}>
+              <h3 className="text-xs font-semibold text-slate-200">{t('insider.byPersonTitle')}</h3>
+              <p className="mt-1 text-[11px] text-slate-500">{t('insider.totalsScopeNote')}</p>
+              <div className="mt-2 overflow-x-auto rounded-lg border border-slate-800">
+                <table className="w-full text-left text-xs" aria-label={t('insider.byPersonTitle')}>
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/40 text-[11px] text-slate-500">
+                      <th className="px-3 py-2 font-medium">{t('insider.person')}</th>
+                      <th className="px-3 py-2 font-medium">{t('insider.currency')}</th>
+                      <th className="px-3 py-2 text-right font-medium">{t('insider.boughtShares')}</th>
+                      <th className="px-3 py-2 text-right font-medium">{t('insider.soldShares')}</th>
+                      <th className="px-3 py-2 text-right font-medium">{t('insider.netShares')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {byInsider.map((person) => (
+                      <tr key={`${person.insiderName}-${person.currency ?? ''}`}>
+                        <td className="px-3 py-2 font-medium text-slate-200">{person.insiderName}</td>
+                        <td className="px-3 py-2 text-slate-400">{person.currency ?? t('insider.unknown')}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-emerald-300">
+                          {person.totalPurchasesShares == null ? t('insider.unknown') : fmtShares(person.totalPurchasesShares)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-rose-300">
+                          {person.totalSalesShares == null ? t('insider.unknown') : fmtShares(person.totalSalesShares)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-slate-200">
+                          {person.netShares == null
+                            ? t('insider.unknown')
+                            : `${person.netShares > 0 ? '+' : ''}${fmtShares(person.netShares)}`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {/* Transactions Table */}
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs" aria-label={t('insider.title')}>
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
                   <th className="pb-2 pr-3 font-semibold">{t('insider.colTradeDate')}</th>
@@ -193,10 +319,10 @@ export function InsiderActivityCard({
                       </td>
                       <td className="py-2 pr-3 text-slate-200">
                         <div className="font-medium">
-                          {tx.role || tx.insiderName || t('insider.defaultRole')}
+                          {tx.insiderName || tx.role || t('insider.defaultRole')}
                         </div>
                         {tx.role && tx.insiderName && (
-                          <div className="text-[11px] text-slate-500">{tx.insiderName}</div>
+                          <div className="text-[11px] text-slate-500">{tx.role}</div>
                         )}
                       </td>
                       <td className="whitespace-nowrap py-2 pr-3">
@@ -212,12 +338,12 @@ export function InsiderActivityCard({
                         {fmtShares(tx.shares)}
                       </td>
                       <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums text-slate-300">
-                        {tx.price != null && tx.price > 0
+                        {tx.price != null
                           ? fmtMoney(tx.price, txCurrency)
                           : '—'}
                       </td>
                       <td className="whitespace-nowrap py-2 pr-3 text-right font-medium tabular-nums text-slate-200">
-                        {tx.value != null && tx.value > 0
+                        {tx.value != null
                           ? fmtMoney(tx.value, txCurrency)
                           : '—'}
                       </td>
@@ -257,7 +383,7 @@ export function InsiderActivityCard({
             </div>
           )}
         </>
-      ) : (
+      ) : !error && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-900/40 px-3 py-3 text-xs text-slate-400">
           <ShieldAlert size={15} className="shrink-0 text-slate-500" />
           <span>{loading ? t('insider.loading') : t('insider.empty')}</span>

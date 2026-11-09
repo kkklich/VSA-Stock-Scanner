@@ -3006,7 +3006,10 @@ async def get_trade_simulation(
 # ── Endpoint: Insider transactions (Yahoo Finance + GPW ESPI MAR Art. 19) ────
 
 _INSIDER_MISS_TTL_SECONDS = 24 * 60 * 60
-_espi_client = EspiClient()
+_INSIDER_RETRY_TTL_SECONDS = 60
+# Read the warnings immediately after this serialized client's fetch returns.
+# The next ticker cannot reset its mutable diagnostics before that snapshot.
+_espi_client = EspiClient(max_concurrent=1)
 
 
 @router.get(
@@ -3026,6 +3029,7 @@ async def get_insider_transactions(
     repo: Annotated[QuoteRepository | None, Depends(get_quote_repository)],
     include_all: Annotated[bool, Query(alias="includeAll")] = False,
     from_date: Annotated[date | None, Query(alias="fromDate")] = None,
+    refresh: Annotated[bool, Query()] = False,
 ) -> InsiderTransactionsResponse:
     """Return insider trades, summary statistics, and daily chart markers.
 
@@ -3053,7 +3057,15 @@ async def get_insider_transactions(
         stooq=stooq,
         cache=cache,
         from_date=from_date,
+        refresh=refresh,
     )
+
+    warnings = list(cache.get(f"insider-warnings:{normalized}") or [])
+    if identity["market"] == GPW_ID:
+        warnings.append(
+            "Odczyt ESPI obejmuje do 50 ostatnich raportów emitenta i do 15 "
+            "powiadomień MAR. Starsze raporty i skany bez tekstu mogą nie być odczytane."
+        )
 
     return build_insider_response(
         normalized.upper(),
@@ -3062,6 +3074,7 @@ async def get_insider_transactions(
         currency=identity["currency"],
         transactions=transactions,
         include_all=include_all,
+        warnings=warnings,
     )
 
 
@@ -3075,13 +3088,17 @@ async def _load_ticker_insider_transactions(
     stooq: StooqClient,
     cache: TTLCache,
     from_date: date | None = None,
+    refresh: bool = False,
 ) -> list[InsiderTransactionItem]:
     """Load stored insider transactions from DB first, falling back to live fetch."""
-    stored: list[InsiderTransactionItem] = []
+    fallback_key = f"insider-live-fallback:{ticker}"
+    # Retain successful live reads even when persistence failed. Otherwise the
+    # next includeAll toggle would see an empty DB and a checked-for-24h marker.
+    stored: list[InsiderTransactionItem] = cache.get(fallback_key) or []
     data_key = f"insider-data:{ticker}"
     if repo is None:
         stored = cache.get(data_key) or []
-    if repo is not None:
+    if repo is not None and not stored:
         try:
             stored = await repo.get_insider_transactions(
                 ticker,
@@ -3092,23 +3109,42 @@ async def _load_ticker_insider_transactions(
             logger.exception("DB insider transaction lookup failed for %s.", ticker)
 
     checked_key = f"insider-checked:{ticker}"
-    needs_live_check = cache.get(checked_key) is None and (
-        not stored or not isinstance(repo, InMemoryQuoteRepository)
+    needs_live_check = refresh or (
+        cache.get(checked_key) is None
+        and (not stored or not isinstance(repo, InMemoryQuoteRepository))
     )
     if needs_live_check:
         fetched: list[InsiderTransactionItem] = []
+        fetch_warnings: list[str] = []
+        fetch_failed = False
         try:
             if market == GPW_ID:
                 fetched = await _espi_client.get_company_insider_transactions(
                     company_name=company.name if (company and company.name) else ticker,
                     ticker=ticker,
                 )
+                # No await before copying: this client's semaphore serializes
+                # the producer and prevents another ticker resetting warnings.
+                fetch_warnings = list(_espi_client.warnings)
+                fetch_failed = any(
+                    warning.startswith(("Nie udało się", "Nie odczytano"))
+                    for warning in fetch_warnings
+                )
             elif isinstance(stooq, YahooFinanceClient):
                 fetched = await stooq.get_insider_transactions(ticker)
         except Exception:
             logger.exception("Live insider transactions fetch failed for %s.", ticker)
+            fetch_failed = True
+            fetch_warnings.append(
+                "Nie udało się odświeżyć transakcji insiderów. "
+                "Pokazano wcześniej zapisane dane, jeśli były dostępne."
+            )
 
-        cache.set(checked_key, True, _INSIDER_MISS_TTL_SECONDS)
+        check_ttl = (
+            _INSIDER_RETRY_TTL_SECONDS if fetch_failed else _INSIDER_MISS_TTL_SECONDS
+        )
+        cache.set(checked_key, True, check_ttl)
+        cache.set(f"insider-warnings:{ticker}", fetch_warnings, _INSIDER_MISS_TTL_SECONDS)
         if fetched:
             if repo is not None:
                 try:
@@ -3118,11 +3154,17 @@ async def _load_ticker_insider_transactions(
                         from_date=from_date,
                         open_market_only=False,
                     )
+                    # A repository with delayed/unavailable reads must not hide
+                    # the live report just fetched for the chart.
+                    if not stored:
+                        stored = fetched
+                    cache.set(fallback_key, [], _INSIDER_MISS_TTL_SECONDS)
                 except Exception:
                     logger.exception(
                         "DB insider transaction upsert failed for %s.", ticker
                     )
                     stored = fetched
+                    cache.set(fallback_key, fetched, _INSIDER_MISS_TTL_SECONDS)
             else:
                 stored = fetched
                 cache.set(data_key, fetched, _INSIDER_MISS_TTL_SECONDS)

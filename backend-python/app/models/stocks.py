@@ -1345,6 +1345,21 @@ class InsiderSummary(_CamelModel):
     currency: str | None = None
 
 
+class InsiderPersonSummary(_CamelModel):
+    """Buy/sell balance for one named insider, in one reported currency."""
+
+    insider_name: str
+    currency: str | None = None
+    total_purchases_count: int = 0
+    total_sales_count: int = 0
+    total_purchases_shares: int | None = 0
+    total_sales_shares: int | None = 0
+    total_purchases_value: float | None = 0.0
+    total_sales_value: float | None = 0.0
+    net_shares: int | None = 0
+    net_value: float | None = 0.0
+
+
 class InsiderTransactionsResponse(_CamelModel):
     """Response payload for GET /api/stocks/{ticker}/insider-transactions."""
 
@@ -1355,4 +1370,6 @@ class InsiderTransactionsResponse(_CamelModel):
     summary: InsiderSummary = Field(default_factory=InsiderSummary)
     transactions: list[InsiderTransactionItem] = Field(default_factory=list)
     chart_markers: list[InsiderChartMarker] = Field(default_factory=list)
+    by_insider: list[InsiderPersonSummary] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 

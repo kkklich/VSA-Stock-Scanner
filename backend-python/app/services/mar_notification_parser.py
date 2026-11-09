@@ -25,6 +25,12 @@ _DATE = re.compile(
     r"\b(\d{4})\s*[-./]\s*(\d{2})\s*[-./]\s*(\d{2})\b"
     r"|\b(\d{2})\s*[-./]\s*(\d{2})\s*[-./]\s*(\d{4})\b"
 )
+_NON_SHARE_INSTRUMENT = re.compile(
+    r"\b(?:obligacj\w*|bonds?|opcj\w*|options?|warrant\w*|certyfikat\w*|certificates?|"
+    r"kontrakt\w*|futures?|swaps?|derivatives?|instrument\w*\s+pochodn\w*|"
+    r"jednostk\w*\s+uczestnictwa|praw\w*\s+poboru|subscription\s+rights)\b",
+    re.I,
+)
 
 
 def extract_trade_date(text: str) -> date | None:
@@ -94,9 +100,19 @@ def parse_mar_text(text: str, stub: dict) -> list[InsiderTransactionItem]:
             role = "Osoba blisko związana"
         else:
             role = extract_role(status or notice)
+        preceding_transaction_start = 0
         for block in re.finditer(
             r"Rodzaj transakcji\s*(.*?)(?=Rodzaj transakcji|$)", notice, re.I | re.S
         ):
+            # Section 4a precedes its transaction heading, so inspecting details
+            # would instead find the *next* transaction's instrument description.
+            preceding = notice[preceding_transaction_start:block.start()]
+            preceding_transaction_start = block.start()
+            instrument = _field(
+                preceding, r"(?:Opis|Rodzaj)\s+instrumentu\s+finansowego", r"$"
+            )
+            if instrument and _NON_SHARE_INSTRUMENT.search(instrument):
+                continue
             details = block.group(1)
             direction = _field(details, r"^", r"\s*c\)\s*Cena|Cena i wolumen")
             tx_type, is_open = parse_espi_direction(direction or "")
