@@ -62,6 +62,61 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest
 ```
 
+## Transakcje insiderów GPW — osobny skrypt
+
+Ten sam odczyt raportów ESPI działa w aplikacji w sekcji insiderów pod wykresem.
+Endpoint `/api/stocks/{ticker}/insider-transactions` zwraca szczegóły transakcji,
+`byInsider` z sumami według osoby i waluty oraz `warnings` z uwagami do odczytu.
+Przycisk „Odśwież ESPI” korzysta z `?refresh=true`, aby ponownie pobrać raporty.
+Znaczniki na wykresie pozostają przy dacie publikacji informacji.
+
+Skrypt `scripts/espi_insiders.py` pobiera z gpw.pl raporty ESPI dotyczące art. 19 MAR,
+odczytuje załączniki PDF i pokazuje osobę/podmiot, funkcję, zakup lub sprzedaż,
+datę transakcji, datę publikacji, liczbę akcji, cenę, walutę i wartość. Wyświetla też
+podsumowanie zakupów i sprzedaży według osoby, osobno dla każdej waluty.
+Nie wymaga uruchomienia serwera ani bazy danych; korzysta z zależności backendu
+zainstalowanych według instrukcji powyżej.
+
+Z głównego folderu repozytorium w PowerShell:
+
+```powershell
+.\backend-python\.venv\Scripts\python.exe .\backend-python\scripts\espi_insiders.py --ticker CBF --html insiderzy.html --csv insiderzy.csv --open
+```
+
+Zmień `CBF` na ticker wybranej spółki, np. `CDR` lub `PKO`. Raport HTML otworzy się
+w przeglądarce, a CSV można otworzyć w Excelu (separator `;`, polskie przecinki
+dziesiętne, kodowanie UTF-8 z BOM). CSV zawiera transakcje; podsumowanie osób jest
+w konsoli i HTML. Jeśli spółki nie ma w lokalnej liście, podaj jej nazwę:
+`--ticker XYZ --company "Pełna nazwa emitenta"`.
+
+Można też odczytać wcześniej pobrany **załącznik z formularzem MAR**:
+
+```powershell
+.\backend-python\.venv\Scripts\python.exe .\backend-python\scripts\espi_insiders.py --pdf powiadomienie.pdf --published 2026-09-16 --html insiderzy.html --open
+```
+
+`--published` to rzeczywista data publikacji raportu ESPI, a nie data transakcji
+ani dzień uruchomienia skryptu. Filtry `--insider "nazwisko"`, `--from YYYY-MM-DD`
+i `--to YYYY-MM-DD` zawężają wynik. Daty filtrują **datę transakcji**; rekordy bez
+tej daty zostają wtedy pominięte z odpowiednią uwagą.
+
+Ograniczenia odczytu:
+
+- Domyślnie skrypt przeszukuje do 50 ostatnich raportów emitenta i odczytuje do 15
+  pasujących raportów MAR, maksymalnie 10 PDF-ów na raport. `--limit` (1–500) oraz
+  `--reports` (1–100) zmieniają dwa pierwsze limity. To nie jest pełna historia;
+  filtr dat nie powoduje pobrania starszych stron archiwum.
+- PDF-y muszą mieć warstwę tekstową. Skany wymagają OCR; nietypowe formularze
+  mogą zostać odczytane częściowo. Limit pliku wynosi 10 MB i 50 stron.
+- Nieodczytane pola pozostają oznaczone jako brak danych. Nieznana liczba akcji
+  powoduje też nieznaną sumę dla danej osoby i kierunku, zamiast zaniżonego wyniku.
+- Bilans obejmuje odczytane zakupy i sprzedaż, także poza giełdą. Darowizny,
+  przyznania akcji i opcje nie wchodzą do bilansu. To nie jest stan posiadania.
+  Korekty i ponowne publikacje wymagają sprawdzenia w źródle.
+- Błędy pobierania i nieodczytane załączniki są opisane w uwagach. Brak rekordów
+  nie jest potwierdzeniem braku transakcji. Jeśli nie uzyskano żadnych rekordów
+  i wystąpił błąd odczytu, skrypt kończy się kodem 1; błędne argumenty — kodem 2.
+
 ## Project layout
 
 ```

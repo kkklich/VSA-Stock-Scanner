@@ -59,7 +59,7 @@ import {
   safeHttpUrl,
 } from '../lib/format'
 import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
-import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { displayTicker, GPW_MARKET, marketOfTicker } from '../lib/markets'
 import { CLASSIC_VSA_ENABLED, isMethodActive } from '../lib/methodStatus'
 import { fmtLiveTime, notTradedYet } from '../lib/live'
 
@@ -545,7 +545,9 @@ export function ChartsPage() {
     useFundamentals(ticker)
   const { data: volume, loading: volumeLoading } = useTickerVolume(ticker)
   const [includeAllInsider, setIncludeAllInsider] = useState(false)
-  const { data: insiderData, loading: insiderLoading } = useInsiderTransactions(
+  const {
+    data: insiderData, loading: insiderLoading, error: insiderError, refresh: refreshInsiders,
+  } = useInsiderTransactions(
     ticker,
     includeAllInsider,
   )
@@ -931,6 +933,8 @@ export function ChartsPage() {
             loading={insiderLoading}
             includeAll={includeAllInsider}
             onToggleIncludeAll={setIncludeAllInsider}
+            error={insiderError}
+            onRefresh={marketOfTicker(ticker) === GPW_MARKET ? refreshInsiders : undefined}
           />
           {CLASSIC_VSA_ENABLED && <RatingHistoryCard ticker={ticker} />}
           <TradeSimulationCard ticker={ticker} />

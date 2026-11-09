@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { fetchRanking } from './stocksApi'
-import { apiFetchWithHeaders } from './client'
+import { fetchInsiderTransactions, fetchRanking } from './stocksApi'
+import { apiFetch, apiFetchWithHeaders } from './client'
 
 vi.mock('./client', () => ({ apiFetchWithHeaders: vi.fn(), apiFetch: vi.fn() }))
 
@@ -32,4 +32,13 @@ it('serializes insider sorting with its reporting window and tie-break', async (
   expect(url.searchParams.get('sortBy')).toBe('insiderValueLast30Days,ticker')
   expect(url.searchParams.get('sortDir')).toBe('desc,asc')
   expect(url.searchParams.get('insiderDays')).toBe('180')
+})
+
+it('requests a fresh ESPI fetch only on explicit refresh', async () => {
+  await fetchInsiderTransactions('CBF', { refresh: true, includeAll: true })
+  expect(apiFetch).toHaveBeenLastCalledWith(
+    '/api/stocks/CBF/insider-transactions?includeAll=true&refresh=true',
+  )
+  await fetchInsiderTransactions('PKO')
+  expect(apiFetch).toHaveBeenLastCalledWith('/api/stocks/PKO/insider-transactions')
 })

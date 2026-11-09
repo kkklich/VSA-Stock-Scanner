@@ -330,14 +330,19 @@ class EspiClient:
     def __init__(self, max_concurrent: int = 2) -> None:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._issuer_indexes: TTLCache[list[str]] = TTLCache(max_entries=20)
+        self.warnings: list[str] = []
 
     async def get_company_insider_transactions(
         self,
         company_name: str,
         ticker: str,
         limit: int = 50,
+        *,
+        report_limit: int = 15,
     ) -> list[InsiderTransactionItem]:
         """Search GPW ESPI reports for a company and return parsed MAR 19 items."""
+        if limit < 1 or report_limit < 1:
+            raise ValueError("Limity raportów muszą być większe od zera.")
         # Use the first significant word of the company name as search query
         clean_name = re.sub(
             r"\b(?:S\.?A\.?|SPÓŁKA|AKCYJNA|GRUPA|POLSKA)\b",
@@ -365,19 +370,45 @@ class EspiClient:
         }
 
         async with self._semaphore:
+            self.warnings = []
             list_html = await self._post_form(_GPW_AJAX_URL, payload)
-            if not list_html:
+            if list_html is None or "<title>Request Rejected</title>" in list_html:
+                self.warnings.append(
+                    "Nie udało się pobrać listy raportów z GPW. "
+                    "Brak wyników nie oznacza braku transakcji."
+                )
                 return []
-
             stubs = parse_espi_list_html(list_html, target_company_hint=search_query)
+            # Profile names can differ from GPW's issuer label, e.g. Powszechna
+            # Kasa Oszczędności versus PKO BANK POLSKI. Try the ticker as well.
+            if not stubs and search_query.casefold() != ticker.casefold():
+                payload["searchText"] = ticker.upper()
+                ticker_html = await self._post_form(_GPW_AJAX_URL, payload)
+                if ticker_html is None or "<title>Request Rejected</title>" in ticker_html:
+                    self.warnings.append(
+                        f"Nie udało się sprawdzić raportów pod tickerem {ticker.upper()}."
+                    )
+                else:
+                    list_html = ticker_html
+                    stubs = parse_espi_list_html(list_html, target_company_hint=ticker)
+            if len(BeautifulSoup(list_html, "html.parser").find_all("li")) >= limit:
+                self.warnings.append(
+                    f"Lista osiągnęła limit {limit} raportów ESPI; starsze raporty "
+                    "mogą nie być uwzględnione."
+                )
             if not stubs:
                 return []
 
             items: list[InsiderTransactionItem] = []
-            # Fetch up to 15 matched MAR 19 reports per company
-            for stub in stubs[:15]:
+            if len(stubs) > report_limit:
+                self.warnings.append(
+                    f"Odczyt obejmuje {report_limit} z {len(stubs)} znalezionych "
+                    "powiadomień MAR. Pozostałe pominięto ze względu na limit."
+                )
+            for stub in stubs[:report_limit]:
                 report_html = await self._get_url(stub["url"])
                 if not report_html:
+                    self.warnings.append(f"Nie udało się pobrać raportu: {stub['url']}")
                     continue
                 soup = BeautifulSoup(report_html, "html.parser")
                 report = soup.select_one(".report-data, .report-content") or soup
@@ -387,19 +418,46 @@ class EspiClient:
                     if ".pdf" in str(a.get("href")).lower()
                 )
                 detail_items: list[InsiderTransactionItem] = []
+                downloaded_pdf = False
+                if len(attachment_urls) > 10:
+                    self.warnings.append(
+                        f"Raport zawiera {len(attachment_urls)} załączników PDF; "
+                        f"odczytano najwyżej 10: {stub['url']}"
+                    )
                 for url in list(attachment_urls)[:10]:
                     # GPW serves reports and their attachments on its own domain.
                     if urlsplit(url).hostname != "www.gpw.pl":
+                        self.warnings.append(f"Pominięto załącznik spoza domeny GPW: {url}")
                         continue
                     content = await self._get_pdf(url)
                     if not content:
                         content = await self._get_issuer_pdf(url, company_name)
-                    if content:
-                        detail_items.extend(await asyncio.to_thread(parse_mar_pdf, content, stub))
+                    if not content:
+                        self.warnings.append(f"Nie udało się pobrać załącznika PDF: {url}")
+                        continue
+                    downloaded_pdf = True
+                    parsed = await asyncio.to_thread(parse_mar_pdf, content, stub)
+                    if not parsed:
+                        self.warnings.append(
+                            f"Nie odczytano transakcji akcji z PDF (możliwy skan, "
+                            f"nieobsługiwany formularz lub inny instrument niż akcje): {url}"
+                        )
+                    elif any(
+                        tx.insider_name is None
+                        or tx.shares is None
+                        or tx.price is None
+                        for tx in parsed
+                    ):
+                        self.warnings.append(
+                            f"Nie odczytano wszystkich pól transakcji z PDF: {url}"
+                        )
+                    detail_items.extend(parsed)
                 # A report is a container, not an extra trade alongside its attachments.
                 if detail_items:
                     items.extend(detail_items)
-                else:
+                elif not downloaded_pdf:
+                    # Do not reintroduce quantities from PDF forms deliberately
+                    # rejected as non-share instruments through the HTML fallback.
                     items.append(parse_espi_report_html(report_html, stub))
             return items
 

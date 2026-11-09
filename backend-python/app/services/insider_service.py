@@ -10,14 +10,75 @@ Handles:
 from __future__ import annotations
 
 from collections import defaultdict
+from decimal import Decimal
 from typing import Literal
 
 from app.models.stocks import (
     InsiderChartMarker,
+    InsiderPersonSummary,
     InsiderSummary,
     InsiderTransactionItem,
     InsiderTransactionsResponse,
 )
+
+
+def _transaction_value(tx: InsiderTransactionItem) -> Decimal | None:
+    """An absent value is unknown, while an explicitly reported zero is valid."""
+    if tx.value is not None:
+        result = Decimal(str(tx.value))
+    elif tx.shares is not None and tx.price is not None:
+        result = Decimal(tx.shares) * Decimal(str(tx.price))
+    else:
+        return None
+    return result if result.is_finite() and result >= 0 else None
+
+
+def summarize_insiders(transactions: list[InsiderTransactionItem]) -> list[InsiderPersonSummary]:
+    """Keep named people, reported currencies and unknown amounts separate."""
+    groups: dict[tuple[str, str | None], tuple[str, list[InsiderTransactionItem]]] = {}
+    for tx in transactions:
+        name = " ".join((tx.insider_name or "").split())
+        if not name or tx.transaction_type not in ("buy", "sell"):
+            continue
+        currency = tx.currency.strip().upper() if tx.currency else None
+        key = (name.casefold(), currency)
+        if key not in groups:
+            groups[key] = (name, [])
+        groups[key][1].append(tx)
+
+    def shares(items: list[InsiderTransactionItem]) -> int | None:
+        if any(tx.shares is None or tx.shares < 0 for tx in items):
+            return None
+        return sum(tx.shares for tx in items if tx.shares is not None)
+
+    def value(items: list[InsiderTransactionItem]) -> float | None:
+        amounts = [_transaction_value(tx) for tx in items]
+        if any(amount is None for amount in amounts):
+            return None
+        return round(float(sum((a for a in amounts if a is not None), Decimal(0))), 2)
+
+    result = []
+    for (_, currency), (name, items) in groups.items():
+        buys = [tx for tx in items if tx.transaction_type == "buy"]
+        sells = [tx for tx in items if tx.transaction_type == "sell"]
+        bought, sold = shares(buys), shares(sells)
+        buy_value, sell_value = value(buys), value(sells)
+        result.append(InsiderPersonSummary(
+            insider_name=name,
+            currency=currency,
+            total_purchases_count=len(buys),
+            total_sales_count=len(sells),
+            total_purchases_shares=bought,
+            total_sales_shares=sold,
+            total_purchases_value=buy_value,
+            total_sales_value=sell_value,
+            net_shares=None if bought is None or sold is None else bought - sold,
+            net_value=(
+                None if buy_value is None or sell_value is None
+                else round(buy_value - sell_value, 2)
+            ),
+        ))
+    return sorted(result, key=lambda row: (row.insider_name.casefold(), row.currency or ""))
 
 
 def _format_compact_shares(shares: int | None) -> str:
@@ -42,6 +103,7 @@ def build_insider_response(
     currency: str | None = None,
     transactions: list[InsiderTransactionItem],
     include_all: bool = False,
+    warnings: list[str] | None = None,
 ) -> InsiderTransactionsResponse:
     """Build the full API response with filtered list, summary, and daily chart markers."""
     if include_all:
@@ -62,6 +124,27 @@ def build_insider_response(
         ),
         reverse=True,
     )
+    response_warnings = list(warnings or [])
+    cash_trades = [tx for tx in visible if tx.transaction_type in ("buy", "sell")]
+    if any(tx.shares is None or _transaction_value(tx) is None for tx in cash_trades):
+        response_warnings.append(
+            "Część zakupów lub sprzedaży ma nieodczytaną liczbę akcji albo wartość. "
+            "Łączne sumy obejmują tylko znane dane; pełny bilans osoby może być nieznany."
+        )
+    if any(not tx.insider_name for tx in cash_trades):
+        response_warnings.append(
+            "Transakcje bez rozpoznanej osoby pokazano w szczegółach, "
+            "ale pominięto w podsumowaniu osób."
+        )
+    reported_currencies = {
+        tx.currency.strip().upper() if tx.currency and tx.currency.strip() else None
+        for tx in cash_trades
+    }
+    if len(reported_currencies) > 1:
+        response_warnings.append(
+            "Raporty zawierają różne waluty. Porównuj wartości w podsumowaniu osób, "
+            "gdzie każda waluta jest liczona oddzielnie."
+        )
 
     purchases_count = 0
     sales_count = 0
@@ -69,15 +152,15 @@ def build_insider_response(
     sales_shares = 0
     purchases_value = 0.0
     sales_value = 0.0
-    summary_currency: str | None = currency
+    summary_currency = (
+        next(iter(reported_currencies))
+        if len(reported_currencies) == 1 and None not in reported_currencies
+        else currency if not reported_currencies or reported_currencies == {None} else None
+    )
 
     for tx in visible:
-        if tx.currency and not summary_currency:
-            summary_currency = tx.currency
         sh = int(tx.shares or 0)
-        val = float(tx.value or 0.0)
-        if not val and sh and tx.price:
-            val = float(sh) * float(tx.price)
+        val = float(_transaction_value(tx) or 0)
 
         if tx.transaction_type == "buy":
             purchases_count += 1
@@ -117,17 +200,21 @@ def build_insider_response(
         buy_cnt = 0
         sell_cnt = 0
         roles_seen: list[str] = []
-        day_curr: str | None = None
+        day_cash_trades = [tx for tx in day_txs if tx.transaction_type in ("buy", "sell")]
+        day_currencies = {
+            tx.currency.strip().upper() if tx.currency and tx.currency.strip() else None
+            for tx in day_cash_trades
+        }
+        comparable_values = len(day_currencies) == 1 and None not in day_currencies
+        complete_shares = all(tx.shares is not None for tx in day_cash_trades)
+        complete_values = all(_transaction_value(tx) is not None for tx in day_cash_trades)
+        day_curr = next(iter(day_currencies)) if comparable_values else None
 
         for tx in day_txs:
-            if tx.currency and not day_curr:
-                day_curr = tx.currency
             if tx.role and tx.role not in roles_seen:
                 roles_seen.append(tx.role)
             sh = int(tx.shares or 0)
-            val = float(tx.value or 0.0)
-            if not val and sh and tx.price:
-                val = float(sh) * float(tx.price)
+            val = float(_transaction_value(tx) or 0)
 
             if tx.transaction_type == "buy":
                 buy_cnt += 1
@@ -139,7 +226,7 @@ def build_insider_response(
                 sell_val += val
 
         net_sh = buy_sh - sell_sh
-        net_val = buy_val - sell_val
+        net_val = buy_val - sell_val if comparable_values and complete_values else 0.0
 
         marker_type: Literal["Bullish", "Bearish", "Watch"]
         if buy_cnt > 0 and sell_cnt == 0:
@@ -147,7 +234,9 @@ def build_insider_response(
         elif sell_cnt > 0 and buy_cnt == 0:
             marker_type = "Bearish"
         elif buy_cnt > 0 and sell_cnt > 0:
-            if net_val > 0 or (net_val == 0 and net_sh > 0):
+            if not comparable_values and not complete_shares:
+                marker_type = "Watch"
+            elif net_val > 0 or (net_val == 0 and net_sh > 0):
                 marker_type = "Bullish"
             elif net_val < 0 or (net_val == 0 and net_sh < 0):
                 marker_type = "Bearish"
@@ -156,8 +245,13 @@ def build_insider_response(
         else:
             marker_type = "Watch"
 
-        display_shares = abs(net_sh) if net_sh != 0 else (buy_sh + sell_sh)
-        display_value = abs(net_val) if net_val != 0 else (buy_val + sell_val)
+        display_shares = (
+            (abs(net_sh) if net_sh != 0 else (buy_sh + sell_sh)) if complete_shares else None
+        )
+        display_value = (
+            (abs(net_val) if net_val != 0 else (buy_val + sell_val))
+            if comparable_values and complete_values else None
+        )
         compact_sh = _format_compact_shares(display_shares)
 
         if marker_type == "Bullish":
@@ -174,7 +268,7 @@ def build_insider_response(
                 label=label,
                 shares=display_shares or None,
                 value=round(display_value, 2) if display_value else None,
-                currency=day_curr or summary_currency,
+                currency=day_curr,
                 transaction_count=len(day_txs),
                 roles=roles_seen,
             )
@@ -188,4 +282,6 @@ def build_insider_response(
         summary=summary,
         transactions=visible,
         chart_markers=chart_markers,
+        by_insider=summarize_insiders(visible),
+        warnings=list(dict.fromkeys(response_warnings)),
     )
