@@ -1,5 +1,7 @@
 """Account-scoped, versioned portfolio persistence and batched stored quote lookup."""
 
+from __future__ import annotations
+
 from datetime import UTC, date, datetime
 from uuid import NAMESPACE_URL, uuid5
 
