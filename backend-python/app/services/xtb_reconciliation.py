@@ -150,17 +150,21 @@ def _checkpoint(cash, opened, cash_values, open_values):
 def reconcile_cash_wallets(wallets, tables):
     # This applies only to complementary native sections. Generic worksheets
     # remain independent even when their securities happen to overlap.
-    cash = [wallet for wallet in wallets if normalized(wallet["sheet"]) == "cashoperations"]
-    opened = [wallet for wallet in wallets if normalized(wallet["sheet"]) == "openpositions"]
+    cash = [wallet for wallet in wallets if wallet["nativeSection"] == "Cash Operations"]
+    opened = [wallet for wallet in wallets if wallet["nativeSection"] == "Open Positions"]
     if len(cash) != 1 or len(opened) != 1 or cash[0]["error"] or opened[0]["error"]:
         return
     cash, opened = cash[0], opened[0]
     cash_account, open_account = cash["brokerAccountId"], opened["brokerAccountId"]
-    if cash_account and open_account and cash_account != open_account:
+    cash_currency = cash["parsed"].broker_account_currency
+    open_currency = opened["parsed"].broker_account_currency
+    if (cash_account and open_account and cash_account != open_account) or (
+        cash_currency and open_currency and cash_currency != open_currency
+    ):
         cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
         return
     values = dict(tables)
-    checkpoint = _checkpoint(cash, opened, values[cash["sheet"]], values[opened["sheet"]])
+    checkpoint = _checkpoint(cash, opened, values[cash["section"]], values[opened["section"]])
     if checkpoint is None:
         cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
     elif checkpoint["changes"]:

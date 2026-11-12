@@ -117,6 +117,7 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("journal_entries", "observation_date", "DATE"),
     # Alembic 016 — link a portfolio to its XTB account without changing its primary key.
     ("portfolios", "broker_account_id", "VARCHAR(32)"),
+    ("portfolios", "broker_account_currency", "VARCHAR(3)"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is

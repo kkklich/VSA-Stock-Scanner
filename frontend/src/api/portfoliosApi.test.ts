@@ -45,8 +45,8 @@ describe('XTB report uploads', () => {
   it('binds worksheet uploads to the account and saves using the preview token', async () => {
     const file = new File(['report'], 'Historia XTB & IKE.xlsx')
     const signal = new AbortController().signal
-    await previewXtbWallets(file, 17, signal)
-    await importXtbWallets(file, 17, 'reviewed-plan', true, signal)
+    await previewXtbWallets(file, 17, signal, 'wallet-1')
+    await importXtbWallets(file, 17, 'reviewed-plan', true, signal, 'wallet-1')
     const [previewPath, request] = vi.mocked(apiFetch).mock.calls[0]
     const previewUrl = new URL(previewPath, 'https://example.com')
     const [commitPath, commitRequest] = vi.mocked(apiFetch).mock.calls[1]
@@ -54,6 +54,8 @@ describe('XTB report uploads', () => {
     expect(previewUrl.pathname).toBe('/api/portfolios/imports/xtb/wallets/preview')
     expect(commitUrl.pathname).toBe('/api/portfolios/imports/xtb/wallets')
     expect(previewUrl.searchParams.get('filename')).toBe(file.name)
+    expect(previewUrl.searchParams.get('target_wallet_id')).toBe('wallet-1')
+    expect(commitUrl.searchParams.get('target_wallet_id')).toBe('wallet-1')
     expect(previewUrl.searchParams.has('import_id')).toBe(false)
     expect(commitUrl.searchParams.has('import_id')).toBe(false)
     expect(commitUrl.searchParams.get('allow_partial')).toBe('true')

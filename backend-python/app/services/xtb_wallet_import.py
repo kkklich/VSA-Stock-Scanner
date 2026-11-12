@@ -9,17 +9,20 @@ from decimal import Decimal, DecimalException
 
 from app.services.portfolio import WARSAW, PortfolioError
 from app.services.xtb_import import (
+    ACCOUNT_CURRENCY_LABELS,
     ACCOUNT_ID_LABELS,
     ALIASES,
     SECTION_NAMES,
     ParsedImport,
     RowError,
+    _header,
     _trade,
     decimal_value,
     is_summary_row,
     normalized,
     parse_xtb_tables,
     read_tables,
+    report_broker_account_currency,
     report_broker_account_id,
     timestamp,
 )
@@ -38,6 +41,7 @@ SNAPSHOT_HEADERS = {
     "fees": {"commission", "opencommission", "prowizja", "prowizjaotwarcia"},
     "feeCurrency": {"feecurrency", "commissioncurrency", "walutaprowizji"},
     "currency": {"currency", "waluta"},
+    "accountCurrency": ACCOUNT_CURRENCY_LABELS,
     "priceCurrency": ALIASES["priceCurrency"],
 }
 
@@ -157,7 +161,7 @@ def _parse_positions(sheet, values, header, companies):
                 "quantity": get("quantity"),
                 "assetType": get("assetType") or categories.get(ticker_key),
                 "priceCurrency": get("priceCurrency"),
-                "currency": get("currency"),
+                "currency": get("currency") or get("accountCurrency"),
                 "feeCurrency": get("feeCurrency"),
             }
             buy = {
@@ -245,15 +249,35 @@ def parse_xtb_wallets(data: bytes, filename: str, companies) -> list[dict]:
         identities.add(identity)
         next_suffixes[sheet] = occurrence
         header = None
+        native_section = None
         try:
             header = _snapshot_header(sheet, values)
+            if header:
+                native_section = "Closed Positions" if header[2] else "Open Positions"
+            elif SECTION_NAMES.get(normalized(sheet)) == "Cash Operations" and any(
+                (columns := _header(row)) and {"amount", "comment"} <= columns.keys()
+                for row in values[:40]
+            ):
+                native_section = "Cash Operations"
             parsed = (
                 _parse_positions(sheet, values, header, companies)
                 if header
                 else parse_xtb_tables([(sheet, values)], companies, allow_empty=True)
             )
             if header:
-                parsed.broker_account_id = report_broker_account_id(values[: header[0]])
+                header_index, columns, _ = header
+                parsed.broker_account_id = report_broker_account_id(values[:header_index])
+                currency_column = columns.get("accountCurrency")
+                currencies = ()
+                if currency_column is not None:
+                    currencies = (
+                        row[currency_column]
+                        for row in values[header_index + 1 :]
+                        if currency_column < len(row)
+                    )
+                parsed.broker_account_currency = report_broker_account_currency(
+                    values[:header_index], currencies
+                )
             error = None
         except PortfolioError as exc:
             parsed, error = ParsedImport([], 0, []), exc.code
@@ -261,6 +285,7 @@ def parse_xtb_wallets(data: bytes, filename: str, companies) -> list[dict]:
             {
                 "sheet": identity,
                 "section": sheet,
+                "nativeSection": native_section,
                 "name": identity[:80],
                 "brokerAccountId": parsed.broker_account_id,
                 "parsed": parsed,

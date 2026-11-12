@@ -244,6 +244,21 @@ def test_regular_trade_worksheets_are_not_combined_or_filtered_out_by_cash_sheet
     assert [w["parsed"].rows[0]["transaction"]["quantity"] for w in wallets] == ["2", "3"]
 
 
+def test_snapshot_accepts_separate_currency_and_account_currency_columns():
+    [wallet] = parse(
+        workbook(
+            (
+                "Open Positions",
+                [*OPEN_HEADERS, "Currency", "Account Currency"],
+                [[*opened(), "USD", "EUR"]],
+            )
+        )
+    )
+    assert wallet["error"] is None
+    assert wallet["parsed"].broker_account_currency == "EUR"
+    assert wallet["parsed"].rows[0]["transaction"]["currency"] == "PLN"
+
+
 def test_repeated_csv_sections_have_unique_wallet_identities():
     data = (
         b"Cash Operations,,,,,,\n"

@@ -13,6 +13,29 @@ from pydantic import ValidationError
 from app.models.portfolio import CreatePortfolio, UpdatePortfolio
 
 
+def test_account_currency_migration_preserves_preexisting_links():
+    path = Path(__file__).parents[1] / "alembic/versions/017_portfolio_broker_account_currency.py"
+    spec = spec_from_file_location("portfolio_account_currency_migration", path)
+    migration = module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    engine = sa.create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TABLE portfolios (id TEXT PRIMARY KEY, broker_account_id VARCHAR(32))"
+        )
+        connection.exec_driver_sql("INSERT INTO portfolios VALUES ('legacy', '00123')")
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+            migration.upgrade()  # App startup can add the column first.
+            assert connection.exec_driver_sql("SELECT * FROM portfolios").one() == (
+                "legacy", "00123", None,
+            )
+            migration.downgrade()
+        assert connection.exec_driver_sql("SELECT * FROM portfolios").one() == ("legacy", "00123")
+    engine.dispose()
+
+
 def test_portfolio_account_command_preserves_identity_and_explicit_clear():
     details = {"name": "Brokerage", "broker": "XTB", "costMethod": "fifo"}
     created = CreatePortfolio(id=uuid4(), brokerAccountId=" 00123456 ", **details)

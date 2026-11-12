@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PortfolioSummary } from '../api/portfoliosApi'
 import { PortfolioOverview } from './PortfolioOverview'
@@ -30,9 +31,10 @@ const summary: PortfolioSummary = {
     { ...current, date: '2026-11-11', value: 1_250 },
     current,
   ],
-  dayChange: { since: '2026-11-11', amount: -50, percent: -4 },
-  weekChange: { since: '2026-11-05', amount: 200, percent: 20 },
+  dayChange: { since: '2026-11-11', amount: -50, percent: -4, partial: false },
+  weekChange: { since: '2026-11-05', amount: 200, percent: 20, partial: false },
   currencyTotals: [{ currency: 'PLN', marketValue: 1_200, missingQuotes: 0 }],
+  missingHoldings: [],
 }
 
 beforeEach(() => {
@@ -65,6 +67,39 @@ describe('PortfolioOverview', () => {
     ])
   })
 
+  it('shows available values and chart points alongside the holdings missing prices', () => {
+    const partial = { ...current, missingQuotes: 2, missingRates: ['USD'] }
+    render(<MemoryRouter><PortfolioOverview walletCount={2} summary={{
+      ...summary,
+      current: partial,
+      history: [summary.history[2], partial],
+      dayChange: { since: '2026-11-11', amount: -50, percent: -4, partial: true },
+      currencyTotals: [
+        { currency: 'PLN', marketValue: 1_200, missingQuotes: 1 },
+        { currency: 'USD', marketValue: 100, missingQuotes: 1 },
+      ],
+      missingHoldings: [
+        { ticker: 'pko', walletId: 'wallet-a', walletName: 'Retirement', currency: 'PLN' },
+        { ticker: 'nvda.us', walletId: 'wallet-b', walletName: 'Savings', currency: 'USD' },
+      ],
+    }} /></MemoryRouter>)
+
+    expect(screen.getByText('Available holdings value')).toBeVisible()
+    expect(screen.getByText('1,200.00 PLN', { selector: 'dd' })).toBeVisible()
+    expect(screen.getByText('Missing prices for 2 holdings.')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'PKO' })).toHaveAttribute('href', '/stock/pko')
+    expect(screen.getByRole('link', { name: 'NVDA.US' })).toHaveAttribute('href', '/stock/nvda.us')
+    expect(screen.getByText('· Retirement · PLN')).toBeVisible()
+    expect(screen.getByText('· Savings · USD')).toBeVisible()
+    expect(screen.getByText('Missing exchange rates for USD.')).toBeVisible()
+    expect(screen.getByText('Comparable holdings only')).toBeVisible()
+    expect(screen.getByText(/Coverage can vary by day/)).toBeVisible()
+    expect(chart.setData).toHaveBeenCalledWith([
+      { time: '2026-11-11', value: 1_250 },
+      { time: '2026-11-12', value: 1_200 },
+    ])
+  })
+
   it('shows native subtotals when conversion is unavailable', () => {
     const missingRate = { ...current, value: null, missingRates: ['USD'] }
     render(<PortfolioOverview walletCount={2} summary={{
@@ -74,7 +109,6 @@ describe('PortfolioOverview', () => {
       dayChange: null,
       weekChange: null,
       currencyTotals: [
-        { currency: 'PLN', marketValue: 900, missingQuotes: 0 },
         { currency: 'USD', marketValue: 100, missingQuotes: 0 },
       ],
     }} />)

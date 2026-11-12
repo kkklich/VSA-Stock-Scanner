@@ -41,7 +41,7 @@ def workbook(sheets=None):
     return output.getvalue()
 
 
-def upload(client, data, *, token=None, partial=False, filename="example.xlsx"):
+def upload(client, data, *, token=None, partial=False, filename="example.xlsx", target=None):
     suffix = "/preview" if token is None else ""
     headers = {
         "Content-Type": "application/octet-stream",
@@ -49,9 +49,12 @@ def upload(client, data, *, token=None, partial=False, filename="example.xlsx"):
     }
     if token is not None:
         headers["X-XTB-Preview"] = token
+    params = {"filename": filename, "allow_partial": partial}
+    if target is not None:
+        params["target_wallet_id"] = target
     return client.post(
         f"/api/portfolios/imports/xtb/wallets{suffix}",
-        params={"filename": filename, "allow_partial": partial},
+        params=params,
         content=data,
         headers=headers,
     )
@@ -176,14 +179,15 @@ def test_partial_consent_does_not_cover_errors_that_appear_after_preview(client,
     assert portfolios(client) == []
 
 
-def test_empty_native_sheets_create_wallets_without_inventing_transactions(client):
+def test_empty_native_sheets_create_one_wallet_without_inventing_transactions(client):
     data = native_workbook(
         ("Closed Positions", CLOSED_HEADERS, []),
         ("Cash Operations", HEADERS, []),
         ("Open Positions", OPEN_HEADERS, []),
     )
     plan = preview(client, data)
-    assert plan["newWallets"] == 3
+    assert plan["newWallets"] == 1
+    assert plan["skippedSheets"] == ["Closed Positions", "Open Positions"]
     assert plan["blockingError"] is None
     assert plan["ready"] == 0
     assert plan["errors"] == 0
@@ -192,10 +196,10 @@ def test_empty_native_sheets_create_wallets_without_inventing_transactions(clien
 
     saved = upload(client, data, token=plan["previewToken"])
     assert saved.status_code == 200, saved.text
-    assert saved.json()["created"] == 3
+    assert saved.json()["created"] == 1
     assert saved.json()["imported"] == 0
     wallets = portfolios(client)
-    assert {p["name"] for p in wallets} == {"Cash Operations", "Closed Positions", "Open Positions"}
+    assert {p["name"] for p in wallets} == {"Cash Operations"}
     assert all(p["transactions"] == [] for p in wallets)
 
 

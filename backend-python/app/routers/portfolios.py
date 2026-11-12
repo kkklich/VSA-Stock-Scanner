@@ -222,16 +222,44 @@ async def read_wallet_import(request: Request, filename: str):
     return wallets, report_digest
 
 
-def wallet_preview_token(owner, report_digest, wallets, plans):
+def wallet_preview_token(owner, report_digest, wallets, plans, target):
     manifest = [{**wallet, "parsed": asdict(wallet["parsed"])} for wallet in wallets]
-    links = [(plan["id"], plan["brokerAccountId"]) for plan in plans]
-    payload = json.dumps(
-        [owner, report_digest, manifest, links], sort_keys=True, separators=(",", ":")
+    subject = sha256(
+        json.dumps(
+            [owner, report_digest, target, manifest], sort_keys=True, separators=(",", ":")
+        ).encode()
+    ).digest()
+    secret = jwt_secret().encode()
+
+    def signature(prefix, details):
+        payload = json.dumps(details, separators=(",", ":")).encode()
+        return digest(secret, prefix + subject + payload, "sha256").hex()
+
+    routes = [
+        (
+            plan["id"],
+            plan["sheet"],
+            plan["brokerAccountId"],
+            plan["brokerAccountCurrency"],
+            plan["error"],
+            plan["ledgerError"],
+            [
+                (row["sheet"], row["row"], row.get("code"))
+                for row in plan["rows"]
+                if row["status"] == "error"
+            ],
+        )
+        for plan in plans
+    ]
+    # Bind state-changing confirmations to the destination version and reviewed rows.
+    state = [
+        (route, plan["version"], [row["status"] for row in plan["rows"]])
+        for route, plan in zip(routes, plans, strict=True)
+    ]
+    # A retry may become a no-op after its first commit, even though versions changed.
+    return signature(b"xtb-wallet-preview:v3\0", state) + signature(
+        b"xtb-wallet-retry:v3\0", routes
     )
-    # Bind the report interpretation and destination links that the user reviewed.
-    return digest(
-        jwt_secret().encode(), b"xtb-wallet-preview:v2\0" + payload.encode(), "sha256"
-    ).hex()
 
 
 @router.post("/imports/xtb/wallets/preview")
@@ -241,11 +269,15 @@ async def preview_xtb_wallets(
     repo: Repository,
     response: Response,
     filename: Annotated[str, Query(min_length=1, max_length=200)],
+    target_wallet_id: UUID | None = None,
 ):
     async def preview():
         wallets, report_digest = await read_wallet_import(request, filename)
-        result = await repo.portfolios.preview_wallets(user.id, wallets, report_digest)
-        token = wallet_preview_token(user.id, report_digest, wallets, result["wallets"])
+        target = str(target_wallet_id) if target_wallet_id else None
+        result = await repo.portfolios.preview_wallets(
+            user.id, wallets, report_digest, target_wallet_id=target
+        )
+        token = wallet_preview_token(user.id, report_digest, wallets, result["wallets"], target)
         return {**result, "previewToken": token}
 
     return await execute(response, preview())
@@ -258,19 +290,35 @@ async def import_xtb_wallets(
     repo: Repository,
     response: Response,
     filename: Annotated[str, Query(min_length=1, max_length=200)],
-    x_xtb_preview: Annotated[str, Header(pattern=r"^[0-9a-f]{64}$")],
+    x_xtb_preview: Annotated[str, Header(pattern=r"^[0-9a-f]{64}(?:[0-9a-f]{64})?$")],
     allow_partial: bool = False,
+    target_wallet_id: UUID | None = None,
 ):
     async def commit():
         wallets, report_digest = await read_wallet_import(request, filename)
+        target = str(target_wallet_id) if target_wallet_id else None
 
         def verify_preview(plans):
-            token = wallet_preview_token(user.id, report_digest, wallets, plans)
-            if not compare_digest(token, x_xtb_preview):
+            token = wallet_preview_token(user.id, report_digest, wallets, plans, target)
+            if compare_digest(token, x_xtb_preview):
+                return
+            has_changes = any(
+                plan["version"] is None
+                or plan["ready"]
+                or plan["linksBrokerAccount"]
+                or plan["setsBrokerAccountCurrency"]
+                for plan in plans
+            )
+            if has_changes or not compare_digest(token[64:], x_xtb_preview[64:]):
                 raise PortfolioError("import_preview_changed")
 
         return await repo.portfolios.import_wallets(
-            user.id, wallets, report_digest, allow_partial, verify_preview=verify_preview
+            user.id,
+            wallets,
+            report_digest,
+            allow_partial,
+            verify_preview=verify_preview,
+            target_wallet_id=target,
         )
 
     return await execute(response, commit())

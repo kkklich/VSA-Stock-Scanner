@@ -111,10 +111,11 @@ delete it and record its replacement; dependent sales may need removing first.
 Valuation uses the latest stored closing quotes and newer available intraday
 quotes from the existing hourly price service. It does not request a fresh market
 download when the page is refreshed. Quote dates are shown separately from the
-calculation timestamp. Missing prices leave the complete currency valuation
-unavailable rather than displaying a partial total. Each currency has its own
-totals; no indicative FX rates are applied. Dividends, corporate actions, cash
-balances and tax accounting are not automatically recorded.
+calculation timestamp. The all-wallet overview lists holdings with missing quotes
+and shows the available subtotal by quote currency and in PLN using NBP rates.
+The one-day and seven-day changes use positions that can be valued at both ends
+of the period, with purchases and sales included. Dividends, corporate actions,
+cash balances and tax accounting are excluded from the ledger.
 
 The page explains its calculation rules, separates closing and intraday quotes,
 and flags quotes older than seven calendar days (an informational threshold,
@@ -127,27 +128,29 @@ it is not an annualized or cash-flow-adjusted return. Calculation references:
 Portfolios are saved in the account database and reloaded on browser focus and
 every minute while visible. Version checks prevent overwriting edits from another
 device; unchanged creation and trade requests can be retried without duplicates.
-Guests are prompted to sign in. Startup creates the new table; Alembic-managed
-deployments should apply revision `013` (`alembic upgrade head`).
+Guests are prompted to sign in. Alembic-managed deployments should apply the
+latest portfolio migrations with `alembic upgrade head`.
 
 ### Importing XTB account history
 
-Open **My portfolio**, select or create the destination portfolio, then use
-**Import from XTB** below the transaction form. Choose an `.xlsx`, `.xls` or `.csv`
-file (up to 5 MiB) and click **Preview file**. Review the recognized trades,
-existing duplicates, warnings and rejected rows before confirming the import.
-The whole batch is saved atomically; no preview changes account data.
+Open **Import from XTB** on **My portfolio**, choose an `.xlsx`, `.xls` or `.csv`
+file (up to 5 MiB) and click **Preview import**. The importer checks the XTB account
+number for an existing wallet. Choose the destination explicitly for older files
+without account details when you want to update a saved wallet. Review the
+destination, recognized trades, duplicates, warnings and rejected rows before
+confirming. The whole batch is saved atomically after confirmation.
 
 Export the full **Cash Operations** history from xStation, including operation
 IDs, execution dates, tickers and execution comments. English and Polish column
 names are recognized, with headers up to row 40. A CSV of executed trades can
 instead contain `ID, Type, Time, Symbol, Quantity, Price, Currency, Commission`.
 Use an unambiguous date (`YYYY-MM-DD HH:MM:SS` or `DD.MM.YYYY HH:MM:SS`). Extract
-ZIP reports before uploading. Open/closed-position snapshots and pending orders
-are not substitutes for execution history. When a workbook contains Cash
-Operations, other sheets are not used to reconstruct the same trades again.
+ZIP reports before uploading. Cash Operations takes precedence when the same
+account also has position sheets. A position snapshot can initialize an empty
+wallet. Use execution history for later trade updates.
 
-Use a separate portfolio for each XTB account. Original operation IDs and trade
+Each XTB account wallet has one account currency. A holding can trade in a
+different currency. Original operation IDs and trade
 sides identify repeated imports, independently of filenames and row order.
 Overlapping reports and retrying an uncertain save do not duplicate imported
 trades. Conflicting data for an existing reference blocks the batch. Similar
@@ -165,8 +168,7 @@ manual reconciliation; the exact GBP/GBX unit conversion is supported when the
 price currency is explicit. Nothing is downloaded from XTB or sent to a third
 party during parsing, and the uploaded file is not stored.
 
-Deploy the updated backend dependencies and frontend together. No new database
-migration is needed: import identifiers live in the portfolio trade ledger.
+Deploy the updated backend and frontend together.
 The bundled Nginx configurations allow 5 MiB uploads. On an existing VPS, also
 set `client_max_body_size 5m;` in the active host Nginx site and reload Nginx
 after a successful `nginx -t`; otherwise its default 1 MiB limit may reject

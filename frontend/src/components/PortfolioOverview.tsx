@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { AreaSeries, ColorType, createChart, isBusinessDay, type AreaData, type Time } from 'lightweight-charts'
 import { useTranslation } from 'react-i18next'
-import type { PortfolioSummary } from '../api/portfoliosApi'
+import { Link } from 'react-router-dom'
+import type { PortfolioSummary, PortfolioSummaryPoint } from '../api/portfoliosApi'
 import { useChartPalette } from '../lib/chartTheme'
 import { currencyLabel, deltaTone } from '../lib/format'
 
@@ -30,6 +31,10 @@ function dateFromChartTime(time: Time) {
   return typeof time === 'string' ? time : new Date(time * 1000).toISOString().slice(0, 10)
 }
 
+function hasMissingInputs(point: PortfolioSummaryPoint) {
+  return point.missingQuotes > 0 || point.missingRates.length > 0
+}
+
 function ValueChange({ change, label, currency }: {
   change: PortfolioSummary['dayChange']; label: string; currency: string
 }) {
@@ -47,6 +52,7 @@ function ValueChange({ change, label, currency }: {
     <dd className="mt-1 text-xs text-slate-400">{change
       ? t('portfolio.overview.since', { date: formatDate(change.since, locale) })
       : t('portfolio.overview.changeUnavailable')}</dd>
+    {change?.partial && <dd className="mt-1 text-xs text-amber-400">{t('portfolio.overview.partialChange')}</dd>}
   </div>
 }
 
@@ -60,6 +66,7 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
   const focused = history.find(point => point.date === hoverDate) ?? history[history.length - 1]
   const pricedDays = history.filter(point => point.value !== null).length
   const canPlot = pricedDays >= 2
+  const hasPartialDays = history.some(point => point.value !== null && hasMissingInputs(point))
 
   useEffect(() => {
     if (!canPlot || !container.current) return
@@ -82,8 +89,7 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
       handleScale: false,
     })
 
-    // Each uninterrupted run has its own series so the chart shows gaps on days
-    // when the combined value could not be calculated.
+    // Separate series keep gaps visible on days when no value could be calculated.
     const segments: AreaData[][] = []
     let segment: AreaData[] | undefined
     for (const { date, value } of history) {
@@ -129,8 +135,12 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
         <span className="ml-2 font-medium text-slate-200">
           {focused.value === null ? unavailable : money(focused.value, currency, locale)}
         </span>
+        {focused.value !== null && hasMissingInputs(focused) && <span className="ml-2 text-amber-400">
+          {t('portfolio.overview.partial')}
+        </span>}
       </p>}
     </div>
+    {hasPartialDays && <p className="mb-2 text-xs text-amber-400">{t('portfolio.overview.partialHistory')}</p>}
     {canPlot
       ? <div ref={container} aria-hidden="true" className="h-52 w-full sm:h-60" />
       : <p className="rounded-lg bg-slate-950 p-4 text-sm text-slate-400">{t('portfolio.overview.historyUnavailable')}</p>}
@@ -143,9 +153,12 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
           <th scope="col" className="py-1 text-right font-medium">{t('portfolio.overview.value')}</th></tr></thead>
         <tbody>{history.map(point => <tr key={point.date} className="border-t border-slate-800">
           <th scope="row" className="py-1 font-normal">{formatDate(point.date, locale)}</th>
-          <td className="py-1 text-right">{point.value === null
-            ? t('portfolio.overview.valueUnavailable')
-            : money(point.value, currency, locale)}</td>
+          <td className="py-1 text-right">
+            {point.value === null ? t('portfolio.overview.valueUnavailable') : money(point.value, currency, locale)}
+            {point.value !== null && hasMissingInputs(point) && <span className="ml-2 text-xs text-amber-400">
+              {t('portfolio.overview.partial')}
+            </span>}
+          </td>
         </tr>)}</tbody>
       </table>
     </details>}
@@ -158,7 +171,8 @@ export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets,
   const { t, i18n } = useTranslation()
   const id = useId()
   const locale = i18n.language
-  const { currency, current, currencyTotals } = summary
+  const { currency, current, currencyTotals, missingHoldings = [] } = summary
+  const incomplete = hasMissingInputs(current)
   const showBreakdown = currencyTotals.length > 1 || currencyTotals.some(total => total.currency !== currency)
   return <section aria-labelledby={id} className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -173,7 +187,9 @@ export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets,
       })}</p>}
       <dl className="grid grid-cols-2 items-start gap-y-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] sm:divide-x sm:divide-slate-800 sm:[&>div+div]:pl-4">
         <div className="col-span-2 min-w-0 sm:col-span-1">
-          <dt className="text-sm text-slate-400">{t('portfolio.overview.value')}</dt>
+          <dt className="text-sm text-slate-400">
+            {t(incomplete && current.value !== null ? 'portfolio.overview.availableValue' : 'portfolio.overview.value')}
+          </dt>
           <dd className="mt-0.5 break-words text-2xl font-semibold tracking-tight text-slate-100 tabular-nums sm:text-3xl">
             {current.value === null ? unavailable : money(current.value, currency, locale)}
           </dd>
@@ -182,9 +198,17 @@ export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets,
         <ValueChange change={summary.weekChange} label={t('portfolio.overview.weekChange')} currency={currency} />
       </dl>
       {hasMultipleXtbWallets && <p className="text-sm text-amber-400">{t('portfolio.overview.xtbOverlap')}</p>}
-      {(current.value === null || current.staleQuotes > 0) && <div className="rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-sm text-amber-400">
+      {(incomplete || current.value === null || current.staleQuotes > 0) && <div className="space-y-1 rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-sm text-amber-400">
         {current.value === null && <p className="font-medium">{t('portfolio.overview.totalUnavailable')}</p>}
         {current.missingQuotes > 0 && <p>{t('portfolio.overview.missingQuotes', { count: current.missingQuotes })}</p>}
+        {missingHoldings.length > 0 && <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+          {missingHoldings.map(holding => <li key={`${holding.walletId}:${holding.ticker}:${holding.currency}`} className="min-w-0 break-words">
+            <Link className="font-medium underline decoration-amber-400/50 underline-offset-2 hover:decoration-current" to={`/stock/${encodeURIComponent(holding.ticker)}`}>
+              {holding.ticker.toUpperCase()}
+            </Link>
+            <span className="text-slate-400"> · {holding.walletName} · {currencyLabel(holding.currency)}</span>
+          </li>)}
+        </ul>}
         {current.missingRates.length > 0 && <p>{t('portfolio.overview.missingRates', {
           currencies: current.missingRates.map(currencyLabel).join(', '),
         })}</p>}
@@ -194,9 +218,12 @@ export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets,
         <p className="text-xs font-medium text-slate-400">{t('portfolio.overview.currencyBreakdown')}</p>
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums">{currencyTotals.map(total => <div key={total.currency} className="flex gap-1.5">
           <dt className="text-slate-400">{currencyLabel(total.currency)}</dt>
-          <dd className="font-medium text-slate-200">{total.marketValue === null
-            ? t('portfolio.overview.valueUnavailable')
-            : formatAmount(total.marketValue, locale)}</dd>
+          <dd className="font-medium text-slate-200">
+            {total.marketValue === null ? t('portfolio.overview.valueUnavailable') : formatAmount(total.marketValue, locale)}
+            {total.marketValue !== null && total.missingQuotes > 0 && <span className="ml-1.5 text-xs text-amber-400">
+              {t('portfolio.overview.partial')}
+            </span>}
+          </dd>
         </div>)}</dl>
       </div>}
       <ValueHistory history={summary.history} currency={currency} />

@@ -207,6 +207,7 @@ def parse_xtb_daily_statement(data: bytes, password: str, companies) -> ParsedIm
         raise _invalid()
     parsed = parse_xtb_tables([("DailyStatement", rows)], companies, allow_empty=True)
     parsed.broker_account_id = broker_account_id
+    parsed.broker_account_currency = account_currency
     parsed.ignored += ignored_sales
     if fx_cost:
         parsed.warnings.append("fx_cost_not_imported")

@@ -39,6 +39,7 @@ MAX_COLUMNS = 80
 MAX_CELL = 4000
 SUMMARY_LABELS = {"total", "suma", "razem", "profitloss"}
 ACCOUNT_ID_LABELS = {"accountnumber", "accountid", "numerrachunku", "idrachunku"}
+ACCOUNT_CURRENCY_LABELS = {"accountcurrency", "walutarachunku"}
 
 
 def normalized(value) -> str:
@@ -152,6 +153,7 @@ class ParsedImport:
     ignored: int
     warnings: list[str]
     broker_account_id: str | None = None
+    broker_account_currency: str | None = None
 
 
 @dataclass(frozen=True)
@@ -517,6 +519,19 @@ def report_broker_account_id(rows: list[list]) -> str | None:
     return next(iter(account_ids), None)
 
 
+def report_broker_account_currency(metadata, values=()) -> str | None:
+    codes = {
+        currency(row[1])
+        for row in metadata
+        if len(row) >= 2 and normalized(row[0]) in ACCOUNT_CURRENCY_LABELS
+    }
+    codes.update(currency(value) for value in values)
+    currencies = {code for code in codes if re.fullmatch(r"[A-Z]{3}", code)}
+    if len(currencies) > 1:
+        raise PortfolioError("import_multiple_account_currencies", 422)
+    return next(iter(currencies), None)
+
+
 def _company(raw, companies):
     value = str(raw or "").strip().lower()
     for suffix, replacement in {".pl": "", ".fr": ".pa", ".nl": ".as", ".uk": ".l"}.items():
@@ -651,6 +666,7 @@ def parse_xtb_tables(
 ) -> ParsedImport:
     rows, ignored, recognized, warnings = [], 0, False, set()
     broker_account_id = None
+    broker_account_currency = None
     cash_names = {
         "cashoperations",
         "cashoperation",
@@ -676,6 +692,25 @@ def parse_xtb_tables(
                 raise PortfolioError("import_multiple_broker_accounts", 422)
             broker_account_id = account_id
         cash_history = "amount" in header and "comment" in header
+        currency_column = header.get("currency")
+        explicit_account_currency = (
+            currency_column is not None
+            and normalized(values[header_index][currency_column]) in ACCOUNT_CURRENCY_LABELS
+        )
+        currencies = ()
+        if currency_column is not None and (cash_history or explicit_account_currency):
+            side_column = header["side"]
+            currencies = (
+                row[currency_column]
+                for row in values[header_index + 1 :]
+                if max(currency_column, side_column) < len(row)
+                and normalized(row[side_column]) in BUY | SELL
+            )
+        account_currency = report_broker_account_currency(values[:header_index], currencies)
+        if account_currency:
+            if broker_account_currency not in (None, account_currency):
+                raise PortfolioError("import_multiple_account_currencies", 422)
+            broker_account_currency = account_currency
         utc_time = normalized(values[header_index][header["time"]]).endswith("utc") or (
             cash_history
             and any(
@@ -699,7 +734,13 @@ def parse_xtb_tables(
             try:
                 if any(isinstance(value, str) and value.startswith("=") for value in row):
                     raise RowError("formula_cell")
-                trade, row_warnings = _trade(get, companies, cash_history, utc_time=utc_time)
+                trade, row_warnings = _trade(
+                    get,
+                    companies,
+                    cash_history,
+                    utc_time=utc_time,
+                    account_currency=explicit_account_currency,
+                )
                 if trade is None:
                     ignored += 1
                     continue
@@ -713,7 +754,7 @@ def parse_xtb_tables(
         raise PortfolioError("import_no_transactions", 422)
     if len(rows) > 1000:
         raise PortfolioError("transaction_limit")
-    return ParsedImport(rows, ignored, sorted(warnings), broker_account_id)
+    return ParsedImport(rows, ignored, sorted(warnings), broker_account_id, broker_account_currency)
 
 
 def _trade_key(trade, *, with_time=True, with_fees=True):
@@ -757,6 +798,9 @@ def prepare_import(
         _trade_key(trade, with_time=False) for trade in existing if trade.get("source") != "xtb"
     }
     xtb_keys = {_xtb_import_key(trade) for trade in existing if trade.get("source") == "xtb"}
+    snapshot_without_cutoff = not checkpoint and any(
+        (trade.get("sourceId") or "").startswith("xtb:position:") for trade in existing
+    )
     rows, additions = [], []
     for raw in parsed.rows:
         row = dict(raw)
@@ -775,6 +819,10 @@ def prepare_import(
                 # Daily statements identify orders, while the cash export uses operation IDs.
                 # Matching amounts and dates warrant review without assuming the fills are equal.
                 row.update(status="error", code="xtb_source_overlap")
+            elif snapshot_without_cutoff and not (trade.get("sourceId") or "").startswith(
+                "xtb:position:"
+            ):
+                row.update(status="error", code="import_snapshot_history_conflict")
             else:
                 require_after_checkpoint(trade, checkpoint)
                 additions.append(trade)
@@ -792,6 +840,8 @@ def prepare_import(
         ledger_error = "transaction_limit"
     if any(row.get("code") == "reference_conflict" for row in rows):
         ledger_error = "import_reference_conflict"
+    if any(row.get("code") == "import_snapshot_history_conflict" for row in rows):
+        ledger_error = "import_snapshot_history_conflict"
     return {
         "rows": rows,
         "additions": additions,

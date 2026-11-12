@@ -31,8 +31,8 @@ beforeEach(() => {
 
 async function loadPreview() {
   const user = userEvent.setup()
-  await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-  await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+  await user.upload(screen.getByLabelText('XTB report file'), file())
+  await user.click(screen.getByRole('button', { name: 'Preview import' }))
   await screen.findByText('New wallets: 3 · New trades: 3 · Rows needing attention: 0')
   return user
 }
@@ -52,8 +52,8 @@ describe('XTB worksheet wallets', () => {
     expect(screen.getByText('Cash Operations · 6')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Import wallets (3)' }))
     await screen.findByText('Import complete. Wallets created: 3, trades added: 3, duplicates: 0, skipped: 0.')
-    expect(previewXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, expect.any(AbortSignal))
-    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal))
+    expect(previewXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, expect.any(AbortSignal), undefined)
+    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal), undefined)
     expect(refreshed).toHaveBeenCalledTimes(1)
     expect(busyChanged.mock.calls.map(([value]) => value)).toEqual([true, false, true, false])
   })
@@ -66,13 +66,13 @@ describe('XTB worksheet wallets', () => {
     vi.mocked(previewXtbWallets).mockResolvedValue(preview)
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     const confirm = await screen.findByRole('button', { name: 'Import wallets (3)' })
     expect(confirm).toBeDisabled()
     await user.click(screen.getByRole('checkbox'))
     await user.click(confirm)
-    await waitFor(() => expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', true, expect.any(AbortSignal)))
+    await waitFor(() => expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', true, expect.any(AbortSignal), undefined))
   })
 
   it.each(['error', 'ledgerError'] as const)('blocks the batch when a worksheet has %s', async code => {
@@ -82,8 +82,8 @@ describe('XTB worksheet wallets', () => {
     vi.mocked(previewXtbWallets).mockResolvedValue(preview)
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     await screen.findByRole('alert')
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import wallets (3)' })).toBeDisabled()
@@ -99,9 +99,9 @@ describe('XTB worksheet wallets', () => {
     await user.click(screen.getByRole('button', { name: 'Import wallets (3)' }))
     await screen.findByText(/Import complete\. Wallets created: 3/)
     expect(vi.mocked(importXtbWallets).mock.calls[0].slice(0, 4)).toEqual(vi.mocked(importXtbWallets).mock.calls[1].slice(0, 4))
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     await screen.findByRole('button', { name: 'Import wallets (3)' })
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), new File(['other'], 'Other.xlsx'))
+    await user.upload(screen.getByLabelText('XTB report file'), new File(['other'], 'Other.xlsx'))
     expect(screen.queryByRole('button', { name: 'Import wallets (3)' })).not.toBeInTheDocument()
   })
 
@@ -112,7 +112,7 @@ describe('XTB worksheet wallets', () => {
     await user.click(screen.getByRole('button', { name: 'Import wallets (3)' }))
     await screen.findByRole('alert')
     expect(screen.queryByRole('button', { name: 'Import wallets (3)' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Preview wallets' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Preview import' })).toBeEnabled()
     expect(refreshed).not.toHaveBeenCalled()
   })
 
@@ -121,12 +121,12 @@ describe('XTB worksheet wallets', () => {
     vi.mocked(previewXtbWallets).mockResolvedValue({ ...ready(), newWallets: 1, ready: 0, wallets: [empty] })
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     const confirm = await screen.findByRole('button', { name: 'Import wallets (1)' })
     expect(confirm).toBeEnabled()
     await user.click(confirm)
-    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal))
+    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal), undefined)
   })
 
   it('explains a duplicate report without offering to recreate its wallets', async () => {
@@ -137,10 +137,79 @@ describe('XTB worksheet wallets', () => {
     })
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     await screen.findByText('This report has already been imported.')
     expect(screen.queryByRole('button', { name: /^Import wallets/ })).not.toBeInTheDocument()
+    expect(importXtbWallets).not.toHaveBeenCalled()
+  })
+
+  it('updates the matched wallet and reports the new trades without creating another wallet', async () => {
+    const matched = { ...wallet('Cash Operations'), name: 'Retirement', version: 3,
+      linksBrokerAccount: false, brokerAccountCurrency: 'EUR' }
+    vi.mocked(previewXtbWallets).mockResolvedValue({ ...ready(), newWallets: 0, ready: 1,
+      wallets: [matched], skippedSheets: ['Open Positions', 'Closed Positions'] })
+    vi.mocked(importXtbWallets).mockResolvedValue({ wallets: [], imported: 1, duplicates: 0, skipped: 0, created: 0 })
+    render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
+    const user = userEvent.setup()
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
+    expect(await screen.findByText(/^Retirement —/)).toBeVisible()
+    expect(screen.getByText('Existing wallet')).toBeVisible()
+    expect(screen.getByText('Account currency EUR')).toBeVisible()
+    expect(screen.getByText('Skipped Open Positions, Closed Positions to avoid overlapping trades.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Import trades (1)' }))
+    expect(await screen.findByText('Import complete. Wallets created: 0, trades added: 1, duplicates: 0, skipped: 0.')).toBeVisible()
+    expect(refreshed).toHaveBeenCalledOnce()
+  })
+
+  it('requires a fresh preview for a manually selected wallet and saves its account currency', async () => {
+    const portfolios = [{ id: 'retirement', name: 'Retirement', broker: 'XTB', brokerAccountId: null }]
+    render(<XtbWalletImport owner={17} portfolios={portfolios} disabled={false} onImported={refreshed} />)
+    const user = await loadPreview()
+    await user.selectOptions(screen.getByLabelText('Destination wallet'), 'retirement')
+    expect(screen.queryByRole('button', { name: 'Import wallets (3)' })).not.toBeInTheDocument()
+    const match = { ...wallet('Cash Operations'), id: 'retirement', name: 'Retirement', version: 2,
+      ready: 0, duplicates: 1, brokerAccountCurrency: 'USD', setsBrokerAccountCurrency: true, linksBrokerAccount: false }
+    vi.mocked(previewXtbWallets).mockResolvedValue({ ...ready(), newWallets: 0, ready: 0,
+      wallets: [match], previewToken: 'manual-target-plan' })
+    vi.mocked(importXtbWallets).mockResolvedValue({ wallets: [], imported: 0, duplicates: 1, skipped: 0, created: 0 })
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
+    await user.click(await screen.findByRole('button', { name: 'Save wallet details' }))
+    expect(await screen.findByText('Wallet details saved.')).toBeVisible()
+    expect(previewXtbWallets).toHaveBeenLastCalledWith(expect.any(File), 17, expect.any(AbortSignal), 'retirement')
+    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'manual-target-plan', false, expect.any(AbortSignal), 'retirement')
+  })
+
+  it('explains when a position-only report has no trades eligible for the matched wallet', async () => {
+    vi.mocked(previewXtbWallets).mockResolvedValue({ ...ready(), newWallets: 0, ready: 0,
+      wallets: [], skippedSheets: ['Open Positions'] })
+    render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
+    const user = userEvent.setup()
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
+    expect(await screen.findByText('No new trades to import.')).toBeVisible()
+    expect(screen.getByText('Skipped Open Positions to avoid overlapping trades.')).toBeVisible()
+    expect(screen.queryByText('This report has already been imported.')).not.toBeInTheDocument()
+  })
+
+  it('requires a new destination when a manually selected wallet is removed', async () => {
+    const portfolios = [{ id: 'retirement', name: 'Retirement', broker: 'XTB', brokerAccountId: null }]
+    const match = { ...wallet('Cash Operations'), id: 'retirement', name: 'Retirement', version: 2,
+      linksBrokerAccount: false }
+    vi.mocked(previewXtbWallets).mockResolvedValue({ ...ready(), newWallets: 0, ready: 1, wallets: [match] })
+    const view = render(<XtbWalletImport owner={17} portfolios={portfolios} disabled={false} onImported={refreshed} />)
+    const user = userEvent.setup()
+    await user.selectOptions(screen.getByLabelText('Destination wallet'), 'retirement')
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
+    await screen.findByRole('button', { name: 'Import trades (1)' })
+    view.rerender(<XtbWalletImport owner={17} portfolios={[]} disabled={false} onImported={refreshed} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('The selected wallet is no longer available.')
+    expect(screen.queryByRole('button', { name: 'Import trades (1)' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Preview import' })).toBeDisabled()
+    await user.selectOptions(screen.getByLabelText('Destination wallet'), '')
+    expect(screen.getByRole('button', { name: 'Preview import' })).toBeEnabled()
     expect(importXtbWallets).not.toHaveBeenCalled()
   })
 
@@ -153,11 +222,11 @@ describe('XTB worksheet wallets', () => {
     vi.mocked(importXtbWallets).mockResolvedValue({ wallets: [], imported: 0, duplicates: 3, skipped: 0, created: 0 })
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
-    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
     await user.click(await screen.findByRole('button', { name: 'Link XTB accounts' }))
     expect(await screen.findByText('XTB accounts linked to the saved wallets.')).toBeVisible()
-    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal))
+    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal), undefined)
   })
 
   it('shows a batch limit error before save and leaves confirmation disabled', async () => {
@@ -172,8 +241,8 @@ describe('XTB worksheet wallets', () => {
     let resolve!: (value: XtbWalletsPreview) => void
     vi.mocked(previewXtbWallets).mockImplementation(() => new Promise(done => { resolve = done }))
     const view = render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
-    fireEvent.change(screen.getByLabelText('XTB file for new wallets'), { target: { files: [file()] } })
-    fireEvent.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    fireEvent.change(screen.getByLabelText('XTB report file'), { target: { files: [file()] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }))
     const signal = vi.mocked(previewXtbWallets).mock.calls[0][2]
     view.unmount()
     expect(signal.aborted).toBe(true)
@@ -186,9 +255,9 @@ describe('XTB worksheet wallets', () => {
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const big = new File(['x'], 'TooLarge.xlsx')
     Object.defineProperty(big, 'size', { value: 5 * 1024 * 1024 + 1 })
-    fireEvent.change(screen.getByLabelText('XTB file for new wallets'), { target: { files: [big] } })
+    fireEvent.change(screen.getByLabelText('XTB report file'), { target: { files: [big] } })
     expect(screen.getByRole('alert')).toHaveTextContent('The file is too large.')
-    expect(screen.getByRole('button', { name: 'Preview wallets' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Preview import' })).toBeDisabled()
     expect(previewXtbWallets).not.toHaveBeenCalled()
   })
 })

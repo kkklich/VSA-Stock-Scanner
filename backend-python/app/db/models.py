@@ -64,6 +64,7 @@ class PortfolioRow(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     broker: Mapped[str] = mapped_column(String(80), nullable=False)
     broker_account_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    broker_account_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     transactions: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     cost_method: Mapped[str] = mapped_column(String(20), nullable=False, default="fifo")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

@@ -6,7 +6,6 @@ import { portfolioRequest, type Instrument, type Portfolio, type Portfolios, typ
 import { useAuth } from '../hooks/useAuth'
 import { currencyLabel, fmtMoney, fmtPct } from '../lib/format'
 import { PortfolioOverview } from '../components/PortfolioOverview'
-import { XtbImport } from '../components/XtbImport'
 import { XtbReconciliationDetails } from '../components/XtbReconciliationDetails'
 import { XtbWalletImport } from '../components/XtbWalletImport'
 
@@ -79,8 +78,8 @@ function TradeForm({ portfolio, instruments, busy, save }: { portfolio: Portfoli
   </form>
 }
 
-function PortfolioDetail({ owner, portfolio, instruments, save, busy, onImported }: {
-  owner: number; portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean; onImported: () => Promise<void>
+function PortfolioDetail({ portfolio, instruments, save, busy }: {
+  portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean
 }) {
   const { t, i18n } = useTranslation()
   const [editing, setEditing] = useState(false)
@@ -98,6 +97,7 @@ function PortfolioDetail({ owner, portfolio, instruments, save, busy, onImported
           <h2 className="text-lg font-semibold">{portfolio.name}</h2>
           <p className="text-sm text-slate-400">{portfolio.broker} · {t(`portfolio.${portfolio.costMethod}`)}</p>
           {portfolio.brokerAccountId && <p className="text-sm text-slate-400">{t('portfolio.brokerAccountIdValue', { id: portfolio.brokerAccountId })}</p>}
+          {portfolio.brokerAccountCurrency && <p className="text-sm text-slate-400">{t('portfolio.brokerAccountCurrencyValue', { currency: portfolio.brokerAccountCurrency })}</p>}
         </div>
         <button className={button} disabled={busy} onClick={() => setEditing(true)}>{t('portfolio.edit')}</button>
         <button className={button + ' text-rose-400'} disabled={busy} onClick={async () => { if (window.confirm(t('portfolio.confirmPortfolio', { name: portfolio.name }))) await save('DELETE', `/${portfolio.id}?version=${portfolio.version}`) }}>{t('portfolio.delete')}</button>
@@ -115,7 +115,6 @@ function PortfolioDetail({ owner, portfolio, instruments, save, busy, onImported
       {!!total.missingQuotes && <p className="mt-3 text-sm text-amber-400">{t('portfolio.missingQuotes', { count: total.missingQuotes })}</p>}
     </section>)}</div>
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
-    <XtbImport owner={owner} portfolio={portfolio} disabled={busy} onImported={onImported} />
     <section><h3 className="mb-3 font-semibold">{t('portfolio.holdings')}</h3>
       {!portfolio.positions.length ? <p className="text-sm text-slate-400">{t('portfolio.emptyHoldings')}</p> : <div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="text-xs text-slate-400"><tr>{['instrument', 'quantity', 'averagePrice', 'currentPrice', 'marketValue', 'unrealized', 'realized', 'quoteDate'].map(key => <th key={key} className="p-3">{t(`portfolio.${key}`)}</th>)}</tr></thead><tbody>{portfolio.positions.map(p => <tr key={`${p.ticker}:${p.currency}`} className="border-t border-slate-800">
         <td className="p-3"><Link className="text-emerald-400 hover:underline" to={`/stock/${encodeURIComponent(p.ticker)}`}>{p.ticker.toUpperCase()}</Link></td><td className="p-3">{quantity(p.quantity)}</td><td className="p-3">{money(p.averagePrice, p.currency)}</td><td className="p-3">{money(p.currentPrice, p.currency)}</td><td className="p-3">{money(p.marketValue, p.currency)}</td><td className="p-3">{pnl(p.unrealizedPnl, p.unrealizedPnlPct, p.currency)}</td><td className="p-3">{money(p.realizedPnl, p.currency)}</td><td className="p-3">{p.quoteDate ?? t('portfolio.noQuote')}{p.quoteAsOf && <span className="block text-xs text-slate-400">{new Date(p.quoteAsOf).toLocaleTimeString(i18n.language)}</span>}{p.quoteSource && <span className="block text-xs text-slate-400">{t(`portfolio.quote_${p.quoteSource}`)}</span>}{p.quantity > 0 && p.quoteAgeDays !== null && p.quoteAgeDays > 7 && <span className="block text-xs text-amber-400">{t('portfolio.oldQuote', { count: p.quoteAgeDays })}</span>}</td>
@@ -219,12 +218,12 @@ function AccountPortfolios({ owner }: { owner: number }) {
       {data.summary && <PortfolioOverview summary={data.summary} walletCount={data.items.length}
         hasMultipleXtbWallets={data.items.filter(wallet => wallet.broker.trim().toUpperCase() === 'XTB').length > 1}
         staleSince={stale ? data.valuedAt : undefined} />}
-      <XtbWalletImport owner={owner} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
+      <XtbWalletImport owner={owner} portfolios={data.items} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
-      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{p.name} · {p.broker}{p.brokerAccountId ? ` · ${p.brokerAccountId}` : ''}</option>)}</select></label>}
+      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{[p.name, p.broker, p.brokerAccountId, p.brokerAccountCurrency].filter(Boolean).join(' · ')}</option>)}</select></label>}
       {active && <>
         <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
-        <PortfolioDetail key={active.id} owner={owner} portfolio={active} instruments={instruments} save={save} busy={disabled} onImported={reload} />
+        <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} />
       </>}
       <p className="text-xs text-slate-500">{t('portfolio.valuedAt')}: {new Date(data.valuedAt).toLocaleString(i18n.language)}</p>
     </>}

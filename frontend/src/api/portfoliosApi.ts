@@ -22,6 +22,7 @@ export interface Position {
 export interface Portfolio {
   id: string; name: string; broker: string; version: number; createdAt: string
   brokerAccountId: string | null
+  brokerAccountCurrency?: string | null
   costMethod: 'fifo' | 'moving_average'
   transactions: Transaction[]; positions: Position[]; totals: PortfolioTotal[]
   reconciliation?: XtbReconciliation | null
@@ -29,11 +30,13 @@ export interface Portfolio {
 export interface PortfolioSummaryPoint {
   date: string; value: number | null; missingQuotes: number; missingRates: string[]; staleQuotes: number
 }
-export interface PortfolioSummaryChange { amount: number; percent: number | null; since: string }
+export interface PortfolioSummaryChange { amount: number; percent: number | null; since: string; partial: boolean }
+export interface PortfolioSummaryMissingHolding { ticker: string; currency: string; walletId: string; walletName: string }
 export interface PortfolioSummary {
   currency: string; current: PortfolioSummaryPoint; history: PortfolioSummaryPoint[]
   dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
   currencyTotals: { currency: string; marketValue: number | null; missingQuotes: number }[]
+  missingHoldings: PortfolioSummaryMissingHolding[]
 }
 export interface Portfolios { items: Portfolio[]; valuedAt: string; summary?: PortfolioSummary }
 function accountHeaders(owner?: number): Record<string, string> {
@@ -73,6 +76,8 @@ function uploadXtb<T>(portfolioId: string, file: File, signal: AbortSignal, owne
 
 export interface XtbWalletPreview extends Omit<XtbPreview, 'version'> {
   id: string; name: string; sheet: string; version: number | null; error: string | null
+  brokerAccountCurrency?: string | null; sourceBrokerAccountCurrency?: string | null
+  setsBrokerAccountCurrency?: boolean
   reconciliation?: XtbReconciliation | null
 }
 export interface XtbReconciliation {
@@ -87,19 +92,23 @@ export interface XtbWalletsPreview {
   wallets: XtbWalletPreview[]
   ready: number; errors: number; newWallets: number
   previewToken: string; blockingError: string | null
+  skippedSheets?: string[]
 }
 export interface XtbWalletsImportResult {
-  wallets: (XtbImportResult & { id: string; name: string; brokerAccountId: string | null })[]
+  wallets: (XtbImportResult & {
+    id: string; name: string; brokerAccountId: string | null; brokerAccountCurrency?: string | null
+  })[]
   imported: number; duplicates: number; skipped: number; created: number
 }
-export function previewXtbWallets(file: File, owner: number, signal: AbortSignal) {
-  return uploadXtbWallets<XtbWalletsPreview>(file, owner, signal)
+export function previewXtbWallets(file: File, owner: number, signal: AbortSignal, targetWalletId?: string) {
+  return uploadXtbWallets<XtbWalletsPreview>(file, owner, signal, targetWalletId)
 }
-export function importXtbWallets(file: File, owner: number, previewToken: string, allowPartial: boolean, signal: AbortSignal) {
-  return uploadXtbWallets<XtbWalletsImportResult>(file, owner, signal, { previewToken, allowPartial })
+export function importXtbWallets(file: File, owner: number, previewToken: string, allowPartial: boolean, signal: AbortSignal, targetWalletId?: string) {
+  return uploadXtbWallets<XtbWalletsImportResult>(file, owner, signal, targetWalletId, { previewToken, allowPartial })
 }
-function uploadXtbWallets<T>(file: File, owner: number, signal: AbortSignal, approval?: { previewToken: string; allowPartial: boolean }) {
+function uploadXtbWallets<T>(file: File, owner: number, signal: AbortSignal, targetWalletId?: string, approval?: { previewToken: string; allowPartial: boolean }) {
   const query = new URLSearchParams({ filename: file.name })
+  if (targetWalletId) query.set('target_wallet_id', targetWalletId)
   if (approval?.allowPartial) query.set('allow_partial', 'true')
   const headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',

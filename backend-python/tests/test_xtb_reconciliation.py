@@ -26,11 +26,15 @@ def report(
     aggregate_quantity=10,
     cash_account="example-account",
     open_account="example-report",
+    cash_currency=None,
+    open_currency=None,
 ):
     book = openpyxl.Workbook()
     cash = book.active
     cash.title = "Cash Operations"
     cash.append(["Account number", cash_account])
+    if cash_currency:
+        cash.append(["Account currency", cash_currency])
     cash.append(["Date to (UTC)", datetime(2026, 1, 5, 12)])
     cash.append(
         [
@@ -62,6 +66,8 @@ def report(
     )
     opened = book.create_sheet("Open Positions")
     opened.append(["Account number", open_account])
+    if open_currency:
+        opened.append(["Account currency", open_currency])
     opened.append(["Data as of report generated", datetime(2026, 1, 5, 12, 0, 0, 500000)])
     opened.append(OPEN_HEADERS)
     opened.append(["IKE", "Example", "KGH.PL", "STOCK", "", aggregate_quantity])
@@ -90,9 +96,10 @@ def cash_wallet(client):
 def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(client):
     body = report()
     plan = preview(client, body)
-    assert plan["ready"] == 3
+    assert plan["ready"] == 1
     assert plan["errors"] == 0
-    assert plan["wallets"][1]["reconciliation"] is None
+    assert plan["skippedSheets"] == ["Open Positions"]
+    assert len(plan["wallets"]) == 1
     changes = {entry["ticker"]: entry for entry in plan["wallets"][0]["reconciliation"]["changes"]}
     assert changes["kgh"]["previousQuantity"] == "2"
     assert changes["kgh"]["quantity"] == "10"
@@ -102,8 +109,8 @@ def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(
         URL, params=PARAMS, content=body, headers={**OWNER, "X-XTB-Preview": plan["previewToken"]}
     )
     assert saved.status_code == 200, saved.text
-    assert saved.json()["created"] == 2
-    assert saved.json()["imported"] == 3
+    assert saved.json()["created"] == 1
+    assert saved.json()["imported"] == 1
     wallet = cash_wallet(client)
     assert len(wallet["transactions"]) == 1
     assert wallet["transactions"][0]["quantity"] == "2"
@@ -138,5 +145,16 @@ def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(
 def test_unlinked_or_inconsistent_snapshot_cannot_change_cash_holdings(client, settings):
     plan = preview(client, report(**settings))
     cash = plan["wallets"][0]
+    assert cash["reconciliation"] is None
+    assert "xtb_reconciliation_unavailable" in cash["warnings"]
+
+
+def test_open_positions_in_another_account_currency_do_not_reconcile_cash_wallet(client):
+    body = report(cash_account="00123456", cash_currency="PLN", open_currency="EUR")
+    plan = preview(client, body)
+    wallets = {wallet["sheet"]: wallet for wallet in plan["wallets"]}
+    assert wallets["Open Positions"]["brokerAccountCurrency"] == "EUR"
+    cash = wallets["Cash Operations"]
+    assert cash["brokerAccountCurrency"] == "PLN"
     assert cash["reconciliation"] is None
     assert "xtb_reconciliation_unavailable" in cash["warnings"]
