@@ -230,6 +230,26 @@ describe('InsiderActivityCard', () => {
     expect(screen.queryByText(i18n.t('insider.netNeutral'))).not.toBeInTheDocument()
   })
 
+  it('keeps a known zero balance neutral', () => {
+    renderWithProviders(
+      <InsiderActivityCard
+        data={{
+          ...SAMPLE_DATA,
+          summary: {
+            ...SAMPLE_DATA.summary,
+            totalPurchasesCount: 1, totalSalesCount: 0,
+            totalPurchasesShares: 0, totalSalesShares: 0,
+            totalPurchasesValue: 0, totalSalesValue: 0, netShares: 0, netValue: 0,
+          },
+          transactions: [{ ...SAMPLE_DATA.transactions[0], shares: 0, price: 0, value: 0 }],
+        }}
+        loading={false} includeAll={false} onToggleIncludeAll={() => {}}
+      />,
+    )
+    expect(screen.getByText(i18n.t('insider.netNeutral'))).toBeInTheDocument()
+    expect(screen.queryByText(i18n.t('insider.unknown'))).not.toBeInTheDocument()
+  })
+
   it('allows ESPI refresh and disables refresh during a request', async () => {
     const onRefresh = vi.fn()
     const { rerender } = renderWithProviders(
