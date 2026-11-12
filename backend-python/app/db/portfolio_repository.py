@@ -1,23 +1,66 @@
 """Account-scoped, versioned portfolio persistence and batched stored quote lookup."""
 
 from datetime import UTC, datetime
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import func, select
 
 from app.db.models import DailyQuoteRow, PortfolioRow, UserRow
-from app.services.portfolio import PortfolioError, holdings
+from app.services.portfolio import (
+    PortfolioError,
+    holdings,
+    require_after_checkpoint,
+    xtb_checkpoint,
+)
 from app.services.xtb_import import prepare_import
+from app.services.xtb_reconciliation import reconciliation_view
 
 
-def response(row):
-    return {
+def response(row, *, include_ledger=False):
+    ledger = row.transactions
+    checkpoint = xtb_checkpoint(ledger)
+    data = {
         "id": row.id,
         "name": row.name,
         "broker": row.broker,
         "costMethod": row.cost_method,
-        "transactions": row.transactions,
+        "transactions": [entry for entry in ledger if entry is not checkpoint],
+        "reconciliation": reconciliation_view(checkpoint),
         "version": row.version,
         "createdAt": row.created_at,
+    }
+    if include_ledger:
+        data["ledger"] = ledger
+    return data
+
+
+def wallet_identity(owner, report_digest, sheet):
+    return str(uuid5(NAMESPACE_URL, f"xtb-wallet:{owner}:{report_digest}:{sheet}"))
+
+
+def wallet_plan(wallet, row, owner, report_digest):
+    checkpoint = xtb_checkpoint(row["ledger"]) if row else wallet.get("checkpoint")
+    plan = prepare_import(
+        wallet["parsed"],
+        row["transactions"] if row else [],
+        "fifo",
+        checkpoint=checkpoint if row else None,
+    )
+    error = wallet["error"]
+    if not error and not row and plan["errors"] and not plan["ready"]:
+        error = "import_no_transactions"
+    if not error and row and plan["ready"]:
+        error = "import_preview_changed"
+    if checkpoint:
+        plan["ledger"].append(checkpoint)
+    return {
+        **plan,
+        "id": wallet_identity(owner, report_digest, wallet["sheet"]),
+        "name": row["name"] if row else wallet["name"],
+        "sheet": wallet["sheet"],
+        "version": row["version"] if row else None,
+        "error": error,
+        "reconciliation": reconciliation_view(checkpoint),
     }
 
 
@@ -37,7 +80,7 @@ class PortfolioRepository:
             ).scalar_one_or_none()
             if row is None:
                 raise PortfolioError("not_found", 404)
-            return response(row)
+            return response(row, include_ledger=True)
 
     async def list(self, owner):
         async with self._session_factory() as session:
@@ -54,7 +97,7 @@ class PortfolioRepository:
                 .scalars()
                 .all()
             )
-            return [response(row) for row in rows]
+            return [response(row, include_ledger=True) for row in rows]
 
     async def quotes(self, tickers):
         if not tickers:
@@ -84,6 +127,105 @@ class PortfolioRepository:
             ).all()
             return {row.ticker: {"price": row.close, "date": row.date} for row in rows}
 
+    async def preview_wallets(self, owner, wallets, report_digest):
+        existing = {row["id"]: row for row in await self.list(owner)}
+        plans = []
+        for wallet in wallets:
+            prior = existing.get(wallet_identity(owner, report_digest, wallet["sheet"]))
+            plan = wallet_plan(wallet, prior, owner, report_digest)
+            plans.append({k: v for k, v in plan.items() if k not in {"additions", "ledger"}})
+        new_wallets = sum(plan["version"] is None for plan in plans)
+        return {
+            "wallets": plans,
+            "ready": sum(plan["ready"] for plan in plans),
+            "errors": sum(plan["errors"] or bool(plan["error"]) for plan in plans),
+            "newWallets": new_wallets,
+            "blockingError": "portfolio_limit" if len(existing) + new_wallets > 20 else None,
+        }
+
+    async def import_wallets(self, owner, wallets, report_digest, allow_partial=False):
+        """Create all worksheet wallets atomically; a retried upload never overwrites one."""
+        async with self._session_factory() as session:
+            async with session.begin():
+                await session.execute(
+                    select(UserRow.id).where(UserRow.id == owner).with_for_update()
+                )
+                identities = [wallet_identity(owner, report_digest, w["sheet"]) for w in wallets]
+                rows = (
+                    (
+                        await session.execute(
+                            select(PortfolioRow)
+                            .where(PortfolioRow.id.in_(identities))
+                            .with_for_update()
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                if any(row.user_id != owner for row in rows):
+                    raise PortfolioError("conflict")
+                existing = {row.id: row for row in rows}
+                plans = [
+                    wallet_plan(
+                        w,
+                        response(existing[key], include_ledger=True) if key in existing else None,
+                        owner,
+                        report_digest,
+                    )
+                    for w, key in zip(wallets, identities, strict=True)
+                ]
+                for plan in plans:
+                    if plan["error"]:
+                        status = 409 if plan["error"] == "import_preview_changed" else 422
+                        raise PortfolioError(plan["error"], status)
+                    if plan["errors"] and not allow_partial:
+                        raise PortfolioError("import_rows_invalid", 422)
+                    if plan["ledgerError"]:
+                        raise PortfolioError(plan["ledgerError"])
+                count = (
+                    await session.execute(
+                        select(func.count())
+                        .select_from(PortfolioRow)
+                        .where(PortfolioRow.user_id == owner)
+                    )
+                ).scalar_one()
+                created = sum(plan["id"] not in existing for plan in plans)
+                if count + created > 20:
+                    raise PortfolioError("portfolio_limit")
+                results = []
+                for plan in plans:
+                    row = existing.get(plan["id"])
+                    if row is None:
+                        row = PortfolioRow(
+                            id=plan["id"],
+                            user_id=owner,
+                            name=plan["name"],
+                            broker="XTB",
+                            cost_method="fifo",
+                            transactions=plan["ledger"],
+                            version=1,
+                            created_at=datetime.now(UTC),
+                        )
+                        session.add(row)
+                    results.append(
+                        {
+                            "id": row.id,
+                            "name": row.name,
+                            "version": row.version,
+                            "imported": plan["ready"],
+                            "duplicates": plan["duplicates"],
+                            "skipped": plan["errors"],
+                        }
+                    )
+                return {
+                    "wallets": results,
+                    "created": created,
+                    **{
+                        key: sum(row[key] for row in results)
+                        for key in ("imported", "duplicates", "skipped")
+                    },
+                }
+
     async def change(
         self,
         owner,
@@ -99,13 +241,13 @@ class PortfolioRepository:
         async with self._session_factory() as session:
             async with session.begin():
                 # Shared lock across account writes handles creation limits and retry races.
-                await session.execute(
-                    select(UserRow.id)
-                    .where(
-                        UserRow.id == owner,
+                owner_active = (
+                    await session.execute(
+                        select(UserRow.is_active).where(UserRow.id == owner).with_for_update()
                     )
-                    .with_for_update()
-                )
+                ).scalar_one_or_none()
+                if operation == "automated_import" and not owner_active:
+                    raise PortfolioError("not_found", 404)
                 key = str(payload.id) if operation == "create" else portfolio_id
                 row = (
                     await session.execute(
@@ -160,17 +302,26 @@ class PortfolioRepository:
                     return response(row)
                 if row is None:
                     raise PortfolioError("not_found", 404)
-                if operation == "import":
-                    plan = prepare_import(parsed, row.transactions, row.cost_method)
+                checkpoint = xtb_checkpoint(row.transactions)
+                if operation in {"import", "automated_import"}:
+                    plan = prepare_import(
+                        parsed,
+                        response(row)["transactions"],
+                        row.cost_method,
+                        checkpoint=checkpoint,
+                    )
                     if plan["errors"] and not allow_partial:
                         raise PortfolioError("import_rows_invalid", 422)
                     if plan["ledgerError"]:
                         raise PortfolioError(plan["ledgerError"])
-                    # An uncertain save can be retried with the original version safely.
-                    if plan["ready"] and row.version != version:
+                    # Browser imports commit their preview version. Automation validates
+                    # the complete import against the current ledger under the row lock.
+                    if operation == "import" and plan["ready"] and row.version != version:
                         raise PortfolioError("conflict")
                     if plan["ready"]:
-                        row.transactions = plan["ledger"]
+                        row.transactions = (
+                            [*plan["ledger"], checkpoint] if checkpoint else plan["ledger"]
+                        )
                         row.version += 1
                     return {
                         "imported": plan["ready"],
@@ -180,7 +331,9 @@ class PortfolioRepository:
                     }
                 if operation == "add":
                     trade = payload.model_dump(mode="json", exclude={"version"})
-                    existing = next((t for t in row.transactions if t["id"] == trade["id"]), None)
+                    existing = next(
+                        (t for t in row.transactions if t.get("id") == trade["id"]), None
+                    )
                     if existing:
                         if existing != trade:
                             raise PortfolioError("conflict")
@@ -191,13 +344,19 @@ class PortfolioRepository:
                     row.name, row.broker = payload.name, payload.broker
                     row.cost_method = payload.cost_method
                 elif operation == "add":
-                    if len(row.transactions) >= 1000:
+                    if len(row.transactions) - bool(checkpoint) >= 1000:
                         raise PortfolioError("transaction_limit")
+                    require_after_checkpoint(trade, checkpoint)
                     trades = [*row.transactions, trade]
                     holdings(trades)  # Validate the entire dated ledger, including backdated sales.
                     row.transactions = trades
                 elif operation == "remove":
-                    trades = [t for t in row.transactions if t["id"] != transaction_id]
+                    original = next(
+                        (t for t in row.transactions if t.get("id") == transaction_id), None
+                    )
+                    if original is not None:
+                        require_after_checkpoint(original, checkpoint)
+                    trades = [t for t in row.transactions if t.get("id") != transaction_id]
                     if len(trades) == len(row.transactions):
                         raise PortfolioError("not_found", 404)
                     holdings(trades)

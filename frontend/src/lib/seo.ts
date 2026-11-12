@@ -1,7 +1,7 @@
-// Per-page SEO: updates the document <title>, meta description, social meta
-// tags and canonical URL as the route changes. The crawlable initial HTML lives
-// in index.html; this keeps the live tab + shared links accurate while the app
-// runs (and helps when Googlebot renders JS).
+// Keep the browser tab branded as StockPilot while updating the per-page meta
+// description, social meta tags and canonical URL as the route changes. The
+// crawlable initial HTML lives in index.html; this keeps shared links accurate
+// while the app runs (and helps when Googlebot renders JS).
 
 import { useEffect } from 'react'
 import { displayTicker, marketOfTicker } from './markets'
@@ -245,7 +245,7 @@ export function usePageSeo(pathname: string) {
     }
 
     const title = `${entry.title} | ${BRAND}`
-    document.title = title
+    document.title = BRAND
     setMetaByName('description', entry.description)
     // index.html ships "index, follow"; an operational page overrides it, and
     // every other route puts it back on the way out.

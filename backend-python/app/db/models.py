@@ -103,6 +103,20 @@ class WatchlistRow(Base):
     tickers: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
+class FilterPresetRow(Base):
+    """A saved Filters screen. Browser-generated ids are unique within an account."""
+
+    __tablename__ = "filter_presets"
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    filters: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class CompanyRow(Base):
     """One tracked GPW company."""
 

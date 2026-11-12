@@ -34,7 +34,7 @@ async function loadPreview() {
 
 describe('XTB portfolio import', () => {
   it('previews without saving and only sends the original file after confirmation', async () => {
-    render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     const user = await loadPreview()
     expect(importXtb).not.toHaveBeenCalled()
     expect(screen.getByText('KGH')).toBeVisible()
@@ -42,14 +42,15 @@ describe('XTB portfolio import', () => {
     expect(screen.getByText('Cash operations and summary rows omitted: 2.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Import 1 trades into “Retirement”' }))
     await screen.findByText('Import complete. Added: 1, duplicates: 1, skipped: 0.')
-    expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, false, expect.any(AbortSignal))
+    expect(previewXtb).toHaveBeenCalledWith('one', expect.any(File), expect.any(AbortSignal), 17)
+    expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, false, expect.any(AbortSignal), 17)
     expect(refreshed).toHaveBeenCalledTimes(1)
   })
 
   it('requires an explicit choice before skipping invalid rows', async () => {
     vi.mocked(previewXtb).mockResolvedValue({ ...ready(), errors: 1 })
     const user = userEvent.setup()
-    render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     await user.upload(screen.getByLabelText('XTB report file'), file())
     await user.click(screen.getByRole('button', { name: 'Preview file' }))
     const confirm = await screen.findByRole('button', { name: 'Import 1 trades into “Retirement”' })
@@ -57,13 +58,13 @@ describe('XTB portfolio import', () => {
     await user.click(screen.getByRole('checkbox'))
     expect(confirm).toBeEnabled()
     await user.click(confirm)
-    await waitFor(() => expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, true, expect.any(AbortSignal)))
+    await waitFor(() => expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, true, expect.any(AbortSignal), 17))
   })
 
   it('blocks an invalid ledger even when partial import is selected', async () => {
     vi.mocked(previewXtb).mockResolvedValue({ ...ready(), errors: 1, ledgerError: 'insufficient_shares' })
     const user = userEvent.setup()
-    render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     await user.upload(screen.getByLabelText('XTB report file'), file())
     await user.click(screen.getByRole('button', { name: 'Preview file' }))
     await screen.findByRole('alert')
@@ -72,9 +73,9 @@ describe('XTB portfolio import', () => {
   })
 
   it('requires a new preview after the portfolio changes or the file is replaced', async () => {
-    const view = render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    const view = render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     const user = await loadPreview()
-    view.rerender(<XtbImport portfolio={{ ...portfolio, version: 2 }} disabled={false} onImported={refreshed} />)
+    view.rerender(<XtbImport owner={17} portfolio={{ ...portfolio, version: 2 }} disabled={false} onImported={refreshed} />)
     expect(screen.getByRole('button', { name: 'Import 1 trades into “Retirement”' })).toBeDisabled()
     await user.upload(screen.getByLabelText('XTB report file'), new File(['other'], 'other.csv', { type: 'text/csv' }))
     expect(screen.queryByRole('button', { name: 'Import 1 trades into “Retirement”' })).not.toBeInTheDocument()
@@ -82,7 +83,7 @@ describe('XTB portfolio import', () => {
 
   it('retains the original preview on an uncertain save so the same import can be retried', async () => {
     vi.mocked(importXtb).mockRejectedValueOnce(new ApiError(0, 'Offline'))
-    render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     const user = await loadPreview()
     await user.click(screen.getByRole('button', { name: 'Import 1 trades into “Retirement”' }))
     await screen.findByRole('alert')
@@ -92,10 +93,20 @@ describe('XTB portfolio import', () => {
     expect(vi.mocked(importXtb).mock.calls[0].slice(0, 4)).toEqual(vi.mocked(importXtb).mock.calls[1].slice(0, 4))
   })
 
+  it('clears the reviewed import when another account becomes active', async () => {
+    vi.mocked(importXtb).mockRejectedValueOnce(new ApiError(409, 'Changed account', 'account_changed'))
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    const user = await loadPreview()
+    await user.click(screen.getByRole('button', { name: 'Import 1 trades into “Retirement”' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The signed-in account changed.')
+    expect(screen.queryByRole('button', { name: 'Import 1 trades into “Retirement”' })).not.toBeInTheDocument()
+    expect(refreshed).not.toHaveBeenCalled()
+  })
+
   it('cancels a pending preview when the portfolio view closes', async () => {
     let resolve!: (value: XtbPreview) => void
     vi.mocked(previewXtb).mockImplementation(() => new Promise(done => { resolve = done }))
-    const view = render(<XtbImport portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    const view = render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
     fireEvent.change(screen.getByLabelText('XTB report file'), { target: { files: [file()] } })
     fireEvent.click(screen.getByRole('button', { name: 'Preview file' }))
     const signal = vi.mocked(previewXtb).mock.calls[0][2]

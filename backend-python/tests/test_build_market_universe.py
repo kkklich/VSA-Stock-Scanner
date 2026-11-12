@@ -148,6 +148,7 @@ class TestMemberLists:
         assert build.members["aapl.us"] == ["sp500", "ndx"]
         assert build.members["brk-b.us"] == ["sp500"]
         assert build.members["asml.us"] == ["ndx"]
+        assert build.members["csu.us"] == []
 
 
 # ── Verification ──────────────────────────────────────────────────────────────

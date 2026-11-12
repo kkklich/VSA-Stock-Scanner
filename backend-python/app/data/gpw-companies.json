@@ -1,8 +1,28 @@
 [
   {
+    "ticker": "06n",
+    "name": "MAGNA POLONIA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "08n",
+    "name": "OCTAVA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "11b",
     "name": "11 bit studios S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "1at",
+    "name": "ATAL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "3rg",
+    "name": "3R GAMES SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "4ms",
@@ -45,6 +65,11 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "adx",
+    "name": "ADATEX SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "ago",
     "name": "Agora S.A.",
     "sector": "Communication Services"
@@ -68,6 +93,11 @@
     "ticker": "ali",
     "name": "Altus S.A.",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "all",
+    "name": "AILLERON SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "alr",
@@ -120,6 +150,11 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "arl",
+    "name": "ARLEN SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "art",
     "name": "Artifex Mundi S.A.",
     "sector": "Communication Services"
@@ -128,6 +163,16 @@
     "ticker": "asb",
     "name": "ASBISc Enterprises Plc",
     "sector": "Technology"
+  },
+  {
+    "ticker": "ase",
+    "name": "Asseco South Eastern Europe S.A.",
+    "sector": "Technology"
+  },
+  {
+    "ticker": "asm",
+    "name": "ASM GROUP SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "ast",
@@ -170,6 +215,11 @@
     "sector": "Basic Materials"
   },
   {
+    "ticker": "awm",
+    "name": "AIRWAY MEDIX SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "bbd",
     "name": "BBI Development S.A.",
     "sector": "Real Estate"
@@ -190,6 +240,16 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "bcx",
+    "name": "BIOCELTIX SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "bdf",
+    "name": "BUMECH DEFENSE PARTNERS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "bdx",
     "name": "Budimex SA",
     "sector": "Industrials"
@@ -208,6 +268,21 @@
     "ticker": "bio",
     "name": "BIOTON S.A.",
     "sector": "Healthcare"
+  },
+  {
+    "ticker": "bip",
+    "name": "BIO PLANET SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "blo",
+    "name": "BLOOBER TEAM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "bmc",
+    "name": "BUMECH SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "bmw",
@@ -245,6 +320,21 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "bst",
+    "name": "BEST SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "cap",
+    "name": "CAPITEA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "car",
+    "name": "INTER CARS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "cav",
     "name": "Cavatina Holding Spólka Akcyjna",
     "sector": "Real Estate"
@@ -253,6 +343,11 @@
     "ticker": "cbf",
     "name": "Cyber_Folks S.A.",
     "sector": "Technology"
+  },
+  {
+    "ticker": "cce",
+    "name": "CLEAN&CARBON ENERGY SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "cdl",
@@ -285,6 +380,11 @@
     "sector": "Technology"
   },
   {
+    "ticker": "cld",
+    "name": "CLOUD TECHNOLOGIES SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "cle",
     "name": "Coal Energy S.A.",
     "sector": "Energy"
@@ -310,6 +410,11 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "cpi",
+    "name": "CPI EUROPE AG",
+    "sector": null
+  },
+  {
     "ticker": "cpl",
     "name": "Comperia.pl S.A.",
     "sector": "Communication Services"
@@ -325,6 +430,11 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "cri",
+    "name": "Creotech Instruments S.A.",
+    "sector": "Technology"
+  },
+  {
     "ticker": "crj",
     "name": "Creepy Jar S.A.",
     "sector": "Communication Services"
@@ -335,9 +445,19 @@
     "sector": "Technology"
   },
   {
+    "ticker": "crq",
+    "name": "Creotech Quantum S.A.",
+    "sector": "Technology"
+  },
+  {
     "ticker": "csr",
     "name": "Caspar Asset Management S.A.",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "cts",
+    "name": "CITY SERVICE SE",
+    "sector": null
   },
   {
     "ticker": "ctx",
@@ -345,7 +465,17 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "czt",
+    "name": "CZERWONA TOREBKA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "dad",
+    "name": "Dadelo S.A.",
+    "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "dada",
     "name": "Dadelo S.A.",
     "sector": "Consumer Cyclical"
   },
@@ -375,9 +505,34 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "del",
+    "name": "DELKO SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "dga",
+    "name": "DGA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "dge",
+    "name": "DRAGO ENTERTAINMENT SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "dia",
+    "name": "DIAGNOSTYKA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "dig",
     "name": "Digital Network SA",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "dmg",
+    "name": "DR. MIELE COSMED GROUP SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "dnp",
@@ -400,6 +555,11 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "eah",
+    "name": "ESOTIQ & HENDERSON SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "eat",
     "name": "AmRest Holdings SE",
     "sector": "Consumer Cyclical"
@@ -410,6 +570,11 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "ecb",
+    "name": "ECB SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "ech",
     "name": "Echo Investment S.A.",
     "sector": "Real Estate"
@@ -418,6 +583,26 @@
     "ticker": "edi",
     "name": "ED Invest Spólka Akcyjna",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "eex",
+    "name": "EKO EXPORT SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "efk",
+    "name": "KORPORACJA GOSPODARCZA EFEKT SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ego",
+    "name": "EUROPEAN DEFENCE GROUP SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ehg",
+    "name": "EUROHOLD BULGARIA AD",
+    "sector": null
   },
   {
     "ticker": "ekp",
@@ -440,9 +625,24 @@
     "sector": "Utilities"
   },
   {
+    "ticker": "ene",
+    "name": "CENTRUM MEDYCZNE ENEL-MED SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "eng",
     "name": "Energa SA",
     "sector": "Utilities"
+  },
+  {
+    "ticker": "eni",
+    "name": "ENERGOINSTAL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "enp",
+    "name": "ENERGOAPARATURA SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "ent",
@@ -450,9 +650,19 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "equ",
+    "name": "EQUNICO SE",
+    "sector": null
+  },
+  {
     "ticker": "erb",
     "name": "Erbud S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "erg",
+    "name": "ERG SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "est",
@@ -460,9 +670,49 @@
     "sector": "Utilities"
   },
   {
+    "ticker": "etfbm40tr",
+    "name": "Beta ETF mWIG40TR",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "etfbs80tr",
+    "name": "Beta ETF sWIG80TR",
+    "sector": "Financial Services"
+  },
+  {
+    "ticker": "etl",
+    "name": "EUROTEL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "euc",
+    "name": "EUROPEJSKIE CENTRUM ODSZKODOWAŃ SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "eur",
     "name": "Eurocash S.A.",
     "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "fab",
+    "name": "FABRITY SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "fee",
+    "name": "FEERUM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ffi",
+    "name": "FAST FINANCE SPÓŁKA AKCYJNA W RESTRUKTURYZACJI",
+    "sector": null
+  },
+  {
+    "ticker": "fhb",
+    "name": "FOODHUB SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "fmg",
@@ -480,9 +730,19 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "fsg",
+    "name": "FABRYKI SPRZĘTU I NARZĘDZI GÓRNICZYCH GRUPA KAPITAŁOWA FASING SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "fte",
     "name": "Fabryki Mebli FORTE S.A.",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "gif",
+    "name": "GAMING FACTORY SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "gki",
@@ -490,9 +750,24 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "gmt",
+    "name": "GENOMTEC SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "gns",
+    "name": "NIEWIADÓW POLSKA GRUPA MILITARNA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "gob",
     "name": "Gobarto S.A.",
     "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "gop",
+    "name": "GAMES OPERATORS SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "gpp",
@@ -530,6 +805,21 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "gvt",
+    "name": "GRUPA VIRTUS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "hdr",
+    "name": "PRZEDSIĘBIORSTWO HYDRAULIKI SIŁOWEJ HYDROTOR S.A.",
+    "sector": null
+  },
+  {
+    "ticker": "hel",
+    "name": "HELIO SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "hrp",
     "name": "Harper Hygienics S.A.",
     "sector": "Consumer Defensive"
@@ -550,14 +840,49 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "ibs",
+    "name": "WISE FINANCE SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ice",
+    "name": "MEDINICE SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "idg",
+    "name": "INDYGOTECH MINERALS SPÓŁKA AKCYJNA W LIKWIDACJI",
+    "sector": null
+  },
+  {
     "ticker": "idm",
     "name": "IDM Spólka Akcyjna",
     "sector": "Financial Services"
   },
   {
+    "ticker": "ifc",
+    "name": "INVESTMENT FRIENDS CAPITAL SE",
+    "sector": null
+  },
+  {
     "ticker": "ifi",
     "name": "Ifirma SA",
     "sector": "Technology"
+  },
+  {
+    "ticker": "ifr",
+    "name": "INVESTMENT FRIENDS SE",
+    "sector": null
+  },
+  {
+    "ticker": "imc",
+    "name": "IMC S.A.",
+    "sector": null
+  },
+  {
+    "ticker": "imp",
+    "name": "IMPERIO ALTERNATYWNA SPÓŁKA INWESTYCYJNA SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "ims",
@@ -600,6 +925,11 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "irl",
+    "name": "AB INTER RAO LIETUVA",
+    "sector": null
+  },
+  {
     "ticker": "itb",
     "name": "Interbud-Lublin S.A.",
     "sector": "Industrials"
@@ -608,6 +938,21 @@
     "ticker": "itx",
     "name": "Industria de Diseño Textil, S.A.",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "izb",
+    "name": "IZOBLOK SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "izo",
+    "name": "IZOLACJA-JAROCIN SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "izs",
+    "name": "IZOSTAL SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "jrh",
@@ -620,6 +965,11 @@
     "sector": "Energy"
   },
   {
+    "ticker": "jww",
+    "name": "JWW INVEST SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "kch",
     "name": "Krakchemia S.A.",
     "sector": "Basic Materials"
@@ -628,6 +978,11 @@
     "ticker": "kci",
     "name": "KCI Spolka Akcyjna",
     "sector": "Real Estate"
+  },
+  {
+    "ticker": "kdm",
+    "name": "KDM SHIPPING PUBLIC LIMITED",
+    "sector": null
   },
   {
     "ticker": "ker",
@@ -655,6 +1010,16 @@
     "sector": "Basic Materials"
   },
   {
+    "ticker": "kom",
+    "name": "KOMPUTRONIK SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "kpd",
+    "name": "KOSZALIŃSKIE PRZEDSIĘBIORSTWO PRZEMYSŁU DRZEWNEGO SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "kpl",
     "name": "Kino Polska TV Spolka Akcyjna",
     "sector": "Communication Services"
@@ -668,6 +1033,11 @@
     "ticker": "kru",
     "name": "KRUK Spólka Akcyjna",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "ksg",
+    "name": "KSG AGRO S.A.",
+    "sector": null
   },
   {
     "ticker": "kty",
@@ -690,9 +1060,24 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "len",
+    "name": "LENA LIGHTING SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "lgl",
+    "name": "LUNA GLOBAL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "lkd",
     "name": "Lokum Deweloper S.A.",
     "sector": "Real Estate"
+  },
+  {
+    "ticker": "lmu",
+    "name": "LUMINA METALS CORP.",
+    "sector": null
   },
   {
     "ticker": "lpp",
@@ -700,13 +1085,28 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "lrq",
+    "name": "LARQ SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "lsi",
     "name": "LSI Software S.A.",
     "sector": "Technology"
   },
   {
+    "ticker": "ltx",
+    "name": "LENTEX SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "lug",
     "name": "LUG S.A.",
+    "sector": null
+  },
+  {
+    "ticker": "lwb",
+    "name": "LUBELSKI WĘGIEL BOGDANKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
@@ -735,6 +1135,11 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "mbw",
+    "name": "MARIE BRIZARD WINE & SPIRITS",
+    "sector": null
+  },
+  {
     "ticker": "mci",
     "name": "MCI Capital Alternatywna Spólka Inwestycyjna S.A.",
     "sector": "Financial Services"
@@ -760,6 +1165,11 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "meg",
+    "name": "MEGARON SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "mex",
     "name": "Mex Polska S.A.",
     "sector": "Consumer Cyclical"
@@ -780,6 +1190,11 @@
     "sector": "Financial Services"
   },
   {
+    "ticker": "mir",
+    "name": "MIRACULUM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "mlg",
     "name": "MLP Group S.A.",
     "sector": "Real Estate"
@@ -788,6 +1203,16 @@
     "ticker": "mlk",
     "name": "MLK Foods Public Company LTD",
     "sector": "Consumer Defensive"
+  },
+  {
+    "ticker": "mls",
+    "name": "ML SYSTEM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "mnc",
+    "name": "MENNICA POLSKA SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "moc",
@@ -813,6 +1238,11 @@
     "ticker": "mov",
     "name": "Movie Games S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "mqr",
+    "name": "MULTIQURE SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "mrb",
@@ -845,6 +1275,31 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "mvp",
+    "name": "MARVIPOL DEVELOPMENT SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "mwt",
+    "name": "M.W. TRADE SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "mxc",
+    "name": "MAXCOM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "mza",
+    "name": "MUZA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ncl",
+    "name": "NOCTILUCA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "neu",
     "name": "NEUCA S.A.",
     "sector": "Healthcare"
@@ -855,9 +1310,29 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "ntc",
+    "name": "NEW TECH CAPITAL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ntt",
+    "name": "NTT SYSTEM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ntu",
+    "name": "AB NOVATURAS",
+    "sector": null
+  },
+  {
     "ticker": "nva",
     "name": "P.A. Nova S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "nvg",
+    "name": "NOVAVIS GROUP SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "nvt",
@@ -865,9 +1340,19 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "nwa",
+    "name": "NWAI DOM MAKLERSKI SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "nwg",
     "name": "Newag S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "nxg",
+    "name": "NEXITY GLOBAL SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "obl",
@@ -880,9 +1365,19 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "oml",
+    "name": "ONE MORE LEVEL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "ond",
     "name": "Onde S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "ono",
+    "name": "ONESANO SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "opg",
@@ -905,9 +1400,29 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "otm",
+    "name": "ZAKŁADY PRZEMYSŁU CUKIERNICZEGO OTMUCHÓW SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "ots",
+    "name": "OT LOGISTICS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "pas",
+    "name": "PASSUS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "pat",
     "name": "Patentus S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "pbf",
+    "name": "PBS FINANSE SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "pbg",
@@ -918,6 +1433,11 @@
     "ticker": "pbx",
     "name": "Pekabex S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "pce",
+    "name": "GRUPA AZOTY ZAKŁADY CHEMICZNE POLICE SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "pcf",
@@ -975,6 +1495,11 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "pjp",
+    "name": "PJP MAKRUM SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "pkn",
     "name": "Orlen S.A.",
     "sector": "Energy"
@@ -998,6 +1523,16 @@
     "ticker": "plz",
     "name": "Plaza Centers N.V.",
     "sector": "Real Estate"
+  },
+  {
+    "ticker": "pma",
+    "name": "PRIMA MODA SPÓŁKA AKCYJNA W RESTRUKTURYZACJI",
+    "sector": null
+  },
+  {
+    "ticker": "pmg",
+    "name": "Grupa Niewiadow S.A.",
+    "sector": "Industrials"
   },
   {
     "ticker": "pps",
@@ -1025,6 +1560,11 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "ptg",
+    "name": "POLTREG SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "ptw",
     "name": "PTWP",
     "sector": "Communication Services"
@@ -1035,6 +1575,11 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "pwx",
+    "name": "POLWAX SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "pxm",
     "name": "Polimex-Mostostal S.A.",
     "sector": "Industrials"
@@ -1043,6 +1588,16 @@
     "ticker": "pzu",
     "name": "Powszechny Zaklad Ubezpieczen SA",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "qna",
+    "name": "QNA TECHNOLOGY SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "qnt",
+    "name": "QUANTUM SOFTWARE SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "qrs",
@@ -1065,6 +1620,21 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "reg",
+    "name": "REGNON SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "rex",
+    "name": "REX CONCEPTS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "rhd",
+    "name": "REINHOLD EUROPE AB",
+    "sector": null
+  },
+  {
     "ticker": "rlp",
     "name": "Relpol S.A.",
     "sector": "Industrials"
@@ -1075,9 +1645,24 @@
     "sector": "Industrials"
   },
   {
+    "ticker": "rnc",
+    "name": "REINO CAPITAL SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "rnd",
+    "name": "RENDER CUBE SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "rnk",
     "name": "Rank Progress S.A.",
     "sector": "Real Estate"
+  },
+  {
+    "ticker": "rob",
+    "name": "ROBYG SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "rpc",
@@ -1093,6 +1678,11 @@
     "ticker": "rwl",
     "name": "Rawlplug S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "s2b",
+    "name": "Syn2bio S.A.",
+    "sector": "Healthcare"
   },
   {
     "ticker": "san",
@@ -1115,6 +1705,11 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "scw",
+    "name": "Scanway S.A.",
+    "sector": "Technology"
+  },
+  {
     "ticker": "sek",
     "name": "Seko S.A.",
     "sector": "Consumer Defensive"
@@ -1125,6 +1720,16 @@
     "sector": "Basic Materials"
   },
   {
+    "ticker": "sfg",
+    "name": "AS SILVANO FASHION GROUP",
+    "sector": null
+  },
+  {
+    "ticker": "sfs",
+    "name": "SFINKS POLSKA SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "sgn",
     "name": "Sygnity S.A.",
     "sector": "Technology"
@@ -1133,6 +1738,11 @@
     "ticker": "shd",
     "name": "Soho Development S.A.",
     "sector": "Financial Services"
+  },
+  {
+    "ticker": "shg",
+    "name": "STARHEDGE SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "sim",
@@ -1220,6 +1830,11 @@
     "sector": "Healthcare"
   },
   {
+    "ticker": "svrs",
+    "name": "SILVAIR. INC.",
+    "sector": null
+  },
+  {
     "ticker": "swg",
     "name": "Seco/Warwick S.A.",
     "sector": "Industrials"
@@ -1240,9 +1855,24 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "thg",
+    "name": "TENDERHUT SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "tlx",
     "name": "Talex S.A.",
     "sector": "Technology"
+  },
+  {
+    "ticker": "tmr",
+    "name": "TATRY MOUNTAIN RESORTS. A.S.",
+    "sector": null
+  },
+  {
+    "ticker": "toa",
+    "name": "TOYA SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "tor",
@@ -1290,6 +1920,11 @@
     "sector": "Technology"
   },
   {
+    "ticker": "ucg",
+    "name": "UNICREDIT S.P.A.",
+    "sector": null
+  },
+  {
     "ticker": "ulg",
     "name": "Ultimate Games S.A.",
     "sector": "Communication Services"
@@ -1313,6 +1948,16 @@
     "ticker": "unt",
     "name": "Unimot S.A.",
     "sector": "Consumer Cyclical"
+  },
+  {
+    "ticker": "urt",
+    "name": "URTESTE SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
+    "ticker": "vgo",
+    "name": "VIGO PHOTONICS SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "vin",
@@ -1355,9 +2000,19 @@
     "sector": "Consumer Cyclical"
   },
   {
+    "ticker": "vvd",
+    "name": "VIVID GAMES SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "was",
     "name": "Wasko S.A.",
     "sector": "Communication Services"
+  },
+  {
+    "ticker": "wen",
+    "name": "WISE ENERGY SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "wik",
@@ -1375,6 +2030,11 @@
     "sector": "Communication Services"
   },
   {
+    "ticker": "wpr",
+    "name": "WOODPECKER.CO SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "wtn",
     "name": "Wittchen S.A.",
     "sector": "Consumer Cyclical"
@@ -1390,6 +2050,11 @@
     "sector": "Real Estate"
   },
   {
+    "ticker": "xpl",
+    "name": "XPLUS SPÓŁKA AKCYJNA",
+    "sector": null
+  },
+  {
     "ticker": "xtb",
     "name": "XTB S.A.",
     "sector": "Financial Services"
@@ -1403,6 +2068,11 @@
     "ticker": "yan",
     "name": "Yanosik S.A.",
     "sector": "Technology"
+  },
+  {
+    "ticker": "yrl",
+    "name": "YARRL SPÓŁKA AKCYJNA",
+    "sector": null
   },
   {
     "ticker": "zab",
@@ -1438,5 +2108,10 @@
     "ticker": "zue",
     "name": "ZUE S.A.",
     "sector": "Industrials"
+  },
+  {
+    "ticker": "zuk",
+    "name": "ZAKŁADY URZĄDZEŃ KOTŁOWYCH STĄPORKÓW SPÓŁKA AKCYJNA",
+    "sector": null
   }
 ]

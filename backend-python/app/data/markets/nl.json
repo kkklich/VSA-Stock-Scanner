@@ -246,6 +246,13 @@
       ]
     },
     {
+      "ticker": "inpst.as",
+      "name": "InPost S.A.",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "sector": "Industrials"
+    },
+    {
       "ticker": "kpn.as",
       "symbol": "KPN.AS",
       "name": "Koninklijke KPN N.V.",

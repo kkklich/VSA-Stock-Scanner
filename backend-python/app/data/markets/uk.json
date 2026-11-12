@@ -943,6 +943,13 @@
       ]
     },
     {
+      "ticker": "isac.l",
+      "name": "iShares MSCI ACWI ETF",
+      "exchange": "London Stock Exchange",
+      "currency": "USD",
+      "sector": "Financial Services"
+    },
+    {
       "ticker": "itrk.l",
       "symbol": "ITRK.L",
       "name": "Intertek Group plc",
@@ -1281,6 +1288,13 @@
       "indices": [
         "ftse100"
       ]
+    },
+    {
+      "ticker": "r2us.l",
+      "name": "Russell 2000 U.S. Small Cap ETF",
+      "exchange": "London Stock Exchange",
+      "currency": "USD",
+      "sector": "Financial Services"
     },
     {
       "ticker": "rel.l",
@@ -1672,6 +1686,13 @@
       "indices": [
         "ftse100"
       ]
+    },
+    {
+      "ticker": "vuaa.l",
+      "name": "Vanguard S&P 500 ETF",
+      "exchange": "London Stock Exchange",
+      "currency": "USD",
+      "sector": "Financial Services"
     },
     {
       "ticker": "weir.l",

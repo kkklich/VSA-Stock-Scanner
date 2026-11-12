@@ -1,7 +1,7 @@
 // Filters page — a full stock screener over the VSA ranking with saved
 // presets. All criteria are applied server-side by GET /api/stocks/ranking
 // (sector, rating band, signal + recency, price range, liquidity); a named
-// combination can be saved as a preset (localStorage) and re-run in one click.
+// combination can be saved as a preset and re-run in one click.
 
 import { CLASSIC_VSA_ENABLED } from '../lib/methodStatus'
 import { cloneElement, useEffect, useId, useMemo, useState } from 'react'
@@ -16,6 +16,7 @@ import { LiveNote } from '../components/LivePrice'
 import { SortMenu } from '../components/SortMenu'
 import { useRanking, type RankingParams } from '../hooks/useRanking'
 import { useCompanies } from '../hooks/useCompanies'
+import { useFilterPresets } from '../hooks/useFilterPresets'
 import { useMarketScope } from '../hooks/useMarkets'
 import { ALL_MARKETS, GPW_MARKET } from '../lib/markets'
 import { currencyLabel, fmtMoney } from '../lib/format'
@@ -35,9 +36,7 @@ import {
   NEAR_52W_PCT,
   createPreset,
   filtersActive,
-  loadPresets,
   range52wParams,
-  savePresets,
   type FilterPreset,
   type Range52w,
   type ScreenFilters,
@@ -220,16 +219,13 @@ export function FiltersPage() {
   const sortingInsiders = sort.some((level) => isInsiderSort(level.key))
   const [page, setPage] = useState(1)
 
-  // Saved presets (localStorage) + the "save as…" inline form.
-  const [presets, setPresets] = useState<FilterPreset[]>(loadPresets)
-  const [saving, setSaving] = useState(false)
-  const [presetName, setPresetName] = useState('')
+  const presetStore = useFilterPresets()
+  const { owner, presets, loading: presetsLoading, busy: presetsBusy } = presetStore
+  const [draft, setDraft] = useState<{ owner: typeof owner; name: string; attempt?: FilterPreset } | null>(null)
+  const saving = draft !== null && draft.owner === owner
+  const presetName = saving ? draft.name : ''
   // Preset the current filter values came from (highlight its chip).
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
-
-  useEffect(() => {
-    savePresets(presets)
-  }, [presets])
 
   useEffect(() => {
     const timer = setTimeout(() => setApplied(filters), 300)
@@ -348,19 +344,24 @@ export function FiltersPage() {
     setActivePresetId(preset.id)
   }
 
-  const deletePreset = (id: string) => {
-    setPresets((p) => p.filter((x) => x.id !== id))
-    if (activePresetId === id) setActivePresetId(null)
+  const deletePreset = async (id: string) => {
+    if (await presetStore.remove(id)) {
+      setActivePresetId((current) => current === id ? null : current)
+    }
   }
 
-  const saveCurrentPreset = () => {
+  const saveCurrentPreset = async () => {
     const name = presetName.trim()
-    if (!name) return
-    const preset = createPreset(name, filters)
-    setPresets((p) => [...p, preset])
-    setActivePresetId(preset.id)
-    setPresetName('')
-    setSaving(false)
+    if (!name || presetsBusy) return
+    // Keep the same ID on retry if the server saved it but the reply was lost.
+    const attempted = draft?.attempt
+    const preset = attempted?.name === name && JSON.stringify(attempted.filters) === JSON.stringify(filters)
+      ? attempted : createPreset(name, filters)
+    setDraft({ owner, name, attempt: preset })
+    if (await presetStore.save(preset)) {
+      setActivePresetId(preset.id)
+      setDraft(null)
+    }
   }
 
   const clearFilters = () => {
@@ -389,11 +390,12 @@ export function FiltersPage() {
       {/* Saved presets */}
       <Card className="flex flex-wrap items-center gap-2 px-4 py-3">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Presets
+          {t('filterPresets.title')}
         </span>
-        {presets.length === 0 && !saving && (
+        {presetsLoading && <span role="status" className="text-xs text-slate-400">{t('filterPresets.loading')}</span>}
+        {presets.length === 0 && !presetsLoading && !presetStore.error && !saving && (
           <span className="text-xs text-slate-500">
-            None saved yet — set some filters below, then “Save preset”.
+            {t('filterPresets.empty')}
           </span>
         )}
         {presets.map((p) => (
@@ -410,7 +412,7 @@ export function FiltersPage() {
               type="button"
               onClick={() => applyPreset(p)}
               className="px-2.5 py-1.5 font-medium hover:bg-slate-800"
-              title={`Apply preset "${p.name}"`}
+              title={t('filterPresets.apply', { name: p.name })}
             >
               {p.name}
             </button>
@@ -418,60 +420,83 @@ export function FiltersPage() {
               type="button"
               onClick={() => deletePreset(p.id)}
               className="border-l border-slate-700/60 px-1.5 py-1.5 text-slate-500 hover:bg-rose-500/10 hover:text-rose-400"
-              aria-label={`Delete preset "${p.name}"`}
-              title="Delete preset"
+              disabled={presetsBusy}
+              aria-label={t('filterPresets.delete', { name: p.name })}
+              title={t('filterPresets.delete', { name: p.name })}
             >
               <X size={12} />
             </button>
           </span>
         ))}
 
-        <span className="ml-auto flex items-center gap-2">
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          {presetStore.importableCount > 0 && (
+            <button type="button" disabled={presetsBusy}
+              onClick={() => void presetStore.importLocal()}
+              className="rounded-lg border border-slate-800 px-2 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50">
+              {t('filterPresets.copy', { count: presetStore.importableCount })}
+            </button>
+          )}
           {saving ? (
             <>
               <input
                 autoFocus
                 value={presetName}
-                onChange={(e) => setPresetName(e.target.value)}
+                aria-label={t('filterPresets.name')}
+                maxLength={owner === null ? undefined : 120}
+                disabled={presetsBusy}
+                onChange={(e) => setDraft({ owner, name: e.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') saveCurrentPreset()
-                  if (e.key === 'Escape') setSaving(false)
+                  if (e.key === 'Escape') setDraft(null)
                 }}
-                placeholder="Preset name…"
+                placeholder={t('filterPresets.name')}
                 className="w-44 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={saveCurrentPreset}
-                disabled={!presetName.trim()}
+                disabled={!presetName.trim() || presetsBusy}
                 className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Save
+                {t('filterPresets.save')}
               </button>
               <button
                 type="button"
-                onClick={() => setSaving(false)}
+                disabled={presetsBusy}
+                onClick={() => setDraft(null)}
                 className="rounded-lg border border-slate-800 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800"
               >
-                Cancel
+                {t('filterPresets.cancel')}
               </button>
             </>
           ) : (
             <button
               type="button"
-              onClick={() => setSaving(true)}
-              disabled={!anyActive}
+              onClick={() => setDraft({ owner, name: '' })}
+              disabled={!anyActive || presetsBusy}
               title={
                 anyActive
-                  ? 'Save the current filters as a preset'
-                  : 'Set at least one filter first'
+                  ? t('filterPresets.saveCurrent')
+                  : t('filterPresets.setFilter')
               }
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <BookmarkPlus size={13} /> Save preset
+              <BookmarkPlus size={13} /> {t('filterPresets.savePreset')}
             </button>
           )}
         </span>
+        {!presetsLoading && <p className="w-full text-xs text-slate-400">
+          {t(owner === null ? 'filterPresets.guest' : 'filterPresets.account')}
+        </p>}
+        {presetStore.error && <div role="alert" className="w-full text-xs text-rose-400">
+          {t(`filterPresets.errors.${presetStore.error}`)}
+          {owner !== null && <button type="button"
+            onClick={presetStore.error === 'account_changed' ? () => window.location.reload() : presetStore.reload}
+            className="ml-2 underline">
+            {t(presetStore.error === 'account_changed' ? 'filterPresets.refreshPage' : 'filterPresets.reload')}
+          </button>}
+        </div>}
       </Card>
 
       {/* Filter controls */}

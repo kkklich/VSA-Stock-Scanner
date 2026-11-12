@@ -72,6 +72,7 @@ export function displayTicker(ticker: string): string {
 export const PLN_PER_UNIT: Record<string, number> = {
   PLN: 1,
   USD: 3.8,
+  CAD: 2.8,
   EUR: 4.35,
   GBP: 5.1,
   GBp: 0.051,

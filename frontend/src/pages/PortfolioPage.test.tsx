@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/client'
-import { portfolioRequest, type Portfolio } from '../api/portfoliosApi'
+import { importXtbWallets, portfolioRequest, previewXtbWallets, type Portfolio, type XtbWalletsPreview } from '../api/portfoliosApi'
 import { PortfolioPage } from './PortfolioPage'
 
 const auth = vi.hoisted(() => ({ user: { id: 1 } as { id: number } | null, loading: false }))
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => auth }))
-vi.mock('../api/portfoliosApi', () => ({ portfolioRequest: vi.fn() }))
+vi.mock('../api/portfoliosApi', () => ({ portfolioRequest: vi.fn(), previewXtbWallets: vi.fn(), importXtbWallets: vi.fn() }))
 const instruments = [{ ticker: 'kgh', name: 'KGHM', currency: 'PLN', market: 'gpw' }]
 const makePortfolio = (): Portfolio => ({
   id: 'portfolio-1', name: 'Retirement', broker: 'XTB', version: 1,
@@ -35,6 +35,50 @@ beforeEach(() => {
 })
 
 describe('account portfolios', () => {
+  it('previews worksheet reconciliation and shows it on the created wallet after reload', async () => {
+    portfolios = []
+    const user = userEvent.setup()
+    const reconciliation = { asOf: '2026-01-06', changes: [{
+      ticker: 'kgh', currency: 'PLN', previousQuantity: '7', quantity: '8', previousCost: '700', cost: '800',
+    }] }
+    vi.mocked(previewXtbWallets).mockResolvedValue({ ready: 1, errors: 0, newWallets: 1, previewToken: 'reviewed-plan', blockingError: null, wallets: [{
+      id: 'imported-wallet', name: 'Cash Operations', sheet: 'Cash Operations', version: null,
+      ready: 1, duplicates: 0, errors: 0, ignored: 0, warnings: [], ledgerError: null, error: null, rows: [], reconciliation,
+    }] })
+    vi.mocked(importXtbWallets).mockImplementation(async () => {
+      portfolios.push({ ...makePortfolio(), id: 'imported-wallet', name: 'Cash Operations', reconciliation })
+      return { wallets: [], imported: 1, duplicates: 0, skipped: 0, created: 1 }
+    })
+    render(<App />)
+    await user.upload(await screen.findByLabelText('XTB file for new wallets'), new File(['report'], 'IKE.xlsx'))
+    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    expect(await screen.findByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
+    expect(screen.getByText('800 PLN')).toBeVisible()
+    await user.click(await screen.findByRole('button', { name: 'Import wallets (1)' }))
+    await screen.findByLabelText('Choose portfolio')
+    expect(screen.getByRole('option', { name: 'Cash Operations · XTB' })).toBeInTheDocument()
+    expect(screen.getByText(/Import complete\. Wallets created: 1/)).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
+    expect(screen.getByText('800 PLN')).toBeVisible()
+  })
+
+  it('freezes wallet controls and background refresh while an upload is pending', async () => {
+    let resolve!: (value: XtbWalletsPreview) => void
+    vi.mocked(previewXtbWallets).mockImplementation(() => new Promise(done => { resolve = done }))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.upload(await screen.findByLabelText('XTB file for new wallets'), new File(['report'], 'IKE.xlsx'))
+    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    expect(screen.getByLabelText('Choose portfolio')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled()
+    const requests = vi.mocked(portfolioRequest).mock.calls.length
+    fireEvent(window, new Event('focus'))
+    expect(portfolioRequest).toHaveBeenCalledTimes(requests)
+    await act(async () => resolve({ wallets: [], ready: 0, errors: 0, newWallets: 0, previewToken: 'reviewed-plan', blockingError: null }))
+    expect(screen.getByLabelText('Choose portfolio')).toBeEnabled()
+  })
+
   it('requires sign in and does not load private data for a guest', () => {
     auth.user = null
     render(<App />)
@@ -61,6 +105,7 @@ describe('account portfolios', () => {
     const post = vi.mocked(portfolioRequest).mock.calls.find(([method, path]) => method === 'POST' && path?.endsWith('/transactions'))!
     expect(post[2]).toMatchObject({ ticker: 'kgh', currency: 'PLN', date: '2026-01-02', quantity: '10', price: '100.25', fees: '0', side: 'buy', version: 1 })
     expect(post[2]).toHaveProperty('id')
+    expect(post[4]).toBe(1)
   })
 
   it('shows currency totals and the price date supplied by the server', async () => {
@@ -82,7 +127,7 @@ describe('account portfolios', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(portfolioRequest).toHaveBeenCalledWith('PATCH', '/portfolio-1', {
       version: 1, name: 'Retirement', broker: 'XTB', costMethod: 'moving_average',
-    }, expect.any(AbortSignal)))
+    }, expect.any(AbortSignal), 1))
   })
 
   it('protects an open editor from overwriting a newer version loaded in the background', async () => {
@@ -148,5 +193,28 @@ describe('account portfolios', () => {
     expect(signal?.aborted).toBe(true)
     await act(async () => resolve({ items: [makePortfolio()], valuedAt: '2026-01-01T00:00:00Z' }))
     expect(screen.queryByText('Retirement')).not.toBeInTheDocument()
+  })
+
+  it('rejects a refresh with another account’s bearer and clears the old wallet view', async () => {
+    let bearerOwner = 1
+    const original = vi.mocked(portfolioRequest).getMockImplementation()!
+    vi.mocked(portfolioRequest).mockImplementation(async (method, path, body, signal, expectedOwner) => {
+      if (expectedOwner !== undefined && expectedOwner !== bearerOwner) {
+        throw new ApiError(409, 'Changed account', 'account_changed')
+      }
+      return original(method, path, body, signal, expectedOwner)
+    })
+    render(<App />)
+    expect(await screen.findByRole('option', { name: 'Retirement · XTB' })).toBeVisible()
+
+    // A different tab replaced the shared token while this page still shows account 1.
+    bearerOwner = 2
+    portfolios = [{ ...makePortfolio(), id: 'other-owner', name: 'Other account' }]
+    fireEvent(window, new Event('focus'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The signed-in account changed.')
+    expect(screen.queryByRole('option', { name: /Retirement|Other account/ })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('XTB report file')).not.toBeInTheDocument()
+    expect(portfolioRequest).toHaveBeenCalledWith('GET', '', undefined, expect.any(AbortSignal), 1)
+    expect(portfolioRequest).toHaveBeenCalledWith('GET', '/instruments', undefined, expect.any(AbortSignal), 1)
   })
 })

@@ -59,6 +59,13 @@
       ]
     },
     {
+      "ticker": "aswc.de",
+      "name": "Future of Defense ETF",
+      "exchange": "XETRA",
+      "currency": "EUR",
+      "sector": "Financial Services"
+    },
+    {
       "ticker": "bas.de",
       "symbol": "BAS.DE",
       "name": "BASF SE",
@@ -620,6 +627,13 @@
       ]
     },
     {
+      "ticker": "spyd.de",
+      "name": "S&P US Dividend Aristocrats ETF",
+      "exchange": "XETRA",
+      "currency": "EUR",
+      "sector": "Financial Services"
+    },
+    {
       "ticker": "sy1.de",
       "symbol": "SY1.DE",
       "name": "Symrise AG",
@@ -669,6 +683,13 @@
       "indices": [
         "dax"
       ]
+    },
+    {
+      "ticker": "vuaa.de",
+      "name": "Vanguard S&P 500 ETF",
+      "exchange": "XETRA",
+      "currency": "EUR",
+      "sector": "Financial Services"
     },
     {
       "ticker": "zal.de",

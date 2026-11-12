@@ -58,6 +58,18 @@ not presented as saved.
 The database table is created by normal startup schema initialization. Deployments
 managed with Alembic should apply revision `010` (`alembic upgrade head`).
 
+## Saved filter presets
+
+On **Filters**, set the criteria, choose **Save preset**, and give it a name.
+Signed-in users can apply or delete their presets on any device using the same
+account. The list refreshes when you return to the tab and periodically while
+it is open.
+
+Guests save presets in the current browser. After signing in, choose **Copy
+browser presets** to add existing local presets to your account. The browser
+keeps its copies for guest use. Each account can store up to 100 presets.
+For Alembic-managed databases, apply revision `015` with `alembic upgrade head`.
+
 ## Observation journal
 
 Signed-in users can save an observation from a stock's chart page and find all

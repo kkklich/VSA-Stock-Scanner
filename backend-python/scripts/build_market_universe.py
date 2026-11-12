@@ -4,7 +4,8 @@ Writes ``app/data/markets/<market>.json`` — the companies the scanner tracks o
 each foreign market — from the members of that market's indices (see
 ``agent/MULTI-MARKET-PLAN.md``):
 
-    us  S&P 500 + NASDAQ-100     de  DAX 40      fr  CAC 40
+    us  S&P 500 + NASDAQ-100 + Constellation Software
+    de  DAX 40                   fr  CAC 40
     nl  AEX                      uk  FTSE 100
 
 Run it from ``backend-python/`` when index members change (the indices are
@@ -56,6 +57,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.markets import (
+    CSU_TICKER,
     FRANCE,
     GERMANY,
     MARKETS,
@@ -111,6 +113,7 @@ EXCHANGE_NAMES = {
     "PAR": "Euronext Paris",
     "AMS": "Euronext Amsterdam",
     "LSE": "LSE",
+    "TOR": "TSX",
 }
 
 # A member must have traded this recently, on at least this many sessions.
@@ -326,6 +329,8 @@ def collect_members(market: Market, client: httpx.Client) -> MarketBuild:
             build.members.setdefault(ticker, [])
             if index_id not in build.members[ticker]:
                 build.members[ticker].append(index_id)
+    if market.id == US.id:
+        build.members.setdefault(CSU_TICKER, [])
     return build
 
 

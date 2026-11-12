@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../test/utils'
-import { EMPTY_FILTERS, FILTER_PRESETS_KEY, loadPresets } from '../lib/filterPresets'
+import { EMPTY_FILTERS, FILTER_PRESETS_KEY, loadPresets, type FilterPreset } from '../lib/filterPresets'
+import { AuthContext, type AuthContextValue } from '../hooks/useAuth'
+import * as presetApi from '../api/filterPresetsApi'
 import { FiltersPage } from './FiltersPage'
 
 const { useRankingMock } = vi.hoisted(() => ({ useRankingMock: vi.fn() }))
@@ -15,11 +17,61 @@ vi.mock('../hooks/useRankingColumns', () => ({
   sortOptionsFrom: () => [],
 }))
 vi.mock('../components/ColumnPicker', () => ({ ColumnPicker: () => null }))
+vi.mock('../api/filterPresetsApi')
 
 beforeEach(() => {
   localStorage.clear()
   useRankingMock.mockReturnValue({
     data: [], total: 0, loading: false, error: null, refetch: vi.fn(),
+  })
+})
+
+describe('account presets', () => {
+  const session: AuthContextValue = {
+    user: { id: 42, email: 'test@example.com', displayName: 'Test', role: 'user',
+      emailVerified: false, createdAt: '2026-01-01', lastLoginAt: null },
+    config: null, loading: false, signIn: vi.fn(), signUp: vi.fn(),
+    signOut: vi.fn(), changePassword: vi.fn(),
+  }
+  const page = <AuthContext.Provider value={session}><FiltersPage /></AuthContext.Provider>
+
+  it('saves once after a lost reply, then applies and deletes the preset in a fresh session', async () => {
+    const user = userEvent.setup()
+    let stored: FilterPreset[] = []
+    vi.mocked(presetApi.getFilterPresets).mockImplementation(async () => [...stored])
+    const add = vi.mocked(presetApi.addFilterPresets)
+    add.mockImplementationOnce(async ([preset]) => {
+      stored = [preset]
+      throw new Error('Lost reply')
+    }).mockImplementationOnce(async ([preset]) => {
+      expect(preset).toEqual(stored[0])
+      return [...stored]
+    })
+    vi.mocked(presetApi.deleteFilterPreset).mockImplementation(async (id) => {
+      stored = stored.filter(preset => preset.id !== id)
+      return [...stored]
+    })
+
+    const firstDevice = renderWithProviders(page, { initialEntries: ['/filters?q=KGH&minPrice=20'] })
+    const openForm = screen.getByRole('button', { name: 'Save preset' })
+    await waitFor(() => expect(openForm).toBeEnabled())
+    await user.click(openForm)
+    await user.type(screen.getByPlaceholderText('Preset name…'), 'My metals')
+    await user.click(screen.getByRole('button', { name: 'Save', exact: true }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t sync presets')
+    await user.click(screen.getByRole('button', { name: 'Save', exact: true }))
+    await screen.findByRole('button', { name: 'My metals', exact: true })
+    expect(loadPresets()).toEqual([])
+    firstDevice.unmount()
+
+    renderWithProviders(page)
+    await user.click(await screen.findByRole('button', { name: 'My metals', exact: true }))
+    await waitFor(() => expect(useRankingMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'KGH', minPrice: 20 }), expect.anything(),
+    ))
+    await user.click(screen.getByRole('button', { name: /Delete preset.*My metals/ }))
+    expect(screen.queryByRole('button', { name: 'My metals', exact: true })).toBeNull()
+    expect(stored).toEqual([])
   })
 })
 

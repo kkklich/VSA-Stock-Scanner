@@ -211,8 +211,9 @@ details.** Summary (2026-07-03):
 - **Filters page / stock screener (added 2026-07-15):** `/filters` page in the
   sidebar — screen the ranking by sector, VSA rating band, signal + signal
   age, price range and minimum volume (all applied server-side by the ranking
-  endpoint's filter params), with **named filter presets** saved in
-  localStorage and re-runnable in one click.
+  endpoint's filter params). Named filter presets sync via `/api/filter-presets`
+  for signed-in users. Guests save presets in localStorage and can copy them
+  to their account from the Filters page after signing in.
 - **VSA engine review (2026-07-18, follow-ups 2026-07-19):** correctness pass
   verified against the VSA source texts. The verdict badge is now derived
   from the same decayed net score as the rating (no more "rating 97 + Sell"
@@ -1145,9 +1146,7 @@ details.** Summary (2026-07-03):
   §3.3a.
 - **Known gaps:** the Settings page has only the Appearance (theme) section
   (the action log is API-only — no UI screen yet);
-  accounts exist but hold nothing yet — favorites, filter presets and column
-  choices are still localStorage-only, so they do not follow a person to
-  another device, and the app sends **no e-mail**, so there is no password
+  column choices are stored locally, and the app sends **no e-mail**, so there is no password
   reset (roadmap #30); frontend unit coverage is
   still thin (component/lib tests only, 193 cases); the foreign markets are
   built and verified locally but **not yet switched on in production**

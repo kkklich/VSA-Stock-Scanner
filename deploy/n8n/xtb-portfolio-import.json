@@ -1,0 +1,85 @@
+{
+  "name": "Import XTB purchases into StockPilot",
+  "active": false,
+  "nodes": [
+    {
+      "id": "18e06e34-20d2-4ab9-939b-f838d204c411",
+      "name": "Watch for labeled XTB emails",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [0, 0],
+      "notes": "Connect your Gmail credential and set the Search filter to the label for verified XTB execution confirmations.",
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "event": "messageReceived",
+        "simple": false,
+        "maxResults": 1,
+        "filters": {
+          "q": "label:xtb-executed-trades",
+          "readStatus": "both"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      }
+    },
+    {
+      "id": "80b5668e-065d-42d0-ad5c-12075fc760a1",
+      "name": "Select the trade report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const attachments = Object.values($input.item.binary ?? {});\nconst reports = attachments.filter((file) => /\\.(pdf|csv|xls|xlsx)$/i.test(file.fileName ?? ''));\n\nif (reports.length !== 1) {\n  throw new Error('Expected one PDF, CSV, XLS, or XLSX trade attachment. Review this email in Gmail.');\n}\n\nconst report = reports[0];\nreturn {\n  json: { filename: encodeURIComponent(report.fileName) },\n  binary: { report },\n};"
+      }
+    },
+    {
+      "id": "7164018e-fdf1-435b-b769-725601f34808",
+      "name": "Import into StockPilot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0],
+      "notes": "Set your StockPilot HTTPS URL and choose a Header Auth credential with Authorization and the value Bearer followed by your StockPilot automation token. StockPilot opens encrypted PDF statements using the password configured on the StockPilot server.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://stockpilot.example/api/portfolios/imports/xtb/automation",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Import-Filename", "value": "={{ $json.filename }}" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "report",
+        "options": {
+          "redirect": { "redirect": { "followRedirects": false } },
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 60000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Watch for labeled XTB emails": {
+      "main": [[{ "node": "Select the trade report", "type": "main", "index": 0 }]]
+    },
+    "Select the trade report": {
+      "main": [[{ "node": "Import into StockPilot", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  }
+}

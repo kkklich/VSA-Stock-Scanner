@@ -85,6 +85,7 @@ class TestSymbols:
             ("kgh", "KGH.WA", "Europe/Warsaw"),
             ("aapl.us", "AAPL", "America/New_York"),
             ("brk-b.us", "BRK-B", "America/New_York"),
+            ("csu.us", "CSU.TO", "America/Toronto"),
             ("sap.de", "SAP.DE", "Europe/Berlin"),
             ("mc.pa", "MC.PA", "Europe/Paris"),
             ("asml.as", "ASML.AS", "Europe/Amsterdam"),

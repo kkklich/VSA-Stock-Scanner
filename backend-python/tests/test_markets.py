@@ -229,7 +229,9 @@ class TestYahooSymbols:
         with pytest.raises(ValueError):
             market_for_yahoo_symbol("SHOP.TO")
 
-    @pytest.mark.parametrize("ticker", ["kgh", "aapl.us", "sap.de", "mc.pa", "asml.as", "hsba.l"])
+    @pytest.mark.parametrize(
+        "ticker", ["kgh", "aapl.us", "csu.us", "sap.de", "mc.pa", "asml.as", "hsba.l"]
+    )
     def test_round_trip(self, ticker: str) -> None:
         assert market_for_yahoo_symbol(yahoo_symbol(ticker)) is market_of(ticker)
 
@@ -244,6 +246,7 @@ class TestTickerFor:
         ("symbol", "market", "ticker"),
         [
             ("AAPL", US, "aapl.us"),
+            ("CSU.TO", US, "csu.us"),
             # Index providers write share classes with a dot; Yahoo uses a hyphen.
             ("BRK.B", US, "brk-b.us"),
             ("SAP.DE", GERMANY, "sap.de"),
@@ -285,6 +288,7 @@ class TestMoney:
     def test_amounts_are_converted_to_zloty(self) -> None:
         assert to_pln(100_000, "PLN") == 100_000
         assert to_pln(30_000, "USD") == pytest.approx(114_000)
+        assert to_pln(40_000, "CAD") == pytest.approx(112_000)
         # 2,000,000 pence = £20,000.
         assert to_pln(2_000_000, "GBp") == pytest.approx(102_000)
 

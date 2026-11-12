@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 GPW_ID = "gpw"
+CSU_TICKER = "csu.us"
 
 # A daily bar is only trusted once the session has closed AND the data provider
 # has had a moment to publish the final print (closing auctions end a few
@@ -72,6 +73,7 @@ MAX_TICKER_LENGTH = 20
 PLN_PER_UNIT: dict[str, float] = {
     "PLN": 1.0,
     "USD": 3.8,
+    "CAD": 2.8,
     "EUR": 4.35,
     "GBP": 5.1,
     "GBp": 0.051,
@@ -211,6 +213,19 @@ US = Market(
     indices=("sp500", "ndx"),
 )
 
+# Constellation Software is grouped with the US stocks in the scanner.
+_CSU_YAHOO_SYMBOL = "CSU.TO"
+_TORONTO = replace(
+    US,
+    name="Toronto Stock Exchange",
+    country="Canada",
+    exchange="TSX",
+    yahoo_suffix=".TO",
+    currency="CAD",
+    timezone="America/Toronto",
+    indices=(),
+)
+
 GERMANY = Market(
     id="de",
     name="Xetra (Deutsche Börse)",
@@ -341,10 +356,13 @@ def normalize_ticker(raw: str | None) -> str | None:
 def market_of(ticker: str) -> Market:
     """The market a ticker belongs to — the GPW when it carries no suffix.
 
-    Raises ``ValueError`` for a suffix no market uses. Pass a normalised
-    ticker; the check is on its last dot-separated part only.
+    Raises ``ValueError`` for a suffix no market uses. Constellation Software
+    uses Toronto trading details under the US market id.
     """
-    _, dot, tail = ticker.strip().casefold().rpartition(".")
+    cleaned = ticker.strip().casefold()
+    if cleaned == CSU_TICKER:
+        return _TORONTO
+    _, dot, tail = cleaned.rpartition(".")
     if not dot:
         return GPW
     market = _BY_SUFFIX.get(dot + tail)
@@ -377,7 +395,10 @@ def market_for_yahoo_symbol(symbol: str) -> Market:
 
     Raises ``ValueError`` for a Yahoo suffix this app does not track.
     """
-    _, dot, tail = symbol.strip().upper().rpartition(".")
+    cleaned = symbol.strip().upper()
+    if cleaned == _CSU_YAHOO_SYMBOL:
+        return _TORONTO
+    _, dot, tail = cleaned.rpartition(".")
     if not dot:
         return US
     market = _BY_YAHOO_SUFFIX.get(dot + tail)
@@ -395,6 +416,8 @@ def ticker_for(symbol: str, market: Market) -> str | None:
     becomes Yahoo's hyphen.
     """
     base = symbol.strip().casefold()
+    if market.id == US.id and base == _CSU_YAHOO_SYMBOL.casefold():
+        return CSU_TICKER
     yahoo_suffix = market.yahoo_suffix.casefold()
     if yahoo_suffix and base.endswith(yahoo_suffix):
         base = base[: -len(yahoo_suffix)]

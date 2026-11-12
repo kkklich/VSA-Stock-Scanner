@@ -6,8 +6,8 @@ import re
 import struct
 import unicodedata
 from dataclasses import dataclass
-from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from datetime import UTC, date, datetime
+from decimal import Decimal, DecimalException, Inexact, InvalidOperation, localcontext
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 from zipfile import BadZipFile, ZipFile
@@ -15,6 +15,8 @@ from zipfile import BadZipFile, ZipFile
 import openpyxl
 import xlrd
 from defusedxml.common import DefusedXmlException
+from defusedxml.ElementTree import iterparse
+from openpyxl.utils.cell import coordinate_to_tuple
 from openpyxl.utils.exceptions import InvalidFileException
 from pydantic import ValidationError
 from xlrd.compdoc import CompDocError
@@ -22,12 +24,20 @@ from xlrd.compdoc import CompDocError
 from app.markets import normalize_ticker, quote_currency
 from app.models.portfolio import AddTransaction
 from app.services.bounded_xls import open_bounded_xls
-from app.services.portfolio import PortfolioError, holdings, trade_order
+from app.services.portfolio import (
+    WARSAW,
+    PortfolioError,
+    holdings,
+    require_after_checkpoint,
+    trade_order,
+)
+from app.services.portfolio_instruments import find_portfolio_instrument
 
 MAX_FILE_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 20000
 MAX_COLUMNS = 80
 MAX_CELL = 4000
+SUMMARY_LABELS = {"total", "suma", "razem", "profitloss"}
 
 
 def normalized(value) -> str:
@@ -51,13 +61,17 @@ ALIASES = {
     "side": {"type", "typ", "rodzaj", "operation", "operationtype", "typoperacji", "side"},
     "time": {
         "time",
+        "timeutc",
         "date",
         "datetime",
+        "datetimeutc",
         "czas",
         "data",
         "dataczas",
         "executiontime",
+        "executiontimeutc",
         "transactiontime",
+        "transactiontimeutc",
         "datatransakcji",
         "czaswykonania",
     },
@@ -69,7 +83,14 @@ ALIASES = {
     "feeCurrency": {"feecurrency", "commissioncurrency", "walutaprowizji"},
     "comment": {"comment", "comments", "komentarz", "description", "opis"},
     "status": {"status", "orderstatus", "statuszlecenia"},
-    "assetType": {"instrumenttype", "assettype", "rodzajinstrumentu", "typinstrumentu"},
+    "assetType": {
+        "category",
+        "kategoria",
+        "instrumenttype",
+        "assettype",
+        "rodzajinstrumentu",
+        "typinstrumentu",
+    },
     "amount": {"amount", "kwota", "value", "wartosc"},
 }
 BUY = {"stockpurchase", "stockbuy", "zakupakcji", "kupnoakcji", "kupno", "buy"}
@@ -97,6 +118,14 @@ CASH = {
     "prowizja",
     "tax",
     "podatek",
+    "ikedeposit",
+    "ikewithdrawal",
+    "wplataike",
+    "wyplataike",
+    "ikzedeposit",
+    "ikzewithdrawal",
+    "wplataikze",
+    "wyplataikze",
 }
 FILLED = {
     "filled",
@@ -150,27 +179,37 @@ def _comment_trade(comment: str) -> CommentTrade | None:
         return comment[start:position], position
 
     for start in COMMENT_START.finditer(comment):
-        quantity, position = number(start.end())
-        if not quantity:
-            continue
-        position = whitespace(position)
-        if position < size and comment[position] == "/":
-            denominator, position = number(whitespace(position + 1), grouped=False)
-            if not denominator:
+        p = whitespace(start.end())
+        candidates = [p]
+        word_end = p
+        while word_end < size and not comment[word_end].isspace():
+            word_end += 1
+        after_word = whitespace(word_end)
+        if after_word < size and after_word != p:
+            candidates.append(after_word)
+
+        for candidate_pos in candidates:
+            quantity, position = number(candidate_pos)
+            if not quantity:
                 continue
             position = whitespace(position)
-        if position >= size or comment[position] != "@":
-            continue
-        price, position = number(whitespace(position + 1))
-        if not price:
-            continue
-        if (
-            position < size
-            and (comment[position].isalnum() or comment[position] in "_.,")
-            and not price[-1].isspace()
-        ):
-            continue
-        return CommentTrade(start[1].upper(), start[2].upper(), quantity, price)
+            if position < size and comment[position] == "/":
+                denominator, position = number(whitespace(position + 1), grouped=False)
+                if not denominator:
+                    continue
+                position = whitespace(position)
+            if position >= size or comment[position] != "@":
+                continue
+            price, position = number(whitespace(position + 1))
+            if not price:
+                continue
+            if (
+                position < size
+                and (comment[position].isalnum() or comment[position] in "_.,")
+                and not price[-1].isspace()
+            ):
+                continue
+            return CommentTrade(start[1].upper(), start[2].upper(), quantity, price)
     return None
 
 
@@ -207,27 +246,40 @@ def decimal_value(value) -> Decimal:
     return number
 
 
-def timestamp(value) -> datetime:
+def timestamp(value, *, assume_utc: bool = False) -> datetime:
     if isinstance(value, datetime):
-        return value.replace(tzinfo=None)
-    if isinstance(value, date):
-        return datetime.combine(value, datetime.min.time())
-    text = str(value or "").strip()
-    try:
-        return datetime.fromisoformat(text.replace("Z", "+00:00")).replace(tzinfo=None)
-    except ValueError:
-        for pattern in (
-            "%d.%m.%Y %H:%M:%S",
-            "%d.%m.%Y %H:%M",
-            "%d.%m.%Y",
-            "%Y.%m.%d %H:%M:%S",
-            "%Y.%m.%d",
-        ):
-            try:
-                return datetime.strptime(text, pattern)
-            except ValueError:
-                continue
-    raise RowError("invalid_date")
+        result = value
+    elif isinstance(value, date):
+        result = datetime.combine(value, datetime.min.time())
+    else:
+        text = str(value or "").strip()
+        try:
+            result = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            for pattern in (
+                "%d.%m.%Y %H:%M:%S",
+                "%d.%m.%Y %H:%M",
+                "%d.%m.%Y",
+                "%Y.%m.%d %H:%M:%S",
+                "%Y.%m.%d",
+            ):
+                try:
+                    result = datetime.strptime(text, pattern)
+                    break
+                except ValueError:
+                    continue
+            else:
+                raise RowError("invalid_date") from None
+    return result.replace(tzinfo=UTC) if assume_utc and result.tzinfo is None else result
+
+
+def is_summary_row(cells, *, reference=None, side=None, time=None) -> bool:
+    """A summary has no execution timestamp or trade direction."""
+    if time not in (None, "") or (side and normalized(side) not in SUMMARY_LABELS):
+        return False
+    if reference and normalized(reference) not in SUMMARY_LABELS:
+        return False
+    return any(normalized(value) in SUMMARY_LABELS for value in cells)
 
 
 def currency(value) -> str:
@@ -245,6 +297,71 @@ def _checked_rows(rows):
             raise PortfolioError("import_invalid_file", 422)
         result.append(values)
     return result
+
+
+SECTION_NAMES = {
+    "cashoperations": "Cash Operations",
+    "cashoperation": "Cash Operations",
+    "operacjegotowkowe": "Cash Operations",
+    "operacjigotowkowe": "Cash Operations",
+    "cashhistory": "Cash Operations",
+    "closedpositions": "Closed Positions",
+    "pozycjezamkniete": "Closed Positions",
+    "openpositions": "Open Positions",
+    "pozycjeotwarte": "Open Positions",
+}
+
+
+def _split_csv_sections(rows: list[list]) -> list[tuple[str, list[list]]]:
+    section_indices: list[tuple[int, str]] = []
+    for idx, row in enumerate(rows):
+        cells = [str(c or "").strip() for c in row if str(c or "").strip()]
+        if len(cells) == 1 and normalized(cells[0]) in SECTION_NAMES:
+            title = SECTION_NAMES[normalized(cells[0])]
+            start_idx = idx
+            if idx > 0:
+                prev_cells = [str(c or "").strip() for c in rows[idx - 1] if str(c or "").strip()]
+                if prev_cells and normalized(prev_cells[0]) in {"accountnumber", "numerrachunku"}:
+                    start_idx = idx - 1
+            section_indices.append((start_idx, title))
+    if not section_indices:
+        return [("CSV", rows)]
+    tables: list[tuple[str, list[list]]] = []
+    if section_indices[0][0] > 0:
+        prefix = rows[: section_indices[0][0]]
+        metadata = {"xtbaccounthistory", "accounthistory", "historiarachunku"}
+        first_cells = [next((c for c in row if str(c or "").strip()), None) for row in prefix]
+        if any(cell is not None and normalized(cell) not in metadata for cell in first_cells):
+            tables.append(("CSV", prefix))
+    for i, (start_idx, title) in enumerate(section_indices):
+        end_idx = section_indices[i + 1][0] if i + 1 < len(section_indices) else len(rows)
+        tables.append((title, rows[start_idx:end_idx]))
+    return tables
+
+
+def _check_xlsx_coordinates(source):
+    """Check actual coordinates before openpyxl allocates sparse rows or columns."""
+    row, column, row_count = 0, 0, 0
+    for event, element in iterparse(source, events=("start", "end")):
+        tag = element.tag.rsplit("}", 1)[-1]
+        if event == "start" and tag == "row":
+            row_count += 1
+            row = int(element.get("r", row + 1))
+            column = 0
+            if row < 1 or row > MAX_ROWS or row_count > MAX_ROWS:
+                raise PortfolioError("import_too_many_rows", 413)
+        elif event == "start" and tag == "c":
+            coordinate = element.get("r")
+            if coordinate:
+                if len(coordinate) > 12:
+                    raise PortfolioError("import_too_many_rows", 413)
+                cell_row, column = coordinate_to_tuple(coordinate)
+            else:
+                cell_row, column = row, column + 1
+            if not (1 <= cell_row <= MAX_ROWS and 1 <= column <= MAX_COLUMNS):
+                raise PortfolioError("import_too_many_rows", 413)
+        if event == "end":
+            element.clear()
 
 
 def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
@@ -268,7 +385,8 @@ def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
                 delimiter = max(
                     (";", "\t", ","), key=lambda sep: sum(line.count(sep) for line in lines[:30])
                 )
-            return [("CSV", _checked_rows(csv.reader(io.StringIO(text), delimiter=delimiter)))]
+            rows = _checked_rows(csv.reader(io.StringIO(text), delimiter=delimiter))
+            return _split_csv_sections(rows)
         if extension == ".xls":
             book = open_bounded_xls(
                 data,
@@ -321,6 +439,12 @@ def read_tables(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
             for sheet in book.worksheets:
                 if (sheet.max_row or 0) > MAX_ROWS or (sheet.max_column or 0) > MAX_COLUMNS:
                     raise PortfolioError("import_too_many_rows", 413)
+                # XTB exports can declare A1:A1 despite containing hundreds of rows.
+                # Validate the same XML stream the read-only sheet uses before
+                # removing that unreliable metadata and reading all actual cells.
+                with book._archive.open(sheet._worksheet_path) as source:
+                    _check_xlsx_coordinates(source)
+                sheet.reset_dimensions()
                 rows = _checked_rows(sheet.values)
                 total_rows += len(rows)
                 if total_rows > MAX_ROWS:
@@ -375,13 +499,27 @@ def _company(raw, companies):
             value = value[: -len(suffix)] + replacement
             break
     ticker = normalize_ticker(value)
-    company = companies.find(ticker) if ticker else None
+    company = find_portfolio_instrument(ticker, companies) if ticker else None
     if company is None:
         raise RowError("unknown_ticker")
     return company
 
 
-def _trade(get, companies, cash_history):
+def _convert_quote_units(value: Decimal, source: str, target: str, error: str) -> Decimal:
+    if source == target:
+        return value
+    if {source, target} != {"GBP", "GBp"}:
+        raise RowError(error)
+    try:
+        with localcontext() as context:
+            context.prec = max(context.prec, len(value.as_tuple().digits) + 2)
+            context.traps[Inexact] = True
+            return value * 100 if source == "GBP" else value / 100
+    except DecimalException as exc:
+        raise RowError("invalid_number") from exc
+
+
+def _trade(get, companies, cash_history, *, utc_time=False, account_currency=False):
     side_text = normalized(get("side"))
     comment = str(get("comment") or "")
     match = _comment_trade(comment)
@@ -418,10 +556,9 @@ def _trade(get, companies, cash_history):
         raise RowError("unsupported_operation")
     company = _company(get("ticker"), companies)
     quote_ccy = quote_currency(company)
-    explicit_ccy = currency(get("priceCurrency") or (get("currency") if not cash_history else ""))
-    if explicit_ccy and explicit_ccy != quote_ccy:
-        if {explicit_ccy, quote_ccy} != {"GBP", "GBp"}:
-            raise RowError("currency_mismatch")
+    explicit_ccy = currency(
+        get("priceCurrency") or (get("currency") if not (cash_history or account_currency) else "")
+    )
     if quote_ccy == "GBp" and not explicit_ccy:
         raise RowError("price_currency_missing")
     reference = str(get("reference") or "").strip()
@@ -431,7 +568,11 @@ def _trade(get, companies, cash_history):
         reference = reference[:-2]
     if not reference or not re.fullmatch(r"[\w.:/-]{1,100}", reference):
         raise RowError("missing_reference")
-    executed = timestamp(get("time"))
+    executed = timestamp(get("time"), assume_utc=utc_time)
+    try:
+        local_date = executed.astimezone(WARSAW).date() if executed.tzinfo else executed.date()
+    except OverflowError as exc:
+        raise RowError("invalid_date") from exc
     if (get("quantity") in (None, "") or get("price") in (None, "")) and not match:
         raise RowError("missing_execution")
     quantity = decimal_value(
@@ -440,33 +581,26 @@ def _trade(get, companies, cash_history):
     price = decimal_value(get("price") if get("price") not in (None, "") else match.price)
     if match and (quantity != decimal_value(match.quantity) or price != decimal_value(match.price)):
         raise RowError("execution_mismatch")
-    if explicit_ccy == "GBP" and quote_ccy == "GBp":
-        price *= 100
-    elif explicit_ccy == "GBp" and quote_ccy == "GBP":
-        price /= 100
+    if explicit_ccy:
+        price = _convert_quote_units(price, explicit_ccy, quote_ccy, "currency_mismatch")
     warnings = []
     if get("fees") in (None, ""):
         fees = Decimal(0)
         warnings.append("fees_missing")
     else:
-        fees = abs(decimal_value(get("fees")))
+        fees = decimal_value(get("fees")).copy_abs()
         fee_ccy = currency(get("feeCurrency") or get("currency"))
         if fees and not fee_ccy:
             raise RowError("fee_currency_missing")
-        if fees and fee_ccy != quote_ccy:
-            if fee_ccy == "GBP" and quote_ccy == "GBp":
-                fees *= 100
-            elif fee_ccy == "GBp" and quote_ccy == "GBP":
-                fees /= 100
-            else:
-                raise RowError("fee_currency_mismatch")
+        if fees:
+            fees = _convert_quote_units(fees, fee_ccy, quote_ccy, "fee_currency_mismatch")
     source_id = f"xtb:{reference}:{side}"
     try:
         trade = AddTransaction(
             id=uuid5(NAMESPACE_URL, source_id),
             version=1,
             ticker=company.ticker,
-            date=executed.date(),
+            date=local_date,
             side=side,
             quantity=quantity,
             price=price,
@@ -484,14 +618,21 @@ def _trade(get, companies, cash_history):
 
 
 def parse_xtb(data: bytes, filename: str, companies) -> ParsedImport:
-    tables = read_tables(data, filename)
+    return parse_xtb_tables(read_tables(data, filename), companies)
+
+
+def parse_xtb_tables(
+    tables: list[tuple[str, list[list]]], companies, *, allow_empty: bool = False
+) -> ParsedImport:
     rows, ignored, recognized, warnings = [], 0, False, set()
-    cash_tables = [
-        table
-        for table in tables
-        if normalized(table[0])
-        in {"cashoperations", "cashoperation", "operacjegotowkowe", "cashhistory"}
-    ]
+    cash_names = {
+        "cashoperations",
+        "cashoperation",
+        "operacjegotowkowe",
+        "operacjigotowkowe",
+        "cashhistory",
+    }
+    cash_tables = [table for table in tables if normalized(table[0]) in cash_names]
     # Never combine a cash ledger with open/closed-position snapshots.
     for sheet, values in cash_tables or tables:
         header, header_index = None, None
@@ -504,6 +645,13 @@ def parse_xtb(data: bytes, filename: str, companies) -> ParsedImport:
             continue
         recognized = True
         cash_history = "amount" in header and "comment" in header
+        utc_time = normalized(values[header_index][header["time"]]).endswith("utc") or (
+            cash_history
+            and any(
+                row and normalized(row[0]) in {"datefromutc", "datetoutc", "dataodutc", "datadoutc"}
+                for row in values[:header_index]
+            )
+        )
         for index in range(header_index + 1, len(values)):
             row = values[index]
             if not any(value not in (None, "") for value in row):
@@ -513,18 +661,14 @@ def parse_xtb(data: bytes, filename: str, companies) -> ParsedImport:
                 position = columns.get(key)
                 return cells[position] if position is not None and position < len(cells) else None
 
-            if normalized(get("reference")) in {"total", "suma", "razem"} or (
-                not get("reference")
-                and not get("side")
-                and any(normalized(value) in {"total", "suma", "razem"} for value in row)
-            ):
+            if is_summary_row(row, reference=get("reference"), side=get("side"), time=get("time")):
                 ignored += 1
                 continue
             result = {"sheet": sheet, "row": index + 1, "symbol": str(get("ticker") or "")[:80]}
             try:
                 if any(isinstance(value, str) and value.startswith("=") for value in row):
                     raise RowError("formula_cell")
-                trade, row_warnings = _trade(get, companies, cash_history)
+                trade, row_warnings = _trade(get, companies, cash_history, utc_time=utc_time)
                 if trade is None:
                     ignored += 1
                     continue
@@ -534,49 +678,83 @@ def parse_xtb(data: bytes, filename: str, companies) -> ParsedImport:
                 rows.append({**result, "status": "error", "code": str(exc)})
     if not recognized:
         raise PortfolioError("import_unrecognized_format", 422)
-    if not rows:
+    if not rows and not allow_empty:
         raise PortfolioError("import_no_transactions", 422)
     if len(rows) > 1000:
         raise PortfolioError("transaction_limit")
     return ParsedImport(rows, ignored, sorted(warnings))
 
 
-def _trade_key(trade, *, with_time=True):
+def _trade_key(trade, *, with_time=True, with_fees=True):
     fields = ("ticker", "date", "side", "currency") + (("executedAt",) if with_time else ())
-    return tuple(trade.get(key) for key in fields) + tuple(
-        Decimal(trade[key]) for key in ("quantity", "price", "fees")
-    )
+    amounts = ("quantity", "price") + (("fees",) if with_fees else ())
+    return tuple(trade.get(key) for key in fields) + tuple(Decimal(trade[key]) for key in amounts)
+
+
+def _xtb_import_key(trade):
+    is_daily_statement = (trade.get("sourceId") or "").startswith("xtb:daily/")
+    return is_daily_statement, _trade_key(trade, with_time=False, with_fees=False)
 
 
 def _same_trade(first, second):
-    return _trade_key(first) == _trade_key(second)
+    if _trade_key(first) == _trade_key(second):
+        return True
+    if not (first.get("executedAt") and second.get("executedAt")):
+        return False
+    prior, imported = timestamp(first["executedAt"]), timestamp(second["executedAt"])
+    if prior.tzinfo and imported.tzinfo:
+        return prior == imported and _trade_key(first, with_time=False) == _trade_key(
+            second, with_time=False
+        )
+    if not prior.tzinfo and imported.tzinfo:
+        # Older imports stored the report wall time and its calendar date without
+        # the timezone. The unchanged source ID must still be safe to retry.
+        legacy = {
+            **second,
+            "date": imported.date().isoformat(),
+            "executedAt": imported.replace(tzinfo=None).isoformat(timespec="microseconds"),
+        }
+        return _trade_key(first) == _trade_key(legacy)
+    return False
 
 
-def prepare_import(parsed: ParsedImport, existing: list[dict], cost_method: str) -> dict:
+def prepare_import(
+    parsed: ParsedImport, existing: list[dict], cost_method: str, *, checkpoint=None
+) -> dict:
     by_id = {trade["id"]: trade for trade in existing}
     manual_keys = {
         _trade_key(trade, with_time=False) for trade in existing if trade.get("source") != "xtb"
     }
+    xtb_keys = {_xtb_import_key(trade) for trade in existing if trade.get("source") == "xtb"}
     rows, additions = [], []
     for raw in parsed.rows:
         row = dict(raw)
         trade = row.get("transaction")
         if trade:
             prior = by_id.get(trade["id"])
+            is_xtb = trade.get("source") == "xtb"
+            is_daily_statement, match_key = _xtb_import_key(trade)
             if prior:
                 row.update(status="duplicate" if _same_trade(prior, trade) else "error")
                 if row["status"] == "error":
                     row["code"] = "reference_conflict"
             elif _trade_key(trade, with_time=False) in manual_keys:
                 row.update(status="error", code="manual_overlap")
+            elif is_xtb and (not is_daily_statement, match_key) in xtb_keys:
+                # Daily statements identify orders, while the cash export uses operation IDs.
+                # Matching amounts and dates warrant review without assuming the fills are equal.
+                row.update(status="error", code="xtb_source_overlap")
             else:
+                require_after_checkpoint(trade, checkpoint)
                 additions.append(trade)
                 by_id[trade["id"]] = trade
+                if is_xtb:
+                    xtb_keys.add((is_daily_statement, match_key))
         rows.append(row)
     ledger = sorted([*existing, *additions], key=trade_order)
     ledger_error = None
     try:
-        holdings(ledger, cost_method)
+        holdings([*ledger, checkpoint] if checkpoint else ledger, cost_method)
     except PortfolioError as exc:
         ledger_error = exc.code
     if len(ledger) > 1000:

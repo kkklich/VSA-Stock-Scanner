@@ -23,11 +23,16 @@ export interface Portfolio {
   id: string; name: string; broker: string; version: number; createdAt: string
   costMethod: 'fifo' | 'moving_average'
   transactions: Transaction[]; positions: Position[]; totals: PortfolioTotal[]
+  reconciliation?: XtbReconciliation | null
 }
 export interface Portfolios { items: Portfolio[]; valuedAt: string }
-export function portfolioRequest<T>(method: string, path = '', body?: unknown, signal?: AbortSignal) {
+function accountHeaders(owner?: number): Record<string, string> {
+  return owner === undefined ? {} : { 'X-Expected-User-Id': String(owner) }
+}
+
+export function portfolioRequest<T>(method: string, path = '', body?: unknown, signal?: AbortSignal, owner?: number) {
   return apiFetch<T>(`/api/portfolios${path}`, {
-    method, signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    method, signal, headers: accountHeaders(owner), ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 }
 
@@ -40,17 +45,57 @@ export interface XtbPreview {
   errors: number; ignored: number; warnings: string[]; ledgerError: string | null
 }
 export interface XtbImportResult { imported: number; duplicates: number; skipped: number; version: number }
-export function previewXtb(portfolioId: string, file: File, signal: AbortSignal) {
-  return uploadXtb<XtbPreview>(portfolioId, file, true, signal)
+export function previewXtb(portfolioId: string, file: File, signal: AbortSignal, owner?: number) {
+  return uploadXtb<XtbPreview>(portfolioId, file, signal, owner)
 }
-export function importXtb(portfolioId: string, file: File, version: number, allowPartial: boolean, signal: AbortSignal) {
-  return uploadXtb<XtbImportResult>(portfolioId, file, false, signal, version, allowPartial)
+export function importXtb(portfolioId: string, file: File, version: number, allowPartial: boolean, signal: AbortSignal, owner?: number) {
+  return uploadXtb<XtbImportResult>(portfolioId, file, signal, owner, { version, allowPartial })
 }
-function uploadXtb<T>(portfolioId: string, file: File, preview: boolean, signal: AbortSignal, version?: number, allowPartial = false) {
+function uploadXtb<T>(portfolioId: string, file: File, signal: AbortSignal, owner?: number, approval?: { version: number; allowPartial: boolean }) {
   const query = new URLSearchParams({ filename: file.name })
-  if (version !== undefined) query.set('version', String(version))
-  if (allowPartial) query.set('allow_partial', 'true')
-  return apiFetch<T>(`/api/portfolios/${portfolioId}/imports/xtb${preview ? '/preview' : ''}?${query}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file, signal,
+  if (approval) query.set('version', String(approval.version))
+  if (approval?.allowPartial) query.set('allow_partial', 'true')
+  return apiFetch<T>(`/api/portfolios/${portfolioId}/imports/xtb${approval ? '' : '/preview'}?${query}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/octet-stream', ...accountHeaders(owner) }, body: file, signal,
+  })
+}
+
+export interface XtbWalletPreview extends Omit<XtbPreview, 'version'> {
+  id: string; name: string; sheet: string; version: number | null; error: string | null
+  reconciliation?: XtbReconciliation | null
+}
+export interface XtbReconciliation {
+  asOf: string
+  changes: {
+    ticker: string; currency: string
+    previousQuantity: string; quantity: string
+    previousCost: string; cost: string
+  }[]
+}
+export interface XtbWalletsPreview {
+  wallets: XtbWalletPreview[]
+  ready: number; errors: number; newWallets: number
+  previewToken: string; blockingError: string | null
+}
+export interface XtbWalletsImportResult {
+  wallets: (XtbImportResult & { id: string; name: string })[]
+  imported: number; duplicates: number; skipped: number; created: number
+}
+export function previewXtbWallets(file: File, owner: number, signal: AbortSignal) {
+  return uploadXtbWallets<XtbWalletsPreview>(file, owner, signal)
+}
+export function importXtbWallets(file: File, owner: number, previewToken: string, allowPartial: boolean, signal: AbortSignal) {
+  return uploadXtbWallets<XtbWalletsImportResult>(file, owner, signal, { previewToken, allowPartial })
+}
+function uploadXtbWallets<T>(file: File, owner: number, signal: AbortSignal, approval?: { previewToken: string; allowPartial: boolean }) {
+  const query = new URLSearchParams({ filename: file.name })
+  if (approval?.allowPartial) query.set('allow_partial', 'true')
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/octet-stream',
+    ...accountHeaders(owner),
+  }
+  if (approval) headers['X-XTB-Preview'] = approval.previewToken
+  return apiFetch<T>(`/api/portfolios/imports/xtb/wallets${approval ? '' : '/preview'}?${query}`, {
+    method: 'POST', headers, body: file, signal,
   })
 }

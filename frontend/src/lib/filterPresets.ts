@@ -1,6 +1,6 @@
 // Saved screen presets for the Filters page — a named combination of filter
-// values the user can re-run with one click. Persisted in localStorage (same
-// approach as favorites) so presets survive reloads on this browser.
+// values the user can re-run with one click. Guests keep presets in browser
+// storage. Signed-in users can explicitly copy those presets to their account.
 
 import type { SignalVerdict } from '../types'
 import type { InsiderActivity } from '../api/stocksApi'
@@ -101,21 +101,29 @@ export function loadPresets(): FilterPreset[] {
     if (!Array.isArray(parsed)) return []
     // Merge with EMPTY_FILTERS so presets saved by an older version of the
     // page never leave a newer filter field undefined.
-    return parsed.map((p) => ({
-      ...p,
-      filters: { ...EMPTY_FILTERS, ...p.filters },
-    }))
+    const presets = parsed.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string')
+    return presets.map((preset) => {
+      // Early presets omitted createdAt. Recover it from timestamp-based IDs
+      // when possible, otherwise use the epoch so repeated imports agree.
+      const timestamp = /^\d{13}(?=-|$)/.exec(preset.id)
+      return {
+        ...preset,
+        createdAt: preset.createdAt || new Date(timestamp ? Number(timestamp[0]) : 0).toISOString(),
+        filters: { ...EMPTY_FILTERS, ...preset.filters },
+      }
+    })
   } catch {
     return []
   }
 }
 
-/** Persist the presets list (ignores quota / private-mode errors). */
-export function savePresets(presets: FilterPreset[]): void {
+/** False when browser storage is unavailable or its quota is exhausted. */
+export function savePresets(presets: FilterPreset[]): boolean {
   try {
     localStorage.setItem(FILTER_PRESETS_KEY, JSON.stringify(presets))
+    return true
   } catch {
-    /* ignore */
+    return false
   }
 }
 

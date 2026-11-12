@@ -4,12 +4,14 @@ import io
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zipfile import ZipFile
 
 import openpyxl
 import pytest
+from pydantic import SecretStr
 
+from app.config import settings
 from app.services.portfolio import PortfolioError
 from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
 from tests.test_portfolios import client as portfolio_client
@@ -159,6 +161,50 @@ def test_explicit_cfd_instrument_type_cannot_be_imported_as_a_stock():
         b"1,Buy,2026-01-02,KGH.PL,2,100,PLN,CFD\n"
     )
     assert parse_xtb(data, "report.csv", Companies()).rows[0]["code"] == "unsupported_operation"
+
+
+def test_native_category_column_blocks_cfd_cash_entries():
+    data = workbook([cash() + ["CFD"]], headers=[*HEADERS, "Category"])
+    assert parse_xtb(data, "report.xlsx", Companies()).rows[0]["code"] == "unsupported_operation"
+
+
+def test_total_in_a_trade_description_does_not_hide_the_trade():
+    data = (
+        b"ID,Type,Time,Instrument,Ticker,Quantity,Price,Currency\n"
+        b"1,Buy,2026-01-02,Total,KGH.PL,2,100,PLN\n"
+    )
+    parsed = parse_xtb(data, "report.csv", Companies())
+    assert parsed.ignored == 0
+    assert parsed.rows[0]["transaction"]["quantity"] == "2"
+
+
+def test_offset_aware_executions_are_sorted_by_their_instant():
+    data = (
+        b"ID,Type,Time,Ticker,Quantity,Price,Currency\n"
+        b"1,Buy,2026-01-02T10:00:00+02:00,KGH.PL,1,100,PLN\n"
+        b"2,Sell,2026-01-02T09:00:00Z,KGH.PL,1,101,PLN\n"
+    )
+    plan = prepare_import(parse_xtb(data, "report.csv", Companies()), [], "fifo")
+    assert plan["ledgerError"] is None
+    assert [trade["side"] for trade in plan["ledger"]] == ["buy", "sell"]
+    assert plan["ledger"][0]["executedAt"] == "2026-01-02T10:00:00.000000+02:00"
+
+
+def test_native_cash_utc_metadata_applies_to_unlabelled_time_column():
+    data = (
+        b"Account number,anonymous,,,,,,\nCash Operations,,,,,,,\n"
+        b"Date from (UTC),2026-01-01 00:00:00,,,,,,\n"
+        b"ID,Type,Time,Comment,Symbol,Amount,Currency\n"
+        b"1001,Stock purchase,2026-01-02 23:30:00,OPEN BUY 1 @ 100,KGH.PL,-100,PLN\n"
+    )
+    trade = parse_xtb(data, "report.csv", Companies()).rows[0]["transaction"]
+    assert trade["date"] == "2026-01-03"
+    assert trade["executedAt"] == "2026-01-02T23:30:00.000000+00:00"
+
+
+def test_legacy_import_of_empty_recognized_ledger_still_requires_transactions():
+    with pytest.raises(PortfolioError, match="import_no_transactions"):
+        parse_xtb(workbook([]), "report.xlsx", Companies())
 
 
 def test_conflicting_references_in_one_report_block_the_whole_batch(client):
@@ -330,6 +376,46 @@ def test_stale_versions_reference_conflicts_and_manual_overlaps_are_not_overwrit
     assert preview(client, current, manual).json()["rows"][0]["code"] == "manual_overlap"
 
 
+@pytest.mark.parametrize("statement_first", [True, False])
+def test_matching_statement_and_cash_trades_require_review(statement_first):
+    columns = b"ID,Type,Time,Symbol,Quantity,Price,Currency,Commission\n"
+    statement = parse_xtb(
+        columns + b"daily/9876/20260102T130000/kgh,Buy,2026-01-02 13:00:00,KGH.PL,2,100.0,PLN,1\n",
+        "trades.csv",
+        Companies(),
+    )
+    cash_report = parse_xtb(
+        columns + b"1234,Buy,2026-01-02 12:00:00,KGH.PL,2.00,100,PLN,0\n",
+        "trades.csv",
+        Companies(),
+    )
+    saved, incoming = (statement, cash_report) if statement_first else (cash_report, statement)
+    existing = prepare_import(saved, [], "fifo")["ledger"]
+
+    retry = prepare_import(saved, existing, "fifo")
+    assert retry["duplicates"] == 1
+    plan = prepare_import(incoming, existing, "fifo")
+    assert plan["rows"][0]["code"] == "xtb_source_overlap"
+    assert (plan["ready"], plan["duplicates"], plan["errors"]) == (0, 0, 1)
+    assert plan["ledger"] == existing
+
+
+def test_mixed_sources_flag_the_overlap_and_keep_distinct_same_format_trades():
+    report = parse_xtb(
+        b"ID,Type,Time,Symbol,Quantity,Price,Currency,Commission\n"
+        b"1234,Buy,2026-01-02 12:00:00,KGH.PL,2,100,PLN,0\n"
+        b"1235,Buy,2026-01-02 12:00:00,KGH.PL,2,100,PLN,0\n"
+        b"daily/9876/20260102T130000/kgh,Buy,2026-01-02 13:00:00,KGH.PL,2,100,PLN,1\n",
+        "trades.csv",
+        Companies(),
+    )
+    plan = prepare_import(report, [], "fifo")
+
+    assert (plan["ready"], plan["duplicates"], plan["errors"]) == (2, 0, 1)
+    assert plan["rows"][2]["code"] == "xtb_source_overlap"
+    assert [trade["sourceId"] for trade in plan["ledger"]] == ["xtb:1234:buy", "xtb:1235:buy"]
+
+
 def test_import_is_private_and_owner_is_checked_before_parsing(client):
     portfolio = create(client)
     client.owner.id = 2
@@ -340,3 +426,108 @@ def test_import_is_private_and_owner_is_checked_before_parsing(client):
 
 def test_rejects_large_raw_upload_before_parsing(client):
     assert preview(client, create(client), b"x" * (MAX_FILE_BYTES + 1)).status_code == 413
+
+
+def test_multi_section_xtb_csv_extracts_cash_operations_and_ignores_snapshots():
+    csv_data = (
+        b"Account number,11111111,,,,,,,\n"
+        b"Closed Positions,,,,,,,,\n"
+        b"Date from (UTC),2006-01-01 00:00:00,,,,,,,\n"
+        b"Instrument,Ticker,Category,Type,Volume,Open Price,Open Time (UTC),Close Price\n"
+        b"KGHM,KGH.PL,STOCK,BUY,10,100,2026-01-01 10:00:00,120\n"
+        b"Profit/loss,,,,,,,\n"
+        b"Account number,11111111,,,,,,,\n"
+        b"Cash Operations,,,,,,,,\n"
+        b"Type,Instrument,Ticker,Category,Time,Amount,ID,Comment,Product,Position ID\n"
+        b"Stock purchase,KGHM,KGH.PL,STOCK,2026-01-02 10:32:22,-1002.5,1001,"
+        b"OPEN BUY KGH.PL 10 @ 100.25,IKE,111\n"
+        b"Stock sell,KGHM,KGH.PL,STOCK,2026-01-03 11:12:08,600,1002,"
+        b"CLOSE BUY KGH.PL 5/10 @ 120.00,IKE,111\n"
+        b"IKE deposit,,,,2026-01-01 06:16:30,1000,1003,Transfer in,IKE,\n"
+        b"Total,,,,,1006.83,,,,\n"
+        b"Account number,22222222,,,,,,,,\n"
+        b"Open Positions,,,,,,,,\n"
+        b"Product,Instrument/Position,Ticker,Volume\n"
+        b"IKE,KGHM,KGH.PL,5\n"
+    )
+    parsed = parse_xtb(csv_data, "report.csv", Companies())
+    assert len(parsed.rows) == 2
+    assert parsed.rows[0]["status"] == "ready"
+    assert parsed.rows[0]["transaction"]["quantity"] == "10"
+    assert parsed.rows[0]["transaction"]["price"] == "100.25"
+    assert parsed.rows[1]["status"] == "ready"
+    assert parsed.rows[1]["transaction"]["side"] == "sell"
+    assert parsed.rows[1]["transaction"]["quantity"] == "5"
+    assert parsed.rows[1]["transaction"]["price"] == "120.00"
+    assert parsed.ignored == 2
+
+
+AUTOMATION_TOKEN = "xtb-automation-test-token-at-least-32-chars"
+AUTOMATION_CSV = (
+    b"ID,Type,Time,Symbol,Quantity,Price,Currency,Commission\n"
+    b"123,Buy,2026-01-02 12:00:00,KGH.PL,2,100,PLN,0\n"
+)
+
+
+def automation_request(client, content=AUTOMATION_CSV, token=AUTOMATION_TOKEN):
+    return client.post(
+        "/api/portfolios/imports/xtb/automation",
+        content=content,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "X-Import-Filename": "potwierdzenie%20zakupu.csv",
+            "Content-Type": "application/octet-stream",
+        },
+    )
+
+
+@pytest.fixture
+def automation_portfolio(client, monkeypatch):
+    portfolio = create(client)
+    monkeypatch.setattr(settings, "xtb_automation_token", SecretStr(AUTOMATION_TOKEN))
+    monkeypatch.setattr(settings, "xtb_automation_user_id", client.owner.id)
+    monkeypatch.setattr(settings, "xtb_automation_portfolio_id", UUID(portfolio["id"]))
+    return portfolio
+
+
+def test_automation_imports_buys_and_deduplicates_browser_imports(client, automation_portfolio):
+    data = AUTOMATION_CSV + b"124,Sell,2026-01-02 13:00:00,KGH.PL,1,110,PLN,0\n"
+    first = automation_request(client, data)
+    assert first.status_code == 200, first.text
+    assert first.json() == {
+        "imported": 1,
+        "duplicates": 0,
+        "skipped": 0,
+        "version": 2,
+        "ignoredSales": 1,
+        "warnings": [],
+    }
+    retry = automation_request(client, data).json()
+    assert (retry["imported"], retry["duplicates"], retry["version"]) == (0, 1, 2)
+    saved = client.get("/api/portfolios").json()["items"][0]
+    assert [row["sourceId"] for row in saved["transactions"]] == ["xtb:123:buy"]
+
+    browser = commit(client, saved, data, filename="report.csv")
+    assert browser.status_code == 200, browser.text
+    assert browser.json() == {"imported": 1, "duplicates": 1, "skipped": 0, "version": 3}
+
+
+def test_automation_rejects_wrong_token_and_cross_owner_scope(
+    client, automation_portfolio, monkeypatch
+):
+    assert automation_request(client, token="wrong").status_code == 401
+    monkeypatch.setattr(settings, "xtb_automation_user_id", 2)
+    assert automation_request(client).status_code == 404
+    monkeypatch.setattr(settings, "xtb_automation_token", SecretStr(""))
+    assert automation_request(client).status_code == 404
+    saved = client.get("/api/portfolios").json()["items"][0]
+    assert saved["transactions"] == []
+
+
+def test_automation_rejects_entire_batch_when_any_row_is_invalid(client, automation_portfolio):
+    data = AUTOMATION_CSV + b"125,Buy,2026-01-02 13:00:00,UNKNOWN.PL,1,110,PLN,0\n"
+    result = automation_request(client, data)
+    assert result.status_code == 422, result.text
+    assert result.json()["detail"]["code"] == "import_rows_invalid"
+    saved = client.get("/api/portfolios").json()["items"][0]
+    assert (saved["version"], saved["transactions"]) == (automation_portfolio["version"], [])

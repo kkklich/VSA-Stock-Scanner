@@ -7,7 +7,9 @@ file). This mirrors the .NET backend's ``appsettings.json`` + ``Cors`` section.
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
+from pydantic import PositiveInt, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend-python/ — this file lives at backend-python/app/config.py.
@@ -157,6 +159,17 @@ class Settings(BaseSettings):
     # Addresses eligible for the admin role. Registration also requires
     # STOCKPILOT_ADMIN_TOKEN; an address alone is not proof of ownership.
     admin_emails: str = ""
+
+    # Optional n8n credential scoped to one existing portfolio and its owner.
+    xtb_automation_token: SecretStr = SecretStr("")
+    xtb_automation_user_id: PositiveInt | None = None
+    xtb_automation_portfolio_id: UUID | None = None
+    xtb_statement_password: SecretStr = SecretStr("")
+
+    @field_validator("xtb_automation_user_id", "xtb_automation_portfolio_id", mode="before")
+    @classmethod
+    def blank_xtb_scope(cls, value):
+        return None if value == "" else value
 
     @property
     def action_log_path(self) -> Path:

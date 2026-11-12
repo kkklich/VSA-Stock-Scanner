@@ -6,7 +6,7 @@
     "sp500": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
     "ndx": "https://api.nasdaq.com/api/quote/list-type/nasdaq100"
   },
-  "verification": "Each company returned at least 5 traded daily bars in the 21 days before it was verified and a company name from Yahoo Finance, with prices quoted in a currency the app converts (PLN, USD, EUR, GBP, GBp).",
+  "verification": "Each company returned at least 5 traded daily bars in the 21 days before it was verified and a company name from Yahoo Finance, with prices quoted in a currency the app converts (PLN, USD, CAD, EUR, GBP, GBp).",
   "companies": [
     {
       "ticker": "a.us",
@@ -2138,6 +2138,21 @@
       "indices": [
         "sp500"
       ]
+    },
+    {
+      "ticker": "csu.us",
+      "symbol": "CSU.TO",
+      "name": "Constellation Software Inc.",
+      "sector": "Technology",
+      "industry": "Software - Application",
+      "country": "Canada",
+      "exchange": "TSX",
+      "currency": "CAD",
+      "marketCap": 73200000000,
+      "employees": null,
+      "website": "https://www.csisoftware.com",
+      "description": "Constellation Software acquires and operates software businesses that serve specialized industries in the public and private sectors.",
+      "indices": []
     },
     {
       "ticker": "csx.us",
@@ -8902,5 +8917,5 @@
     }
   ],
   "rejected": [],
-  "updatedAt": "2026-09-16"
+  "updatedAt": "2026-11-12"
 }

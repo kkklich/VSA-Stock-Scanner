@@ -1,4 +1,31 @@
 {
+  "filterPresets": {
+    "title": "Zestawy filtrów",
+    "loading": "Wczytywanie zestawów…",
+    "empty": "Ustaw filtry, a następnie wybierz „Zapisz zestaw”.",
+    "apply": "Zastosuj zestaw „{{name}}”",
+    "delete": "Usuń zestaw „{{name}}”",
+    "copy": "Skopiuj zestawy z przeglądarki ({{count}})",
+    "name": "Nazwa zestawu…",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "saveCurrent": "Zapisz bieżące filtry jako zestaw",
+    "setFilter": "Najpierw ustaw co najmniej jeden filtr",
+    "savePreset": "Zapisz zestaw",
+    "guest": "Zestawy są zapisywane w tej przeglądarce. Zaloguj się, aby korzystać z nich na innych urządzeniach.",
+    "account": "Twoje zestawy są dostępne na każdym urządzeniu po zalogowaniu się na to konto.",
+    "reload": "Odśwież zestawy",
+    "refreshPage": "Odśwież stronę",
+    "errors": {
+      "account_changed": "W innej karcie zmieniono konto. Odśwież stronę, aby wczytać jego zestawy.",
+      "failed": "Nie udało się zsynchronizować zestawów. Sprawdź połączenie i spróbuj ponownie.",
+      "storage": "Nie udało się zapisać zmiany w tej przeglądarce.",
+      "preset_limit": "Na koncie można zapisać do 100 zestawów. Usuń zestaw, aby dodać kolejny.",
+      "id_conflict": "Inny zestaw ma już ten identyfikator. Zapisz filtry jako nowy zestaw.",
+      "not_found": "Ten zestaw został już usunięty. Odśwież zestawy.",
+      "invalid": "Sprawdź nazwę zestawu i wartości filtrów, a następnie spróbuj ponownie."
+    }
+  },
   "longTerm": {
     "title": "Ranking długoterminowy: jakość + wycena + momentum",
     "shortDescription": "Ocena względna 0–100 do analizy w horyzoncie 1–3 lat; nie jest prawdopodobieństwem wzrostu ani prognozą stopy zwrotu.",
@@ -630,7 +657,7 @@
       },
       "scope": {
         "heading": "Jakie dane są przetwarzane",
-        "body": "Serwis nie wymaga rejestracji, nie prowadzi kont użytkowników i nie zawiera formularzy zbierających dane. Automatycznie, w logach serwera, zapisywane są: adres IP, data i godzina zapytania, adres żądanego zasobu, typ przeglądarki i systemu operacyjnego oraz adres strony odsyłającej. Zapisy te są standardowym elementem działania każdego serwera WWW."
+        "body": "Rejestracja jest dobrowolna. Jeśli założysz konto, serwer przechowuje dane konta i zapisane na nim elementy, w tym nazwane zestawy filtrów. W logach serwera zapisywane są adres IP, data i godzina zapytania, adres żądanego zasobu, typ przeglądarki i systemu operacyjnego oraz adres strony odsyłającej."
       },
       "purpose": {
         "heading": "Cel i podstawa prawna",
@@ -646,11 +673,11 @@
       },
       "storage": {
         "heading": "Pamięć lokalna przeglądarki",
-        "body": "Serwis nie używa plików cookies. Korzysta natomiast z pamięci lokalnej przeglądarki (localStorage), aby zapamiętać Twoje ustawienia: wybrany motyw i język, listę obserwowanych spółek, zapisane zestawy filtrów oraz ustawienia silnika VSA. Dane te pozostają wyłącznie na Twoim urządzeniu, nie są wysyłane na serwer ani nikomu udostępniane; możesz je usunąć, czyszcząc dane witryny w przeglądarce. Ponieważ służą wyłącznie realizacji funkcji, o które sam prosisz, ich zapisanie nie wymaga zgody."
+        "body": "Przeglądarka zapamiętuje motyw, język, ustawienia silnika VSA oraz spółki i zestawy filtrów zapisane w trybie gościa. Wyczyszczenie danych witryny usuwa te lokalne kopie. Zestawy zapisane po zalogowaniu lub skopiowane na konto są przechowywane na serwerze, dzięki czemu możesz z nich korzystać na innych urządzeniach. Zestaw z konta możesz usunąć na stronie filtrów."
       },
       "rights": {
         "heading": "Twoje prawa",
-        "body": "Przysługuje Ci prawo dostępu do swoich danych, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo sprzeciwu wobec przetwarzania oraz prawo wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych. Ze względu na wąski zakres zbieranych danych (wyłącznie logi techniczne) realizacja części tych praw może wymagać podania informacji pozwalających odnaleźć odpowiednie wpisy."
+        "body": "Przysługuje Ci prawo dostępu do swoich danych, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo sprzeciwu wobec przetwarzania oraz prawo wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych."
       },
       "external": {
         "heading": "Odesłania zewnętrzne",
@@ -1226,7 +1253,10 @@
       "import_too_many_rows": "Raport przekracza limit 20 000 wierszy lub 80 kolumn. Wyeksportuj mniejszy zakres.",
       "import_unrecognized_format": "Nie rozpoznano historii transakcji. Wyeksportuj historię operacji gotówkowych z XTB z numerem operacji, datą, tickerem i komentarzem wykonania. Same otwarte lub zamknięte pozycje nie wystarczą.",
       "import_no_transactions": "W raporcie nie znaleziono transakcji kupna ani sprzedaży.",
-      "import_rows_invalid": "Raport zawiera błędne wiersze. Sprawdź podgląd przed zapisaniem."
+      "import_rows_invalid": "Raport zawiera błędne wiersze. Sprawdź podgląd przed zapisaniem.",
+      "account_changed": "Zmieniono konto. Odśwież stronę i sprawdź, na którym koncie jesteś, przed ponownym wgraniem pliku.",
+      "import_preview_changed": "Dane importu zmieniły się od czasu podglądu. Sprawdź plik ponownie przed zapisem.",
+      "xtb_snapshot_locked": "Stan tego portfela XTB uzgodniono na dzień raportu. Dodaj transakcje z późniejszą datą."
     },
     "costMethod": "Metoda rozliczania kosztu",
     "fifo": "FIFO (najstarszy zakup pierwszy)",
@@ -1239,8 +1269,36 @@
     "costHint": "FIFO przypisuje sprzedaż do najstarszych zakupów. Średni koszt rozdziela koszt posiadanych akcji proporcjonalnie. Prowizje zakupu zwiększają koszt, a prowizje sprzedaży zmniejszają wynik. Zmiana metody przelicza całą historię portfela.",
     "priceHint": "Wartość pozycji to liczba sztuk × ostatni dostępny kurs. Przy każdym kursie podajemy datę i rodzaj notowania. Kurs starszy niż 7 dni jest oznaczony ostrzeżeniem; to próg informacyjny, nie kalendarz sesji. Odświeżenie strony pobiera dane aplikacji, nie zamawia nowego notowania.",
     "returnHint": "Procentowy wynik otwartej pozycji to niezrealizowany zysk lub strata podzielone przez jej pozostały koszt. Nie jest to roczna stopa zwrotu ani wynik całego rachunku uwzględniający wpłaty, wypłaty i waluty.",
-    "scopeHint": "Obsługiwane są kupno i sprzedaż akcji bez krótkich pozycji. Waluty liczymy oddzielnie. Wynik nie uwzględnia automatycznie dywidend, splitów ani podatków; zmiany liczby akcji wymagają uzgodnienia historii. Nie jest to raport podatkowy.",
+    "scopeHint": "Obsługiwane są kupno i sprzedaż akcji bez krótkich pozycji. Waluty liczymy oddzielnie. Zgodny arkusz otwartych pozycji XTB może ustalić stan i koszt pozycji portfela operacji gotówkowych na dzień raportu. W takim portfelu historia transakcji do czasu raportu jest zablokowana. Historia transakcji nie obejmuje dywidend, splitów ani podatków. Nie jest to raport podatkowy.",
     "editChanged": "Portfel zmienił się podczas edycji. Anuluj edycję i otwórz ją ponownie, aby pracować na aktualnych danych.",
+    "xtbWallets": {
+      "title": "Utwórz portfele z pliku XTB",
+      "hint": "Wgraj raport XLSX, XLS lub CSV, do 5 MB. Każdy arkusz utworzy osobny portfel z nazwą zakładki i brokerem XTB. Przed zapisem sprawdź wszystkie portfele.",
+      "file": "Plik XTB do nowych portfeli",
+      "preview": "Sprawdź portfele",
+      "summary": "Nowe portfele: {{count}} · Nowe transakcje: {{ready}} · Wiersze wymagające uwagi: {{errors}}",
+      "confirm": "Importuj portfele ({{count}})",
+      "saved": "Import zakończony. Utworzone portfele: {{created}}, dodane transakcje: {{imported}}, duplikaty: {{duplicates}}, pominięte: {{skipped}}.",
+      "alreadyImported": "Ten raport został już zaimportowany.",
+      "walletExists": "Portfel z tego arkusza jest już zapisany.",
+      "emptyWallet": "Z tego arkusza powstanie pusty portfel.",
+      "reconcile": "Otwarte pozycje importujemy jako zakupy pozostałych pakietów. Dla zamkniętych pozycji dodajemy zakup i sprzedaż. Operacje gotówkowe dostarczają historię transakcji, a stan portfela można skorygować na podstawie otwartych pozycji. Portfele mogą zawierać te same transakcje z jednego rachunku. Sprawdź ilości, ceny i prowizje w każdym podglądzie.",
+      "reconciliation": {
+        "title": "Korekta stanu portfela według XTB",
+        "date": "Na podstawie otwartych pozycji według stanu na {{asOf}}. Koszty podano w walucie notowania waloru.",
+        "previousQuantity": "Liczba sztuk z transakcji",
+        "quantity": "Liczba sztuk według XTB",
+        "previousCost": "Koszt z transakcji",
+        "cost": "Koszt według XTB"
+      },
+      "codes": {
+        "import_unrecognized_format": "Arkusz nie zawiera rozpoznanej historii transakcji XTB ani raportu otwartych lub zamkniętych pozycji.",
+        "import_no_transactions": "W tym arkuszu nie ma transakcji, które można zaimportować. Sprawdź wskazane wiersze.",
+        "closed_positions_snapshot": "Portfel odtwarza zakupy i sprzedaże wyłącznie z zamkniętych pozycji. Nie obejmuje pełnej historii rachunku.",
+        "open_positions_snapshot": "Portfel obejmuje pakiety zakupów pozostające otwarte w dniu raportu. Nie zawiera zamkniętych transakcji.",
+        "xtb_reconciliation_unavailable": "Nie udało się sprawdzić stanu portfela operacji gotówkowych na podstawie otwartych pozycji. Sprawdź zaimportowaną historię transakcji."
+      }
+    },
     "xtb": {
       "title": "Import z XTB",
       "hint": "Wybierz raport historii operacji gotówkowych z xStation albo CSV z wykonanymi transakcjami. Obsługiwane pliki: XLSX, XLS i CSV, do 5 MB. Importuj jeden rachunek XTB do jednego portfela. Same otwarte pozycje lub oczekujące zlecenia nie są historią transakcji.",
@@ -1261,6 +1319,7 @@
       "codes": {
         "fees_missing": "W części transakcji raport nie podaje prowizji — przyjęto 0. Sprawdź koszty przed importem; osobne opłaty z operacji gotówkowych nie są doliczane automatycznie.",
         "unknown_ticker": "Walor nie jest obsługiwany przez aplikację.",
+        "xtb_snapshot_locked": "Stan tego portfela XTB uzgodniono na dzień raportu. Dodaj transakcje z późniejszą datą.",
         "invalid_number": "Nieprawidłowa liczba.",
         "invalid_date": "Nieprawidłowa data wykonania.",
         "invalid_transaction": "Nieprawidłowa ilość, cena, prowizja lub data transakcji.",
@@ -1275,6 +1334,7 @@
         "formula_cell": "Wiersz zawiera formułę zamiast zapisanej wartości.",
         "reference_conflict": "Ten sam numer XTB ma inne dane. Import wymaga wyjaśnienia.",
         "manual_overlap": "Podobna transakcja jest już zapisana ręcznie. Sprawdź ją, aby nie zdublować historii.",
+        "xtb_source_overlap": "Podobną transakcję zaimportowano z innego raportu XTB. Porównaj oba raporty przed ponownym importem.",
         "import_reference_conflict": "Raport zawiera sprzeczne dane dla tego samego numeru XTB. Żadne zmiany nie zostały zapisane.",
         "execution_mismatch": "Ilość lub cena w kolumnach różni się od komentarza wykonania. Sprawdź dane raportu."
       }

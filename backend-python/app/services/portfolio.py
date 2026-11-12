@@ -1,7 +1,12 @@
 """FIFO and moving-average accounting in quote currency, without guessed FX rates."""
 
 from collections import deque
+from datetime import datetime
 from decimal import Decimal, localcontext
+from zoneinfo import ZoneInfo
+
+WARSAW = ZoneInfo("Europe/Warsaw")
+XTB_RECONCILIATION = "xtb_reconciliation"
 
 
 class PortfolioError(Exception):
@@ -10,8 +15,37 @@ class PortfolioError(Exception):
 
 
 def trade_order(trade: dict):
-    """Imported fills retain execution order; manual date-only entries keep stable order."""
-    return trade["date"], trade.get("executedAt", trade["date"] + "T00:00:00")
+    """Compare instants while retaining the local dates of legacy trades."""
+    executed = datetime.fromisoformat(trade.get("executedAt") or trade["date"])
+    if executed.tzinfo is None:
+        executed = executed.replace(tzinfo=WARSAW)
+    offset = executed.utcoffset()
+    utc_order = executed.replace(tzinfo=None) - datetime.min
+    if offset is not None:
+        utc_order -= offset
+    return trade["date"], bool(trade.get("executedAt")), utc_order
+
+
+def xtb_checkpoint(ledger: list[dict]) -> dict | None:
+    return next((entry for entry in ledger if entry.get("kind") == XTB_RECONCILIATION), None)
+
+
+def require_after_checkpoint(trade: dict, checkpoint: dict | None) -> None:
+    if checkpoint and trade_order(trade) <= trade_order(checkpoint):
+        raise PortfolioError("xtb_snapshot_locked")
+
+
+def _position(positions, key):
+    return positions.setdefault(
+        key,
+        {
+            "ticker": key[0],
+            "currency": key[1],
+            "quantity": Decimal(0),
+            "cost": Decimal(0),
+            "realizedPnl": Decimal(0),
+        },
+    )
 
 
 def holdings(transactions: list[dict], cost_method: str = "moving_average") -> list[dict]:
@@ -21,17 +55,20 @@ def holdings(transactions: list[dict], cost_method: str = "moving_average") -> l
     with localcontext() as context:
         context.prec = 50
         for trade in sorted(transactions, key=trade_order):
+            if trade.get("kind") == XTB_RECONCILIATION:
+                # Replace the open lots at the report time. Keep all historical
+                # fills and their realized P&L. This is not a buy or a sale.
+                for snapshot in trade["positions"]:
+                    key = (snapshot["ticker"], snapshot["currency"])
+                    position = _position(positions, key)
+                    position["quantity"] = Decimal(snapshot["quantity"])
+                    position["cost"] = Decimal(snapshot["cost"])
+                    lots[key] = deque(
+                        [Decimal(lot["quantity"]), Decimal(lot["cost"])] for lot in snapshot["lots"]
+                    )
+                continue
             key = (trade["ticker"], trade["currency"])
-            position = positions.setdefault(
-                key,
-                {
-                    "ticker": key[0],
-                    "currency": key[1],
-                    "quantity": Decimal(0),
-                    "cost": Decimal(0),
-                    "realizedPnl": Decimal(0),
-                },
-            )
+            position = _position(positions, key)
             quantity, price, fees = (Decimal(trade[k]) for k in ("quantity", "price", "fees"))
             if trade["side"] == "buy":
                 position["quantity"] += quantity

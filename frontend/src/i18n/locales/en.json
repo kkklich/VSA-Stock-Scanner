@@ -1,4 +1,31 @@
 {
+  "filterPresets": {
+    "title": "Presets",
+    "loading": "Loading presets…",
+    "empty": "Set your filters, then choose “Save preset”.",
+    "apply": "Apply preset “{{name}}”",
+    "delete": "Delete preset “{{name}}”",
+    "copy": "Copy browser presets ({{count}})",
+    "name": "Preset name…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveCurrent": "Save the current filters as a preset",
+    "setFilter": "Set at least one filter first",
+    "savePreset": "Save preset",
+    "guest": "Presets are saved in this browser. Sign in to use them on other devices.",
+    "account": "Your presets sync across devices signed in to this account.",
+    "reload": "Reload presets",
+    "refreshPage": "Refresh page",
+    "errors": {
+      "account_changed": "The signed-in account changed in another tab. Refresh this page to load its presets.",
+      "failed": "Couldn’t sync presets. Check your connection and try again.",
+      "storage": "Couldn’t save the change in this browser.",
+      "preset_limit": "Your account can hold up to 100 presets. Delete a preset before adding more.",
+      "id_conflict": "A different preset already uses this ID. Save the filters as a new preset.",
+      "not_found": "This preset has already been removed. Reload your presets.",
+      "invalid": "Check the preset name and filter values, then try again."
+    }
+  },
   "longTerm": {
     "title": "Long-term ranking: quality + value + momentum",
     "shortDescription": "Relative score 0–100 for a 1–3 year research horizon; not a probability of growth or a forecast return.",
@@ -622,7 +649,7 @@
       },
       "scope": {
         "heading": "What data is processed",
-        "body": "The site requires no registration, keeps no user accounts and contains no forms that collect data. The server logs automatically record: IP address, the date and time of the request, the resource requested, the browser and operating-system type, and the referring page. These records are a standard part of how any web server operates."
+        "body": "Registration is optional. If you create an account, the server stores your account details and the items you save to it, including named filter presets. Server logs record the IP address, request time, resource requested, browser and operating-system type, and referring page."
       },
       "purpose": {
         "heading": "Purpose and legal basis",
@@ -638,11 +665,11 @@
       },
       "storage": {
         "heading": "Browser local storage",
-        "body": "The site uses no cookies. It does use your browser's local storage (localStorage) to remember your settings: the chosen theme and language, your list of favourite companies, saved filter presets and the VSA engine settings. This data stays on your device only; it is never sent to the server or shared with anyone, and you can remove it by clearing the site's data in your browser. Because it serves only the functions you asked for yourself, storing it does not require consent."
+        "body": "Your browser remembers your theme, language, VSA settings, and any favourites and filter presets saved as a guest. Clearing site data removes those local copies. Presets you save while signed in, or choose to copy to your account, are stored on the server so you can use them on other devices. You can delete an account preset from the Filters page."
       },
       "rights": {
         "heading": "Your rights",
-        "body": "You have the right to access your data, to have it rectified, erased or its processing restricted, to object to processing, and to lodge a complaint with the President of the Personal Data Protection Office (UODO). Given how narrow the data collected is (technical logs only), exercising some of these rights may require details that let the relevant entries be found."
+        "body": "You have the right to access your data, to have it rectified, erased or its processing restricted, to object to processing, and to lodge a complaint with the President of the Personal Data Protection Office (UODO)."
       },
       "external": {
         "heading": "External links",
@@ -1207,7 +1234,10 @@
       "import_too_many_rows": "The report exceeds 20,000 rows or 80 columns. Export a smaller range.",
       "import_unrecognized_format": "Transaction history was not recognized. Export XTB cash-operation history with operation reference, date, ticker and execution comment. Open or closed positions alone are insufficient.",
       "import_no_transactions": "No purchase or sale transactions were found.",
-      "import_rows_invalid": "The report contains invalid rows. Review the preview before saving."
+      "import_rows_invalid": "The report contains invalid rows. Review the preview before saving.",
+      "account_changed": "The signed-in account changed. Reload this page and check the account before uploading again.",
+      "import_preview_changed": "The import has changed since the preview. Preview the file again before saving.",
+      "xtb_snapshot_locked": "This XTB wallet is reconciled through its report date. Add trades after that date."
     },
     "costMethod": "Cost basis method",
     "fifo": "FIFO (oldest purchase first)",
@@ -1220,8 +1250,36 @@
     "costHint": "FIFO matches sales to the oldest purchases. Moving average allocates the cost of held shares proportionally. Buy fees increase the cost basis; sale fees reduce the realized result. Changing the method recalculates the portfolio’s entire history.",
     "priceHint": "Position value is quantity × latest available price. Each quote shows its date and type. Quotes older than 7 days are flagged; this is an informational threshold, not an exchange calendar. Refreshing the page reads application data rather than requesting a new market quote.",
     "returnHint": "The percentage result of an open position is unrealized profit or loss divided by remaining cost basis. It is not an annualized return or total account performance adjusted for deposits, withdrawals and currencies.",
-    "scopeHint": "Supports stock purchases and sales without short positions. Currencies are kept separate. Dividends, splits and taxes are not automatically included; share-count changes require reconciling trade history. This is not a tax report.",
+    "scopeHint": "Supports stock purchases and sales without short positions. Currencies are kept separate. A matching XTB Open Positions snapshot can set the Cash Operations holdings and costs on the report date. Trades through that snapshot are then locked. Dividends, splits and taxes are excluded from trade history. This is not a tax report.",
     "editChanged": "The portfolio changed while you were editing. Cancel and reopen the editor to use current data.",
+    "xtbWallets": {
+      "title": "Create wallets from an XTB file",
+      "hint": "Upload an XLSX, XLS or CSV report, up to 5 MB. Each worksheet becomes a separate wallet named after its tab, with XTB as the broker. Review all wallets before saving.",
+      "file": "XTB file for new wallets",
+      "preview": "Preview wallets",
+      "summary": "New wallets: {{count}} · New trades: {{ready}} · Rows needing attention: {{errors}}",
+      "confirm": "Import wallets ({{count}})",
+      "saved": "Import complete. Wallets created: {{created}}, trades added: {{imported}}, duplicates: {{duplicates}}, skipped: {{skipped}}.",
+      "alreadyImported": "This report has already been imported.",
+      "walletExists": "This worksheet's wallet is already saved.",
+      "emptyWallet": "This worksheet will create an empty wallet.",
+      "reconcile": "Open Positions imports each remaining lot as a purchase. Closed Positions imports its purchase and sale. Cash Operations imports the executed trades and can adjust holdings to the Open Positions snapshot. The wallets may contain overlapping trades from the same account. Review the quantities, prices and fees in each preview.",
+      "reconciliation": {
+        "title": "XTB holdings adjustment",
+        "date": "Based on Open Positions as of {{asOf}}. Costs are shown in the instrument’s quote currency.",
+        "previousQuantity": "Quantity from trades",
+        "quantity": "Quantity in XTB snapshot",
+        "previousCost": "Cost from trades",
+        "cost": "Cost in XTB snapshot"
+      },
+      "codes": {
+        "import_unrecognized_format": "This worksheet is not a recognized XTB transaction history or open/closed position report.",
+        "import_no_transactions": "This worksheet has no trades that can be imported. Review the listed rows.",
+        "closed_positions_snapshot": "This wallet reconstructs purchases and sales from closed positions only. It does not contain the full account history.",
+        "open_positions_snapshot": "This wallet contains the purchase lots still open at report time. It does not contain closed trades.",
+        "xtb_reconciliation_unavailable": "The Open Positions snapshot could not be used to check the Cash Operations holdings. Review the imported trade history."
+      }
+    },
     "xtb": {
       "title": "Import from XTB",
       "hint": "Choose an xStation cash-operation history report or a CSV of executed trades. Supported files: XLSX, XLS and CSV, up to 5 MB. Use one portfolio per XTB account. Open positions or pending orders alone are not a transaction history.",
@@ -1242,6 +1300,7 @@
       "codes": {
         "fees_missing": "Some trades have no commission in the report — zero was assumed. Check costs before importing; separate cash-operation charges are not allocated automatically.",
         "unknown_ticker": "This instrument is not supported by the app.",
+        "xtb_snapshot_locked": "This XTB wallet is reconciled through its report date. Add trades after that date.",
         "invalid_number": "Invalid number.",
         "invalid_date": "Invalid execution date.",
         "invalid_transaction": "Invalid quantity, price, fee or transaction date.",
@@ -1256,6 +1315,7 @@
         "formula_cell": "The row contains a formula instead of a stored value.",
         "reference_conflict": "The same XTB reference has different trade details. Resolve the conflict before importing.",
         "manual_overlap": "A similar trade was recorded manually. Check it to avoid duplicating history.",
+        "xtb_source_overlap": "A similar trade was imported from a different XTB report. Check both reports before importing it again.",
         "import_reference_conflict": "Conflicting data for the same XTB reference. No changes were saved.",
         "execution_mismatch": "Quantity or price columns disagree with the execution comment. Check the report."
       }

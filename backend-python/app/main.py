@@ -60,7 +60,16 @@ from app.dependencies import (
     yahoo_client,
 )
 from app.markets import enabled_markets, refresh_runs
-from app.routers import admin, auth, journal, long_term, portfolios, stocks, watchlists
+from app.routers import (
+    admin,
+    auth,
+    filter_presets,
+    journal,
+    long_term,
+    portfolios,
+    stocks,
+    watchlists,
+)
 from app.services.action_log import (
     OUTCOME_FINISHED,
     OUTCOME_STARTED,
@@ -466,12 +475,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
-    # POST is needed only by /api/stocks/refresh (the manual Refresh button).
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     # X-Admin-Token is the optional shared secret for /api/admin/*; the browser
     # may only send it if CORS says so.
     # Authorization carries the signed-in visitor's bearer token.
-    allow_headers=["Content-Type", "X-Admin-Token", "Authorization"],
+    allow_headers=[
+        "Content-Type", "X-Admin-Token", "Authorization", "X-Expected-User-Id", "X-XTB-Preview"
+    ],
     # Let the browser read the pagination total the ranking endpoint sets and
     # the id that ties a response to its action-log entry.
     expose_headers=["X-Total-Count", "X-Request-Id"],
@@ -492,6 +502,7 @@ app.include_router(long_term.router)
 app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(watchlists.router)
+app.include_router(filter_presets.router)
 app.include_router(journal.router)
 app.include_router(portfolios.router)
 

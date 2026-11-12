@@ -16,9 +16,10 @@ from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.config import settings
 from app.db.models import DailyQuoteRow, PortfolioRow, UserRow
 from app.db.portfolio_repository import PortfolioRepository
-from app.dependencies import get_user_repository
+from app.dependencies import get_user_repository, gpw_company_service
 from app.routers.auth import get_current_user
 from app.routers.portfolios import router
 from app.services.portfolio import valuation
@@ -103,6 +104,31 @@ def trade(client, portfolio, **changes):
         **changes,
     }
     return client.post(f"/api/portfolios/{portfolio['id']}/transactions", json=payload)
+
+
+def test_portfolio_only_instrument_preserves_xetra_ticker_and_currency(client, monkeypatch):
+    monkeypatch.setattr(settings, "markets", "gpw")
+    assert all(company.ticker != "nvd.de" for company in gpw_company_service.get_companies("de"))
+
+    listed = client.get("/api/portfolios/instruments").json()
+    nvidia = next(instrument for instrument in listed if instrument["ticker"] == "nvd.de")
+    assert nvidia == {
+        "ticker": "nvd.de",
+        "name": "NVIDIA Corporation",
+        "market": "de",
+        "currency": "EUR",
+    }
+
+    portfolio = create(client)
+    assert trade(client, portfolio, ticker="NVD.DE", currency="USD").status_code == 422
+    saved = trade(client, portfolio, ticker="NVD.DE", currency="EUR", quantity="0.5")
+    assert saved.status_code == 201, saved.text
+    (transaction,) = saved.json()["transactions"]
+    assert (transaction["ticker"], transaction["currency"], transaction["quantity"]) == (
+        "nvd.de",
+        "EUR",
+        "0.5",
+    )
 
 
 def test_lifecycle_cost_basis_fees_sales_and_latest_quotes(client):

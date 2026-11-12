@@ -7,8 +7,8 @@ import { currencyLabel } from '../lib/format'
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
 const MAX_BYTES = 5 * 1024 * 1024
 
-export function XtbImport({ portfolio, disabled, onImported }: {
-  portfolio: Portfolio; disabled: boolean; onImported: () => Promise<void>
+export function XtbImport({ owner, portfolio, disabled, onImported }: {
+  owner: number; portfolio: Portfolio; disabled: boolean; onImported: () => Promise<void>
 }) {
   const { t, i18n } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
@@ -29,16 +29,23 @@ export function XtbImport({ portfolio, disabled, onImported }: {
     setBusy(true); setError(null); setResult(null)
     try {
       if (commit && preview) {
-        const saved = await importXtb(portfolio.id, file, preview.version, allowPartial, abort.signal)
+        const saved = await importXtb(portfolio.id, file, preview.version, allowPartial, abort.signal, owner)
         if (abort.signal.aborted) return
         setResult(saved); setPreview(null); setAllowPartial(false)
         await onImported()
       } else {
-        const next = await previewXtb(portfolio.id, file, abort.signal)
+        const next = await previewXtb(portfolio.id, file, abort.signal, owner)
         if (!abort.signal.aborted) { setPreview(next); setAllowPartial(false) }
       }
     } catch (failure) {
-      if (!abort.signal.aborted) setError(failure instanceof ApiError && failure.code ? failure.code : 'failed')
+      if (!abort.signal.aborted) {
+        const code = failure instanceof ApiError && failure.code ? failure.code : 'failed'
+        setError(code)
+        if (code === 'account_changed') {
+          setPreview(null)
+          setAllowPartial(false)
+        }
+      }
     } finally {
       if (!abort.signal.aborted) { setBusy(false); request.current = null }
     }
