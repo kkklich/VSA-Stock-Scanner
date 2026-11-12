@@ -10,8 +10,10 @@ Handles:
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 from typing import Literal
+from urllib.parse import parse_qs, urlsplit
 
 from app.models.stocks import (
     InsiderChartMarker,
@@ -95,6 +97,43 @@ def _format_compact_shares(shares: int | None) -> str:
     return str(n)
 
 
+def _espi_report_key(tx: InsiderTransactionItem) -> tuple[str, date] | None:
+    if tx.source != "espi" or not tx.source_url:
+        return None
+    try:
+        url = urlsplit(tx.source_url)
+        if url.hostname not in {"gpw.pl", "www.gpw.pl"}:
+            return None
+    except ValueError:
+        return None
+    report_ids = parse_qs(url.query).get("geru_id", [])
+    if (
+        url.path in {"/komunikat", "/espi-ebi-report"}
+        and len(report_ids) == 1
+        and report_ids[0].isascii()
+        and report_ids[0].isdigit()
+    ):
+        return report_ids[0], tx.publication_date
+    return None
+
+
+def _is_espi_report_placeholder(tx: InsiderTransactionItem) -> bool:
+    return (
+        tx.source == "espi"
+        and (
+            tx.trade_date is None
+            or (
+                tx.trade_date == tx.publication_date
+                and (tx.source_url or "").startswith("https://www.gpw.pl/espi-ebi-report?")
+            )
+        )
+        and not tx.insider_name
+        and tx.shares is None
+        and tx.price is None
+        and tx.value is None
+    )
+
+
 def build_insider_response(
     ticker: str,
     *,
@@ -106,12 +145,25 @@ def build_insider_response(
     warnings: list[str] | None = None,
 ) -> InsiderTransactionsResponse:
     """Build the full API response with filtered list, summary, and daily chart markers."""
-    if include_all:
-        visible = list(transactions)
-    else:
+    # Older imports could save a report title as a trade and use the report's
+    # publication date. Skip that placeholder once the same filing yields trades.
+    dated_espi_reports = {
+        key
+        for tx in transactions
+        if tx.trade_date is not None
+        and not _is_espi_report_placeholder(tx)
+        and (key := _espi_report_key(tx)) is not None
+    }
+    visible = [
+        tx for tx in transactions
+        if not (
+            _is_espi_report_placeholder(tx) and _espi_report_key(tx) in dated_espi_reports
+        )
+    ]
+    if not include_all:
         visible = [
             tx
-            for tx in transactions
+            for tx in visible
             if tx.is_open_market and tx.transaction_type in ("buy", "sell")
         ]
 

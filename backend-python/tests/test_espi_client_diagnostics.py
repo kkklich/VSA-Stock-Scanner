@@ -79,6 +79,35 @@ async def test_failed_report_download_is_visible(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("gpw_report", [None, "<html><title>Access denied</title></html>"])
+async def test_failed_gpw_report_is_recovered_from_issuer_archive(monkeypatch, gpw_report):
+    client = EspiClient()
+    listing = _listing().replace("TEST S.A.", "CYBER_FOLKS S.A.").replace(
+        "16-09-2026", "16-09-2026 17:07:24 | Bieżący | ESPI | 034/2026"
+    )
+    monkeypatch.setattr(client, "_post_form", AsyncMock(return_value=listing))
+    archive = '''<div class="reports__result">
+    <a class="reports__result-title" href="/raporty/34-2026/">Raport bieżący 34/2026</a>
+    <div class="reports__result-files"><a href="/2026/notice.pdf">PDF</a></div></div>'''
+    detail = """<main><h2>Raport bieżący 34/2026</h2><p>16/09/2026 • 17:07</p>
+    <p>Temat:</p><p>Powiadomienie art. 19 MAR</p></main>"""
+    monkeypatch.setattr(client, "_get_url", AsyncMock(side_effect=[gpw_report, archive, detail]))
+    download = AsyncMock(return_value=b"pdf")
+    monkeypatch.setattr(client, "_get_pdf", download)
+    monkeypatch.setattr(
+        "app.services.espi_client.parse_mar_pdf",
+        lambda content, stub: [_trade().model_copy(update={"source_url": stub["url"]})],
+    )
+
+    (item,) = await client.get_company_insider_transactions("Cyber_Folks S.A.", "CBF")
+    assert item.insider_name == "Jan Testowy"
+    assert item.shares == 123
+    assert item.source_url == "https://www.gpw.pl/komunikat?geru_id=0"
+    download.assert_awaited_once_with("https://investors.cyberfolks.pl/2026/notice.pdf")
+    assert client.warnings == []
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("unreadable", [None, b"scan"])
 async def test_one_readable_pdf_does_not_hide_failed_or_scanned_attachments(
     monkeypatch, unreadable
@@ -151,7 +180,9 @@ async def test_issuer_abbreviation_can_be_found_by_ticker(monkeypatch):
         return "<ul></ul>"
 
     monkeypatch.setattr(client, "_post_form", search)
-    monkeypatch.setattr(client, "_get_url", AsyncMock(return_value="<p>Nabycie akcji</p>"))
+    monkeypatch.setattr(
+        client, "_get_url", AsyncMock(return_value='<div class="report-data">Nabycie akcji</div>')
+    )
     items = await client.get_company_insider_transactions(
         "Powszechna Kasa Oszczędności Bank Polski Spółka Akcyjna", "PKO"
     )

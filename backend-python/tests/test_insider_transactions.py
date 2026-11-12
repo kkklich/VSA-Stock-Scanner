@@ -249,6 +249,48 @@ def test_build_insider_response_daily_aggregation_and_filtering() -> None:
     assert m2.shares == 2000
 
 
+@pytest.mark.parametrize("legacy_trade_date", [None, date(2026, 9, 16)])
+def test_dated_espi_trade_replaces_legacy_report_placeholder_in_response(
+    legacy_trade_date: date | None,
+) -> None:
+    placeholder = InsiderTransactionItem(
+        publication_date=date(2026, 9, 16),
+        trade_date=legacy_trade_date,
+        transaction_type="buy",
+        source="espi",
+        source_url="https://www.gpw.pl/espi-ebi-report?geru_id=497134&title=MAR",
+        currency="PLN",
+    )
+    trade = placeholder.model_copy(update={
+        "source_url": "https://www.gpw.pl/komunikat?geru_id=497134",
+        "trade_date": date(2026, 9, 9),
+        "insider_name": "Fundacja Rodzinna",
+        "shares": 5000,
+        "price": 198.0,
+    })
+    response = build_insider_response("CBF", transactions=[placeholder, trade])
+
+    assert response.transactions == [trade]
+    assert response.summary.total_purchases_count == 1
+    assert response.summary.total_purchases_value == 990000.0
+    assert response.chart_markers[0].transaction_count == 1
+    assert response.warnings == []
+
+    partial_trade = placeholder.model_copy(update={
+        "source_url": trade.source_url,
+        "trade_date": placeholder.publication_date,
+    })
+    unmatched = placeholder.model_copy(update={
+        "source_url": "https://www.gpw.pl/espi-ebi-report?geru_id=496798",
+    })
+    response = build_insider_response(
+        "CBF",
+        transactions=[placeholder, trade, partial_trade, unmatched],
+        include_all=True,
+    )
+    assert response.transactions == [partial_trade, unmatched, trade]
+
+
 @pytest.mark.asyncio
 async def test_in_memory_repo_and_api_endpoint() -> None:
     repo = InMemoryQuoteRepository()
