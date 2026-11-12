@@ -6,11 +6,12 @@ import { importXtb, previewXtb, type Portfolio, type XtbPreview } from '../api/p
 import { XtbImport } from './XtbImport'
 
 vi.mock('../api/portfoliosApi', () => ({ previewXtb: vi.fn(), importXtb: vi.fn() }))
-const portfolio: Portfolio = { id: 'one', name: 'Retirement', broker: 'XTB', costMethod: 'fifo',
+const portfolio: Portfolio = { id: 'one', name: 'Retirement', broker: 'XTB', costMethod: 'fifo', brokerAccountId: null,
   version: 1, createdAt: '2026-01-01', positions: [], totals: [], transactions: [] }
 const file = () => new File(['report'], 'history.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 const ready = (): XtbPreview => ({
   version: 1, ready: 1, duplicates: 1, errors: 0, ignored: 2, warnings: ['fees_missing'], ledgerError: null,
+  brokerAccountId: null, sourceBrokerAccountId: null, linksBrokerAccount: false,
   rows: [{ sheet: 'Cash Operations', row: 6, symbol: 'KGH.PL', status: 'ready', transaction: {
     id: 'trade-1', ticker: 'kgh', side: 'buy', date: '2026-01-02', quantity: '10', price: '100.25', fees: '0', currency: 'PLN', executedAt: '2026-01-02T12:00:00.000000',
   } }],
@@ -59,6 +60,21 @@ describe('XTB portfolio import', () => {
     expect(confirm).toBeEnabled()
     await user.click(confirm)
     await waitFor(() => expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, true, expect.any(AbortSignal), 17))
+  })
+
+  it('links the report account when every trade is already saved', async () => {
+    vi.mocked(previewXtb).mockResolvedValue({
+      ...ready(), ready: 0, rows: [], brokerAccountId: '00123456', sourceBrokerAccountId: '00123456', linksBrokerAccount: true,
+    })
+    vi.mocked(importXtb).mockResolvedValue({ imported: 0, duplicates: 1, skipped: 0, version: 2 })
+    const user = userEvent.setup()
+    render(<XtbImport owner={17} portfolio={portfolio} disabled={false} onImported={refreshed} />)
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview file' }))
+    expect(await screen.findByText('Report account 00123456')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Link XTB account to “Retirement”' }))
+    expect(await screen.findByText('XTB account linked to the portfolio.')).toBeVisible()
+    expect(importXtb).toHaveBeenCalledWith('one', expect.any(File), 1, false, expect.any(AbortSignal), 17)
   })
 
   it('blocks an invalid ledger even when partial import is selected', async () => {

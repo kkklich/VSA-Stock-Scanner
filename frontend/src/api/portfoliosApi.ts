@@ -21,6 +21,7 @@ export interface Position {
 }
 export interface Portfolio {
   id: string; name: string; broker: string; version: number; createdAt: string
+  brokerAccountId: string | null
   costMethod: 'fifo' | 'moving_average'
   transactions: Transaction[]; positions: Position[]; totals: PortfolioTotal[]
   reconciliation?: XtbReconciliation | null
@@ -52,6 +53,7 @@ export interface XtbPreviewRow {
 export interface XtbPreview {
   version: number; rows: XtbPreviewRow[]; ready: number; duplicates: number
   errors: number; ignored: number; warnings: string[]; ledgerError: string | null
+  brokerAccountId: string | null; sourceBrokerAccountId: string | null; linksBrokerAccount: boolean
 }
 export interface XtbImportResult { imported: number; duplicates: number; skipped: number; version: number }
 export function previewXtb(portfolioId: string, file: File, signal: AbortSignal, owner?: number) {
@@ -87,7 +89,7 @@ export interface XtbWalletsPreview {
   previewToken: string; blockingError: string | null
 }
 export interface XtbWalletsImportResult {
-  wallets: (XtbImportResult & { id: string; name: string })[]
+  wallets: (XtbImportResult & { id: string; name: string; brokerAccountId: string | null })[]
   imported: number; duplicates: number; skipped: number; created: number
 }
 export function previewXtbWallets(file: File, owner: number, signal: AbortSignal) {

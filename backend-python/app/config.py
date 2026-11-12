@@ -160,7 +160,7 @@ class Settings(BaseSettings):
     # STOCKPILOT_ADMIN_TOKEN; an address alone is not proof of ownership.
     admin_emails: str = ""
 
-    # Optional n8n credential scoped to one existing portfolio and its owner.
+    # Optional n8n credential scoped to one owner and, when set, one wallet.
     xtb_automation_token: SecretStr = SecretStr("")
     xtb_automation_user_id: PositiveInt | None = None
     xtb_automation_portfolio_id: UUID | None = None

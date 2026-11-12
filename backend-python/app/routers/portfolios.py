@@ -162,7 +162,7 @@ async def import_xtb_automation(
     token = settings.xtb_automation_token.get_secret_value()
     owner = settings.xtb_automation_user_id
     portfolio = settings.xtb_automation_portfolio_id
-    if len(token) < 32 or owner is None or portfolio is None:
+    if len(token) < 32 or owner is None:
         raise HTTPException(404, detail={"code": "not_found"})
     scheme, _, supplied = (authorization or "").partition(" ")
     if scheme.lower() != "bearer" or not compare_digest(supplied.encode(), token.encode()):
@@ -203,7 +203,7 @@ async def import_xtb_automation(
         result = await repo.portfolios.change(
             owner,
             "automated_import",
-            portfolio_id=str(portfolio),
+            portfolio_id=str(portfolio) if portfolio is not None else None,
             parsed=parsed,
         )
         return {
@@ -215,16 +215,23 @@ async def import_xtb_automation(
     return await execute(response, commit())
 
 
-async def read_wallet_import(request: Request, filename: str, owner: int):
+async def read_wallet_import(request: Request, filename: str):
     data = await read_import_file(request)
     report_digest = sha256(data).hexdigest()
     wallets = await run_in_threadpool(parse_xtb_wallets, data, filename, gpw_company_service)
+    return wallets, report_digest
+
+
+def wallet_preview_token(owner, report_digest, wallets, plans):
     manifest = [{**wallet, "parsed": asdict(wallet["parsed"])} for wallet in wallets]
-    payload = json.dumps([owner, report_digest, manifest], sort_keys=True, separators=(",", ":"))
-    # Authorize the exact report interpretation that was previewed. Re-parsing
-    # must not make a previously accepted trade silently eligible to skip.
-    token = digest(jwt_secret().encode(), b"xtb-wallet-preview:v1\0" + payload.encode(), "sha256")
-    return wallets, report_digest, token.hex()
+    links = [(plan["id"], plan["brokerAccountId"]) for plan in plans]
+    payload = json.dumps(
+        [owner, report_digest, manifest, links], sort_keys=True, separators=(",", ":")
+    )
+    # Bind the report interpretation and destination links that the user reviewed.
+    return digest(
+        jwt_secret().encode(), b"xtb-wallet-preview:v2\0" + payload.encode(), "sha256"
+    ).hex()
 
 
 @router.post("/imports/xtb/wallets/preview")
@@ -236,8 +243,9 @@ async def preview_xtb_wallets(
     filename: Annotated[str, Query(min_length=1, max_length=200)],
 ):
     async def preview():
-        wallets, report_digest, token = await read_wallet_import(request, filename, user.id)
+        wallets, report_digest = await read_wallet_import(request, filename)
         result = await repo.portfolios.preview_wallets(user.id, wallets, report_digest)
+        token = wallet_preview_token(user.id, report_digest, wallets, result["wallets"])
         return {**result, "previewToken": token}
 
     return await execute(response, preview())
@@ -254,10 +262,16 @@ async def import_xtb_wallets(
     allow_partial: bool = False,
 ):
     async def commit():
-        wallets, report_digest, token = await read_wallet_import(request, filename, user.id)
-        if not compare_digest(token, x_xtb_preview):
-            raise PortfolioError("import_preview_changed")
-        return await repo.portfolios.import_wallets(user.id, wallets, report_digest, allow_partial)
+        wallets, report_digest = await read_wallet_import(request, filename)
+
+        def verify_preview(plans):
+            token = wallet_preview_token(user.id, report_digest, wallets, plans)
+            if not compare_digest(token, x_xtb_preview):
+                raise PortfolioError("import_preview_changed")
+
+        return await repo.portfolios.import_wallets(
+            user.id, wallets, report_digest, allow_partial, verify_preview=verify_preview
+        )
 
     return await execute(response, commit())
 
@@ -274,6 +288,7 @@ async def preview_xtb(
     async def preview():
         portfolio = await repo.portfolios.get(user.id, str(portfolio_id))
         parsed = await import_file(request, filename)
+        account = await repo.portfolios.preview_import_account(user.id, portfolio, parsed)
         plan = prepare_import(
             parsed,
             portfolio["transactions"],
@@ -282,7 +297,16 @@ async def preview_xtb(
         )
         return {
             key: value
-            for key, value in {**plan, "version": portfolio["version"]}.items()
+            for key, value in {
+                **plan,
+                "version": portfolio["version"],
+                "sourceBrokerAccountId": parsed.broker_account_id,
+                "brokerAccountId": account,
+                "linksBrokerAccount": bool(
+                    account != portfolio["brokerAccountId"]
+                    and (plan["ready"] or plan["duplicates"])
+                ),
+            }.items()
             if key not in {"additions", "ledger"}
         }
 

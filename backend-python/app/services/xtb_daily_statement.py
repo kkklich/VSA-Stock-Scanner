@@ -14,11 +14,13 @@ from app.services.xtb_import import (
     ParsedImport,
     RowError,
     decimal_value,
+    normalize_broker_account_id,
     normalized,
     parse_xtb_tables,
 )
 
 _TITLE = re.compile(r"Potwierdzenie zleceń wykonanych w dniu (\d{2}\.\d{2}\.\d{4})")
+_ACCOUNT_HEADER = re.compile(r"\b(?:Konto|Numer rachunku)\s{2,}(Waluta rachunku)\s{2,}(Saldo)")
 _SECTION = re.compile(r"Wykonane zlecenia (kupna|sprzedaży) (.+?) \((\d{1,4})\)")
 _ORDER = re.compile(r"\s*\d{1,4}\s+(\d{1,24})(?=\s)")
 _TIME = re.compile(r"\d{2}:\d{2}:\d{2}")
@@ -75,14 +77,21 @@ def _page_lines(data: bytes, password: str):
         raise _invalid() from exc
 
 
-def _account_currency(lines):
+def _account_summary(lines) -> tuple[str, str] | None:
+    summary = None
     for index, line in enumerate(lines[:-1]):
-        if match := re.search(r"Waluta rachunku\s{2,}Saldo", line):
-            currency = lines[index + 1][match.start() : line.index("Saldo", match.start())].strip()
-            if re.fullmatch(r"[A-Z]{3}", currency):
-                return currency
-            break
-    raise _invalid()
+        if match := _ACCOUNT_HEADER.search(line):
+            values = lines[index + 1]
+            account_id = normalize_broker_account_id(values[match.start() : match.start(1)])
+            currency = values[match.start(1) : match.start(2)].strip()
+            if account_id is None:
+                raise PortfolioError("import_statement_broker_account_missing", 422)
+            if not re.fullmatch(r"[A-Z]{3}", currency):
+                raise _invalid()
+            if summary is not None and summary != (account_id, currency):
+                raise PortfolioError("import_multiple_broker_accounts", 422)
+            summary = (account_id, currency)
+    return summary
 
 
 def _columns(line):
@@ -147,7 +156,10 @@ def parse_xtb_daily_statement(data: bytes, password: str, companies) -> ParsedIm
         report_date = datetime.strptime(title[1], "%d.%m.%Y").date()
     except ValueError as exc:
         raise _invalid() from exc
-    account_currency = _account_currency(first_page)
+    account = _account_summary(first_page)
+    if account is None:
+        raise _invalid()
+    broker_account_id, account_currency = account
     rows = [_TRADE_COLUMNS]
     refs = set()
     section = None
@@ -155,7 +167,9 @@ def parse_xtb_daily_statement(data: bytes, password: str, companies) -> ParsedIm
     ignored_sales = 0
     total_orders = 0
     fx_cost = False
-    for lines in chain((first_page,), pages):
+    for page_index, lines in enumerate(chain((first_page,), pages)):
+        if page_index and (summary := _account_summary(lines)) is not None and summary != account:
+            raise PortfolioError("import_multiple_broker_accounts", 422)
         columns = None
         for index, line in enumerate(lines):
             if line.lstrip().startswith("Wykonane zlecenia"):
@@ -192,6 +206,7 @@ def parse_xtb_daily_statement(data: bytes, password: str, companies) -> ParsedIm
     if section is None or remaining:
         raise _invalid()
     parsed = parse_xtb_tables([("DailyStatement", rows)], companies, allow_empty=True)
+    parsed.broker_account_id = broker_account_id
     parsed.ignored += ignored_sales
     if fx_cost:
         parsed.warnings.append("fx_cost_not_imported")

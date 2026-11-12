@@ -9,6 +9,8 @@ vi.mock('../api/portfoliosApi', () => ({ previewXtbWallets: vi.fn(), importXtbWa
 const file = () => new File(['report'], 'IKE.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 const wallet = (name: string): XtbWalletPreview => ({
   id: name, name, sheet: name, version: null, ready: 1, duplicates: 0, errors: 0,
+  sourceBrokerAccountId: '00123456', brokerAccountId: name === 'Cash Operations' ? '00123456' : null,
+  linksBrokerAccount: name === 'Cash Operations',
   ignored: 0, warnings: [], ledgerError: null, error: null,
   rows: [{ sheet: name, row: 6, symbol: 'KGH.PL', status: 'ready', transaction: {
     id: `trade-${name}`, ticker: 'kgh', side: 'buy', date: '2026-01-02', quantity: '10', price: '100.25', fees: '0', currency: 'PLN',
@@ -44,6 +46,8 @@ describe('XTB worksheet wallets', () => {
     expect(screen.getByText(/^Closed Positions —/)).toBeVisible()
     expect(screen.getByText(/^Cash Operations —/)).toBeVisible()
     expect(screen.getByText(/^Open Positions —/)).toBeVisible()
+    expect(screen.getByText('XTB account 00123456')).toBeVisible()
+    expect(screen.getAllByText('Report account 00123456')).toHaveLength(2)
     await user.click(screen.getByText(/^Cash Operations —/))
     expect(screen.getByText('Cash Operations · 6')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Import wallets (3)' }))
@@ -129,7 +133,7 @@ describe('XTB worksheet wallets', () => {
     const preview = ready()
     vi.mocked(previewXtbWallets).mockResolvedValue({
       ...preview, newWallets: 0, ready: 0,
-      wallets: preview.wallets.map(wallet => ({ ...wallet, version: 1, ready: 0, duplicates: 1 })),
+      wallets: preview.wallets.map(wallet => ({ ...wallet, version: 1, ready: 0, duplicates: 1, linksBrokerAccount: false })),
     })
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
     const user = userEvent.setup()
@@ -138,6 +142,22 @@ describe('XTB worksheet wallets', () => {
     await screen.findByText('This report has already been imported.')
     expect(screen.queryByRole('button', { name: /^Import wallets/ })).not.toBeInTheDocument()
     expect(importXtbWallets).not.toHaveBeenCalled()
+  })
+
+  it('lets an existing worksheet wallet link its account without creating another wallet', async () => {
+    const preview = ready()
+    vi.mocked(previewXtbWallets).mockResolvedValue({
+      ...preview, newWallets: 0, ready: 0,
+      wallets: preview.wallets.map(wallet => ({ ...wallet, version: 1, ready: 0, duplicates: 1 })),
+    })
+    vi.mocked(importXtbWallets).mockResolvedValue({ wallets: [], imported: 0, duplicates: 3, skipped: 0, created: 0 })
+    render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} />)
+    const user = userEvent.setup()
+    await user.upload(screen.getByLabelText('XTB file for new wallets'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
+    await user.click(await screen.findByRole('button', { name: 'Link XTB accounts' }))
+    expect(await screen.findByText('XTB accounts linked to the saved wallets.')).toBeVisible()
+    expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal))
   })
 
   it('shows a batch limit error before save and leaves confirmation disabled', async () => {

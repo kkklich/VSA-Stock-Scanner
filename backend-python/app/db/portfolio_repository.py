@@ -8,11 +8,12 @@ from sqlalchemy import func, select
 from app.db.models import DailyQuoteRow, PortfolioRow, UserRow
 from app.services.portfolio import (
     PortfolioError,
+    check_broker_account,
     holdings,
     require_after_checkpoint,
     xtb_checkpoint,
 )
-from app.services.xtb_import import prepare_import
+from app.services.xtb_import import normalized, prepare_import
 from app.services.xtb_reconciliation import reconciliation_view
 
 
@@ -23,6 +24,7 @@ def response(row, *, include_ledger=False):
         "id": row.id,
         "name": row.name,
         "broker": row.broker,
+        "brokerAccountId": row.broker_account_id,
         "costMethod": row.cost_method,
         "transactions": [entry for entry in ledger if entry is not checkpoint],
         "reconciliation": reconciliation_view(checkpoint),
@@ -38,7 +40,7 @@ def wallet_identity(owner, report_digest, sheet):
     return str(uuid5(NAMESPACE_URL, f"xtb-wallet:{owner}:{report_digest}:{sheet}"))
 
 
-def wallet_plan(wallet, row, owner, report_digest):
+def wallet_plan(wallet, row, wallet_id, broker_account_id):
     checkpoint = xtb_checkpoint(row["ledger"]) if row else wallet.get("checkpoint")
     plan = prepare_import(
         wallet["parsed"],
@@ -55,13 +57,81 @@ def wallet_plan(wallet, row, owner, report_digest):
         plan["ledger"].append(checkpoint)
     return {
         **plan,
-        "id": wallet_identity(owner, report_digest, wallet["sheet"]),
+        "id": wallet_id,
         "name": row["name"] if row else wallet["name"],
+        "brokerAccountId": broker_account_id,
+        "sourceBrokerAccountId": wallet.get("brokerAccountId"),
+        "linksBrokerAccount": bool(broker_account_id and (not row or not row["brokerAccountId"])),
         "sheet": wallet["sheet"],
         "version": row["version"] if row else None,
         "error": error,
         "reconciliation": reconciliation_view(checkpoint),
     }
+
+
+def wallet_plans(wallets, identities, existing, linked_accounts):
+    # An XTB account has one writable ledger. When a report includes snapshots,
+    # prefer its Cash Operations worksheet and leave snapshot wallets separate.
+    candidates = {}
+    for wallet, key in zip(wallets, identities, strict=True):
+        account = wallet.get("brokerAccountId")
+        if account and account not in linked_accounts:
+            candidates.setdefault(account, []).append((key, wallet))
+    links = {}
+    for account, group in candidates.items():
+        cash = [
+            key
+            for key, wallet in group
+            if normalized(wallet.get("section", wallet["sheet"]))
+            in {
+                "cashoperations",
+                "cashoperation",
+                "operacjegotowkowe",
+                "operacjigotowkowe",
+                "cashhistory",
+            }
+        ]
+        eligible = cash or [key for key, _ in group]
+        if len(eligible) == 1:
+            key = eligible[0]
+            row = existing.get(key)
+            if row is None or (
+                row["broker"].casefold() == "xtb" and row["brokerAccountId"] is None
+            ):
+                links[key] = account
+    return [
+        wallet_plan(
+            wallet,
+            existing.get(key),
+            key,
+            links.get(key) or (existing[key]["brokerAccountId"] if key in existing else None),
+        )
+        for wallet, key in zip(wallets, identities, strict=True)
+    ]
+
+
+async def require_broker_account_available(session, owner, portfolio_id, account):
+    if account is None:
+        return
+    existing = (
+        await session.execute(
+            select(PortfolioRow.id).where(
+                PortfolioRow.user_id == owner,
+                PortfolioRow.broker_account_id == account,
+                PortfolioRow.id != portfolio_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise PortfolioError("broker_account_already_linked")
+
+
+async def broker_account_for_import(session, owner, portfolio_id, broker, current, received):
+    check_broker_account(current, received)
+    if current or received is None or broker.casefold() != "xtb":
+        return current
+    await require_broker_account_available(session, owner, portfolio_id, received)
+    return received
 
 
 class PortfolioRepository:
@@ -156,13 +226,25 @@ class PortfolioRepository:
                 history.setdefault(ticker, []).append({"price": price, "date": day})
         return history
 
+    async def preview_import_account(self, owner, portfolio, parsed):
+        async with self._session_factory() as session:
+            return await broker_account_for_import(
+                session,
+                owner,
+                portfolio["id"],
+                portfolio["broker"],
+                portfolio["brokerAccountId"],
+                parsed.broker_account_id,
+            )
+
     async def preview_wallets(self, owner, wallets, report_digest):
         existing = {row["id"]: row for row in await self.list(owner)}
-        plans = []
-        for wallet in wallets:
-            prior = existing.get(wallet_identity(owner, report_digest, wallet["sheet"]))
-            plan = wallet_plan(wallet, prior, owner, report_digest)
-            plans.append({k: v for k, v in plan.items() if k not in {"additions", "ledger"}})
+        identities = [wallet_identity(owner, report_digest, w["sheet"]) for w in wallets]
+        linked = {row["brokerAccountId"] for row in existing.values()}
+        plans = [
+            {k: v for k, v in plan.items() if k not in {"additions", "ledger"}}
+            for plan in wallet_plans(wallets, identities, existing, linked)
+        ]
         new_wallets = sum(plan["version"] is None for plan in plans)
         return {
             "wallets": plans,
@@ -172,7 +254,9 @@ class PortfolioRepository:
             "blockingError": "portfolio_limit" if len(existing) + new_wallets > 20 else None,
         }
 
-    async def import_wallets(self, owner, wallets, report_digest, allow_partial=False):
+    async def import_wallets(
+        self, owner, wallets, report_digest, allow_partial=False, *, verify_preview
+    ):
         """Create all worksheet wallets atomically; a retried upload never overwrites one."""
         async with self._session_factory() as session:
             async with session.begin():
@@ -194,15 +278,23 @@ class PortfolioRepository:
                 if any(row.user_id != owner for row in rows):
                     raise PortfolioError("conflict")
                 existing = {row.id: row for row in rows}
-                plans = [
-                    wallet_plan(
-                        w,
-                        response(existing[key], include_ledger=True) if key in existing else None,
-                        owner,
-                        report_digest,
-                    )
-                    for w, key in zip(wallets, identities, strict=True)
-                ]
+                linked = set(
+                    (
+                        await session.execute(
+                            select(PortfolioRow.broker_account_id).where(
+                                PortfolioRow.user_id == owner,
+                                PortfolioRow.broker_account_id.is_not(None),
+                            )
+                        )
+                    ).scalars()
+                )
+                plans = wallet_plans(
+                    wallets,
+                    identities,
+                    {key: response(row, include_ledger=True) for key, row in existing.items()},
+                    linked,
+                )
+                verify_preview(plans)
                 for plan in plans:
                     if plan["error"]:
                         status = 409 if plan["error"] == "import_preview_changed" else 422
@@ -230,16 +322,21 @@ class PortfolioRepository:
                             user_id=owner,
                             name=plan["name"],
                             broker="XTB",
+                            broker_account_id=plan["brokerAccountId"],
                             cost_method="fifo",
                             transactions=plan["ledger"],
                             version=1,
                             created_at=datetime.now(UTC),
                         )
                         session.add(row)
+                    elif row.broker_account_id != plan["brokerAccountId"]:
+                        row.broker_account_id = plan["brokerAccountId"]
+                        row.version += 1
                     results.append(
                         {
                             "id": row.id,
                             "name": row.name,
+                            "brokerAccountId": row.broker_account_id,
                             "version": row.version,
                             "imported": plan["ready"],
                             "duplicates": plan["duplicates"],
@@ -278,12 +375,17 @@ class PortfolioRepository:
                 if operation == "automated_import" and not owner_active:
                     raise PortfolioError("not_found", 404)
                 key = str(payload.id) if operation == "create" else portfolio_id
+                destination = PortfolioRow.id == key
+                if operation == "automated_import" and key is None:
+                    if parsed.broker_account_id is None:
+                        raise PortfolioError("broker_account_required", 422)
+                    destination = PortfolioRow.broker_account_id == parsed.broker_account_id
                 row = (
                     await session.execute(
                         select(PortfolioRow)
                         .where(
                             PortfolioRow.user_id == owner,
-                            PortfolioRow.id == key,
+                            destination,
                         )
                         .with_for_update()
                     )
@@ -294,6 +396,10 @@ class PortfolioRepository:
                             row.name != payload.name
                             or row.broker != payload.broker
                             or row.cost_method != payload.cost_method
+                            or (
+                                "broker_account_id" in payload.model_fields_set
+                                and row.broker_account_id != payload.broker_account_id
+                            )
                         ):
                             raise PortfolioError("conflict")
                         return response(row)
@@ -317,11 +423,15 @@ class PortfolioRepository:
                     ).scalar_one()
                     if count >= 20:
                         raise PortfolioError("portfolio_limit")
+                    await require_broker_account_available(
+                        session, owner, key, payload.broker_account_id
+                    )
                     row = PortfolioRow(
                         id=key,
                         user_id=owner,
                         name=payload.name,
                         broker=payload.broker,
+                        broker_account_id=payload.broker_account_id,
                         cost_method=payload.cost_method,
                         transactions=[],
                         version=1,
@@ -330,9 +440,17 @@ class PortfolioRepository:
                     session.add(row)
                     return response(row)
                 if row is None:
+                    if operation == "automated_import" and key is None:
+                        raise PortfolioError("broker_account_unlinked", 404)
                     raise PortfolioError("not_found", 404)
                 checkpoint = xtb_checkpoint(row.transactions)
                 if operation in {"import", "automated_import"}:
+                    received = parsed.broker_account_id
+                    account = row.broker_account_id
+                    check_broker_account(account, received)
+                    if operation == "automated_import" and received is not None:
+                        if account is None:
+                            raise PortfolioError("broker_account_unlinked", 404)
                     plan = prepare_import(
                         parsed,
                         response(row)["transactions"],
@@ -343,14 +461,29 @@ class PortfolioRepository:
                         raise PortfolioError("import_rows_invalid", 422)
                     if plan["ledgerError"]:
                         raise PortfolioError(plan["ledgerError"])
+                    if (
+                        operation == "import"
+                        and account is None
+                        and (plan["ready"] or plan["duplicates"])
+                    ):
+                        account = await broker_account_for_import(
+                            session, owner, row.id, row.broker, account, received
+                        )
+                    link_changed = account != row.broker_account_id
                     # Browser imports commit their preview version. Automation validates
                     # the complete import against the current ledger under the row lock.
-                    if operation == "import" and plan["ready"] and row.version != version:
+                    if (
+                        operation == "import"
+                        and (plan["ready"] or link_changed)
+                        and row.version != version
+                    ):
                         raise PortfolioError("conflict")
                     if plan["ready"]:
                         row.transactions = (
                             [*plan["ledger"], checkpoint] if checkpoint else plan["ledger"]
                         )
+                    if plan["ready"] or link_changed:
+                        row.broker_account_id = account
                         row.version += 1
                     return {
                         "imported": plan["ready"],
@@ -370,6 +503,13 @@ class PortfolioRepository:
                 if row.version != (payload.version if payload else version):
                     raise PortfolioError("conflict")
                 if operation == "update":
+                    account = row.broker_account_id
+                    if "broker_account_id" in payload.model_fields_set:
+                        account = payload.broker_account_id
+                    elif payload.broker.casefold() != "xtb":
+                        account = None
+                    await require_broker_account_available(session, owner, row.id, account)
+                    row.broker_account_id = account
                     row.name, row.broker = payload.name, payload.broker
                     row.cost_method = payload.cost_method
                 elif operation == "add":

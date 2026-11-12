@@ -115,6 +115,8 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("company_fundamentals", "fundamental_details", "JSON"),
     # Alembic 014 — user-selected observation dates, backfilled below.
     ("journal_entries", "observation_date", "DATE"),
+    # Alembic 016 — link a portfolio to its XTB account without changing its primary key.
+    ("portfolios", "broker_account_id", "VARCHAR(32)"),
 )
 
 # These identifiers are interpolated into a raw ALTER TABLE statement (there is
@@ -134,6 +136,7 @@ _ALLOWED_COLUMN_TYPES = frozenset(
         "NUMERIC",
         "DATE",
         "VARCHAR(8)",
+        "VARCHAR(32)",
         "JSON",
     }
 )
@@ -224,6 +227,13 @@ async def lifespan(_app: FastAPI):
                                 f"ADD COLUMN IF NOT EXISTS {column} {coltype}"
                             )
                         )
+                    await conn.execute(
+                        text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS "
+                            "uq_portfolios_user_broker_account_id ON portfolios "
+                            "(user_id, broker_account_id)"
+                        )
+                    )
                     await conn.execute(text(
                         "UPDATE journal_entries "
                         "SET observation_date = (created_at AT TIME ZONE 'UTC')::date "

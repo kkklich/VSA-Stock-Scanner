@@ -346,3 +346,16 @@ def test_report_title_in_csv_preamble_does_not_create_a_phantom_wallet():
     wallets = parse_xtb_wallets(data, "report.csv", Companies())
     assert [w["sheet"] for w in wallets] == ["Cash Operations"]
     assert len(wallets[0]["parsed"].rows) == 1
+
+
+def test_wallet_csv_sections_keep_separate_exact_account_ids():
+    trades = (
+        b"Cash Operations,,,,,,\nID,Type,Time,Comment,Symbol,Amount,Currency\n"
+        b"1001,Buy,2026-01-02 12:00:00,OPEN BUY 1 @ 100,KGH.PL,-100,PLN\n"
+    )
+    data = b"Account number,00123456,,,,,\n" + trades + b"Account number,00123457,,,,,\n" + trades
+    wallets = parse_xtb_wallets(data, "report.csv", Companies())
+    assert [w["sheet"] for w in wallets] == ["Cash Operations", "Cash Operations (2)"]
+    assert [w["section"] for w in wallets] == ["Cash Operations", "Cash Operations"]
+    assert [w["brokerAccountId"] for w in wallets] == ["00123456", "00123457"]
+    assert [w["parsed"].broker_account_id for w in wallets] == ["00123456", "00123457"]

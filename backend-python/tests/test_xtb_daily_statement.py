@@ -14,15 +14,18 @@ from pypdf.generic import (
 )
 
 from app.config import settings
+from app.services.portfolio import PortfolioError
+from app.services.xtb_daily_statement import parse_xtb_daily_statement
 from tests import test_xtb_import
 
 client = test_xtb_import.client
 automation_portfolio = test_xtb_import.automation_portfolio
 
 PASSWORD = "synthetic-statement-password"
+ACCOUNT_ID = "10000000"
 
 
-def statement(*, side="kupna", count=1, repeat=False):
+def statement(*, side="kupna", count=1, repeat=False, account_id=ACCOUNT_ID):
     def columns(*cells):
         return "".join(f"{cell:<24}" for cell in cells).rstrip()
 
@@ -64,7 +67,7 @@ def statement(*, side="kupna", count=1, repeat=False):
     lines = [
         "Potwierdzenie zleceń wykonanych w dniu 02.01.2026",
         columns("Imię i nazwisko", "Konto", "Waluta rachunku", "Saldo"),
-        columns("Test Investor", "10000000", "PLN", "0,00"),
+        columns("Test Investor", account_id, "PLN", "0,00"),
         f"Wykonane zlecenia {side} Praw Ułamkowych ({count})",
         header,
         row,
@@ -128,8 +131,42 @@ def post_statement(client, content):
     )
 
 
-def test_encrypted_statement_purchase_is_saved_once(client, automation_portfolio, monkeypatch):
+@pytest.fixture
+def linked_automation_portfolio(client, automation_portfolio):
+    updated = client.patch(
+        f"/api/portfolios/{automation_portfolio['id']}",
+        json={
+            "name": automation_portfolio["name"],
+            "broker": "XTB",
+            "brokerAccountId": ACCOUNT_ID,
+            "costMethod": automation_portfolio["costMethod"],
+            "version": automation_portfolio["version"],
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    return updated.json()
+
+
+def test_daily_statement_preserves_leading_zero_in_account_id():
+    parsed = parse_xtb_daily_statement(
+        statement(account_id="00123456"), PASSWORD, test_xtb_import.Companies()
+    )
+    assert parsed.broker_account_id == "00123456"
+
+
+def test_daily_statement_rejects_invalid_account_id():
+    with pytest.raises(PortfolioError) as raised:
+        parse_xtb_daily_statement(
+            statement(account_id="unknown"), PASSWORD, test_xtb_import.Companies()
+        )
+    assert raised.value.code == "import_statement_broker_account_missing"
+
+
+def test_encrypted_statement_purchase_is_saved_once(
+    client, linked_automation_portfolio, monkeypatch
+):
     monkeypatch.setattr(settings, "xtb_statement_password", SecretStr(PASSWORD))
+    monkeypatch.setattr(settings, "xtb_automation_portfolio_id", None)
     pdf = statement()
     first = post_statement(client, pdf)
     assert first.status_code == 200, first.text
@@ -164,7 +201,7 @@ def test_invalid_statement_saves_nothing(
     assert client.get("/api/portfolios").json()["items"][0]["transactions"] == []
 
 
-def test_sale_only_statement_is_a_noop(client, automation_portfolio, monkeypatch):
+def test_sale_only_statement_is_a_noop(client, linked_automation_portfolio, monkeypatch):
     monkeypatch.setattr(settings, "xtb_statement_password", SecretStr(PASSWORD))
     result = post_statement(client, statement(side="sprzedaży"))
     assert result.status_code == 200, result.text

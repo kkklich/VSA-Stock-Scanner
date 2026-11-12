@@ -9,6 +9,7 @@ from decimal import Decimal, DecimalException
 
 from app.services.portfolio import WARSAW, PortfolioError
 from app.services.xtb_import import (
+    ACCOUNT_ID_LABELS,
     ALIASES,
     SECTION_NAMES,
     ParsedImport,
@@ -19,6 +20,7 @@ from app.services.xtb_import import (
     normalized,
     parse_xtb_tables,
     read_tables,
+    report_broker_account_id,
     timestamp,
 )
 from app.services.xtb_reconciliation import reconcile_cash_wallets
@@ -210,7 +212,7 @@ def _report_metadata(values, header):
         if len(row) < 2:
             continue
         label, value = normalized(row[0]), row[1]
-        if label in {"accountnumber", "numerrachunku"} and value not in (None, ""):
+        if label in ACCOUNT_ID_LABELS and value not in (None, ""):
             if isinstance(value, float) and value.is_integer():
                 value = int(value)
             account = str(value).strip() or None
@@ -250,13 +252,17 @@ def parse_xtb_wallets(data: bytes, filename: str, companies) -> list[dict]:
                 if header
                 else parse_xtb_tables([(sheet, values)], companies, allow_empty=True)
             )
+            if header:
+                parsed.broker_account_id = report_broker_account_id(values[: header[0]])
             error = None
         except PortfolioError as exc:
             parsed, error = ParsedImport([], 0, []), exc.code
         wallets.append(
             {
                 "sheet": identity,
+                "section": sheet,
                 "name": identity[:80],
+                "brokerAccountId": parsed.broker_account_id,
                 "parsed": parsed,
                 "error": error,
                 **_report_metadata(values, header),

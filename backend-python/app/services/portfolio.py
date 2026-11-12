@@ -14,6 +14,11 @@ class PortfolioError(Exception):
         self.code, self.status = code, status
 
 
+def check_broker_account(expected: str | None, received: str | None) -> None:
+    if expected and received and expected != received:
+        raise PortfolioError("broker_account_mismatch")
+
+
 def trade_order(trade: dict):
     """Compare instants while retaining the local dates of legacy trades."""
     executed = datetime.fromisoformat(trade.get("executedAt") or trade["date"])

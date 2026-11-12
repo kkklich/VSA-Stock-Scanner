@@ -20,11 +20,17 @@ def client():
     yield from portfolio_client.__wrapped__()
 
 
-def report(*, position=12345, aggregate_quantity=10):
+def report(
+    *,
+    position=12345,
+    aggregate_quantity=10,
+    cash_account="example-account",
+    open_account="example-report",
+):
     book = openpyxl.Workbook()
     cash = book.active
     cash.title = "Cash Operations"
-    cash.append(["Account number", "example-account"])
+    cash.append(["Account number", cash_account])
     cash.append(["Date to (UTC)", datetime(2026, 1, 5, 12)])
     cash.append(
         [
@@ -55,7 +61,7 @@ def report(*, position=12345, aggregate_quantity=10):
         ]
     )
     opened = book.create_sheet("Open Positions")
-    opened.append(["Account number", "example-report"])
+    opened.append(["Account number", open_account])
     opened.append(["Data as of report generated", datetime(2026, 1, 5, 12, 0, 0, 500000)])
     opened.append(OPEN_HEADERS)
     opened.append(["IKE", "Example", "KGH.PL", "STOCK", "", aggregate_quantity])
@@ -121,7 +127,14 @@ def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(
     assert (after["quantity"], after["cost"], after["realizedPnl"]) == (7, 140, 30)
 
 
-@pytest.mark.parametrize("settings", [{"position": 54321}, {"aggregate_quantity": 11}])
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"position": 54321},
+        {"aggregate_quantity": 11},
+        {"cash_account": "00123456", "open_account": "00123457"},
+    ],
+)
 def test_unlinked_or_inconsistent_snapshot_cannot_change_cash_holdings(client, settings):
     plan = preview(client, report(**settings))
     cash = plan["wallets"][0]

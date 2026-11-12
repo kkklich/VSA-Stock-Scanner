@@ -38,6 +38,7 @@ MAX_ROWS = 20000
 MAX_COLUMNS = 80
 MAX_CELL = 4000
 SUMMARY_LABELS = {"total", "suma", "razem", "profitloss"}
+ACCOUNT_ID_LABELS = {"accountnumber", "accountid", "numerrachunku", "idrachunku"}
 
 
 def normalized(value) -> str:
@@ -150,6 +151,7 @@ class ParsedImport:
     rows: list[dict]
     ignored: int
     warnings: list[str]
+    broker_account_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -321,7 +323,7 @@ def _split_csv_sections(rows: list[list]) -> list[tuple[str, list[list]]]:
             start_idx = idx
             if idx > 0:
                 prev_cells = [str(c or "").strip() for c in rows[idx - 1] if str(c or "").strip()]
-                if prev_cells and normalized(prev_cells[0]) in {"accountnumber", "numerrachunku"}:
+                if prev_cells and normalized(prev_cells[0]) in ACCOUNT_ID_LABELS:
                     start_idx = idx - 1
             section_indices.append((start_idx, title))
     if not section_indices:
@@ -492,6 +494,29 @@ def _header(row):
     return None
 
 
+def normalize_broker_account_id(value) -> str | None:
+    """Keep textual leading zeros and accept exact integer spreadsheet cells."""
+    if isinstance(value, float) and value.is_integer() and 0 <= value < 2**53:
+        value = int(value)
+    if not isinstance(value, (str, int)):
+        return None
+    text = str(value).strip()
+    return text if re.fullmatch(r"[0-9]{1,32}", text) else None
+
+
+def report_broker_account_id(rows: list[list]) -> str | None:
+    account_ids = {
+        account_id
+        for row in rows
+        if len(row) >= 2
+        and normalized(row[0]) in ACCOUNT_ID_LABELS
+        and (account_id := normalize_broker_account_id(row[1])) is not None
+    }
+    if len(account_ids) > 1:
+        raise PortfolioError("import_multiple_broker_accounts", 422)
+    return next(iter(account_ids), None)
+
+
 def _company(raw, companies):
     value = str(raw or "").strip().lower()
     for suffix, replacement in {".pl": "", ".fr": ".pa", ".nl": ".as", ".uk": ".l"}.items():
@@ -625,6 +650,7 @@ def parse_xtb_tables(
     tables: list[tuple[str, list[list]]], companies, *, allow_empty: bool = False
 ) -> ParsedImport:
     rows, ignored, recognized, warnings = [], 0, False, set()
+    broker_account_id = None
     cash_names = {
         "cashoperations",
         "cashoperation",
@@ -644,6 +670,11 @@ def parse_xtb_tables(
         if header is None:
             continue
         recognized = True
+        account_id = report_broker_account_id(values[:header_index])
+        if account_id is not None:
+            if broker_account_id not in (None, account_id):
+                raise PortfolioError("import_multiple_broker_accounts", 422)
+            broker_account_id = account_id
         cash_history = "amount" in header and "comment" in header
         utc_time = normalized(values[header_index][header["time"]]).endswith("utc") or (
             cash_history
@@ -682,7 +713,7 @@ def parse_xtb_tables(
         raise PortfolioError("import_no_transactions", 422)
     if len(rows) > 1000:
         raise PortfolioError("transaction_limit")
-    return ParsedImport(rows, ignored, sorted(warnings))
+    return ParsedImport(rows, ignored, sorted(warnings), broker_account_id)
 
 
 def _trade_key(trade, *, with_time=True, with_fees=True):

@@ -5,11 +5,21 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    ValidationInfo,
+    field_validator,
+)
 
 from app.markets import normalize_ticker
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+BrokerAccountId = Annotated[
+    str, StringConstraints(strict=True, strip_whitespace=True, pattern=r"^[0-9]{1,32}$")
+]
 Amount = Annotated[
     Decimal,
     Field(gt=0, le=Decimal("1000000000000"), max_digits=24, decimal_places=8, allow_inf_nan=False),
@@ -21,17 +31,26 @@ class Command(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class CreatePortfolio(Command):
-    id: UUID
+class PortfolioDetails(Command):
     name: Name
     broker: Name
+    broker_account_id: BrokerAccountId | None = Field(default=None, alias="brokerAccountId")
+
+    @field_validator("broker_account_id")
+    @classmethod
+    def validate_broker_account(cls, value: str | None, info: ValidationInfo) -> str | None:
+        if value is not None and info.data.get("broker", "").casefold() != "xtb":
+            raise ValueError("An XTB account ID requires XTB as the broker")
+        return value
+
+
+class CreatePortfolio(PortfolioDetails):
+    id: UUID
     cost_method: CostMethod = Field(default="fifo", alias="costMethod")
 
 
-class UpdatePortfolio(Command):
+class UpdatePortfolio(PortfolioDetails):
     version: int = Field(ge=1)
-    name: Name
-    broker: Name
     cost_method: CostMethod = Field(alias="costMethod")
 
 

@@ -12,6 +12,7 @@ import { XtbWalletImport } from '../components/XtbWalletImport'
 
 const input = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-sm'
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
+const ACCOUNT_ID_MAX_LENGTH = 32
 type Save = (method: string, path: string, payload?: unknown) => Promise<boolean>
 const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
 
@@ -19,23 +20,36 @@ function PortfolioForm({ portfolio, save, busy, close }: { portfolio?: Portfolio
   const { t } = useTranslation()
   const [name, setName] = useState(portfolio?.name ?? '')
   const [broker, setBroker] = useState(portfolio?.broker ?? '')
+  const [accountId, setAccountId] = useState(portfolio?.brokerAccountId ?? '')
   const [costMethod, setCostMethod] = useState(portfolio?.costMethod ?? 'fifo')
   const [editVersion] = useState(portfolio?.version)
   const changedElsewhere = !!portfolio && portfolio.version !== editVersion
   const id = useRef<string | null>(null)
+  const isXtb = broker.trim().toUpperCase() === 'XTB'
+  const brokerAccountId = (isXtb && accountId.trim()) || null
+  const invalidAccountId = brokerAccountId !== null &&
+    (brokerAccountId.length > ACCOUNT_ID_MAX_LENGTH || !/^[0-9]+$/.test(brokerAccountId))
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (invalidAccountId) return
     id.current ??= crypto.randomUUID()
     if (await save(portfolio ? 'PATCH' : 'POST', portfolio ? `/${portfolio.id}` : '', {
       ...(portfolio ? { version: editVersion } : { id: id.current }), name: name.trim(), broker: broker.trim(), costMethod,
-    })) { setName(''); setBroker(''); id.current = null; close?.() }
+      ...(brokerAccountId !== null || portfolio?.brokerAccountId ? { brokerAccountId } : {}),
+    })) { setName(''); setBroker(''); setAccountId(''); id.current = null; close?.() }
   }
   return <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
     <label className="min-w-40 flex-1 text-sm">{t('portfolio.name')}<input className={input} required maxLength={80} value={name} disabled={busy} onChange={e => { setName(e.target.value); id.current = null }} /></label>
     <label className="min-w-40 flex-1 text-sm">{t('portfolio.broker')}<input className={input} required maxLength={80} value={broker} disabled={busy} onChange={e => { setBroker(e.target.value); id.current = null }} /></label>
+    {isXtb && <label className="min-w-40 flex-1 text-sm">
+      {t('portfolio.brokerAccountId')}
+      <input className={input} inputMode="numeric" value={accountId} disabled={busy}
+        aria-invalid={invalidAccountId} onChange={e => { setAccountId(e.target.value); id.current = null }} />
+    </label>}
     <label className="min-w-40 flex-1 text-sm">{t('portfolio.costMethod')}<select className={input} disabled={busy} value={costMethod} onChange={e => { setCostMethod(e.target.value as Portfolio['costMethod']); id.current = null }}><option value="fifo">{t('portfolio.fifo')}</option><option value="moving_average">{t('portfolio.moving_average')}</option></select></label>
-    <button className={button + ' text-emerald-400'} disabled={busy || changedElsewhere || !name.trim() || !broker.trim()}>{t(portfolio ? 'portfolio.save' : 'portfolio.create')}</button>
+    <button className={button + ' text-emerald-400'} disabled={busy || changedElsewhere || invalidAccountId || !name.trim() || !broker.trim()}>{t(portfolio ? 'portfolio.save' : 'portfolio.create')}</button>
     {close && <button type="button" className={button} disabled={busy} onClick={close}>{t('portfolio.cancel')}</button>}
+    {invalidAccountId && <p role="alert" className="w-full text-sm text-amber-400">{t('portfolio.errors.xtb_account_id_invalid')}</p>}
     {changedElsewhere && <p role="alert" className="w-full text-sm text-amber-400">{t('portfolio.editChanged')}</p>}
   </form>
 }
@@ -80,7 +94,11 @@ function PortfolioDetail({ owner, portfolio, instruments, save, busy, onImported
   return <div className="space-y-5">
     <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
       {editing ? <PortfolioForm portfolio={portfolio} save={save} busy={busy} close={() => setEditing(false)} /> : <div className="flex flex-wrap items-center gap-3">
-        <div className="mr-auto"><h2 className="text-lg font-semibold">{portfolio.name}</h2><p className="text-sm text-slate-400">{portfolio.broker} · {t(`portfolio.${portfolio.costMethod}`)}</p></div>
+        <div className="mr-auto">
+          <h2 className="text-lg font-semibold">{portfolio.name}</h2>
+          <p className="text-sm text-slate-400">{portfolio.broker} · {t(`portfolio.${portfolio.costMethod}`)}</p>
+          {portfolio.brokerAccountId && <p className="text-sm text-slate-400">{t('portfolio.brokerAccountIdValue', { id: portfolio.brokerAccountId })}</p>}
+        </div>
         <button className={button} disabled={busy} onClick={() => setEditing(true)}>{t('portfolio.edit')}</button>
         <button className={button + ' text-rose-400'} disabled={busy} onClick={async () => { if (window.confirm(t('portfolio.confirmPortfolio', { name: portfolio.name }))) await save('DELETE', `/${portfolio.id}?version=${portfolio.version}`) }}>{t('portfolio.delete')}</button>
       </div>}
@@ -203,7 +221,7 @@ function AccountPortfolios({ owner }: { owner: number }) {
         staleSince={stale ? data.valuedAt : undefined} />}
       <XtbWalletImport owner={owner} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
-      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{p.name} · {p.broker}</option>)}</select></label>}
+      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{p.name} · {p.broker}{p.brokerAccountId ? ` · ${p.brokerAccountId}` : ''}</option>)}</select></label>}
       {active && <>
         <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
         <PortfolioDetail key={active.id} owner={owner} portfolio={active} instruments={instruments} save={save} busy={disabled} onImported={reload} />

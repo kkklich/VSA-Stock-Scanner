@@ -12,7 +12,7 @@ vi.mock('../api/portfoliosApi', () => ({ portfolioRequest: vi.fn(), previewXtbWa
 const instruments = [{ ticker: 'kgh', name: 'KGHM', currency: 'PLN', market: 'gpw' }]
 const makePortfolio = (): Portfolio => ({
   id: 'portfolio-1', name: 'Retirement', broker: 'XTB', version: 1,
-  costMethod: 'fifo',
+  costMethod: 'fifo', brokerAccountId: null,
   createdAt: '2026-01-01T00:00:00Z', transactions: [], positions: [], totals: [],
 })
 let portfolios: Portfolio[]
@@ -68,20 +68,23 @@ describe('account portfolios', () => {
     }] }
     vi.mocked(previewXtbWallets).mockResolvedValue({ ready: 1, errors: 0, newWallets: 1, previewToken: 'reviewed-plan', blockingError: null, wallets: [{
       id: 'imported-wallet', name: 'Cash Operations', sheet: 'Cash Operations', version: null,
+      brokerAccountId: '00123456', sourceBrokerAccountId: '00123456', linksBrokerAccount: true,
       ready: 1, duplicates: 0, errors: 0, ignored: 0, warnings: [], ledgerError: null, error: null, rows: [], reconciliation,
     }] })
     vi.mocked(importXtbWallets).mockImplementation(async () => {
-      portfolios.push({ ...makePortfolio(), id: 'imported-wallet', name: 'Cash Operations', reconciliation })
+      portfolios.push({ ...makePortfolio(), id: 'imported-wallet', name: 'Cash Operations', brokerAccountId: '00123456', reconciliation })
       return { wallets: [], imported: 1, duplicates: 0, skipped: 0, created: 1 }
     })
     render(<App />)
     await user.upload(await screen.findByLabelText('XTB file for new wallets'), new File(['report'], 'IKE.xlsx'))
     await user.click(screen.getByRole('button', { name: 'Preview wallets' }))
     expect(await screen.findByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
+    expect(screen.getByText('XTB account 00123456')).toBeVisible()
     expect(screen.getByText('800 PLN')).toBeVisible()
     await user.click(await screen.findByRole('button', { name: 'Import wallets (1)' }))
     await screen.findByLabelText('Choose portfolio')
-    expect(screen.getByRole('option', { name: 'Cash Operations · XTB' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Cash Operations · XTB · 00123456' })).toBeInTheDocument()
+    expect(screen.getByText('XTB account 00123456')).toBeVisible()
     expect(screen.getByText(/Import complete\. Wallets created: 1/)).toBeVisible()
     expect(screen.getByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
     expect(screen.getByText('800 PLN')).toBeVisible()
@@ -152,6 +155,21 @@ describe('account portfolios', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(portfolioRequest).toHaveBeenCalledWith('PATCH', '/portfolio-1', {
       version: 1, name: 'Retirement', broker: 'XTB', costMethod: 'moving_average',
+    }, expect.any(AbortSignal), 1))
+  })
+
+  it('lets the owner link an existing XTB portfolio and preserves leading zeros', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    const account = screen.getByLabelText('XTB account number')
+    await user.type(account, '001a')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await user.clear(account)
+    await user.type(account, '00123456')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(portfolioRequest).toHaveBeenCalledWith('PATCH', '/portfolio-1', {
+      version: 1, name: 'Retirement', broker: 'XTB', costMethod: 'fifo', brokerAccountId: '00123456',
     }, expect.any(AbortSignal), 1))
   })
 

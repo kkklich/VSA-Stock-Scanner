@@ -53,6 +53,9 @@ class PortfolioRow(Base):
     """Private trade ledger, atomically updated under an owner lock and version check."""
 
     __tablename__ = "portfolios"
+    __table_args__ = (
+        Index("uq_portfolios_user_broker_account_id", "user_id", "broker_account_id", unique=True),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[int] = mapped_column(
@@ -60,6 +63,7 @@ class PortfolioRow(Base):
     )
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     broker: Mapped[str] = mapped_column(String(80), nullable=False)
+    broker_account_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     transactions: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     cost_method: Mapped[str] = mapped_column(String(20), nullable=False, default="fifo")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

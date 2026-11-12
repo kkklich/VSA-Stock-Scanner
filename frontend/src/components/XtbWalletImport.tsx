@@ -14,7 +14,7 @@ export function XtbWalletImport({ owner, disabled, onImported, onBusyChange }: {
   const { t, i18n } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<XtbWalletsPreview | null>(null)
-  const [result, setResult] = useState<XtbWalletsImportResult | null>(null)
+  const [result, setResult] = useState<(XtbWalletsImportResult & { linkedAccount: boolean }) | null>(null)
   const [allowPartial, setAllowPartial] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -29,7 +29,8 @@ export function XtbWalletImport({ owner, disabled, onImported, onBusyChange }: {
   const formatter = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 8 })
   const number = (value: string) => formatter.format(Number(value))
   const blocked = !!preview && (!!preview.blockingError || preview.wallets.some(wallet => wallet.error || wallet.ledgerError))
-  const canImport = !!preview?.newWallets && !blocked && (!preview.errors || allowPartial)
+  const hasChanges = !!preview && (!!preview.newWallets || preview.wallets.some(wallet => wallet.linksBrokerAccount))
+  const canImport = hasChanges && !blocked && (!preview.errors || allowPartial)
   async function run(approval?: XtbWalletsPreview) {
     if (!file || request.current || disabled || (approval && !canImport)) return
     const abort = new AbortController()
@@ -46,7 +47,7 @@ export function XtbWalletImport({ owner, disabled, onImported, onBusyChange }: {
       if (approval) {
         const saved = await importXtbWallets(file, owner, approval.previewToken, allowPartial, abort.signal)
         if (abort.signal.aborted) return
-        setResult(saved)
+        setResult({ ...saved, linkedAccount: approval.wallets.some(wallet => wallet.linksBrokerAccount) })
         setPreview(null)
         setAllowPartial(false)
         await onImported()
@@ -89,16 +90,25 @@ export function XtbWalletImport({ owner, disabled, onImported, onBusyChange }: {
       <button type="button" className={button} disabled={!file || disabled || busy} onClick={() => void run()}>{t(busy ? 'portfolio.xtb.working' : 'portfolio.xtbWallets.preview')}</button>
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-rose-400">{message(error)}</p>}
-    {result && <p role="status" className="mt-3 text-sm text-emerald-400">{result.created ? t('portfolio.xtbWallets.saved', { ...result }) : t('portfolio.xtbWallets.alreadyImported')}</p>}
+    {result && <p role="status" className="mt-3 text-sm text-emerald-400">
+      {result.created ? t('portfolio.xtbWallets.saved', { ...result }) : t(result.linkedAccount ? 'portfolio.xtbWallets.linked' : 'portfolio.xtbWallets.alreadyImported')}
+    </p>}
     {preview && <div className="mt-4 space-y-3">
       <p className="text-sm">{t('portfolio.xtbWallets.summary', { count: preview.newWallets, ready: preview.ready, errors: preview.errors })}</p>
       {preview.blockingError && <p role="alert" className="text-sm text-rose-400">{message(preview.blockingError)}</p>}
-      {!blocked && !preview.newWallets && <p role="status" className="text-sm text-emerald-400">{t('portfolio.xtbWallets.alreadyImported')}</p>}
+      {!blocked && !hasChanges && <p role="status" className="text-sm text-emerald-400">{t('portfolio.xtbWallets.alreadyImported')}</p>}
       {preview.wallets.map(wallet => <details key={wallet.id} className="rounded-lg border border-slate-800 p-3" open={
         !!wallet.error || !!wallet.ledgerError || !!wallet.errors || !!wallet.reconciliation ||
         (wallet.version === null && !wallet.ready) || wallet.warnings.includes('xtb_reconciliation_unavailable')
       }>
-        <summary className="cursor-pointer text-sm font-medium">{wallet.name} — {t('portfolio.xtb.summary', { ready: wallet.ready, duplicates: wallet.duplicates, errors: wallet.errors })}</summary>
+        <summary className="cursor-pointer text-sm font-medium">
+          {wallet.name} — {t('portfolio.xtb.summary', { ready: wallet.ready, duplicates: wallet.duplicates, errors: wallet.errors })}
+          {(wallet.brokerAccountId || wallet.sourceBrokerAccountId) && <span className="ml-2 whitespace-nowrap text-slate-400">
+            {wallet.brokerAccountId
+              ? t('portfolio.brokerAccountIdValue', { id: wallet.brokerAccountId })
+              : t('portfolio.xtbWallets.sourceAccount', { id: wallet.sourceBrokerAccountId })}
+          </span>}
+        </summary>
         <div className="mt-3 space-y-2">
           {wallet.error && <p role="alert" className="text-sm text-rose-400">{message(wallet.error)}</p>}
           {wallet.ledgerError && <p role="alert" className="text-sm text-rose-400">{message(wallet.ledgerError)}</p>}
@@ -124,9 +134,11 @@ export function XtbWalletImport({ owner, disabled, onImported, onBusyChange }: {
           </div>}
         </div>
       </details>)}
-      {!blocked && !!preview.newWallets && !!preview.errors && <label className="flex items-start gap-2 text-sm text-amber-400"><input type="checkbox" checked={allowPartial} disabled={busy || disabled} onChange={event => setAllowPartial(event.target.checked)} />{t('portfolio.xtb.partial')}</label>}
+      {!blocked && hasChanges && !!preview.errors && <label className="flex items-start gap-2 text-sm text-amber-400"><input type="checkbox" checked={allowPartial} disabled={busy || disabled} onChange={event => setAllowPartial(event.target.checked)} />{t('portfolio.xtb.partial')}</label>}
       {!!preview.newWallets && <p className="text-xs text-slate-400">{t('portfolio.xtbWallets.reconcile')}</p>}
-      {!!preview.newWallets && <button type="button" className={button + ' text-emerald-400'} disabled={busy || disabled || !canImport} onClick={() => void run(preview)}>{t('portfolio.xtbWallets.confirm', { count: preview.newWallets })}</button>}
+      {hasChanges && <button type="button" className={button + ' text-emerald-400'} disabled={busy || disabled || !canImport} onClick={() => void run(preview)}>
+        {preview.newWallets ? t('portfolio.xtbWallets.confirm', { count: preview.newWallets }) : t('portfolio.xtbWallets.confirmLinks')}
+      </button>}
     </div>}
   </section>
 }

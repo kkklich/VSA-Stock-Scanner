@@ -13,7 +13,7 @@ from pydantic import SecretStr
 
 from app.config import settings
 from app.services.portfolio import PortfolioError
-from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
+from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, parse_xtb_tables, prepare_import
 from tests.test_portfolios import client as portfolio_client
 from tests.test_portfolios import create, trade
 
@@ -451,6 +451,7 @@ def test_multi_section_xtb_csv_extracts_cash_operations_and_ignores_snapshots():
         b"IKE,KGHM,KGH.PL,5\n"
     )
     parsed = parse_xtb(csv_data, "report.csv", Companies())
+    assert parsed.broker_account_id == "11111111"
     assert len(parsed.rows) == 2
     assert parsed.rows[0]["status"] == "ready"
     assert parsed.rows[0]["transaction"]["quantity"] == "10"
@@ -460,6 +461,26 @@ def test_multi_section_xtb_csv_extracts_cash_operations_and_ignores_snapshots():
     assert parsed.rows[1]["transaction"]["quantity"] == "5"
     assert parsed.rows[1]["transaction"]["price"] == "120.00"
     assert parsed.ignored == 2
+
+
+@pytest.mark.parametrize(
+    ("cell", "account_id"),
+    [("00123456", "00123456"), (123456.0, "123456"), ("anonymous", None), (2.0**53, None)],
+)
+def test_spreadsheet_account_number_uses_exact_digits(cell, account_id):
+    tables = [("Cash Operations", [["Account number", cell], HEADERS, cash()])]
+    assert parse_xtb_tables(tables, Companies()).broker_account_id == account_id
+
+
+def test_multiple_accounts_in_one_trade_section_are_rejected():
+    data = (
+        b"Account number,11111111,,,,,\nAccount ID,22222222,,,,,\n"
+        b"ID,Type,Time,Comment,Symbol,Amount,Currency\n"
+        b"1001,Buy,2026-01-02 12:00:00,OPEN BUY 1 @ 100,KGH.PL,-100,PLN\n"
+    )
+    with pytest.raises(PortfolioError) as raised:
+        parse_xtb(data, "report.csv", Companies())
+    assert raised.value.code == "import_multiple_broker_accounts"
 
 
 AUTOMATION_TOKEN = "xtb-automation-test-token-at-least-32-chars"

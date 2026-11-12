@@ -13,7 +13,7 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
   const { t, i18n } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<XtbPreview | null>(null)
-  const [result, setResult] = useState<XtbImportResult | null>(null)
+  const [result, setResult] = useState<(XtbImportResult & { linkedAccount: boolean }) | null>(null)
   const [allowPartial, setAllowPartial] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -31,7 +31,7 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
       if (commit && preview) {
         const saved = await importXtb(portfolio.id, file, preview.version, allowPartial, abort.signal, owner)
         if (abort.signal.aborted) return
-        setResult(saved); setPreview(null); setAllowPartial(false)
+        setResult({ ...saved, linkedAccount: preview.linksBrokerAccount }); setPreview(null); setAllowPartial(false)
         await onImported()
       } else {
         const next = await previewXtb(portfolio.id, file, abort.signal, owner)
@@ -41,7 +41,7 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
       if (!abort.signal.aborted) {
         const code = failure instanceof ApiError && failure.code ? failure.code : 'failed'
         setError(code)
-        if (code === 'account_changed') {
+        if (code === 'account_changed' || code === 'broker_account_mismatch' || code === 'broker_account_already_linked') {
           setPreview(null)
           setAllowPartial(false)
         }
@@ -69,9 +69,12 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
       <button type="button" className={button} disabled={!file || disabled || busy} onClick={() => void run(false)}>{t(busy ? 'portfolio.xtb.working' : 'portfolio.xtb.preview')}</button>
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-rose-400">{t(`portfolio.errors.${error}`, { defaultValue: message(error) })}</p>}
-    {result && <p role="status" className="mt-3 text-sm text-emerald-400">{t('portfolio.xtb.saved', { ...result })}</p>}
+    {result && <p role="status" className="mt-3 text-sm text-emerald-400">
+      {result.linkedAccount && !result.imported ? t('portfolio.xtb.linked') : t('portfolio.xtb.saved', { ...result })}
+    </p>}
     {preview && <div className="mt-4 space-y-3">
       <p className="text-sm">{t('portfolio.xtb.summary', { ready: preview.ready, duplicates: preview.duplicates, errors: preview.errors })}</p>
+      {preview.sourceBrokerAccountId && <p className="text-sm text-slate-400">{t('portfolio.xtb.sourceAccount', { id: preview.sourceBrokerAccountId })}</p>}
       {!!preview.ignored && <p className="text-xs text-slate-400">{t('portfolio.xtb.ignored', { count: preview.ignored })}</p>}
       {preview.warnings.map(code => <p key={code} className="text-sm text-amber-400">{message(code)}</p>)}
       {preview.ledgerError && <p role="alert" className="text-sm text-rose-400">{t(`portfolio.errors.${preview.ledgerError}`, { defaultValue: message(preview.ledgerError) })}</p>}
@@ -93,7 +96,9 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
       </div>
       {!!preview.errors && <label className="flex items-start gap-2 text-sm text-amber-400"><input type="checkbox" checked={allowPartial} disabled={busy || disabled} onChange={event => setAllowPartial(event.target.checked)} />{t('portfolio.xtb.partial')}</label>}
       <p className="text-xs text-slate-400">{t('portfolio.xtb.reconcile')}</p>
-      <button type="button" className={button + ' text-emerald-400'} disabled={busy || disabled || !preview.ready || !!preview.ledgerError || versionChanged || (!!preview.errors && !allowPartial)} onClick={() => void run(true)}>{t('portfolio.xtb.confirm', { count: preview.ready, name: portfolio.name })}</button>
+      <button type="button" className={button + ' text-emerald-400'} disabled={busy || disabled || (!preview.ready && !preview.linksBrokerAccount) || !!preview.ledgerError || versionChanged || (!!preview.errors && !allowPartial)} onClick={() => void run(true)}>
+        {t(preview.ready || !preview.linksBrokerAccount ? 'portfolio.xtb.confirm' : 'portfolio.xtb.confirmLink', { count: preview.ready, name: portfolio.name })}
+      </button>
     </div>}
   </section>
 }

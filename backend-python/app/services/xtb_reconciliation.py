@@ -155,6 +155,10 @@ def reconcile_cash_wallets(wallets, tables):
     if len(cash) != 1 or len(opened) != 1 or cash[0]["error"] or opened[0]["error"]:
         return
     cash, opened = cash[0], opened[0]
+    cash_account, open_account = cash["brokerAccountId"], opened["brokerAccountId"]
+    if cash_account and open_account and cash_account != open_account:
+        cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
+        return
     values = dict(tables)
     checkpoint = _checkpoint(cash, opened, values[cash["sheet"]], values[opened["sheet"]])
     if checkpoint is None:
