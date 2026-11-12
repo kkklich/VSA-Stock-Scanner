@@ -1,6 +1,6 @@
 """Account-scoped, versioned portfolio persistence and batched stored quote lookup."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import func, select
@@ -126,6 +126,35 @@ class PortfolioRepository:
                 )
             ).all()
             return {row.ticker: {"price": row.close, "date": row.date} for row in rows}
+
+    async def quote_history(
+        self, tickers: set[str], start: date, end: date
+    ) -> dict[str, list[dict]]:
+        """Return in-window closes and one prior close per ticker for carrying prices forward."""
+        if not tickers:
+            return {}
+
+        quote = DailyQuoteRow
+        # PostgreSQL numeric can hold NaN, which compares greater than zero.
+        usable = (quote.close > 0) & (quote.close - quote.close == 0)
+        window = select(quote.ticker, quote.date, quote.close).where(
+            quote.ticker.in_(tickers), quote.date.between(start, end), usable
+        )
+        prior_dates = (
+            select(quote.ticker, func.max(quote.date).label("date"))
+            .where(quote.ticker.in_(tickers), quote.date < start, usable)
+            .group_by(quote.ticker)
+            .subquery()
+        )
+        prior = select(quote.ticker, quote.date, quote.close).join(
+            prior_dates, (quote.ticker == prior_dates.c.ticker) & (quote.date == prior_dates.c.date)
+        )
+        statement = window.union_all(prior).order_by("ticker", "date")
+        history = {}
+        async with self._session_factory() as session:
+            for ticker, day, price in (await session.execute(statement)).all():
+                history.setdefault(ticker, []).append({"price": price, "date": day})
+        return history
 
     async def preview_wallets(self, owner, wallets, report_digest):
         existing = {row["id"]: row for row in await self.list(owner)}

@@ -35,6 +35,31 @@ beforeEach(() => {
 })
 
 describe('account portfolios', () => {
+  it('keeps the all-wallet value visible when switching the selected portfolio', async () => {
+    portfolios.push({ ...makePortfolio(), id: 'second-wallet', name: 'Savings' })
+    const original = vi.mocked(portfolioRequest).getMockImplementation()!
+    const current = { date: '2026-01-06', value: 2500, missingQuotes: 0, missingRates: [], staleQuotes: 0 }
+    vi.mocked(portfolioRequest).mockImplementation(async (method, path, ...args) => {
+      const data = await original(method, path, ...args)
+      return path === '' ? { ...(data as object), summary: {
+        currency: 'PLN', current, history: [current], dayChange: null, weekChange: null, currencyTotals: [],
+      } } : data
+    })
+
+    const user = userEvent.setup()
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'All wallets' })).toBeVisible()
+    expect(screen.getByText('2,500.00 PLN', { selector: 'dd' })).toBeVisible()
+    expect(screen.getByText(/overlapping XTB imports/)).toBeVisible()
+    vi.mocked(portfolioRequest).mockRejectedValueOnce(new ApiError(0, 'Offline'))
+    await user.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(await screen.findByText(/Showing the valuation from/)).toBeVisible()
+    await user.selectOptions(screen.getByLabelText('Choose portfolio'), 'second-wallet')
+    expect(screen.getByRole('heading', { name: 'Savings' })).toBeVisible()
+    expect(screen.getByText('2,500.00 PLN', { selector: 'dd' })).toBeVisible()
+    expect(screen.getByText(/Showing the valuation from/)).toBeVisible()
+  })
+
   it('previews worksheet reconciliation and shows it on the created wallet after reload', async () => {
     portfolios = []
     const user = userEvent.setup()

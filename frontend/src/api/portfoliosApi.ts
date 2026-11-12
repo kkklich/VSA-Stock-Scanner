@@ -25,7 +25,16 @@ export interface Portfolio {
   transactions: Transaction[]; positions: Position[]; totals: PortfolioTotal[]
   reconciliation?: XtbReconciliation | null
 }
-export interface Portfolios { items: Portfolio[]; valuedAt: string }
+export interface PortfolioSummaryPoint {
+  date: string; value: number | null; missingQuotes: number; missingRates: string[]; staleQuotes: number
+}
+export interface PortfolioSummaryChange { amount: number; percent: number | null; since: string }
+export interface PortfolioSummary {
+  currency: string; current: PortfolioSummaryPoint; history: PortfolioSummaryPoint[]
+  dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
+  currencyTotals: { currency: string; marketValue: number | null; missingQuotes: number }[]
+}
+export interface Portfolios { items: Portfolio[]; valuedAt: string; summary?: PortfolioSummary }
 function accountHeaders(owner?: number): Record<string, string> {
   return owner === undefined ? {} : { 'X-Expected-User-Id': String(owner) }
 }

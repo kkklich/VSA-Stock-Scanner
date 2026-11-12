@@ -376,6 +376,73 @@ def test_newer_intraday_quote_is_used_and_completed_close_takes_precedence(clien
     assert closed["quoteAgeDays"] >= 0
 
 
+def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client, monkeypatch):
+    import app.routers.portfolios as endpoint
+    import app.services.portfolio_summary as summary_service
+
+    class ValuationClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 1, 12, 12, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(endpoint, "datetime", ValuationClock)
+    live = SimpleNamespace(
+        price=140, session_date=date(2026, 1, 12), as_of=ValuationClock.now(UTC)
+    )
+    monkeypatch.setattr(endpoint, "get_live_prices", lambda: {"kgh": live})
+    repo = client.app_instance.dependency_overrides[get_user_repository]().portfolios
+    with repo._session_factory().session as session:
+        for index, (day, price) in enumerate(((date(2026, 1, 5), 10), (date(2026, 1, 9), 12)), 3):
+            session.add(
+                DailyQuoteRow(
+                    id=index, ticker="nvd.de", date=day, open=price, high=price,
+                    low=price, close=price, volume=100,
+                )
+            )
+        session.commit()
+
+    purchase = trade(client, create(client)).json()
+    assert trade(client, purchase, side="sell", quantity="4", date="2026-01-08").status_code == 201
+    foreign_purchase = trade(client, create(client), ticker="NVD.DE", currency="EUR", quantity="2")
+    assert foreign_purchase.status_code == 201
+
+    rates = {
+        "EUR": [
+            (date(2026, 1, 5), Decimal(4)),
+            (date(2026, 1, 9), Decimal("4.25")),
+            (date(2026, 1, 12), Decimal("4.5")),
+        ]
+    }
+
+    async def exchange_rates(start, end, currencies):
+        assert (start, end, currencies) == (date(2026, 1, 5), date(2026, 1, 12), {"EUR"})
+        return rates
+
+    monkeypatch.setattr(summary_service, "get_portfolio_fx", exchange_rates)
+    summary = client.get("/api/portfolios").json()["summary"]
+    assert summary["currency"] == "PLN"
+    assert summary["current"]["value"] == 948
+    assert len(summary["history"]) == 8
+    assert summary["history"][-2]["value"] == 882
+    assert summary["history"][0]["value"] == 980
+    assert summary["dayChange"] == {
+        "amount": 66, "percent": pytest.approx(66 / 882 * 100), "since": "2026-01-11",
+    }
+    assert summary["weekChange"] == {
+        "amount": -32, "percent": pytest.approx(-32 / 980 * 100), "since": "2026-01-05",
+    }
+
+    rates.clear()
+    summary = client.get("/api/portfolios").json()["summary"]
+    assert summary["current"]["value"] is None
+    assert summary["current"]["missingRates"] == ["EUR"]
+    assert summary["dayChange"] is None
+    assert summary["currencyTotals"] == [
+        {"currency": "EUR", "marketValue": 24, "missingQuotes": 0},
+        {"currency": "PLN", "marketValue": 840, "missingQuotes": 0},
+    ]
+
+
 def test_portfolio_migration_upgrade_and_downgrade():
     engine = create_engine("sqlite://")
     UserRow.__table__.create(engine)

@@ -5,6 +5,7 @@ import { ApiError } from '../api/client'
 import { portfolioRequest, type Instrument, type Portfolio, type Portfolios, type Transaction } from '../api/portfoliosApi'
 import { useAuth } from '../hooks/useAuth'
 import { currencyLabel, fmtMoney, fmtPct } from '../lib/format'
+import { PortfolioOverview } from '../components/PortfolioOverview'
 import { XtbImport } from '../components/XtbImport'
 import { XtbReconciliationDetails } from '../components/XtbReconciliationDetails'
 import { XtbWalletImport } from '../components/XtbWalletImport'
@@ -193,18 +194,23 @@ function AccountPortfolios({ owner }: { owner: number }) {
   const disabled = busy || importBusy || stale || loading
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center gap-3"><h1 className="mr-auto text-xl font-semibold">{t('portfolio.title')}</h1><button className={button} disabled={busy || importBusy || loading} onClick={() => { setError(null); void reload() }}>{t('portfolio.refresh')}</button><button className={button} disabled={disabled} onClick={() => setCreating(v => !v)}>{t('portfolio.create')}</button></div>
-    <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
-    <details className="rounded-lg border border-slate-800 p-3 text-sm text-slate-400"><summary className="cursor-pointer text-slate-200">{t('portfolio.assumptions')}</summary><ul className="mt-3 list-disc space-y-2 pl-5">{['costHint', 'priceHint', 'returnHint', 'scopeHint'].map(key => <li key={key}>{t(`portfolio.${key}`)}</li>)}</ul><p className="mt-3">{t('portfolio.sources')}: <a className="text-emerald-400 hover:underline" href="https://www.ibkrguides.com/ibkrdesktop/account-portfolio.htm" target="_blank" rel="noreferrer">Interactive Brokers</a> · <a className="text-emerald-400 hover:underline" href="https://help.portfolio-performance.info/en/concepts/cost-methodology/" target="_blank" rel="noreferrer">Portfolio Performance</a></p></details>
     {error && <p role="alert" className="rounded-md border border-rose-500/30 p-3 text-sm text-rose-400">{t(`portfolio.errors.${error}`, { defaultValue: t('portfolio.errors.failed') })}</p>}
     {saved && <p role="status" className="text-sm text-emerald-400">{t('portfolio.saved')}</p>}
     {loading && <p role="status" className="text-sm text-slate-400">{t('portfolio.loading')}</p>}
     {data && <>
+      {data.summary && <PortfolioOverview summary={data.summary} walletCount={data.items.length}
+        hasMultipleXtbWallets={data.items.filter(wallet => wallet.broker.trim().toUpperCase() === 'XTB').length > 1}
+        staleSince={stale ? data.valuedAt : undefined} />}
       <XtbWalletImport owner={owner} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
       {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{p.name} · {p.broker}</option>)}</select></label>}
-      {active && <PortfolioDetail key={active.id} owner={owner} portfolio={active} instruments={instruments} save={save} busy={disabled} onImported={reload} />}
+      {active && <>
+        <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
+        <PortfolioDetail key={active.id} owner={owner} portfolio={active} instruments={instruments} save={save} busy={disabled} onImported={reload} />
+      </>}
       <p className="text-xs text-slate-500">{t('portfolio.valuedAt')}: {new Date(data.valuedAt).toLocaleString(i18n.language)}</p>
     </>}
+    <details className="rounded-lg border border-slate-800 p-3 text-sm text-slate-400"><summary className="cursor-pointer text-slate-200">{t('portfolio.assumptions')}</summary><ul className="mt-3 list-disc space-y-2 pl-5">{['costHint', 'priceHint', 'returnHint', 'scopeHint'].map(key => <li key={key}>{t(`portfolio.${key}`)}</li>)}</ul><p className="mt-3">{t('portfolio.sources')}: <a className="text-emerald-400 hover:underline" href="https://www.ibkrguides.com/ibkrdesktop/account-portfolio.htm" target="_blank" rel="noreferrer">Interactive Brokers</a> · <a className="text-emerald-400 hover:underline" href="https://help.portfolio-performance.info/en/concepts/cost-methodology/" target="_blank" rel="noreferrer">Portfolio Performance</a></p></details>
   </div>
 }
 

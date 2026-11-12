@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import asdict, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
 from hmac import compare_digest, digest
@@ -21,8 +21,9 @@ from app.markets import market_of, quote_currency
 from app.models.portfolio import AddTransaction, CreatePortfolio, UpdatePortfolio
 from app.routers.auth import get_current_user
 from app.services.auth import jwt_secret
-from app.services.portfolio import PortfolioError, valuation, xtb_checkpoint
+from app.services.portfolio import WARSAW, PortfolioError, valuation, xtb_checkpoint
 from app.services.portfolio_instruments import find_portfolio_instrument, list_portfolio_instruments
+from app.services.portfolio_summary import SUMMARY_DAYS, portfolio_summary
 from app.services.xtb_daily_statement import parse_xtb_daily_statement
 from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
 from app.services.xtb_wallet_import import parse_xtb_wallets
@@ -75,6 +76,8 @@ async def instruments(user: Owner, response: Response):
 @router.get("")
 async def portfolios(user: Owner, repo: Repository, response: Response):
     response.headers["Cache-Control"] = "private, no-store"
+    now = datetime.now(UTC)
+    today = now.astimezone(WARSAW).date()
     rows = await repo.portfolios.list(user.id)
     tickers = {t["ticker"] for row in rows for t in row["transactions"]}
     tickers.update(
@@ -83,36 +86,48 @@ async def portfolios(user: Owner, repo: Repository, response: Response):
         if row["reconciliation"]
         for change in row["reconciliation"]["changes"]
     )
-    quotes = await repo.portfolios.quotes(tickers)
+    history = await repo.portfolios.quote_history(
+        tickers, today - timedelta(days=SUMMARY_DAYS), today
+    )
+    quotes = {}
     live = get_live_prices()
     for ticker in tickers:
-        quote = quotes.get(ticker)
-        if quote:
-            quote["source"] = "close"
+        market = market_of(ticker)
+        company = find_portfolio_instrument(ticker, gpw_company_service)
+        currency = quote_currency(company) if company else market.currency
+        observations = history.get(ticker, [])
+        for observation in observations:
+            observation["currency"] = currency
+        quote = {**observations[-1], "source": "close"} if observations else None
         current = live.get(ticker) if live else None
-        if current and (quote is None or current.session_date > quote["date"]):
-            quote = {
-                "price": Decimal(str(current.price)),
-                "date": current.session_date,
-                "asOf": current.as_of,
-                "source": "intraday",
-            }
-            quotes[ticker] = quote
+        if (
+            current
+            and current.session_date <= today
+            and (quote is None or current.session_date > quote["date"])
+        ):
+            price = Decimal(str(current.price))
+            if price.is_finite() and price > 0:
+                quote = {
+                    "price": price,
+                    "date": current.session_date,
+                    "asOf": current.as_of,
+                    "source": "intraday",
+                    "currency": currency,
+                }
         if quote:
-            company = find_portfolio_instrument(ticker, gpw_company_service)
-            quote["currency"] = quote_currency(company) if company else market_of(ticker).currency
-            quote["ageDays"] = max(0, (market_of(ticker).local_date() - quote["date"]).days)
-            if not quote["price"].is_finite() or quote["price"] <= 0:
-                quotes.pop(ticker)
+            quote["ageDays"] = max(0, (market.local_date(now) - quote["date"]).days)
+            quotes[ticker] = quote
+    items = [
+        {
+            **{key: value for key, value in row.items() if key != "ledger"},
+            **valuation(row["ledger"], quotes, row["costMethod"]),
+        }
+        for row in rows
+    ]
     return {
-        "items": [
-            {
-                **{key: value for key, value in row.items() if key != "ledger"},
-                **valuation(row["ledger"], quotes, row["costMethod"]),
-            }
-            for row in rows
-        ],
-        "valuedAt": datetime.now(UTC),
+        "items": items,
+        "summary": await portfolio_summary(rows, items, history, today),
+        "valuedAt": now,
     }
 
 
