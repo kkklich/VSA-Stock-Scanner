@@ -43,7 +43,9 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
     )
     confirmLabel = updatesExisting
       ? t('portfolio.xtbWallets.confirmMixed')
-      : t('portfolio.xtbWallets.confirm', { count: preview.newWallets })
+      : preview.newWallets === 1
+        ? t('portfolio.xtbWallets.confirmOne')
+        : t('portfolio.xtbWallets.confirm', { count: preview.newWallets })
   } else if (preview?.ready) {
     confirmLabel = t('portfolio.xtbWallets.confirmTrades', { count: preview.ready })
   }

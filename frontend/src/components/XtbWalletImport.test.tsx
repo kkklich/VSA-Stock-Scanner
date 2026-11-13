@@ -37,21 +37,27 @@ async function loadPreview() {
   return user
 }
 
-describe('XTB worksheet wallets', () => {
-  it('previews each worksheet for the account and submits the reviewed plan', async () => {
+describe('XTB wallet import', () => {
+  it('previews one wallet for a full XTB account report and submits the reviewed plan', async () => {
     const busyChanged = vi.fn()
+    vi.mocked(previewXtbWallets).mockResolvedValue({
+      ...ready(), newWallets: 1, ready: 1,
+      wallets: [wallet('Cash Operations')], skippedSheets: ['Closed Positions', 'Open Positions'],
+    })
+    vi.mocked(importXtbWallets).mockResolvedValue({ wallets: [], imported: 1, duplicates: 0, skipped: 0, created: 1 })
     render(<XtbWalletImport owner={17} disabled={false} onImported={refreshed} onBusyChange={busyChanged} />)
-    const user = await loadPreview()
+    const user = userEvent.setup()
+    await user.upload(screen.getByLabelText('XTB report file'), file())
+    await user.click(screen.getByRole('button', { name: 'Preview import' }))
+    await screen.findByText('New wallets: 1 · New trades: 1 · Rows needing attention: 0')
     expect(importXtbWallets).not.toHaveBeenCalled()
-    expect(screen.getByText(/^Closed Positions —/)).toBeVisible()
-    expect(screen.getByText(/^Cash Operations —/)).toBeVisible()
-    expect(screen.getByText(/^Open Positions —/)).toBeVisible()
+    expect(screen.queryByText(/^Closed Positions —/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Open Positions —/)).not.toBeInTheDocument()
     expect(screen.getByText('XTB account 00123456')).toBeVisible()
-    expect(screen.getAllByText('Report account 00123456')).toHaveLength(2)
     await user.click(screen.getByText(/^Cash Operations —/))
     expect(screen.getByText('Cash Operations · 6')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Import wallets (3)' }))
-    await screen.findByText('Import complete. Wallets created: 3, trades added: 3, duplicates: 0, skipped: 0.')
+    await user.click(screen.getByRole('button', { name: 'Create wallet' }))
+    await screen.findByText('Import complete. Wallets created: 1, trades added: 1, duplicates: 0, skipped: 0.')
     expect(previewXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, expect.any(AbortSignal), undefined)
     expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal), undefined)
     expect(refreshed).toHaveBeenCalledTimes(1)
@@ -123,7 +129,7 @@ describe('XTB worksheet wallets', () => {
     const user = userEvent.setup()
     await user.upload(screen.getByLabelText('XTB report file'), file())
     await user.click(screen.getByRole('button', { name: 'Preview import' }))
-    const confirm = await screen.findByRole('button', { name: 'Import wallets (1)' })
+    const confirm = await screen.findByRole('button', { name: 'Create wallet' })
     expect(confirm).toBeEnabled()
     await user.click(confirm)
     expect(importXtbWallets).toHaveBeenCalledWith(expect.any(File), 17, 'reviewed-plan', false, expect.any(AbortSignal), undefined)
@@ -157,7 +163,7 @@ describe('XTB worksheet wallets', () => {
     expect(await screen.findByText(/^Retirement —/)).toBeVisible()
     expect(screen.getByText('Existing wallet')).toBeVisible()
     expect(screen.getByText('Account currency EUR')).toBeVisible()
-    expect(screen.getByText('Skipped Open Positions, Closed Positions to avoid overlapping trades.')).toBeVisible()
+    expect(screen.getByText('No trades added from Open Positions, Closed Positions.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Import trades (1)' }))
     expect(await screen.findByText('Import complete. Wallets created: 0, trades added: 1, duplicates: 0, skipped: 0.')).toBeVisible()
     expect(refreshed).toHaveBeenCalledOnce()
@@ -189,7 +195,7 @@ describe('XTB worksheet wallets', () => {
     await user.upload(screen.getByLabelText('XTB report file'), file())
     await user.click(screen.getByRole('button', { name: 'Preview import' }))
     expect(await screen.findByText('No new trades to import.')).toBeVisible()
-    expect(screen.getByText('Skipped Open Positions to avoid overlapping trades.')).toBeVisible()
+    expect(screen.getByText('No trades added from Open Positions.')).toBeVisible()
     expect(screen.queryByText('This report has already been imported.')).not.toBeInTheDocument()
   })
 
