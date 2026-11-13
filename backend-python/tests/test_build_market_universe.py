@@ -128,7 +128,7 @@ class TestMemberLists:
         assert [m.symbol for m in members] == ["AAPL"]
         assert len(client.calls) == 3
 
-    def test_members_of_both_us_indices_are_merged(self) -> None:
+    def test_us_index_members_and_extra_tickers_are_merged(self) -> None:
         url = builder.WIKIPEDIA["sp500"][0]
         sp500 = [["AAPL", "Apple"], ["BRK.B", "Berkshire"]] + [
             [f"S{i}", "x"] for i in range(460)
@@ -149,6 +149,8 @@ class TestMemberLists:
         assert build.members["brk-b.us"] == ["sp500"]
         assert build.members["asml.us"] == ["ndx"]
         assert build.members["csu.us"] == []
+        assert build.members["hhh.us"] == []
+        assert build.members["nu.us"] == []
 
 
 # ── Verification ──────────────────────────────────────────────────────────────
