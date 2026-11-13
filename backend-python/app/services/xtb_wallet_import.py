@@ -1,4 +1,4 @@
-"""Import each XTB worksheet as an independent wallet, including position reports."""
+"""Parse the transaction and position sections of an XTB report."""
 
 import hashlib
 import json

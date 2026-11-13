@@ -8,7 +8,8 @@ import pytest
 
 from tests.test_portfolios import client as portfolio_client
 from tests.test_portfolios import trade
-from tests.test_xtb_wallet_import import OPEN_HEADERS
+from tests.test_xtb_wallet_import import CLOSED_HEADERS, OPEN_HEADERS
+from tests.test_xtb_wallet_import import closed as closed_position
 
 URL = "/api/portfolios/imports/xtb/wallets"
 PARAMS = {"filename": "example.xlsx"}
@@ -28,6 +29,7 @@ def report(
     open_account="example-report",
     cash_currency=None,
     open_currency=None,
+    include_closed=False,
 ):
     book = openpyxl.Workbook()
     cash = book.active
@@ -76,6 +78,11 @@ def report(
     )
     opened.append(["IKE", "Added", "CRQ.PL", "STOCK", "", 1])
     opened.append(["IKE", 88888, "CRQ.PL", "", "BUY", 1, 10, 10, 0.1, datetime(2026, 1, 3, 12), 0])
+    if include_closed:
+        closed = book.create_sheet("Closed Positions", 0)
+        closed.append(["Account number", cash_account])
+        closed.append(CLOSED_HEADERS)
+        closed.append(closed_position())
     data = io.BytesIO()
     book.save(data)
     return data.getvalue()
@@ -98,7 +105,7 @@ def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(
     plan = preview(client, body)
     assert plan["ready"] == 1
     assert plan["errors"] == 0
-    assert plan["skippedSheets"] == ["Open Positions"]
+    assert plan["skippedSheets"] == []
     assert len(plan["wallets"]) == 1
     changes = {entry["ticker"]: entry for entry in plan["wallets"][0]["reconciliation"]["changes"]}
     assert changes["kgh"]["previousQuantity"] == "2"
@@ -132,6 +139,35 @@ def test_snapshot_reconciles_cash_wallet_and_preserves_history_and_future_sales(
     assert len(sale.json()["transactions"]) == 2
     after = next(p for p in cash_wallet(client)["positions"] if p["ticker"] == "kgh")
     assert (after["quantity"], after["cost"], after["realizedPnl"]) == (7, 140, 30)
+
+
+@pytest.mark.parametrize("position", [12345, 54321])
+def test_full_export_uses_one_wallet_when_open_account_differs(client, position):
+    body = report(
+        position=position,
+        cash_account="00123456",
+        open_account="00123457",
+        include_closed=True,
+    )
+    plan = preview(client, body)
+    assert plan["newWallets"] == plan["ready"] == 1
+    [wallet] = plan["wallets"]
+    assert wallet["brokerAccountId"] == "00123456"
+    matching_lots = position == 12345
+    assert bool(wallet["reconciliation"]) == matching_lots
+    assert plan["skippedSheets"] == (
+        ["Closed Positions"] if matching_lots else ["Closed Positions", "Open Positions"]
+    )
+
+    headers = {**OWNER, "X-XTB-Preview": plan["previewToken"]}
+    for created in (1, 0):
+        saved = client.post(URL, params=PARAMS, content=body, headers=headers)
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["created"] == saved.json()["imported"] == created
+    [saved] = client.get("/api/portfolios").json()["items"]
+    assert len(saved["transactions"]) == 1
+    positions = {p["ticker"]: p["quantity"] for p in saved["positions"]}
+    assert positions == ({"kgh": 10, "crq": 1} if matching_lots else {"kgh": 2})
 
 
 @pytest.mark.parametrize(

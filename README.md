@@ -145,9 +145,11 @@ IDs, execution dates, tickers and execution comments. English and Polish column
 names are recognized, with headers up to row 40. A CSV of executed trades can
 instead contain `ID, Type, Time, Symbol, Quantity, Price, Currency, Commission`.
 Use an unambiguous date (`YYYY-MM-DD HH:MM:SS` or `DD.MM.YYYY HH:MM:SS`). Extract
-ZIP reports before uploading. Cash Operations takes precedence when the same
-account also has position sheets. A position snapshot can initialize an empty
-wallet. Use execution history for later trade updates.
+ZIP reports before uploading. A full account export produces one wallet.
+Cash Operations supplies the trades, and a verified Open Positions snapshot
+can reconcile holdings and cost at the report date. Closed Positions are already
+represented in the full execution history. A position-only export can initialize
+an empty wallet. Use execution history for later trade updates.
 
 Each XTB account wallet has one account currency. A holding can trade in a
 different currency. Original operation IDs and trade

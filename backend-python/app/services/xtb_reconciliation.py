@@ -148,18 +148,25 @@ def _checkpoint(cash, opened, cash_values, open_values):
 
 
 def reconcile_cash_wallets(wallets, tables):
-    # This applies only to complementary native sections. Generic worksheets
-    # remain independent even when their securities happen to overlap.
     cash = [wallet for wallet in wallets if wallet["nativeSection"] == "Cash Operations"]
     opened = [wallet for wallet in wallets if wallet["nativeSection"] == "Open Positions"]
-    if len(cash) != 1 or len(opened) != 1 or cash[0]["error"] or opened[0]["error"]:
+    if len(cash) != 1 or len(opened) != 1:
         return
     cash, opened = cash[0], opened[0]
     cash_account, open_account = cash["brokerAccountId"], opened["brokerAccountId"]
+    different_account = cash_account and open_account and cash_account != open_account
+    if different_account:
+        # The two history tabs identify the account on a full export. The open
+        # snapshot can carry a different number and still show that account's lots.
+        closed = [wallet for wallet in wallets if wallet["nativeSection"] == "Closed Positions"]
+        if len(wallets) != 3 or len(closed) != 1 or closed[0]["brokerAccountId"] != cash_account:
+            cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
+            return
+        opened["supplementalSnapshot"] = True
     cash_currency = cash["parsed"].broker_account_currency
     open_currency = opened["parsed"].broker_account_currency
-    if (cash_account and open_account and cash_account != open_account) or (
-        cash_currency and open_currency and cash_currency != open_currency
+    if cash["error"] or opened["error"] or (
+        cash_currency and open_currency and open_currency != cash_currency
     ):
         cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
         return
@@ -169,3 +176,4 @@ def reconcile_cash_wallets(wallets, tables):
         cash["parsed"].warnings.append("xtb_reconciliation_unavailable")
     elif checkpoint["changes"]:
         cash["checkpoint"] = checkpoint
+        cash["checkpointSheet"] = opened["sheet"]

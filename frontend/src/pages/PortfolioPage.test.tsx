@@ -82,7 +82,7 @@ describe('account portfolios', () => {
     expect(await screen.findByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
     expect(screen.getByText('XTB account 00123456')).toBeVisible()
     expect(screen.getByText('800 PLN')).toBeVisible()
-    await user.click(await screen.findByRole('button', { name: 'Import wallets (1)' }))
+    await user.click(await screen.findByRole('button', { name: 'Create wallet' }))
     const walletSelector = await screen.findByLabelText('Choose portfolio')
     expect(within(walletSelector).getByRole('option', { name: 'Cash Operations · XTB · 00123456 · PLN' })).toBeInTheDocument()
     expect(screen.getByText('XTB account 00123456')).toBeVisible()

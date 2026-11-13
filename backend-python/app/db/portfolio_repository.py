@@ -61,7 +61,7 @@ def wallet_plan(sources, row, wallet_id, account, account_currency, *, exact, sk
     )
     old_checkpoint = xtb_checkpoint(row["ledger"]) if row else None
     checkpoint = old_checkpoint
-    if not row and len(sources) == 1:
+    if len(sources) == 1 and (not row or not row["ledger"]):
         checkpoint = first.get("checkpoint")
     if not checkpoint and len(sources) == 1 and (not row or not row["ledger"]):
         # A dated open-position snapshot can seed a ledger. Its cutoff guards
@@ -190,34 +190,14 @@ def _trade_sources(group):
     return [next((wallet for wallet in group if _section(wallet) == "Cash Operations"), group[0])]
 
 
-def _unrelated_open_sheet(wallets):
-    # In a full account-history workbook, the two dated ledger tabs identify
-    # the exported account. XTB can put a different account number on the
-    # standalone open snapshot. It cannot establish a second wallet or adjust
-    # this ledger unless it matches the exported account.
-    sections = {_section(wallet): wallet for wallet in wallets}
-    if len(wallets) != 3 or sections.keys() != {
-        "Cash Operations", "Closed Positions", "Open Positions",
-    }:
-        return None
-    cash = sections["Cash Operations"]
-    closed = sections["Closed Positions"]
-    opened = sections["Open Positions"]
-    account = cash["brokerAccountId"]
-    open_account = opened["brokerAccountId"]
-    if account and closed["brokerAccountId"] == account and open_account not in (None, account):
-        return opened["sheet"]
-    return None
-
-
 def wallet_plans(owner, wallets, report_digest, existing, target_wallet_id):
     target = existing.get(target_wallet_id)
     if target_wallet_id is not None and target is None:
         raise PortfolioError("not_found", 404)
     linked = {row["brokerAccountId"]: row for row in existing.values() if row["brokerAccountId"]}
-    unrelated_open = _unrelated_open_sheet(wallets)
-    routed = [wallet for wallet in wallets if wallet["sheet"] != unrelated_open]
-    plans, skipped = [], {unrelated_open} if unrelated_open else set()
+    supplemental = {wallet["sheet"] for wallet in wallets if wallet.get("supplementalSnapshot")}
+    routed = [wallet for wallet in wallets if wallet["sheet"] not in supplemental]
+    plans, skipped = [], set(supplemental)
     for group in [routed] if target else _wallet_groups(routed):
         accounts = {wallet["brokerAccountId"] for wallet in group if wallet["brokerAccountId"]}
         if len(accounts) > 1:
@@ -246,17 +226,19 @@ def wallet_plans(owner, wallets, report_digest, existing, target_wallet_id):
         )
         source_sheets = {wallet["sheet"] for wallet in sources} if not skip else set()
         skipped.update(wallet["sheet"] for wallet in group if wallet["sheet"] not in source_sheets)
-        plans.append(
-            wallet_plan(
-                sources,
-                row,
-                row["id"] if row else key,
-                account,
-                account_currency,
-                exact=exact,
-                skip=skip,
-            )
+        plan = wallet_plan(
+            sources,
+            row,
+            row["id"] if row else key,
+            account,
+            account_currency,
+            exact=exact,
+            skip=skip,
         )
+        snapshot_sheet = sources[0].get("checkpointSheet")
+        if snapshot_sheet and xtb_checkpoint(plan["ledger"]) == sources[0]["checkpoint"]:
+            skipped.discard(snapshot_sheet)
+        plans.append(plan)
     return plans, [wallet["sheet"] for wallet in wallets if wallet["sheet"] in skipped]
 
 
@@ -426,7 +408,7 @@ class PortfolioRepository:
         verify_preview,
         target_wallet_id=None,
     ):
-        """Create all worksheet wallets atomically; a retried upload never overwrites one."""
+        """Save the reviewed XTB import atomically and safely retry a completed import."""
         async with self._session_factory() as session:
             async with session.begin():
                 await session.execute(
