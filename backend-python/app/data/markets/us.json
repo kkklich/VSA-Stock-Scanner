@@ -3953,6 +3953,21 @@
       ]
     },
     {
+      "ticker": "hhh.us",
+      "symbol": "HHH",
+      "name": "Howard Hughes Holdings Inc.",
+      "sector": "Real Estate",
+      "industry": "Real Estate - Development",
+      "country": "United States",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "marketCap": 5007000000,
+      "employees": null,
+      "website": "https://www.howardhughes.com",
+      "description": "Howard Hughes Holdings Inc. owns a real estate business that develops master-planned communities and operates commercial properties. Its Vantage subsidiary provides specialty insurance and reinsurance.",
+      "indices": []
+    },
+    {
       "ticker": "hig.us",
       "symbol": "HIG",
       "name": "The Hartford Insurance Group, Inc.",
@@ -5995,6 +6010,21 @@
       "indices": [
         "sp500"
       ]
+    },
+    {
+      "ticker": "nu.us",
+      "symbol": "NU",
+      "name": "Nu Holdings Ltd.",
+      "sector": "Financial Services",
+      "industry": "Banks - Regional",
+      "country": "Brazil",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "marketCap": 59514000000,
+      "employees": 10027,
+      "website": "https://international.nubank.com.br",
+      "description": "Nu Holdings Ltd. provides digital banking through Nubank, offering accounts, cards, loans, investments, and other financial products. It operates in Brazil, Mexico, Colombia, and the United States.",
+      "indices": []
     },
     {
       "ticker": "nue.us",

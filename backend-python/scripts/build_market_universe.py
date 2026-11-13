@@ -1,10 +1,10 @@
 """Build the company lists for the non-GPW markets.
 
 Writes ``app/data/markets/<market>.json`` — the companies the scanner tracks on
-each foreign market — from the members of that market's indices (see
+each foreign market — from index members and explicitly tracked stocks (see
 ``agent/MULTI-MARKET-PLAN.md``):
 
-    us  S&P 500 + NASDAQ-100 + Constellation Software
+    us  S&P 500 + NASDAQ-100 + Constellation Software, Howard Hughes Holdings, and Nu Holdings
     de  DAX 40                   fr  CAC 40
     nl  AEX                      uk  FTSE 100
 
@@ -99,6 +99,8 @@ NASDAQ_100_URL = "https://api.nasdaq.com/api/quote/list-type/nasdaq100"
 # How many members an index is expected to have, give or take a share class.
 # A download far below this is a changed page layout, not a smaller index.
 EXPECTED_SIZE = {"sp500": 500, "ndx": 100, "dax": 40, "cac40": 40, "aex": 25, "ftse100": 100}
+
+EXTRA_US_TICKERS = (CSU_TICKER, "hhh.us", "nu.us")
 
 # Yahoo's exchange codes, as the reader knows them.
 EXCHANGE_NAMES = {
@@ -330,7 +332,8 @@ def collect_members(market: Market, client: httpx.Client) -> MarketBuild:
             if index_id not in build.members[ticker]:
                 build.members[ticker].append(index_id)
     if market.id == US.id:
-        build.members.setdefault(CSU_TICKER, [])
+        for ticker in EXTRA_US_TICKERS:
+            build.members.setdefault(ticker, [])
     return build
 
 
