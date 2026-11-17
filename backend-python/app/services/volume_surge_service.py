@@ -57,6 +57,7 @@ from datetime import date, timedelta
 from app.analysis.runtime_vsa import detect_signals
 from app.analysis.statistics import close_position, median_turnover, median_volume
 from app.analysis.vsa import VsaConfig, compute_rating, verdict_from_signals
+from app.analysis.weekly import resample_weekly
 from app.db.base import DB_SCAN_CONCURRENCY
 from app.db.repository import QuoteRepository
 from app.markets import (
@@ -80,8 +81,8 @@ logger = logging.getLogger(__name__)
 
 # Same analysis window and pre-filters as the ranking (blueprint §5). The
 # FETCH window is the ranking's longer CONTEXT_HISTORY_DAYS (52-week context)
-# so both services keep sharing one cached per-ticker history; analysis here
-# still runs on this 120-day slice.
+# so both services keep sharing one cached per-ticker history. The 120-day
+# slice is for liquidity and VSA; volume windows can use the full history.
 _HISTORY_DAYS = 120
 _MAX_CONCURRENT = 4
 # Recency pre-filter, same as the ranking: drop tickers whose last bar lags
@@ -90,9 +91,11 @@ _MAX_CONCURRENT = 4
 _MAX_SESSION_LAG_DAYS = 10
 
 # Screen defaults: last 3 sessions vs the 20 sessions before them, flagged
-# when the recent average is at least 50 % above the baseline average.
+# when the recent average is at least 50% above the baseline median.
 DEFAULT_RECENT_DAYS = 3
 DEFAULT_BASELINE_DAYS = 20
+DEFAULT_RECENT_WEEKS = 1
+DEFAULT_BASELINE_WEEKS = 13
 DEFAULT_MIN_RATIO = 1.5
 
 
@@ -305,6 +308,8 @@ async def compute_volume_surge(
     recent_days: int = DEFAULT_RECENT_DAYS,
     baseline_days: int = DEFAULT_BASELINE_DAYS,
     min_ratio: float = DEFAULT_MIN_RATIO,
+    *,
+    weekly_windows: tuple[int, int] | None = None,
 ) -> VolumeSurgeResponse:
     """Scan every company passing the ranking pre-filters for a volume surge.
 
@@ -315,7 +320,10 @@ async def compute_volume_surge(
     if today is None:
         today = date.today()
 
+    recent_count, baseline_count = weekly_windows or (recent_days, baseline_days)
     from_date = today - timedelta(days=CONTEXT_HISTORY_DAYS)
+    # Exclude the first week if the fetch started midweek.
+    first_full_week = from_date + timedelta(days=(-from_date.weekday()) % 7)
     analysis_from = today - timedelta(days=_HISTORY_DAYS)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
     # Separate gate for the DB reads: this scan fans out over the whole
@@ -327,7 +335,7 @@ async def compute_volume_surge(
     async def fetch_quotes(ticker: str) -> list[StooqDailyQuote] | None:
         """Return quotes from cache → repo → stooq, in that priority order."""
         # Identical key to the ranking's fetch, so both features share one
-        # cached 120-day history per ticker.
+        # cached history per ticker.
         cache_key = f"history:{ticker}:{from_date}:None"
         quotes: list[StooqDailyQuote] | None = history_cache.get(cache_key)
         if quotes is not None:
@@ -388,11 +396,8 @@ async def compute_volume_surge(
         if below_market_cap_floor(company.market_cap, currency):
             return None
 
-        quotes = await fetch_quotes(company.ticker)
-        # Analysis runs on the ranking's 120-day slice; only the shared fetch
-        # window is longer (see CONTEXT_HISTORY_DAYS), so results are
-        # identical to a plain 120-day fetch.
-        recent = [q for q in quotes or [] if q.date >= analysis_from]
+        quotes = await fetch_quotes(company.ticker) or []
+        recent = [q for q in quotes if q.date >= analysis_from]
         if len(recent) < 25:
             return None
 
@@ -401,7 +406,10 @@ async def compute_volume_surge(
             if below_liquidity_floor(median_turnover(recent), currency):
                 return None
 
-            windows = _surge_windows(recent, recent_days, baseline_days)
+            bars = quotes
+            if weekly_windows is not None:
+                bars = resample_weekly([q for q in quotes if q.date >= first_full_week])
+            windows = _surge_windows(bars, recent_count, baseline_count)
             if windows is None:
                 return None
             metrics = _metrics(windows)
@@ -410,6 +418,10 @@ async def compute_volume_surge(
             if metrics.volume_ratio < min_ratio:
                 return None
             context = _context(windows)
+            surge_start = context.surge_start
+            if weekly_windows is not None:
+                week_start = surge_start - timedelta(days=surge_start.weekday())
+                surge_start = next(q.date for q in quotes if q.date >= week_start)
 
             # VSA context on the same window/settings as the ranking, so the
             # numbers match across pages. As-of the last session date (not
@@ -421,7 +433,7 @@ async def compute_volume_surge(
             # The verdict is a decayed score over months of signals; say
             # whether any of them is part of the surge, or it reads as if it
             # described the surge when it predates it.
-            signal_in_window = any(s.date >= context.surge_start for s in signals)
+            signal_in_window = any(s.date >= surge_start for s in signals)
 
             item = VolumeSurgeItem(
                 ticker=company.ticker.upper(),
@@ -440,7 +452,7 @@ async def compute_volume_surge(
                 last_signal=verdict,
                 days_since_signal=days_since,
                 signal_in_window=signal_in_window,
-                surge_start=context.surge_start,
+                surge_start=surge_start,
                 peak_date=context.peak_date,
                 peak_volume_ratio=context.peak_volume_ratio,
                 peak_change_pct=context.peak_change_pct,
@@ -449,7 +461,7 @@ async def compute_volume_surge(
                 breaks_high=context.breaks_high,
                 breaks_low=context.breaks_low,
             )
-            return item, recent
+            return item, bars
         except Exception:  # noqa: BLE001
             logger.exception("Volume surge: skipping %s: analysis failed.", company.ticker)
             return None
@@ -485,7 +497,7 @@ async def compute_volume_surge(
             item.model_copy(
                 update={
                     "report_date": report_in_window(
-                        report_dates.get(item.ticker.lower(), ()), bars, recent_days
+                        report_dates.get(item.ticker.lower(), ()), bars, recent_count
                     )
                 }
             ),
@@ -498,8 +510,10 @@ async def compute_volume_surge(
     as_of = max((bars[-1].date for _, bars in hits), default=None)
     return VolumeSurgeResponse(
         as_of=as_of,
-        recent_days=recent_days,
-        baseline_days=baseline_days,
+        recent_days=None if weekly_windows else recent_days,
+        baseline_days=None if weekly_windows else baseline_days,
+        recent_weeks=recent_count if weekly_windows else None,
+        baseline_weeks=baseline_count if weekly_windows else None,
         min_ratio=min_ratio,
         scanned_count=scanned,
         total_count=len(items),

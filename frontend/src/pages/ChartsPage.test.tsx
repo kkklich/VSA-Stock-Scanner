@@ -5,7 +5,8 @@
 // directly, without any network.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderWithProviders, screen } from '../test/utils'
+import { Link } from 'react-router-dom'
+import { fireEvent, renderWithProviders, screen } from '../test/utils'
 import i18n from '../i18n'
 import en from '../i18n/locales/en.json'
 import type { ApiStockSignals } from '../api/stocksApi'
@@ -45,6 +46,7 @@ vi.mock('../components/AiAnalysisCard', () => ({ AiAnalysisCard: () => null }))
 vi.mock('../components/TrustScoreCard', () => ({ TrustScoreCard: () => null }))
 
 // Import after the mocks are registered.
+import App from '../App'
 import { ChartsPage } from './ChartsPage'
 
 const rating = en.chart.rating
@@ -88,6 +90,29 @@ function mockData(over: Partial<ApiStockSignals> = {}) {
     noDataForInterval: false,
   })
 }
+
+it('updates the browser tab when opening and leaving stock pages', () => {
+  mockData({ ticker: 'VRC', name: 'Vercom S.A.' })
+  const routes = () => (
+    <>
+      <Link to="/stock/kgh">Open KGH</Link>
+      <Link to="/legal">Leave stock page</Link>
+      <App />
+    </>
+  )
+  const { rerender } = renderWithProviders(routes(), { initialEntries: ['/stock/vrc'] })
+  expect(document.title).toBe('Vercom')
+
+  fireEvent.click(screen.getByRole('link', { name: 'Open KGH' }))
+  expect(document.title).toBe('KGH')
+
+  mockData()
+  rerender(routes())
+  expect(document.title).toBe('KGHM Polska Miedz')
+
+  fireEvent.click(screen.getByRole('link', { name: 'Leave stock page' }))
+  expect(document.title).toBe('StockPilot')
+})
 
 describe('ChartsPage — weekly section of the VSA Rating card', () => {
   beforeEach(async () => {

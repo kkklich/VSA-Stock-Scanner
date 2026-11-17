@@ -38,7 +38,7 @@ export function describePeakBar(item: ApiVolumeSurgeItem): string {
 }
 
 /** The same reading with its numbers, for the tooltip. */
-export function peakBarDetail(item: ApiVolumeSurgeItem): string {
+export function peakBarDetail(item: ApiVolumeSurgeItem, unit: 'session' | 'week' = 'session'): string {
   const spread =
     item.peakSpreadRatio == null
       ? 'no reference spread'
@@ -47,8 +47,10 @@ export function peakBarDetail(item: ApiVolumeSurgeItem): string {
     item.peakClosePosition == null
       ? 'no price range'
       : `closed at ${Math.round(item.peakClosePosition * 100)}% of its range`
-  const move = `${item.peakChangePct >= 0 ? '+' : ''}${item.peakChangePct.toFixed(2)}% on the day`
-  return `Busiest session ${fmtSessionDay(item.peakDate)}: ${item.peakVolumeRatio.toFixed(1)}× a typical day's volume, ${spread}, ${close}, ${move}.`
+  const period = unit === 'week' ? 'week' : 'day'
+  const move = `${item.peakChangePct >= 0 ? '+' : ''}${item.peakChangePct.toFixed(2)}% on the ${period}`
+  const date = fmtSessionDay(item.peakDate)
+  return `Busiest ${unit} ${unit === 'week' ? `through ${date}` : date}: ${item.peakVolumeRatio.toFixed(1)}× a typical ${period}'s volume, ${spread}, ${close}, ${move}.`
 }
 
 /** "Wed 24.09" — a session in the surge window. */

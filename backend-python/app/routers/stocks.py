@@ -142,8 +142,10 @@ from app.services.stooq_client import StooqClient
 from app.services.trade_simulation_service import build_trade_simulation
 from app.services.volume_surge_service import (
     DEFAULT_BASELINE_DAYS,
+    DEFAULT_BASELINE_WEEKS,
     DEFAULT_MIN_RATIO,
     DEFAULT_RECENT_DAYS,
+    DEFAULT_RECENT_WEEKS,
     compute_surge_metrics,
     compute_volume_surge,
 )
@@ -1659,12 +1661,14 @@ _SURGE_SORT_KEYS: dict[str, str] = {
 )
 async def get_volume_surge(
     request: Request = None,
-    recent_days: Annotated[int, Query(alias="recentDays", ge=1, le=10)] = (
+    recent_days: Annotated[int, Query(alias="recentDays", ge=1, le=20)] = (
         DEFAULT_RECENT_DAYS
     ),
-    baseline_days: Annotated[int, Query(alias="baselineDays", ge=10, le=60)] = (
+    baseline_days: Annotated[int, Query(alias="baselineDays", ge=10, le=250)] = (
         DEFAULT_BASELINE_DAYS
     ),
+    recent_weeks: Annotated[int | None, Query(alias="recentWeeks", ge=1, le=12)] = None,
+    baseline_weeks: Annotated[int | None, Query(alias="baselineWeeks", ge=4, le=52)] = None,
     min_ratio: Annotated[float, Query(alias="minRatio", ge=1.0, le=10.0)] = (
         DEFAULT_MIN_RATIO
     ),
@@ -1693,6 +1697,10 @@ async def get_volume_surge(
     price move alone. Server-side sorted (default: strongest surge first) and
     paginated; ``totalCount`` carries the matching-row total.
 
+    Supplying ``recentWeeks`` or ``baselineWeeks`` selects weekly candles and
+    overrides the daily windows. The weekly defaults are 1 and 13. The
+    latest candle includes volume from sessions available so far this week.
+
     ``tickers`` narrows the cached scan to a comma-separated favorites list
     before sorting and pagination. Omitted means all; empty matches nothing.
 
@@ -1701,6 +1709,12 @@ async def get_volume_surge(
     is ``sortBy=sector,volumeRatio&sortDir=asc,desc``.
     """
     sort = _parse_sort_levels(sort_by, sort_dir, _SURGE_SORT_KEYS)
+    weekly_windows = None
+    if recent_weeks is not None or baseline_weeks is not None:
+        weekly_windows = (
+            recent_weeks or DEFAULT_RECENT_WEEKS,
+            baseline_weeks or DEFAULT_BASELINE_WEEKS,
+        )
 
     markets = _resolve_markets(market, allow_all=True)
     config = _parse_vsa_settings(vsa_settings)
@@ -1719,6 +1733,7 @@ async def get_volume_surge(
             history_cache,
             repo,
             request=request,
+            weekly_windows=weekly_windows,
         )
         for scope in markets
     ]
@@ -1765,13 +1780,17 @@ async def _market_volume_surge(
     history_cache: TTLCache,
     repo: QuoteRepository | None,
     request: Request = None,
+    *,
+    weekly_windows: tuple[int, int] | None = None,
 ) -> VolumeSurgeResponse:
     """One market's full volume-surge scan, from the cache or computed once."""
     config = _scan_vsa_config(config)
-    cache_key = (
-        f"volume-surge:{scope.id}:{recent_days}:{baseline_days}:{min_ratio}"
-        f"{config.cache_suffix()}"
+    window_key = (
+        f"weekly:{weekly_windows[0]}:{weekly_windows[1]}"
+        if weekly_windows
+        else f"{recent_days}:{baseline_days}"
     )
+    cache_key = f"volume-surge:{scope.id}:{window_key}:{min_ratio}{config.cache_suffix()}"
     full: VolumeSurgeResponse | None = cache.get(cache_key)
     if full is not None:
         return full
@@ -1788,6 +1807,7 @@ async def _market_volume_surge(
             config=config,
             recent_days=recent_days,
             baseline_days=baseline_days,
+            weekly_windows=weekly_windows,
             min_ratio=min_ratio,
         )
         if not cache.set_if_generation(

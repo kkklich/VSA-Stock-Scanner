@@ -92,6 +92,27 @@ describe('VolumeSurgePage surge context', () => {
     expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({ recentDays: 3, baselineDays: 20, minRatio: 1.5 })
   })
 
+  it('keeps separate daily and weekly windows when changing timeframe', async () => {
+    mockScan([])
+    const user = userEvent.setup()
+    renderWithProviders(<VolumeSurgePage />, {
+      initialEntries: ['/volume-surge?recentDays=20&baselineDays=250'],
+    })
+    const timeframe = screen.getByRole('combobox', { name: 'Timeframe' })
+    const baseline = screen.getByRole('combobox', { name: 'Baseline' })
+
+    await user.selectOptions(timeframe, 'weekly')
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({ recentWeeks: 1, baselineWeeks: 13, page: 1 })
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0].recentDays).toBeUndefined()
+    await user.selectOptions(baseline, '52')
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0].baselineWeeks).toBe(52)
+
+    await user.selectOptions(timeframe, 'daily')
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({ recentDays: 20, baselineDays: 250 })
+    await user.selectOptions(timeframe, 'weekly')
+    expect(baseline).toHaveDisplayValue('52 weeks')
+  })
+
   beforeEach(() => {
     localStorage.clear()
     useVolumeSurgeMock.mockClear()

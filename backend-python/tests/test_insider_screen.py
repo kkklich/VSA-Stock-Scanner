@@ -133,6 +133,34 @@ async def test_api_filters_before_pagination_and_returns_amounts(client):
     repo.get_insider_transactions_bulk.assert_awaited_once()
 
 
+async def test_screener_ignores_legacy_report_rows_and_counts_recovered_trades(client):
+    http, repo = client
+    today = date.today()
+    old_report = trade(
+        trade_date=today, shares=None, price=None,
+        source_url="https://www.gpw.pl/espi-ebi-report?geru_id=123",
+    )
+    open_market_sale = trade(
+        "sell", trade_date=today - timedelta(days=3), insider_name="Jan Testowy",
+        shares=300, price=20, source_url="https://www.gpw.pl/komunikat?geru_id=123",
+    )
+    await repo.upsert_insider_transactions("bbb", [old_report, open_market_sale])
+    await repo.upsert_insider_transactions("ccc", [old_report])
+
+    response = http.get("/api/stocks/ranking", params={
+        "insiderActivity": "any", "insiderDays": 30, "minInsiderValue": 6000,
+    })
+    assert response.status_code == 200
+    [item] = response.json()
+    assert item["ticker"] == "bbb"
+    summary = item["insiderActivity"]
+    assert summary["purchasesCount"] == 0
+    assert summary["salesCount"] == 1
+    assert summary["netValuePln"] == -6000
+    assert summary["valueLast30DaysPln"] == -6000
+    assert summary["latestTransactionDate"] == open_market_sale.trade_date.isoformat()
+
+
 def test_no_filter_does_not_read_insiders(client):
     http, repo = client
     repo.get_insider_transactions_bulk = AsyncMock(side_effect=AssertionError("unexpected read"))

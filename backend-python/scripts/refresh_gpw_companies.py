@@ -23,6 +23,7 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -66,7 +67,10 @@ def parse_gpw_companies(html: str) -> list[dict]:
         name = full_name[: -len(symbol_text)].strip()
         if not name:
             raise ValueError(f"The GPW company {ticker!r} has an empty name")
-        company = {"ticker": ticker, "name": name, "sector": None}
+        isin = parse_qs(urlsplit(str(name_element.parent["href"])).query).get("isin", [""])[0]
+        if not re.fullmatch(r"[A-Z]{2}[A-Z0-9]{9}[0-9]", isin):
+            raise ValueError(f"The GPW company {ticker!r} has an invalid ISIN")
+        company = {"ticker": ticker, "name": name, "sector": None, "isin": isin}
         previous = companies.get(ticker)
         if previous is not None and previous != company:
             raise ValueError(f"Conflicting GPW directory entries for {ticker!r}")
@@ -96,6 +100,8 @@ def merge_companies(existing: list[dict], official: list[dict]) -> list[dict]:
         incoming[ticker] = company
         if ticker not in merged:
             merged[ticker] = {"ticker": ticker, "name": company["name"], "sector": None}
+        if "isin" in company:
+            merged[ticker]["isin"] = company["isin"]
     return [merged[ticker] for ticker in sorted(merged)]
 
 

@@ -1,9 +1,9 @@
-// Keep the browser tab branded as StockPilot while updating the per-page meta
-// description, social meta tags and canonical URL as the route changes. The
-// crawlable initial HTML lives in index.html; this keeps shared links accurate
-// while the app runs (and helps when Googlebot renders JS).
+// Keep the browser tab branded as StockPilot outside the stock detail route.
+// Update the metadata and canonical URL as the route changes. The crawlable
+// initial HTML lives in index.html.
 
 import { useEffect } from 'react'
+import { matchPath } from 'react-router-dom'
 import { displayTicker, marketOfTicker } from './markets'
 
 const BRAND = 'StockPilot'
@@ -227,11 +227,12 @@ function setCanonical(href: string) {
 export function usePageSeo(pathname: string) {
   useEffect(() => {
     let entry = DEFAULT_ENTRY
+    const stockRoute = matchPath('/stock/:ticker', pathname)
 
-    if (pathname.startsWith('/stock/')) {
+    if (stockRoute) {
       // Per-ticker stock detail page. A foreign ticker's suffix names its
       // market, so the text says where the stock trades.
-      const raw = decodeURIComponent(pathname.split('/')[2] ?? '')
+      const raw = decodeURIComponent(stockRoute.params.ticker ?? '')
       const ticker = displayTicker(raw).toUpperCase()
       const venue = MARKET_VENUES[marketOfTicker(raw)] ?? MARKET_VENUES.gpw
       entry = {
@@ -241,11 +242,11 @@ export function usePageSeo(pathname: string) {
           : 'Interactive candlestick chart with Volume Spread Analysis (VSA) signals for a listed stock.',
       }
     } else {
+      document.title = BRAND
       entry = STATIC_ENTRIES.find((e) => e.test(pathname))?.entry ?? DEFAULT_ENTRY
     }
 
     const title = `${entry.title} | ${BRAND}`
-    document.title = BRAND
     setMetaByName('description', entry.description)
     // index.html ships "index, follow"; an operational page overrides it, and
     // every other route puts it back on the way out.

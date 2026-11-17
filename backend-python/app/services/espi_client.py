@@ -13,9 +13,12 @@ publication date, manager role, trade direction (buy/sell), volume and price.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from datetime import date
+from functools import lru_cache
+from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
@@ -24,6 +27,8 @@ from bs4 import BeautifulSoup
 from app.models import InsiderTransactionItem
 from app.services.cache import TTLCache
 from app.services.espi_issuer_reports import issuer_report_matches, parse_issuer_report_candidates
+from app.services.espi_pap_reports import PAP_ORIGIN, find_pap_report
+from app.services.insider_service import espi_correction_notes, without_superseded_espi_reports
 from app.services.mar_notification_parser import parse_mar_pdf
 
 logger = logging.getLogger(__name__)
@@ -34,9 +39,12 @@ _GPW_AJAX_URL = f"{_GPW_BASE_URL}/ajaxindex.php"
 _ISSUER_REPORT_INDEXES = {
     "cyber_folks": "https://investors.cyberfolks.pl/raporty/",
 }
-_ISSUER_ORIGINS = {urlsplit(url).netloc for url in _ISSUER_REPORT_INDEXES.values()}
+_PUBLIC_REPORT_ORIGINS = {
+    PAP_ORIGIN, *(urlsplit(url).netloc for url in _ISSUER_REPORT_INDEXES.values())
+}
 _REPORT_SELECTOR = ".report-data, .report-content"
 _MAX_PDF_BYTES = 10_000_000
+_GPW_REPORT_PATHS = {"/komunikat", "/espi-ebi-report"}
 
 _HEADERS = {
     "User-Agent": (
@@ -66,6 +74,14 @@ _ART69_PATTERNS = (
 _GERU_ID_RE = re.compile(r"geru_id=(\d+)")
 _DATE_DMY_RE = re.compile(r"(\d{2})-(\d{2})-(\d{4})")
 _ESPI_REPORT_NUMBER_RE = re.compile(r"\|\s*ESPI\s*\|\s*(\d+)/(\d{4})\b", re.IGNORECASE)
+_LIST_ISIN_RE = re.compile(r"\(([A-Z]{2}[A-Z0-9]{9}[0-9])\)\s*$")
+_LEGAL_SUFFIX_RE = re.compile(
+    r"(?:\s+|^)(?:s\.?\s*a\.?|spółka\s+akcyjna)\s*$", re.IGNORECASE
+)
+_CORRECTED_REPORT_NUMBER_RE = re.compile(
+    r"\braporcie\s+bieżącym\s+(?:ESPI\s+)?nr\s+(\d+)\s*/\s*(\d{4})\b",
+    re.IGNORECASE,
+)
 
 _ROLE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"wiceprezes[a-z]*\s+zarz[aą]du", re.IGNORECASE), "Wiceprezes Zarządu"),
@@ -212,13 +228,30 @@ def extract_shares_and_price(text: str) -> tuple[int | None, float | None]:
     return shares, price
 
 
-def parse_espi_list_html(html: str, target_company_hint: str = "") -> list[dict]:
+@lru_cache(maxsize=1)
+def _gpw_company_isins() -> dict[str, str]:
+    path = Path(__file__).resolve().parents[1] / "data/gpw-companies.json"
+    return {
+        company["ticker"].casefold(): company["isin"]
+        for company in json.loads(path.read_text(encoding="utf-8-sig"))
+        if company.get("isin")
+    }
+
+
+def _issuer_name(text: str) -> str:
+    without_isin = _LIST_ISIN_RE.sub("", text).strip()
+    return " ".join(re.findall(r"[^\W_]+", _LEGAL_SUFFIX_RE.sub("", without_isin).casefold()))
+
+
+def parse_espi_list_html(
+    html: str, target_company_hint: str = "", *, target_isin: str | None = None
+) -> list[dict]:
     """Parse GPW ajaxindex.php HTML list into candidate MAR 19 report stubs."""
     if not html or not html.strip():
         return []
     soup = BeautifulSoup(html, "html.parser")
     results: list[dict] = []
-    hint_lower = target_company_hint.strip().lower()
+    target_name = _issuer_name(target_company_hint)
 
     for li in soup.find_all("li"):
         date_span = li.find("span", class_="date")
@@ -230,16 +263,29 @@ def parse_espi_list_html(html: str, target_company_hint: str = "") -> list[dict]
             continue
 
         href = str(link_a.get("href") or "")
+        url = urljoin(_GPW_BASE_URL, href)
+        parts = urlsplit(url)
+        if (
+            parts.scheme != "https"
+            or parts.netloc != "www.gpw.pl"
+            or parts.path not in _GPW_REPORT_PATHS
+        ):
+            continue
         m_id = _GERU_ID_RE.search(href)
         if not m_id:
             continue
         geru_id = m_id.group(1)
 
-        company_text = name_strong.get_text(strip=True) if name_strong else ""
-        if hint_lower and hint_lower not in company_text.lower():
+        company_text = name_strong.get_text(" ", strip=True) if name_strong else ""
+        isin_match = _LIST_ISIN_RE.search(company_text)
+        isin = isin_match[1] if isin_match else None
+        if target_isin and isin:
+            if target_isin != isin:
+                continue
+        elif target_name and target_name != _issuer_name(company_text):
             continue
 
-        title_text = title_p.get_text(strip=True) if title_p else ""
+        title_text = title_p.get_text(" ", strip=True) if title_p else ""
         if not is_mar19_title(title_text):
             continue
 
@@ -264,7 +310,8 @@ def parse_espi_list_html(html: str, target_company_hint: str = "") -> list[dict]
                 "publication_date": pub_date,
                 "title": title_text,
                 "company": company_text,
-                "url": urljoin(_GPW_BASE_URL, href),
+                "isin": isin,
+                "url": url,
             }
         )
     return results
@@ -353,15 +400,8 @@ class EspiClient:
         """Search GPW ESPI reports for a company and return parsed MAR 19 items."""
         if limit < 1 or report_limit < 1:
             raise ValueError("Limity raportów muszą być większe od zera.")
-        # Use the first significant word of the company name as search query
-        clean_name = re.sub(
-            r"\b(?:S\.?A\.?|SPÓŁKA|AKCYJNA|GRUPA|POLSKA)\b",
-            "",
-            company_name,
-            flags=re.IGNORECASE,
-        ).strip()
-        words = [w for w in re.split(r"[\s\-]+", clean_name) if len(w) >= 3]
-        search_query = words[0] if words else ticker.upper()
+        isin = _gpw_company_isins().get(ticker.casefold())
+        search_query = isin or _LEGAL_SUFFIX_RE.sub("", company_name.strip()) or ticker.upper()
 
         payload = {
             "action": "GPWEspiReportUnion",
@@ -388,19 +428,7 @@ class EspiClient:
                     "Brak wyników nie oznacza braku transakcji."
                 )
                 return []
-            stubs = parse_espi_list_html(list_html, target_company_hint=search_query)
-            # Profile names can differ from GPW's issuer label, e.g. Powszechna
-            # Kasa Oszczędności versus PKO BANK POLSKI. Try the ticker as well.
-            if not stubs and search_query.casefold() != ticker.casefold():
-                payload["searchText"] = ticker.upper()
-                ticker_html = await self._post_form(_GPW_AJAX_URL, payload)
-                if ticker_html is None or "<title>Request Rejected</title>" in ticker_html:
-                    self.warnings.append(
-                        f"Nie udało się sprawdzić raportów pod tickerem {ticker.upper()}."
-                    )
-                else:
-                    list_html = ticker_html
-                    stubs = parse_espi_list_html(list_html, target_company_hint=ticker)
+            stubs = parse_espi_list_html(list_html, company_name, target_isin=isin)
             if len(BeautifulSoup(list_html, "html.parser").find_all("li")) >= limit:
                 self.warnings.append(
                     f"Lista osiągnęła limit {limit} raportów ESPI; starsze raporty "
@@ -416,17 +444,29 @@ class EspiClient:
                     "powiadomień MAR. Pozostałe pominięto ze względu na limit."
                 )
             for stub in stubs[:report_limit]:
+                report_text = ""
                 report_html = await self._get_url(stub["url"])
                 report = BeautifulSoup(report_html or "", "html.parser").select_one(
                     _REPORT_SELECTOR
                 )
+                if report is None and stub["isin"]:
+                    alternate = f"{_GPW_BASE_URL}/espi-ebi-report?geru_id={stub['geru_id']}"
+                    report_html = await self._get_url(alternate)
+                    report = BeautifulSoup(report_html or "", "html.parser").select_one(
+                        _REPORT_SELECTOR
+                    )
                 if report is None:
                     issuer_urls = await self._get_issuer_report_attachments(stub, company_name)
                     if not issuer_urls:
-                        self.warnings.append(f"Nie udało się pobrać raportu: {stub['url']}")
-                        continue
+                        mirror = await find_pap_report(stub, self._get_url)
+                        if mirror is None:
+                            self.warnings.append(f"Nie udało się pobrać raportu: {stub['url']}")
+                            continue
+                        issuer_urls = mirror.attachments
+                        report_text = mirror.text
                     attachment_urls = list(issuer_urls)
                 else:
+                    report_text = report.get_text(" ", strip=True)
                     attachment_urls = list(
                         dict.fromkeys(
                             urljoin(stub["url"], str(a["href"]))
@@ -449,6 +489,19 @@ class EspiClient:
                     content = await self._get_pdf(url)
                     if not content and report is not None:
                         content = await self._get_issuer_pdf(url, company_name)
+                    if not content and report is not None:
+                        # Match the filename within the same issuer, report number
+                        # and publication date. PAP keeps the GPW attachment name
+                        # after a document/date prefix.
+                        filename = _gpw_attachment_filename(url)
+                        mirror = await find_pap_report(stub, self._get_url)
+                        matches = [
+                            link for link in mirror.attachments if unquote(
+                                urlsplit(link).path
+                            ).casefold().endswith("." + filename)
+                        ] if mirror else []
+                        if len(matches) == 1:
+                            content = await self._get_pdf(matches[0])
                     if not content:
                         self.warnings.append(f"Nie udało się pobrać załącznika PDF: {url}")
                         continue
@@ -471,15 +524,22 @@ class EspiClient:
                     detail_items.extend(parsed)
                 # A report is a container, not an extra trade alongside its attachments.
                 if detail_items:
+                    if "korekt" in stub["title"].casefold():
+                        original_ids = _corrected_report_ids(report_text, stub, stubs)
+                        if len(original_ids) == 1:
+                            notes = espi_correction_notes(stub["title"], original_ids.pop())
+                            detail_items = [
+                                tx.model_copy(update={"notes": notes}) for tx in detail_items
+                            ]
                     items.extend(detail_items)
                 elif not downloaded_pdf and report is not None:
                     # Do not reintroduce quantities from PDF forms deliberately
                     # rejected as non-share instruments through the HTML fallback.
                     items.append(parse_espi_report_html(report_html, stub))
-            return items
+            return without_superseded_espi_reports(items)
 
     async def _get_pdf(self, url: str) -> bytes | None:
-        response = await self._get_issuer_response(url)
+        response = await self._get_public_report_response(url)
         if response is not None and self._is_pdf(response.content):
             return response.content
         return await asyncio.to_thread(self._browser_request, "GET", url, None, True)
@@ -536,7 +596,7 @@ class EspiClient:
         html = await self._get_issuer_index(index_url)
         if not html:
             return None
-        filename = unquote(urlsplit(gpw_url).path).rsplit("/", 1)[-1].split(",", 1)[0]
+        filename = _gpw_attachment_filename(gpw_url)
         key = re.sub(r"\W", "", filename).casefold()
         origin = urlsplit(index_url).netloc
         for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
@@ -558,31 +618,51 @@ class EspiClient:
                 timeout=12.0, headers=_HEADERS, follow_redirects=True
             ) as client:
                 resp = await client.post(url, data=data)
-                if resp.status_code == 200 and len(resp.text) > 50:
+                if resp.status_code == 200 and "<title>Request Rejected</title>" not in resp.text:
                     return resp.text
         except Exception as exc:
             logger.debug("httpx POST to GPW failed (%s), trying curl fallback.", exc)
 
-        return await asyncio.to_thread(self._curl_post_sync, url, data)
+        html = await asyncio.to_thread(self._curl_post_sync, url, data)
+        if html is not None:
+            return html
+        try:
+            async with httpx.AsyncClient(timeout=12.0, headers=_HEADERS) as client:
+                resp = await client.get(url, params=data)
+                return resp.text if resp.status_code == 200 else None
+        except httpx.HTTPError as exc:
+            logger.debug("GPW listing GET failed: %s", exc)
+            return None
 
     async def _get_url(self, url: str) -> str | None:
-        response = await self._get_issuer_response(url)
+        response = await self._get_public_report_response(url)
         if response is not None:
             return response.text
         # GPW report pages reject the default TLS fingerprint even with HTTP 200.
-        return await asyncio.to_thread(self._curl_get_sync, url)
+        html = await asyncio.to_thread(self._curl_get_sync, url)
+        if html:
+            return html
+        if urlsplit(url).netloc != "www.gpw.pl":
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=8.0, headers=_HEADERS) as client:
+                response = await client.get(url)
+                return response.text if response.status_code == 200 else None
+        except httpx.HTTPError as exc:
+            logger.debug("GPW report request failed: %s", exc)
+            return None
 
     @staticmethod
-    async def _get_issuer_response(url: str) -> httpx.Response | None:
+    async def _get_public_report_response(url: str) -> httpx.Response | None:
         parts = urlsplit(url)
-        if parts.scheme != "https" or parts.netloc not in _ISSUER_ORIGINS:
+        if parts.scheme != "https" or parts.netloc not in _PUBLIC_REPORT_ORIGINS:
             return None
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.get(url)
                 return response if response.status_code == 200 else None
         except httpx.HTTPError as exc:
-            logger.debug("Issuer archive request failed: %s", exc)
+            logger.debug("Public ESPI mirror request failed: %s", exc)
             return None
 
     @staticmethod
@@ -620,3 +700,20 @@ class EspiClient:
         except Exception as exc:
             logger.debug("Browser request to GPW failed: %s", exc)
         return None
+
+
+def _gpw_attachment_filename(url: str) -> str:
+    return unquote(urlsplit(url).path).rsplit("/", 1)[-1].split(",", 1)[0].casefold()
+
+
+def _corrected_report_ids(text: str, correction: dict, candidates: list[dict]) -> set[str]:
+    numbers = {
+        f"{int(match[1])}/{match[2]}" for match in _CORRECTED_REPORT_NUMBER_RE.finditer(text)
+    }
+    return {
+        stub["geru_id"]
+        for stub in candidates
+        if stub["geru_id"] != correction["geru_id"]
+        and stub["publication_date"] <= correction["publication_date"]
+        and stub["report_number"] in numbers
+    }

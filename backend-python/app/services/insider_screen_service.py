@@ -8,6 +8,7 @@ from typing import Literal
 
 from app.markets import to_pln_or_none
 from app.models.stocks import InsiderScreenSummary, InsiderTransactionItem, StockRankingItem
+from app.services.insider_service import is_espi_report_placeholder, without_superseded_espi_reports
 
 InsiderActivity = Literal["all", "any", "buy", "sell", "netBuy", "netSell"]
 
@@ -24,9 +25,9 @@ def summarize_insider_activity(
     selected_side = "buy" if activity in ("buy", "netBuy") else (
         "sell" if activity in ("sell", "netSell") else None
     )
-    for tx in transactions:
+    for tx in without_superseded_espi_reports(transactions):
         side = tx.transaction_type
-        if not tx.is_open_market or side not in counts:
+        if not tx.is_open_market or side not in counts or is_espi_report_placeholder(tx):
             continue
         counts[side] += 1
         if selected_side is None or side == selected_side:

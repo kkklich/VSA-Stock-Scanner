@@ -9,6 +9,7 @@ Handles:
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
@@ -22,6 +23,14 @@ from app.models.stocks import (
     InsiderTransactionItem,
     InsiderTransactionsResponse,
 )
+
+_CORRECTION_NOTE = "\nKorygowany komunikat GPW: "
+_CORRECTED_REPORT = re.compile(r"\nKorygowany komunikat GPW: (\d+)\s*$")
+
+
+def espi_correction_notes(title: str, original_report_id: str) -> str:
+    # Link the correction to any copy of the original already in storage.
+    return f"{title[:450]}{_CORRECTION_NOTE}{original_report_id}"
 
 
 def _transaction_value(tx: InsiderTransactionItem) -> Decimal | None:
@@ -117,10 +126,9 @@ def _espi_report_key(tx: InsiderTransactionItem) -> tuple[str, date] | None:
     return None
 
 
-def _is_espi_report_placeholder(tx: InsiderTransactionItem) -> bool:
+def is_espi_report_placeholder(tx: InsiderTransactionItem) -> bool:
     return (
-        tx.source == "espi"
-        and (
+        (
             tx.trade_date is None
             or (
                 tx.trade_date == tx.publication_date
@@ -128,10 +136,45 @@ def _is_espi_report_placeholder(tx: InsiderTransactionItem) -> bool:
             )
         )
         and not tx.insider_name
-        and tx.shares is None
-        and tx.price is None
-        and tx.value is None
+        and _espi_report_key(tx) is not None
     )
+
+
+def without_superseded_espi_reports(
+    transactions: list[InsiderTransactionItem],
+) -> list[InsiderTransactionItem]:
+    """Use dated trades and apply corrections to the cited insider and date."""
+    # Older imports could save a report title as a trade and use the report's
+    # publication date. Skip that placeholder once the same filing yields trades.
+    dated_espi_reports = {
+        key
+        for tx in transactions
+        if tx.trade_date is not None
+        and not is_espi_report_placeholder(tx)
+        and (key := _espi_report_key(tx)) is not None
+    }
+    corrections = set()
+    for tx in transactions:
+        if tx.source != "espi" or not tx.insider_name or tx.trade_date is None:
+            continue
+        if match := _CORRECTED_REPORT.search(tx.notes or ""):
+            name = " ".join(tx.insider_name.casefold().split())
+            corrections.add((match[1], name, tx.trade_date, tx.transaction_type))
+
+    return [
+        tx
+        for tx in transactions
+        if not (
+            (key := _espi_report_key(tx))
+            and (
+                (is_espi_report_placeholder(tx) and key in dated_espi_reports)
+                or (
+                    key[0], " ".join((tx.insider_name or "").casefold().split()),
+                    tx.trade_date, tx.transaction_type,
+                ) in corrections
+            )
+        )
+    ]
 
 
 def build_insider_response(
@@ -145,26 +188,14 @@ def build_insider_response(
     warnings: list[str] | None = None,
 ) -> InsiderTransactionsResponse:
     """Build the full API response with filtered list, summary, and daily chart markers."""
-    # Older imports could save a report title as a trade and use the report's
-    # publication date. Skip that placeholder once the same filing yields trades.
-    dated_espi_reports = {
-        key
-        for tx in transactions
-        if tx.trade_date is not None
-        and not _is_espi_report_placeholder(tx)
-        and (key := _espi_report_key(tx)) is not None
-    }
-    visible = [
-        tx for tx in transactions
-        if not (
-            _is_espi_report_placeholder(tx) and _espi_report_key(tx) in dated_espi_reports
-        )
-    ]
+    visible = without_superseded_espi_reports(transactions)
     if not include_all:
         visible = [
             tx
             for tx in visible
-            if tx.is_open_market and tx.transaction_type in ("buy", "sell")
+            if tx.is_open_market
+            and tx.transaction_type in ("buy", "sell")
+            and not is_espi_report_placeholder(tx)
         ]
 
     # Sort transactions newest first by publication_date, then trade_date

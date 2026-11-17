@@ -1,8 +1,8 @@
 // Volume Surge page — companies trading on unusually high volume right now.
-// Method: multi-day relative volume (RVOL) — the average volume of the last
-// few sessions divided by the stock's typical (median) session before them.
+// Relative volume (RVOL) compares recent sessions or weeks with the stock's
+// typical (median) volume per session or week in the preceding baseline.
 // Volume is the "effort" side of VSA, so each row also shows the price change
-// over the surge window (the "result"), the session that carried the surge
+// over the surge window (the "result"), the bar that carried the surge
 // read the way VSA reads a bar (spread and close), whether the price left its
 // range, a report date when one explains the surge, and the stock's VSA
 // rating/verdict with the age of the signal behind it.
@@ -27,7 +27,7 @@ import { useWatchlists } from '../hooks/useWatchlists'
 import { WatchlistControls } from '../components/WatchlistControls'
 import { ALL_MARKETS, displayTicker, GPW_MARKET } from '../lib/markets'
 import { plnLine } from '../lib/rankingColumns'
-import { useUrlState, booleanParam, numberParam, type UrlField } from '../hooks/useUrlState'
+import { useUrlState, booleanParam, enumParam, numberParam, type UrlField } from '../hooks/useUrlState'
 import { sortParam } from '../lib/urlSort'
 import { SortMenu, type SortOption } from '../components/SortMenu'
 import { useTableSort } from '../hooks/useTableSort'
@@ -61,8 +61,8 @@ const SORT_OPTIONS: SortOption<VolumeSurgeSortKey>[] = [
   { key: 'sector', label: 'Sector' },
   { key: 'volumeRatio', label: 'RVOL' },
   { key: 'recentAvgVolume', label: 'Volume now / normal' },
-  { key: 'daysAboveBaseline', label: 'Hot days' },
-  { key: 'peakVolumeRatio', label: 'Peak day' },
+  { key: 'daysAboveBaseline', label: 'Above normal' },
+  { key: 'peakVolumeRatio', label: 'Peak volume' },
   { key: 'priceChangePct', label: 'Price move' },
   { key: 'lastPrice', label: 'Price' },
   ...(CLASSIC_VSA_ENABLED ? [{ key: 'currentRating' as const, label: 'VSA' }] : []),
@@ -71,19 +71,10 @@ const SORT_OPTIONS: SortOption<VolumeSurgeSortKey>[] = [
 
 /* ── Screen parameter presets ───────────────────────────────────────────── */
 
-const RECENT_OPTIONS = [
-  { value: 1, label: '1 day' },
-  { value: 3, label: '3 days' },
-  { value: 5, label: '5 days' },
-  { value: 10, label: '10 days' },
-]
-
-const BASELINE_OPTIONS = [
-  { value: 10, label: '10 days' },
-  { value: 20, label: '20 days' },
-  { value: 30, label: '30 days' },
-  { value: 60, label: '60 days' },
-]
+const RECENT_DAYS = [1, 2, 3, 5, 10, 15, 20]
+const BASELINE_DAYS = [10, 20, 30, 40, 60, 120, 250]
+const RECENT_WEEKS = [1, 2, 3, 4, 8, 12]
+const BASELINE_WEEKS = [4, 8, 13, 26, 52]
 
 const RATIO_OPTIONS = [
   { value: 1.5, label: '≥ 1.5×' },
@@ -114,6 +105,7 @@ function ButtonGroup<T extends number>({
         <button
           key={opt.value}
           type="button"
+          aria-pressed={opt.value === value}
           onClick={() => onChange(opt.value)}
           className={
             'px-2.5 py-1.5 text-xs font-medium transition-colors ' +
@@ -127,6 +119,35 @@ function ButtonGroup<T extends number>({
         </button>
       ))}
     </div>
+  )
+}
+
+const FILTER_SELECT_CLASS = 'rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-slate-200'
+
+function WindowSelect({
+  label,
+  options,
+  unit,
+  value,
+  onChange,
+}: {
+  label: string
+  options: number[]
+  unit: 'session' | 'week'
+  value: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="flex items-center gap-2 text-xs text-slate-400">
+      {label}
+      <select className={FILTER_SELECT_CLASS} value={value} onChange={(e) => onChange(Number(e.target.value))}>
+        {options.map((count) => (
+          <option key={count} value={count}>
+            {count} {unit}{count === 1 ? '' : 's'}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -150,8 +171,11 @@ function volumeParam(key: string, fallback: number, values: number[]): UrlField<
 
 const URL_FIELDS = {
   favorites: booleanParam(),
-  recentDays: volumeParam('stockpilot:volume-surge:recentDays', 3, [1, 3, 5, 10]),
-  baselineDays: volumeParam('stockpilot:volume-surge:baselineDays', 20, [10, 20, 30, 60]),
+  timeframe: enumParam<'daily' | 'weekly'>('daily', ['daily', 'weekly']),
+  recentDays: volumeParam('stockpilot:volume-surge:recentDays', 3, RECENT_DAYS),
+  baselineDays: volumeParam('stockpilot:volume-surge:baselineDays', 20, BASELINE_DAYS),
+  recentWeeks: numberParam(1, { values: RECENT_WEEKS }),
+  baselineWeeks: numberParam(13, { values: BASELINE_WEEKS }),
   minRatio: volumeParam('stockpilot:volume-surge:minRatio', 1.5, [1.5, 2, 3, 5]),
   sort: sortParam<VolumeSurgeSortKey>({ key: 'volumeRatio', dir: 'desc' }, [
     'ticker', 'name', 'sector', 'lastPrice', 'recentAvgVolume', 'baselineAvgVolume',
@@ -171,9 +195,16 @@ export function VolumeSurgePage() {
     [stars],
   )
   const favoritesKey = favoritesOnly ? favTickers.join(',') : undefined
+  const [timeframe, setTimeframe] = url.field('timeframe')
   const [recentDays, setRecentDays] = url.field('recentDays')
   const [baselineDays, setBaselineDays] = url.field('baselineDays')
+  const [recentWeeks, setRecentWeeks] = url.field('recentWeeks')
+  const [baselineWeeks, setBaselineWeeks] = url.field('baselineWeeks')
   const [minRatio, setMinRatio] = url.field('minRatio')
+  const weekly = timeframe === 'weekly'
+  const unit = weekly ? 'week' : 'session'
+  const recentCount = weekly ? recentWeeks : recentDays
+  const baselineCount = weekly ? baselineWeeks : baselineDays
   useEffect(() => {
     try {
       localStorage.setItem('stockpilot:volume-surge:recentDays', JSON.stringify(recentDays))
@@ -202,13 +233,12 @@ export function VolumeSurgePage() {
   const pooled = market === ALL_MARKETS
   useEffect(() => {
     setPage(1)
-  }, [marketParam, favoritesKey, recentDays, baselineDays, minRatio, sort])
+  }, [marketParam, favoritesKey, timeframe, recentCount, baselineCount, minRatio, sort])
 
   const { items, meta, loading, loadingMore, error, hasMore, refetch } =
     useVolumeSurge(
       {
-        recentDays,
-        baselineDays,
+        ...(weekly ? { recentWeeks, baselineWeeks } : { recentDays, baselineDays }),
         minRatio,
         page,
         pageSize: PAGE_SIZE,
@@ -220,6 +250,9 @@ export function VolumeSurgePage() {
     )
 
   const totalCount = meta?.totalCount ?? 0
+  const resultUnit = meta ? (meta.recentWeeks != null ? 'week' : 'session') : unit
+  const resultRecentCount = meta?.recentWeeks ?? meta?.recentDays ?? recentCount
+  const resultBaselineCount = meta?.baselineWeeks ?? meta?.baselineDays ?? baselineCount
 
   // Infinite scroll: when the sentinel row below the table scrolls into view
   // (a little before it's actually visible, via rootMargin) and there are more
@@ -262,14 +295,18 @@ export function VolumeSurgePage() {
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-400">
             Stocks whose average volume over the last{' '}
-            <span className="text-slate-200">{recentDays}</span> session
-            {recentDays > 1 ? 's' : ''} is at least{' '}
+            <span className="text-slate-200">{recentCount}</span> {unit}
+            {recentCount > 1 ? 's' : ''} is at least{' '}
             <span className="text-slate-200">{minRatio}×</span> their typical
-            session over the <span className="text-slate-200">{baselineDays}</span>{' '}
-            sessions before that (relative volume, RVOL). In VSA terms a volume
-            surge is <em>effort</em> — professional money at work; the price
-            change and the shape of the busiest bar are the <em>result</em>.
+            {' '}{unit} over the <span className="text-slate-200">{baselineCount}</span>{' '}
+            {unit}s before that (relative volume, RVOL).
           </p>
+          {weekly && (
+            <p className="mt-1 max-w-3xl text-xs text-slate-400">
+              For a 1W chart spike, start with a 1-week surge window and a 13-week baseline.
+              The current week uses volume so far.
+            </p>
+          )}
         </div>
         {meta?.asOf && (
           <span className="text-xs text-slate-500">Data as of {meta.asOf}</span>
@@ -278,27 +315,34 @@ export function VolumeSurgePage() {
 
       {/* Screen parameters */}
       <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          Surge window
-          <InfoTip text="How many of the most recent sessions are averaged as the 'now' volume." />
-          <ButtonGroup
-            options={RECENT_OPTIONS}
-            value={recentDays}
-            onChange={applyParam(setRecentDays)}
-          />
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          Baseline
-          <InfoTip text="The reference period: how many sessions before the surge window define the stock's normal volume. Normal is the typical (median) session, so one exceptional day in it, such as a report day, does not hide a new surge." />
-          <ButtonGroup
-            options={BASELINE_OPTIONS}
-            value={baselineDays}
-            onChange={applyParam(setBaselineDays)}
-          />
-        </div>
+        <label className="flex items-center gap-2 text-xs text-slate-400">
+          Timeframe
+          <select
+            className={FILTER_SELECT_CLASS}
+            value={timeframe}
+            onChange={(e) => applyParam(setTimeframe)(e.target.value === 'weekly' ? 'weekly' : 'daily')}
+          >
+            <option value="daily">Daily (1D)</option>
+            <option value="weekly">Weekly (1W)</option>
+          </select>
+        </label>
+        <WindowSelect
+          label="Surge window"
+          options={weekly ? RECENT_WEEKS : RECENT_DAYS}
+          unit={unit}
+          value={recentCount}
+          onChange={applyParam(weekly ? setRecentWeeks : setRecentDays)}
+        />
+        <WindowSelect
+          label="Baseline"
+          options={weekly ? BASELINE_WEEKS : BASELINE_DAYS}
+          unit={unit}
+          value={baselineCount}
+          onChange={applyParam(weekly ? setBaselineWeeks : setBaselineDays)}
+        />
         <div className="flex items-center gap-2 text-xs text-slate-400">
           Min. ratio
-          <InfoTip text="Only stocks whose recent volume is at least this many times a typical session are shown. 1.5× = elevated, 3× or more = a major event." />
+          <InfoTip text={`Minimum recent volume relative to a typical ${unit} in the baseline. 1.5× means 50% above normal.`} />
           <ButtonGroup
             options={RATIO_OPTIONS}
             value={minRatio}
@@ -413,7 +457,7 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="Relative volume: average volume of the surge window ÷ a typical (median) session of the baseline period. 2× = double the normal activity."
+                    info={`Average volume in the surge window divided by the median volume per ${resultUnit} in the baseline. 2× means double the normal activity.`}
                     className="text-right"
                   />
                   <SortHeader
@@ -422,24 +466,24 @@ export function VolumeSurgePage() {
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="Average shares traded per session during the surge window vs a typical session of the baseline period (the median, so one exceptional day does not distort it)."
+                    info={`Average shares traded per ${resultUnit} in the surge window compared with the median in the baseline.`}
                     className="hidden text-right md:table-cell"
                   />
                   <SortHeader
-                    label="Hot days"
+                    label="Above normal"
                     col="daysAboveBaseline"
                     sort={sort}
                     onSort={onSort}
                     align="right"
-                    info="How many sessions of the surge window individually beat a typical baseline session — more days = a sustained surge, not a one-off."
+                    info={`Number of ${resultUnit}s in the surge window whose volume exceeded the baseline median.`}
                     className="hidden text-right md:table-cell"
                   />
                   <SortHeader
-                    label="Peak day"
+                    label="Peak volume"
                     col="peakVolumeRatio"
                     sort={sort}
                     onSort={onSort}
-                    info="The session in the surge window that traded the most shares, read the way VSA reads a bar: its spread (high to low) against the reference period's average (wide = 1.5× or more, narrow = 0.7× or less, the VSA engine's own thresholds) and where it closed in that range. Heavy volume on a wide bar that closes in its direction is effort with result; heavy volume on a narrow bar, or a close against the bar's direction, is effort without result. Worth a look at the chart either way."
+                    info={`The highest-volume ${resultUnit} in the surge window. The bar's high-to-low range is measured against the baseline average (wide at 1.5× or more, narrow at 0.7× or less). Its close position shows where it finished within that range.`}
                   />
                   <SortHeader
                     label="Price move"
@@ -486,8 +530,9 @@ export function VolumeSurgePage() {
                     key={item.ticker}
                     item={item}
                     pooled={pooled}
-                    recentDays={meta?.recentDays ?? recentDays}
-                    baselineDays={meta?.baselineDays ?? baselineDays}
+                    unit={resultUnit}
+                    recentCount={resultRecentCount}
+                    baselineCount={resultBaselineCount}
                     onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
                   />
                 ))}
@@ -502,8 +547,9 @@ export function VolumeSurgePage() {
                 key={item.ticker}
                 item={item}
                 pooled={pooled}
-                recentDays={meta?.recentDays ?? recentDays}
-                baselineDays={meta?.baselineDays ?? baselineDays}
+                unit={resultUnit}
+                recentCount={resultRecentCount}
+                baselineCount={resultBaselineCount}
                 onOpen={() => navigate(`/stock/${item.ticker.toLowerCase()}`)}
               />
             ))}
@@ -566,19 +612,21 @@ function ReportChip({ date }: { date: string }) {
 /** "↑ 20-session high" when the surge pushed the price out of its range. */
 function RangeBreak({
   item,
-  baselineDays,
+  baselineCount,
+  unit,
 }: {
   item: ApiVolumeSurgeItem
-  baselineDays: number
+  baselineCount: number
+  unit: 'session' | 'week'
 }) {
   if (!item.breaksHigh && !item.breaksLow) return null
   const tag = (arrow: string, word: string) => (
     <span
       key={word}
-      title={`During the surge the price traded ${word === 'high' ? 'above the highest high' : 'below the lowest low'} of the ${baselineDays} sessions before it. On heavy volume that can be a breakout — or a climax.`}
+      title={`During the surge the price traded ${word === 'high' ? 'above the highest high' : 'below the lowest low'} of the ${baselineCount} ${unit}s before it.`}
       className="inline-flex items-center whitespace-nowrap rounded border border-slate-700 bg-slate-800/60 px-1 py-px text-[10px] font-medium leading-none text-slate-300"
     >
-      {arrow} {baselineDays}-session {word}
+      {arrow} {baselineCount}-{unit} {word}
     </span>
   )
   return (
@@ -589,13 +637,22 @@ function RangeBreak({
   )
 }
 
-/** The session that carried the surge: its date, volume and VSA shape. */
-function PeakDay({ item, align = 'left' }: { item: ApiVolumeSurgeItem; align?: 'left' | 'right' }) {
+/** The highest-volume bar's date, volume and VSA shape. */
+function PeakBar({
+  item,
+  unit,
+  align = 'left',
+}: {
+  item: ApiVolumeSurgeItem
+  unit: 'session' | 'week'
+  align?: 'left' | 'right'
+}) {
   const arrow = item.peakChangePct > 0 ? '▲' : item.peakChangePct < 0 ? '▼' : '•'
+  const date = fmtSessionDay(item.peakDate)
   return (
-    <div className={align === 'right' ? 'text-right' : ''} title={peakBarDetail(item)}>
+    <div className={align === 'right' ? 'text-right' : ''} title={peakBarDetail(item, unit)}>
       <div className="whitespace-nowrap text-xs tabular-nums">
-        <span className="text-slate-200">{fmtSessionDay(item.peakDate)}</span>
+        <span className="text-slate-200">{unit === 'week' ? `Through ${date}` : date}</span>
         <span className="text-slate-500"> · {item.peakVolumeRatio.toFixed(1)}×</span>
       </div>
       <div className="mt-0.5 text-[11px] text-slate-400">
@@ -624,14 +681,16 @@ function SignalAgeLine({ item }: { item: ApiVolumeSurgeItem }) {
 function SurgeRow({
   item,
   pooled,
-  recentDays,
-  baselineDays,
+  unit,
+  recentCount,
+  baselineCount,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
   pooled: boolean
-  recentDays: number
-  baselineDays: number
+  unit: 'session' | 'week'
+  recentCount: number
+  baselineCount: number
   onOpen: () => void
 }) {
   return (
@@ -677,10 +736,10 @@ function SurgeRow({
         {plnLine(item.recentAvgVolume * item.lastPrice, item.currency, pooled, 'turnover')}
       </td>
       <td className="hidden px-4 py-3 text-right text-xs tabular-nums text-slate-300 md:table-cell">
-        {item.daysAboveBaseline}/{recentDays}
+        {item.daysAboveBaseline}/{recentCount}
       </td>
       <td className="px-4 py-3">
-        <PeakDay item={item} />
+        <PeakBar item={item} unit={unit} />
       </td>
       <td className="px-4 py-3 text-right">
         <span
@@ -688,7 +747,7 @@ function SurgeRow({
         >
           {fmtPct(item.priceChangePct)}
         </span>
-        <RangeBreak item={item} baselineDays={baselineDays} />
+        <RangeBreak item={item} baselineCount={baselineCount} unit={unit} />
       </td>
       <td className="hidden px-4 py-3 text-right text-sm tabular-nums text-slate-200 sm:table-cell">
         {fmtMoney(item.lastPrice, item.currency)}
@@ -718,14 +777,16 @@ function SurgeRow({
 function SurgeCard({
   item,
   pooled,
-  recentDays,
-  baselineDays,
+  unit,
+  recentCount,
+  baselineCount,
   onOpen,
 }: {
   item: ApiVolumeSurgeItem
   pooled: boolean
-  recentDays: number
-  baselineDays: number
+  unit: 'session' | 'week'
+  recentCount: number
+  baselineCount: number
   onOpen: () => void
 }) {
   return (
@@ -776,7 +837,7 @@ function SurgeCard({
             <span className={'tabular-nums font-medium ' + deltaTone(item.priceChangePct)}>
               {fmtPct(item.priceChangePct)}
             </span>
-            <RangeBreak item={item} baselineDays={baselineDays} />
+            <RangeBreak item={item} baselineCount={baselineCount} unit={unit} />
           </span>
         </div>
         <div className="flex justify-between gap-2">
@@ -798,14 +859,14 @@ function SurgeCard({
           </span>
         </div>
         <div className="flex justify-between gap-2">
-          <span className="text-slate-500">Hot days</span>
+          <span className="text-slate-500">Above normal</span>
           <span className="tabular-nums text-slate-300">
-            {item.daysAboveBaseline}/{recentDays}
+            {item.daysAboveBaseline}/{recentCount}
           </span>
         </div>
         <div className="col-span-2 flex justify-between gap-2">
-          <span className="text-slate-500">Peak day</span>
-          <PeakDay item={item} align="right" />
+          <span className="text-slate-500">Peak volume</span>
+          <PeakBar item={item} unit={unit} align="right" />
         </div>
       </div>
 

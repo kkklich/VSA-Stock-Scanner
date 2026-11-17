@@ -1,7 +1,7 @@
 // Stock detail / charts page — the "detail" half of the master–detail dashboard.
 // Now backed by GET /api/stocks/{ticker}/signals via the useStockDetail hook.
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, Loader2, MoreHorizontal } from 'lucide-react'
@@ -536,6 +536,13 @@ export function ChartsPage() {
     fromDate,
     interval,
   )
+  // The API returns the canonical ticker, and data can briefly belong to the previous stock.
+  const requestedTicker = ticker.trim().toUpperCase().replace(/\.WA$/, '')
+  const companyName = data?.ticker === requestedTicker ? data.name : null
+  const tabTitle = companyName?.trim().replace(/\s+S\.?A\.?$/i, '') || displayTicker(requestedTicker)
+  useEffect(() => {
+    document.title = tabTitle
+  }, [tabTitle])
 
   // Company fundamentals — fetched once here and shared by the Fundamentals and
   // Investment cards (both read the same payload; one fetch, not two). Volume

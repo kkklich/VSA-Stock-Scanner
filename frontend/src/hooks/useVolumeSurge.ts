@@ -45,7 +45,7 @@ export function useVolumeSurge(
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  const { recentDays, baselineDays, minRatio, page, pageSize, sort, market, tickers } = query
+  const { recentDays, baselineDays, recentWeeks, baselineWeeks, minRatio, page, pageSize, sort, market, tickers } = query
   // Keep an empty favorites list distinct from an unrestricted scan.
   const tickerDeps = tickers?.join(',')
   // The sort is an array of objects, so a fresh render would look like a
@@ -64,6 +64,8 @@ export function useVolumeSurge(
     fetchVolumeSurge({
       recentDays,
       baselineDays,
+      recentWeeks,
+      baselineWeeks,
       minRatio,
       page,
       pageSize,
@@ -100,7 +102,7 @@ export function useVolumeSurge(
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recentDays, baselineDays, minRatio, page, pageSize, sortDeps, market, tickerDeps, tick, enabled])
+  }, [recentDays, baselineDays, recentWeeks, baselineWeeks, minRatio, page, pageSize, sortDeps, market, tickerDeps, tick, enabled])
 
   const hasMore = meta !== null && items.length < meta.totalCount
 

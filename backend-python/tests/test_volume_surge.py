@@ -640,6 +640,59 @@ class TestGetVolumeSurge:
         assert body["items"][0]["volumeRatio"] == 3.0
         assert body["items"][0]["daysAboveBaseline"] == 10
 
+    def test_daily_windows_use_history_beyond_the_ranking_slice(self) -> None:
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService([_company()])
+        )
+        stooq = _FakeStooqClient(_series([100_000] * 250 + [250_000] * 20))
+        app.dependency_overrides[get_stooq_client] = lambda: stooq
+
+        with TestClient(app) as client:
+            response = client.get(
+                "/api/stocks/volume-surge",
+                params={"recentDays": 20, "baselineDays": 250},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["items"][0]["volumeRatio"] == 2.5
+
+    def test_weekly_scan_uses_chart_weeks_and_includes_volume_so_far(self) -> None:
+        today = date.today()
+        monday = today - timedelta(days=today.weekday())
+        if today == monday:
+            monday -= timedelta(weeks=1)
+        first_day = monday - timedelta(weeks=52)
+        quotes = [
+            _quote(first_day + timedelta(weeks=week, days=day), 100, 100_000)
+            for week in range(52)
+            for day in range(5)
+        ]
+        tuesday = monday + timedelta(days=1)
+        quotes.extend([_quote(monday, 100, 550_000), _quote(tuesday, 100, 550_000)])
+        stooq = _CountingStooqClient(quotes)
+        app.dependency_overrides[get_gpw_company_service] = lambda: (
+            _FakeCompanyService([_company()])
+        )
+        app.dependency_overrides[get_stooq_client] = lambda: stooq
+
+        with TestClient(app) as client:
+            weekly = client.get("/api/stocks/volume-surge", params={"baselineWeeks": 52})
+            daily = client.get("/api/stocks/volume-surge")
+
+        assert weekly.status_code == daily.status_code == 200
+        assert stooq.calls == 1  # Separate scan results share the same quote fetch.
+        body = weekly.json()
+        assert body["recentWeeks"] == 1
+        assert body["baselineWeeks"] == 52
+        assert body["asOf"] == tuesday.isoformat()
+        item = body["items"][0]
+        assert item["surgeStart"] == monday.isoformat()
+        assert item["peakDate"] == tuesday.isoformat()
+        assert item["recentAvgVolume"] == 1_100_000
+        assert item["baselineAvgVolume"] == 500_000
+        assert item["volumeRatio"] == 2.2
+        assert daily.json()["items"][0]["volumeRatio"] == 4
+
     def test_invalid_parameters_rejected(self) -> None:
         with TestClient(app) as client:
             assert (

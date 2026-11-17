@@ -1,286 +1,343 @@
 [
   {
     "ticker": "06n",
+    "isin": "PLNFI0600010",
     "name": "MAGNA POLONIA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "08n",
+    "isin": "PLNFI0800016",
     "name": "OCTAVA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "11b",
+    "isin": "PL11BTS00015",
     "name": "11 bit studios S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "1at",
+    "isin": "PLATAL000046",
     "name": "ATAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "3rg",
+    "isin": "PLGRNKT00019",
     "name": "3R GAMES SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "4ms",
+    "isin": "PL4MASS00011",
     "name": "4MASS",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "aat",
+    "isin": "PLTRNSU00013",
     "name": "Alta S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "abe",
+    "isin": "PLAB00000019",
     "name": "AB S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "abs",
+    "isin": "PLABS0000018",
     "name": "Asseco Business Solutions S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "acg",
+    "isin": "PLACSA000014",
     "name": "AC Spólka Akcyjna",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "acp",
+    "isin": "PLSOFTB00016",
     "name": "Asseco Poland S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "act",
+    "isin": "PLACTIN00018",
     "name": "Action S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "adv",
+    "isin": "PLADVIV00015",
     "name": "Adiuvo Investments S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "adx",
+    "isin": "PLPIK0000018",
     "name": "ADATEX SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ago",
+    "isin": "PLAGORA00067",
     "name": "Agora S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "agt",
+    "isin": "CY0101062111",
     "name": "Agroton Public Limited",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "ale",
+    "isin": "LU2237380790",
     "name": "Allegro.eu S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "alg",
+    "isin": "PLSNTFG00017",
     "name": "All in! Games S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "ali",
+    "isin": "PLATTFI00018",
     "name": "Altus S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "all",
+    "isin": "PLWNDMB00010",
     "name": "AILLERON SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "alr",
+    "isin": "PLALIOR00045",
     "name": "Alior Bank S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "amb",
+    "isin": "PLAMBRA00013",
     "name": "Ambra S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "amc",
+    "isin": "PLAMICA00010",
     "name": "Amica S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "anr",
+    "isin": "PLANSWR00019",
     "name": "Answear.com S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "ape",
+    "isin": "PLAPSEN00011",
     "name": "APS Energia SA",
     "sector": "Industrials"
   },
   {
     "ticker": "apl",
+    "isin": "PLAMPLI00019",
     "name": "LC Spólka Akcyjna",
     "sector": "Technology"
   },
   {
     "ticker": "apn",
+    "isin": "PLAPLS000016",
     "name": "Aplisens S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "apr",
+    "isin": "PLATPRT00018",
     "name": "Auto Partner SA",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "apt",
+    "isin": "PLAPATR00018",
     "name": "Apator S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "arh",
+    "isin": "PLARHCM00016",
     "name": "Archicom S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "arl",
+    "isin": "PLARLEN00012",
     "name": "ARLEN SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "art",
+    "isin": "PLARTFX00011",
     "name": "Artifex Mundi S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "asb",
+    "isin": "CY1000031710",
     "name": "ASBISc Enterprises Plc",
     "sector": "Technology"
   },
   {
     "ticker": "ase",
+    "isin": "PLASSEE00014",
     "name": "Asseco South Eastern Europe S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "asm",
+    "isin": "PLASMGR00014",
     "name": "ASM GROUP SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ast",
+    "isin": "NL0000686509",
     "name": "Astarta Holding PLC",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "atc",
+    "isin": "PLARTPR00012",
     "name": "Arctic Paper S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "atd",
+    "isin": "PLATMSI00016",
     "name": "Atende S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "atg",
+    "isin": "PLATM0000021",
     "name": "ATM Grupa S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "atp",
+    "isin": "PLATLPL00018",
     "name": "Atlanta Poland S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "atr",
+    "isin": "PLATREM00017",
     "name": "Atrem S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "ats",
+    "isin": "EE0000000552",
     "name": "Atlantis SE",
     "sector": "Financial Services"
   },
   {
     "ticker": "att",
+    "isin": "PLZATRM00012",
     "name": "Grupa Azoty S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "awm",
+    "isin": "PLAIRWY00017",
     "name": "AIRWAY MEDIX SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "bbd",
+    "isin": "PLNFI1200018",
     "name": "BBI Development S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "bbt",
+    "isin": "PLBMBIT00010",
     "name": "BoomBit S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "bcm",
+    "isin": "PLBTCOM00016",
     "name": "Betacom S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "bcs",
+    "isin": "PLA340200015",
     "name": "Big Cheese Studio Spolka Akcyjna",
     "sector": "Communication Services"
   },
   {
     "ticker": "bcx",
+    "isin": "PLBCLTX00019",
     "name": "BIOCELTIX SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "bdf",
+    "isin": "PLCPTLP00015",
     "name": "BUMECH DEFENSE PARTNERS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "bdx",
+    "isin": "PLBUDMX00013",
     "name": "Budimex SA",
     "sector": "Industrials"
   },
   {
     "ticker": "bft",
+    "isin": "PLBNFTS00018",
     "name": "Benefit Systems S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "bhw",
+    "isin": "PLBH00000012",
     "name": "Bank Handlowy w Warszawie S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "bio",
+    "isin": "PLBIOTN00029",
     "name": "BIOTON S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "bip",
+    "isin": "PLBIOPL00013",
     "name": "BIO PLANET SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "blo",
+    "isin": "PLBLOBR00014",
     "name": "BLOOBER TEAM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "bmc",
+    "isin": "PLBMECH00012",
     "name": "BUMECH SPÓŁKA AKCYJNA",
     "sector": null
   },
@@ -291,21 +348,25 @@
   },
   {
     "ticker": "bmx",
+    "isin": "PLBIOMX00015",
     "name": "BioMaxima S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "bnp",
+    "isin": "PLBGZ0000010",
     "name": "BNP Paribas Bank Polska S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "bos",
+    "isin": "PLBOS0000019",
     "name": "Bank Ochrony Srodowiska S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "bow",
+    "isin": "PLBOWM000019",
     "name": "Bowim S.A.",
     "sector": "Basic Materials"
   },
@@ -316,161 +377,193 @@
   },
   {
     "ticker": "brs",
+    "isin": "PLBRSZW00011",
     "name": "Boryszew S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "bst",
+    "isin": "PLBEST000010",
     "name": "BEST SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "cap",
+    "isin": "PLGTBCK00297",
     "name": "CAPITEA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "car",
+    "isin": "PLINTCS00010",
     "name": "INTER CARS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "cav",
+    "isin": "PLCVTNH00040",
     "name": "Cavatina Holding Spólka Akcyjna",
     "sector": "Real Estate"
   },
   {
     "ticker": "cbf",
+    "isin": "PLR220000018",
     "name": "Cyber_Folks S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "cce",
+    "isin": "PLKAREN00014",
     "name": "CLEAN&CARBON ENERGY SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "cdl",
+    "isin": "PLCDRL000043",
     "name": "CDRL S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "cdr",
+    "isin": "PLOPTTC00011",
     "name": "CD Projekt S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "cez",
+    "isin": "CZ0005112300",
     "name": "CEZ, a. s.",
     "sector": "Utilities"
   },
   {
     "ticker": "cfi",
+    "isin": "PLINTKS00013",
     "name": "CFI Holding S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "cig",
+    "isin": "PLCTINT00018",
     "name": "CI Games SE",
     "sector": "Communication Services"
   },
   {
     "ticker": "clc",
+    "isin": "PLSTIGR00012",
     "name": "Columbus Energy S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "cld",
+    "isin": "PLCLDTC00019",
     "name": "CLOUD TECHNOLOGIES SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "cle",
+    "isin": "LU0646112838",
     "name": "Coal Energy S.A.",
     "sector": "Energy"
   },
   {
     "ticker": "cln",
+    "isin": "PLCLNPH00015",
     "name": "Celon Pharma S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "cmp",
+    "isin": "PLCMP0000017",
     "name": "Comp S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "cog",
+    "isin": "PLCNTSL00014",
     "name": "Cognor Holding S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "cpd",
+    "isin": "PLCELPD00013",
     "name": "CPD S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "cpi",
+    "isin": "AT0000A21KS2",
     "name": "CPI EUROPE AG",
     "sector": null
   },
   {
     "ticker": "cpl",
+    "isin": "PLCOMPR00010",
     "name": "Comperia.pl S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "cpr",
+    "isin": "PLPZBDT00013",
     "name": "Compremum S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "cps",
+    "isin": "PLCFRPT00013",
     "name": "Cyfrowy Polsat S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "cri",
+    "isin": "PLCRTCH00017",
     "name": "Creotech Instruments S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "crj",
+    "isin": "PLCRPJR00019",
     "name": "Creepy Jar S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "crm",
+    "isin": "PLCMRAY00029",
     "name": "PZ Cormay S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "crq",
+    "isin": "PLCTHQM00018",
     "name": "Creotech Quantum S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "csr",
+    "isin": "PLCSPAM00017",
     "name": "Caspar Asset Management S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "cts",
+    "isin": "EE3100126368",
     "name": "CITY SERVICE SE",
     "sector": null
   },
   {
     "ticker": "ctx",
+    "isin": "PLCPTRT00014",
     "name": "Captor Therapeutics Spolka Akcyjna",
     "sector": "Healthcare"
   },
   {
     "ticker": "czt",
+    "isin": "PLCRWTR00022",
     "name": "CZERWONA TOREBKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dad",
+    "isin": "PLDADEL00013",
     "name": "Dadelo S.A.",
     "sector": "Consumer Cyclical"
   },
@@ -481,136 +574,163 @@
   },
   {
     "ticker": "dat",
+    "isin": "PLPILAB00012",
     "name": "DataWalk S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "dbc",
+    "isin": "PLDEBCA00016",
     "name": "Tire Company Debica S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "dbe",
+    "isin": "PLDBENR00017",
     "name": "DB Energy S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "dcr",
+    "isin": "PLDECOR00013",
     "name": "Decora S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "dek",
+    "isin": "PLDEKPL00032",
     "name": "Dekpol S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "del",
+    "isin": "PLDELKO00019",
     "name": "DELKO SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dga",
+    "isin": "PLDGA0000019",
     "name": "DGA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dge",
+    "isin": "PLDRG0000013",
     "name": "DRAGO ENTERTAINMENT SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dia",
+    "isin": "PLDGNST00012",
     "name": "DIAGNOSTYKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dig",
+    "isin": "PL4FNMD00013",
     "name": "Digital Network SA",
     "sector": "Communication Services"
   },
   {
     "ticker": "dmg",
+    "isin": "PLGLBLC00011",
     "name": "DR. MIELE COSMED GROUP SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "dnp",
+    "isin": "PLDINPL00011",
     "name": "Dino Polska S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "dom",
+    "isin": "PLDMDVL00012",
     "name": "Dom Development S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "dtr",
+    "isin": "PLSARE000013",
     "name": "Digitree Group S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "dvl",
+    "isin": "PLLCCRP00017",
     "name": "Develia S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "eah",
+    "isin": "PLESTHN00018",
     "name": "ESOTIQ & HENDERSON SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "eat",
+    "isin": "ES0105375002",
     "name": "AmRest Holdings SE",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "ebp",
+    "isin": "PLBZ00000044",
     "name": "Erste Bank Polska S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "ecb",
+    "isin": "PLECBDZ00013",
     "name": "ECB SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ech",
+    "isin": "PLECHPS00019",
     "name": "Echo Investment S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "edi",
+    "isin": "PLEDINV00014",
     "name": "ED Invest Spólka Akcyjna",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "eex",
+    "isin": "PLEKEP000019",
     "name": "EKO EXPORT SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "efk",
+    "isin": "PLEFEKT00018",
     "name": "KORPORACJA GOSPODARCZA EFEKT SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ego",
+    "isin": "PLZSTAL00012",
     "name": "EUROPEAN DEFENCE GROUP SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ehg",
+    "isin": "BG1100114062",
     "name": "EUROHOLD BULGARIA AD",
     "sector": null
   },
   {
     "ticker": "ekp",
+    "isin": "EE0000000453",
     "name": "Elkop Estonia SE",
     "sector": "Real Estate"
   },
   {
     "ticker": "elt",
+    "isin": "PLELEKT00016",
     "name": "Elektrotim S.A.",
     "sector": "Industrials"
   },
@@ -621,51 +741,61 @@
   },
   {
     "ticker": "ena",
+    "isin": "PLENEA000013",
     "name": "ENEA S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "ene",
+    "isin": "PLENLMD00017",
     "name": "CENTRUM MEDYCZNE ENEL-MED SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "eng",
+    "isin": "PLENERG00022",
     "name": "Energa SA",
     "sector": "Utilities"
   },
   {
     "ticker": "eni",
+    "isin": "PLERGIN00015",
     "name": "ENERGOINSTAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "enp",
+    "isin": "PLENAP000010",
     "name": "ENERGOAPARATURA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ent",
+    "isin": "PLENTER00017",
     "name": "Enter Air S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "equ",
+    "isin": "PLRESBD00032",
     "name": "EQUNICO SE",
     "sector": null
   },
   {
     "ticker": "erb",
+    "isin": "PLERBUD00012",
     "name": "Erbud S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "erg",
+    "isin": "PLERGZB00014",
     "name": "ERG SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "est",
+    "isin": "HU0000089198",
     "name": "ENEFI Vagyonkezelo Nyrt.",
     "sector": "Utilities"
   },
@@ -681,36 +811,43 @@
   },
   {
     "ticker": "etl",
+    "isin": "PLERTEL00011",
     "name": "EUROTEL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "euc",
+    "isin": "PLERPCO00017",
     "name": "EUROPEJSKIE CENTRUM ODSZKODOWAŃ SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "eur",
+    "isin": "PLEURCH00011",
     "name": "Eurocash S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "fab",
+    "isin": "PLK2ITR00010",
     "name": "FABRITY SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "fee",
+    "isin": "PLFEERM00018",
     "name": "FEERUM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ffi",
+    "isin": "PLFSTFC00012",
     "name": "FAST FINANCE SPÓŁKA AKCYJNA W RESTRUKTURYZACJI",
     "sector": null
   },
   {
     "ticker": "fhb",
+    "isin": "PLPMPOL00031",
     "name": "FOODHUB SPÓŁKA AKCYJNA",
     "sector": null
   },
@@ -721,61 +858,73 @@
   },
   {
     "ticker": "fon",
+    "isin": "EE0000002897",
     "name": "FON SE",
     "sector": "Financial Services"
   },
   {
     "ticker": "fro",
+    "isin": "PLFERRO00016",
     "name": "FERRO S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "fsg",
+    "isin": "PLFSING00010",
     "name": "FABRYKI SPRZĘTU I NARZĘDZI GÓRNICZYCH GRUPA KAPITAŁOWA FASING SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "fte",
+    "isin": "PLFORTE00012",
     "name": "Fabryki Mebli FORTE S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "gif",
+    "isin": "PLGMNGF00017",
     "name": "GAMING FACTORY SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "gki",
+    "isin": "PLMAKRM00019",
     "name": "Grupa Kapitalowa IMMOBILE S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "gmt",
+    "isin": "PLGNMTC00017",
     "name": "GENOMTEC SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "gns",
+    "isin": "PLVNTCP00019",
     "name": "NIEWIADÓW POLSKA GRUPA MILITARNA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "gob",
+    "isin": "PLDUDA000016",
     "name": "Gobarto S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "gop",
+    "isin": "PLGMSOP00019",
     "name": "GAMES OPERATORS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "gpp",
+    "isin": "PLGRPRC00015",
     "name": "Grupa Pracuj S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "gpw",
+    "isin": "PLGPW0000017",
     "name": "Gielda Papierów Wartosciowych w Warszawie S.A.",
     "sector": "Financial Services"
   },
@@ -786,46 +935,55 @@
   },
   {
     "ticker": "grn",
+    "isin": "PLGRODN00015",
     "name": "Grodno Spólka Akcyjna",
     "sector": "Technology"
   },
   {
     "ticker": "grx",
+    "isin": "AU0000198939",
     "name": "GreenX Metals Limited",
     "sector": "Basic Materials"
   },
   {
     "ticker": "gtc",
+    "isin": "PLGTC0000037",
     "name": "Globe Trade Centre S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "gtn",
+    "isin": "PLGSPR000014",
     "name": "Getin Holding S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "gvt",
+    "isin": "PLIQPRT00017",
     "name": "GRUPA VIRTUS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "hdr",
+    "isin": "PLHDRTR00013",
     "name": "PRZEDSIĘBIORSTWO HYDRAULIKI SIŁOWEJ HYDROTOR S.A.",
     "sector": null
   },
   {
     "ticker": "hel",
+    "isin": "PLHELIO00014",
     "name": "HELIO SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "hrp",
+    "isin": "PLHRPHG00023",
     "name": "Harper Hygienics S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "hrs",
+    "isin": "PLZRWZW00012",
     "name": "Herkules S.A.",
     "sector": "Industrials"
   },
@@ -836,6 +994,7 @@
   },
   {
     "ticker": "hug",
+    "isin": "US44853H1086",
     "name": "Huuuge, Inc.",
     "sector": "Communication Services"
   },
@@ -846,91 +1005,109 @@
   },
   {
     "ticker": "ice",
+    "isin": "PLMDNCE00016",
     "name": "MEDINICE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "idg",
+    "isin": "PLLSTIA00018",
     "name": "INDYGOTECH MINERALS SPÓŁKA AKCYJNA W LIKWIDACJI",
     "sector": null
   },
   {
     "ticker": "idm",
+    "isin": "PLIDMSA00044",
     "name": "IDM Spólka Akcyjna",
     "sector": "Financial Services"
   },
   {
     "ticker": "ifc",
+    "isin": "EE3100149154",
     "name": "INVESTMENT FRIENDS CAPITAL SE",
     "sector": null
   },
   {
     "ticker": "ifi",
+    "isin": "PLPWRMD00011",
     "name": "Ifirma SA",
     "sector": "Technology"
   },
   {
     "ticker": "ifr",
+    "isin": "EE3100099391",
     "name": "INVESTMENT FRIENDS SE",
     "sector": null
   },
   {
     "ticker": "imc",
+    "isin": "LU0607203980",
     "name": "IMC S.A.",
     "sector": null
   },
   {
     "ticker": "imp",
+    "isin": "PLNFI0700018",
     "name": "IMPERIO ALTERNATYWNA SPÓŁKA INWESTYCYJNA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ims",
+    "isin": "PLINTMS00019",
     "name": "IMS S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "inc",
+    "isin": "PLINCLT00015",
     "name": "INC S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "ing",
+    "isin": "PLBSK0000017",
     "name": "ING Bank Slaski S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "ink",
+    "isin": "PLINSTK00013",
     "name": "Instal Kraków S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "inl",
+    "isin": "PLINTRL00013",
     "name": "Introl S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "inp",
+    "isin": "PLINPRO00015",
     "name": "Inpro S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "ipe",
+    "isin": "PLIPOPM00011",
     "name": "IPOPEMA Securities S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "ipo",
+    "isin": "PLINTSP00038",
     "name": "Intersport Polska S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "irl",
+    "isin": "LT0000128621",
     "name": "AB INTER RAO LIETUVA",
     "sector": null
   },
   {
     "ticker": "itb",
+    "isin": "PLINTBD00014",
     "name": "Interbud-Lublin S.A.",
     "sector": "Industrials"
   },
@@ -941,161 +1118,193 @@
   },
   {
     "ticker": "izb",
+    "isin": "PLIZBLK00010",
     "name": "IZOBLOK SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "izo",
+    "isin": "PLIZCJR00017",
     "name": "IZOLACJA-JAROCIN SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "izs",
+    "isin": "PLIZSTL00015",
     "name": "IZOSTAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "jrh",
+    "isin": "PLJRINV00013",
     "name": "JRH",
     "sector": "Financial Services"
   },
   {
     "ticker": "jsw",
+    "isin": "PLJSW0000015",
     "name": "Jastrzebska Spólka Weglowa S.A.",
     "sector": "Energy"
   },
   {
     "ticker": "jww",
+    "isin": "PLJWWNT00018",
     "name": "JWW INVEST SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "kch",
+    "isin": "PLKRKCH00019",
     "name": "Krakchemia S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "kci",
+    "isin": "PLPONAR00012",
     "name": "KCI Spolka Akcyjna",
     "sector": "Real Estate"
   },
   {
     "ticker": "kdm",
+    "isin": "CY0102492119",
     "name": "KDM SHIPPING PUBLIC LIMITED",
     "sector": null
   },
   {
     "ticker": "ker",
+    "isin": "LU0327357389",
     "name": "Kernel Holding S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "kgh",
+    "isin": "PLKGHM000017",
     "name": "KGHM Polska Miedz S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "kgl",
+    "isin": "PLKRKGL00012",
     "name": "KGL SA",
     "sector": "Basic Materials"
   },
   {
     "ticker": "kgn",
+    "isin": "PLKGNRC00015",
     "name": "Zespól Elektrocieplowni Wroclawskich KOGENERACJA S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "kmp",
+    "isin": "PLKOMPP00017",
     "name": "Przedsiebiorstwo Produkcyjno - Handlowe KOMPAP S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "kom",
+    "isin": "PLKMPTR00012",
     "name": "KOMPUTRONIK SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "kpd",
+    "isin": "PLKPPD000017",
     "name": "KOSZALIŃSKIE PRZEDSIĘBIORSTWO PRZEMYSŁU DRZEWNEGO SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "kpl",
+    "isin": "PLKNOPL00014",
     "name": "Kino Polska TV Spolka Akcyjna",
     "sector": "Communication Services"
   },
   {
     "ticker": "krk",
+    "isin": "SI0031102120",
     "name": "Krka, d. d.",
     "sector": "Healthcare"
   },
   {
     "ticker": "kru",
+    "isin": "PLKRK0000010",
     "name": "KRUK Spólka Akcyjna",
     "sector": "Financial Services"
   },
   {
     "ticker": "ksg",
+    "isin": "LU0611262873",
     "name": "KSG AGRO S.A.",
     "sector": null
   },
   {
     "ticker": "kty",
+    "isin": "PLKETY000011",
     "name": "Grupa Kety S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "kvt",
+    "isin": "PLKRVTM00010",
     "name": "Krynica Vitamin S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "lbt",
+    "isin": "PLLBT0000013",
     "name": "Libet S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "lbw",
+    "isin": "PLLUBAW00013",
     "name": "Lubawa S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "len",
+    "isin": "PLLENAL00015",
     "name": "LENA LIGHTING SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "lgl",
+    "isin": "PLINTGR00013",
     "name": "LUNA GLOBAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "lkd",
+    "isin": "PLLKMDW00049",
     "name": "Lokum Deweloper S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "lmu",
+    "isin": "CA55025J1030",
     "name": "LUMINA METALS CORP.",
     "sector": null
   },
   {
     "ticker": "lpp",
+    "isin": "PLLPP0000011",
     "name": "LPP SA",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "lrq",
+    "isin": "PLCAMMD00032",
     "name": "LARQ SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "lsi",
+    "isin": "PLLSSFT00016",
     "name": "LSI Software S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "ltx",
+    "isin": "PLLENTX00010",
     "name": "LENTEX SPÓŁKA AKCYJNA",
     "sector": null
   },
@@ -1106,116 +1315,139 @@
   },
   {
     "ticker": "lwb",
+    "isin": "PLLWBGD00016",
     "name": "LUBELSKI WĘGIEL BOGDANKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mab",
+    "isin": "PLMBION00016",
     "name": "Mabion S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "mak",
+    "isin": "PLMKRNP00015",
     "name": "Makarony Polskie S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "man",
+    "isin": "PLADDRG00015",
     "name": "ManyDev Studio SE",
     "sector": "Communication Services"
   },
   {
     "ticker": "mbk",
+    "isin": "PLBRE0000012",
     "name": "mBank S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "mbr",
+    "isin": "PLMOBRK00013",
     "name": "Mo-BRUK S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "mbw",
+    "isin": "FR0000060873",
     "name": "MARIE BRIZARD WINE & SPIRITS",
     "sector": null
   },
   {
     "ticker": "mci",
+    "isin": "PLMCIMG00012",
     "name": "MCI Capital Alternatywna Spólka Inwestycyjna S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "mcr",
+    "isin": "PLMRCOR00016",
     "name": "mcr Spolka Akcyjna",
     "sector": "Industrials"
   },
   {
     "ticker": "mdg",
+    "isin": "PLMDCLG00015",
     "name": "Medicalgorithmics S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "mdi",
+    "isin": "PLNFI1000012",
     "name": "MDI Energia S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "mdv",
+    "isin": "PLCCC0000016",
     "name": "Modivo S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "meg",
+    "isin": "PLMGRON00016",
     "name": "MEGARON SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mex",
+    "isin": "PLMEXPL00010",
     "name": "Mex Polska S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "mfo",
+    "isin": "PLMFO0000013",
     "name": "MFO S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "mgt",
+    "isin": "PLZTKMA00017",
     "name": "Mangata Holding S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "mil",
+    "isin": "PLBIG0000016",
     "name": "Bank Millennium S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "mir",
+    "isin": "PLKLSTN00017",
     "name": "MIRACULUM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mlg",
+    "isin": "PLMLPGR00017",
     "name": "MLP Group S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "mlk",
+    "isin": "NL0009508712",
     "name": "MLK Foods Public Company LTD",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "mls",
+    "isin": "PLMLSTM00015",
     "name": "ML SYSTEM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mnc",
+    "isin": "PLMNNCP00011",
     "name": "MENNICA POLSKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "moc",
+    "isin": "PLONCTH00011",
     "name": "Molecure S.A.",
     "sector": "Healthcare"
   },
@@ -1226,306 +1458,367 @@
   },
   {
     "ticker": "mol",
+    "isin": "HU0000153937",
     "name": "MOL Magyar Olaj- és Gázipari Nyilvánosan Muködo Részvénytársaság",
     "sector": "Energy"
   },
   {
     "ticker": "mon",
+    "isin": "PLMNRTR00012",
     "name": "Monnari Trade S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "mov",
+    "isin": "PLMVGMS00011",
     "name": "Movie Games S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "mqr",
+    "isin": "PLPRBLG00010",
     "name": "MULTIQURE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mrb",
+    "isin": "PLMRBUD00015",
     "name": "Mirbud S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "mrc",
+    "isin": "PLMRCTR00015",
     "name": "Mercator Medical S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "msp",
+    "isin": "PLMSTPL00018",
     "name": "Mostostal Plock S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "msw",
+    "isin": "PLMSTWS00019",
     "name": "Mostostal Warszawa S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "msz",
+    "isin": "PLMSTZB00018",
     "name": "Mostostal Zabrze S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "mur",
+    "isin": "PLMURPL00190",
     "name": "Murapol S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "mvp",
+    "isin": "PLMRVDV00011",
     "name": "MARVIPOL DEVELOPMENT SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mwt",
+    "isin": "PLMWTRD00013",
     "name": "M.W. TRADE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mxc",
+    "isin": "PLMXCMS00016",
     "name": "MAXCOM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "mza",
+    "isin": "PLMUZA000019",
     "name": "MUZA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ncl",
+    "isin": "PLNCTLC00018",
     "name": "NOCTILUCA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "neu",
+    "isin": "PLTRFRM00018",
     "name": "NEUCA S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "nng",
+    "isin": "PLNNGRP00011",
     "name": "NanoGroup S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "ntc",
+    "isin": "PLECMNG00019",
     "name": "NEW TECH CAPITAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ntt",
+    "isin": "PLNTSYS00013",
     "name": "NTT SYSTEM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ntu",
+    "isin": "LT0000131872",
     "name": "AB NOVATURAS",
     "sector": null
   },
   {
     "ticker": "nva",
+    "isin": "PLPANVA00013",
     "name": "P.A. Nova S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "nvg",
+    "isin": "PLNFI0500012",
     "name": "NOVAVIS GROUP SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "nvt",
+    "isin": "PLNVITA00018",
     "name": "Novita S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "nwa",
+    "isin": "PLNWAI000017",
     "name": "NWAI DOM MAKLERSKI SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "nwg",
+    "isin": "PLNEWAG00012",
     "name": "Newag S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "nxg",
+    "isin": "PLWDMCP00013",
     "name": "NEXITY GLOBAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "obl",
+    "isin": "PLORZBL00013",
     "name": "Orzel Bialy S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "odl",
+    "isin": "PLODLPL00013",
     "name": "Odlewnie Polskie S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "oml",
+    "isin": "PLLSRMD00018",
     "name": "ONE MORE LEVEL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ond",
+    "isin": "PLONDE000018",
     "name": "Onde S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "ono",
+    "isin": "PLSKTAN00010",
     "name": "ONESANO SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "opg",
+    "isin": "LU0122624777",
     "name": "CPI FIM SA",
     "sector": null
   },
   {
     "ticker": "opl",
+    "isin": "PLTLKPL00017",
     "name": "Orange Polska S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "opm",
+    "isin": "PLOPTEM00012",
     "name": "OPTeam Spólka Akcyjna",
     "sector": "Technology"
   },
   {
     "ticker": "opn",
+    "isin": "PLOPNPL00013",
     "name": "Oponeo.pl S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "otm",
+    "isin": "PLZPCOT00018",
     "name": "ZAKŁADY PRZEMYSŁU CUKIERNICZEGO OTMUCHÓW SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ots",
+    "isin": "PLODRTS00017",
     "name": "OT LOGISTICS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pas",
+    "isin": "PLPSSUS00018",
     "name": "PASSUS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pat",
+    "isin": "PLPTNTS00019",
     "name": "Patentus S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "pbf",
+    "isin": "PLBEFSN00010",
     "name": "PBS FINANSE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pbg",
+    "isin": "PLPBG0000029",
     "name": "PBG S.A.",
     "sector": "Energy"
   },
   {
     "ticker": "pbx",
+    "isin": "PLPKBEX00072",
     "name": "Pekabex S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "pce",
+    "isin": "PLZCPLC00036",
     "name": "GRUPA AZOTY ZAKŁADY CHEMICZNE POLICE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pcf",
+    "isin": "PLPCFGR00010",
     "name": "PCF Group Spólka Akcyjna",
     "sector": "Communication Services"
   },
   {
     "ticker": "pco",
+    "isin": "NL0015000AU7",
     "name": "Pepco Group N.V.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "pcr",
+    "isin": "PLPCCRK00076",
     "name": "PCC Rokita SA",
     "sector": "Basic Materials"
   },
   {
     "ticker": "pcx",
+    "isin": "PLPCCEX00010",
     "name": "PCC Exol S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "pen",
+    "isin": "NL0010391108",
     "name": "Photon Energy N.V.",
     "sector": "Technology"
   },
   {
     "ticker": "peo",
+    "isin": "PLPEKAO00016",
     "name": "Bank Polska Kasa Opieki S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "pep",
+    "isin": "PLPLSEP00013",
     "name": "Polenergia S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "pge",
+    "isin": "PLPGER000010",
     "name": "PGE Polska Grupa Energetyczna S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "pgm",
+    "isin": "PLPEKPL00010",
     "name": "PMPG Polskie Media SA",
     "sector": "Communication Services"
   },
   {
     "ticker": "phn",
+    "isin": "PLPHN0000014",
     "name": "Polski Holding Nieruchomosci S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "phr",
+    "isin": "PLPHRMN00011",
     "name": "Pharmena S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "pjp",
+    "isin": "PLPROJP00018",
     "name": "PJP MAKRUM SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pkn",
+    "isin": "PLPKN0000018",
     "name": "Orlen S.A.",
     "sector": "Energy"
   },
   {
     "ticker": "pko",
+    "isin": "PLPKO0000016",
     "name": "Powszechna Kasa Oszczednosci Bank Polski Spólka Akcyjna",
     "sector": "Financial Services"
   },
   {
     "ticker": "pkp",
+    "isin": "PLPKPCR00011",
     "name": "Pkp Cargo S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "plw",
+    "isin": "PLPLAYW00015",
     "name": "PlayWay S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "plz",
+    "isin": "NL0011882741",
     "name": "Plaza Centers N.V.",
     "sector": "Real Estate"
   },
   {
     "ticker": "pma",
+    "isin": "PLPRMMD00012",
     "name": "PRIMA MODA SPÓŁKA AKCYJNA W RESTRUKTURYZACJI",
     "sector": null
   },
@@ -1536,6 +1829,7 @@
   },
   {
     "ticker": "pps",
+    "isin": "PLPEPES00018",
     "name": "Pepees S.A.",
     "sector": "Consumer Defensive"
   },
@@ -1546,26 +1840,31 @@
   },
   {
     "ticker": "pri",
+    "isin": "PLPRGNK00017",
     "name": "Pragma Inkaso S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "prm",
+    "isin": "PLPRCHM00014",
     "name": "Prochem S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "prt",
+    "isin": "PLLZPSK00019",
     "name": "Protektor S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "ptg",
+    "isin": "PLPLTRG00038",
     "name": "POLTREG SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "ptw",
+    "isin": "PLPTWP000015",
     "name": "PTWP",
     "sector": "Communication Services"
   },
@@ -1576,116 +1875,139 @@
   },
   {
     "ticker": "pwx",
+    "isin": "PLPOLWX00026",
     "name": "POLWAX SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "pxm",
+    "isin": "PLMSTSD00019",
     "name": "Polimex-Mostostal S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "pzu",
+    "isin": "PLPZU0000011",
     "name": "Powszechny Zaklad Ubezpieczen SA",
     "sector": "Financial Services"
   },
   {
     "ticker": "qna",
+    "isin": "PLQNTHL00017",
     "name": "QNA TECHNOLOGY SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "qnt",
+    "isin": "PLQNTUM00018",
     "name": "QUANTUM SOFTWARE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "qrs",
+    "isin": "PLQRCUS00012",
     "name": "Quercus TFI S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "raf",
+    "isin": "PLRFMET00016",
     "name": "Fabryka Obrabiarek RAFAMET S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "rbw",
+    "isin": "PLRNBWT00031",
     "name": "Rainbow Tours S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "rdn",
+    "isin": "PLREDAN00019",
     "name": "Redan S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "reg",
+    "isin": "PLPRNTC00017",
     "name": "REGNON SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "rex",
+    "isin": "PLRXCNC00017",
     "name": "REX CONCEPTS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "rhd",
+    "isin": "SE0001856519",
     "name": "REINHOLD EUROPE AB",
     "sector": null
   },
   {
     "ticker": "rlp",
+    "isin": "PLRELPL00014",
     "name": "Relpol S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "rmk",
+    "isin": "PLREMAK00016",
     "name": "Remak-Energomontaz S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "rnc",
+    "isin": "PLWDM0000029",
     "name": "REINO CAPITAL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "rnd",
+    "isin": "PLRNDCB00011",
     "name": "RENDER CUBE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "rnk",
+    "isin": "PLRNKPR00014",
     "name": "Rank Progress S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "rob",
+    "isin": "PLROBYG00321",
     "name": "ROBYG SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "rpc",
+    "isin": "PLROPCE00017",
     "name": "Zaklady Magnezytowe ROPCZYCE S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "rvu",
+    "isin": "PLSELVT00013",
     "name": "Ryvu Therapeutics S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "rwl",
+    "isin": "PLKLNR000017",
     "name": "Rawlplug S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "s2b",
+    "isin": "PLSNBIO00013",
     "name": "Syn2bio S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "san",
+    "isin": "ES0113900J37",
     "name": "Banco Santander, S.A.",
     "sector": "Financial Services"
   },
@@ -1701,266 +2023,319 @@
   },
   {
     "ticker": "scp",
+    "isin": "PLSCPFL00018",
     "name": "Scope Fluidics S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "scw",
+    "isin": "PLSCWAY00018",
     "name": "Scanway S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "sek",
+    "isin": "PLSEKO000014",
     "name": "Seko S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "sel",
+    "isin": "PLSELNA00010",
     "name": "Selena FM S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "sfg",
+    "isin": "EE3100001751",
     "name": "AS SILVANO FASHION GROUP",
     "sector": null
   },
   {
     "ticker": "sfs",
+    "isin": "PLSFNKS00011",
     "name": "SFINKS POLSKA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "sgn",
+    "isin": "PLCMPLD00016",
     "name": "Sygnity S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "shd",
+    "isin": "PLNFI0400015",
     "name": "Soho Development S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "shg",
+    "isin": "PLHRDEX00021",
     "name": "STARHEDGE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "sim",
+    "isin": "PLSMFBC00016",
     "name": "SimFabric S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "ska",
+    "isin": "PLSNZKA00033",
     "name": "Fabryka Farb i Lakierów Sniezka SA",
     "sector": "Basic Materials"
   },
   {
     "ticker": "skh",
+    "isin": "PLSKRBH00014",
     "name": "Skarbiec Holding S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "skl",
+    "isin": "PLSKLNW00011",
     "name": "Skyline Investment S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "slv",
+    "isin": "PLSLVCR00029",
     "name": "Selvita S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "snk",
+    "isin": "PLSTLSK00016",
     "name": "Sanok Rubber Company Spólka Akcyjna",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "snt",
+    "isin": "PLSNKTK00019",
     "name": "Synektik Spólka Akcyjna",
     "sector": "Healthcare"
   },
   {
     "ticker": "snw",
+    "isin": "PLSANWL00012",
     "name": "Sanwil Holding Spólka Akcyjna",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "snx",
+    "isin": "PLSUNEX00013",
     "name": "Sunex S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "son",
+    "isin": "PLSONEL00011",
     "name": "Sonel S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "sph",
+    "isin": "BG11SOSOBT18",
     "name": "Sopharma AD",
     "sector": "Healthcare"
   },
   {
     "ticker": "spr",
+    "isin": "PLSPRSF00011",
     "name": "Spyrosoft Spólka Akcyjna",
     "sector": "Technology"
   },
   {
     "ticker": "stf",
+    "isin": "PLSTLPF00012",
     "name": "Stalprofil S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "stp",
+    "isin": "PLSTLPD00017",
     "name": "Stalprodukt S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "sts",
+    "isin": "PLADVPL00029",
     "name": "Satis Group S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "stx",
+    "isin": "PLSTLEX00019",
     "name": "Stalexport Autostrady S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "sve",
+    "isin": "PLBMDLB00018",
     "name": "Synthaverse S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "svrs",
+    "isin": "USU827061099",
     "name": "SILVAIR. INC.",
     "sector": null
   },
   {
     "ticker": "swg",
+    "isin": "PLWRWCK00013",
     "name": "Seco/Warwick S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "tar",
+    "isin": "PLTRCZN00016",
     "name": "Tarczynski S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "tbl",
+    "isin": "PLTBULL00024",
     "name": "T-Bull S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "ten",
+    "isin": "PLTSQGM00016",
     "name": "Ten Square Games S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "thg",
+    "isin": "PLTNDRH00012",
     "name": "TENDERHUT SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "tlx",
+    "isin": "PLTALEX00017",
     "name": "Talex S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "tmr",
+    "isin": "SK1120010287",
     "name": "TATRY MOUNTAIN RESORTS. A.S.",
     "sector": null
   },
   {
     "ticker": "toa",
+    "isin": "PLTOYA000011",
     "name": "TOYA SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "tor",
+    "isin": "PLTORPL00016",
     "name": "Torpol S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "tow",
+    "isin": "PLTWRNV00013",
     "name": "Tower Investments S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "tpe",
+    "isin": "PLTAURN00011",
     "name": "TAURON Polska Energia S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "tri",
+    "isin": "PLASMOT00030",
     "name": "Triton Development S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "trk",
+    "isin": "PLTRKPL00014",
     "name": "Trakcja S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "trn",
+    "isin": "PLTRNSP00013",
     "name": "Trans Polonia S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "trr",
+    "isin": "PLTRMRX00011",
     "name": "Termo-Rex S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "tsg",
+    "isin": "PLTSGS000019",
     "name": "Tesgas S.A.",
     "sector": "Utilities"
   },
   {
     "ticker": "txt",
+    "isin": "PLLVTSF00010",
     "name": "Text S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "ucg",
+    "isin": "IT0005239360",
     "name": "UNICREDIT S.P.A.",
     "sector": null
   },
   {
     "ticker": "ulg",
+    "isin": "PLULTGM00013",
     "name": "Ultimate Games S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "ulm",
+    "isin": "PLBAUMA00017",
     "name": "ULMA Construccion Polska S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "unf",
+    "isin": "PLVNTIN00011",
     "name": "Unfold.vc ASI S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "uni",
+    "isin": "PLUNBEP00015",
     "name": "UNIBEP S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "unt",
+    "isin": "PLUNMOT00013",
     "name": "Unimot S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "urt",
+    "isin": "PLURTST00010",
     "name": "URTESTE SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "vgo",
+    "isin": "PLVIGOS00015",
     "name": "VIGO PHOTONICS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "vin",
+    "isin": "PLVNDEX00013",
     "name": "Gielda Praw Majatkowych Vindexus Spolka Akcyjna",
     "sector": "Industrials"
   },
@@ -1971,6 +2346,7 @@
   },
   {
     "ticker": "vot",
+    "isin": "PLVOTUM00016",
     "name": "Votum S.A.",
     "sector": "Industrials"
   },
@@ -1981,11 +2357,13 @@
   },
   {
     "ticker": "vox",
+    "isin": "PLVOXEL00014",
     "name": "Voxel S.A.",
     "sector": "Healthcare"
   },
   {
     "ticker": "vrc",
+    "isin": "PLVRCM000016",
     "name": "Vercom S.A.",
     "sector": "Technology"
   },
@@ -1996,86 +2374,103 @@
   },
   {
     "ticker": "vrg",
+    "isin": "PLVSTLA00011",
     "name": "VRG S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "vvd",
+    "isin": "PLVVDGM00014",
     "name": "VIVID GAMES SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "was",
+    "isin": "PLHOGA000041",
     "name": "Wasko S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "wen",
+    "isin": "PLTHP0000011",
     "name": "WISE ENERGY SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "wik",
+    "isin": "PLELPO000016",
     "name": "Wikana S.A.",
     "sector": "Real Estate"
   },
   {
     "ticker": "wlt",
+    "isin": "PLWELTN00012",
     "name": "Wielton S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "wpl",
+    "isin": "PLWRTPL00027",
     "name": "Wirtualna Polska Holding S.A.",
     "sector": "Communication Services"
   },
   {
     "ticker": "wpr",
+    "isin": "PLWDPCK00017",
     "name": "WOODPECKER.CO SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "wtn",
+    "isin": "PLWTCHN00030",
     "name": "Wittchen S.A.",
     "sector": "Consumer Cyclical"
   },
   {
     "ticker": "wwl",
+    "isin": "PLWAWEL00013",
     "name": "Wawel S.A.",
     "sector": "Consumer Defensive"
   },
   {
     "ticker": "wxf",
+    "isin": "AT0000827209",
     "name": "Warimpex Finanz- und Beteiligungs AG",
     "sector": "Real Estate"
   },
   {
     "ticker": "xpl",
+    "isin": "PLXPLUS00013",
     "name": "XPLUS SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "xtb",
+    "isin": "PLXTRDM00011",
     "name": "XTB S.A.",
     "sector": "Financial Services"
   },
   {
     "ticker": "xtp",
+    "isin": "PLXTPL000018",
     "name": "XTPL S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "yan",
+    "isin": "PLNEPTS00011",
     "name": "Yanosik S.A.",
     "sector": "Technology"
   },
   {
     "ticker": "yrl",
+    "isin": "PLUNMST00014",
     "name": "YARRL SPÓŁKA AKCYJNA",
     "sector": null
   },
   {
     "ticker": "zab",
+    "isin": "LU2910446546",
     "name": "Zabka Group S.A.",
     "sector": "Consumer Defensive"
   },
@@ -2086,31 +2481,37 @@
   },
   {
     "ticker": "zap",
+    "isin": "PLZAPUL00057",
     "name": "Zaklady Azotowe Pulawy S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "zep",
+    "isin": "PLZEPAK00012",
     "name": "ZE PAK SA",
     "sector": "Utilities"
   },
   {
     "ticker": "zmt",
+    "isin": "PLZAMET00010",
     "name": "Zamet S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "zre",
+    "isin": "PLZBMZC00019",
     "name": "Zaklad Budowy Maszyn ZREMB - Chojnice S.A.",
     "sector": "Basic Materials"
   },
   {
     "ticker": "zue",
+    "isin": "PLZUE0000015",
     "name": "ZUE S.A.",
     "sector": "Industrials"
   },
   {
     "ticker": "zuk",
+    "isin": "PLSTPRK00019",
     "name": "ZAKŁADY URZĄDZEŃ KOTŁOWYCH STĄPORKÓW SPÓŁKA AKCYJNA",
     "sector": null
   }

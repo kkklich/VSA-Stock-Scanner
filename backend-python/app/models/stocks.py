@@ -482,8 +482,8 @@ class MarketOverviewResponse(_CamelModel):
 class VolumeSurgeItem(_CamelModel):
     """One surging stock in ``GET /api/stocks/volume-surge``.
 
-    "Surging" means the average volume of the last few sessions is well above
-    the stock's own baseline average (multi-day relative volume, RVOL).
+    Relative volume (RVOL) compares the average volume of recent bars with
+    the stock's own baseline median.
     """
 
     ticker: str
@@ -496,17 +496,15 @@ class VolumeSurgeItem(_CamelModel):
     currency: str = "PLN"
     # Last EOD closing price, in ``currency``.
     last_price: float
-    # Average daily volume over the recent window (shares).
+    # Average volume per session or week over the recent window (shares).
     recent_avg_volume: int
-    # Typical daily volume over the baseline window before it: the MEDIAN
-    # session, since 2026-09-26 (it was the mean). Shares. The name is kept so
-    # existing clients and saved sorts keep working.
+    # Median volume per session or week over the baseline window (shares).
     baseline_avg_volume: int
     # recent avg ÷ baseline — the multi-day relative volume. >= minRatio.
     volume_ratio: float
-    # Latest single session's volume ÷ baseline (classic RVOL).
+    # Latest bar's volume ÷ baseline.
     last_day_ratio: float
-    # Recent sessions whose volume individually beat the baseline.
+    # Recent bars whose volume individually beat the baseline.
     days_above_baseline: int
     # Close-to-close price change across the recent window, percent — a rough
     # proxy for the price "result" of the volume "effort" (the ``peak_*``
@@ -523,7 +521,7 @@ class VolumeSurgeItem(_CamelModel):
     signal_in_window: bool = False
     # First session of the surge window.
     surge_start: date
-    # The session in the window that carried the most volume, and the VSA
+    # The bar in the window that carried the most volume, and the VSA
     # facts about it: its volume ÷ the baseline, its close-to-close change
     # (an up bar or a down bar), its spread ÷ the baseline's average spread
     # (None when the baseline had no range) and where it closed within its
@@ -550,8 +548,10 @@ class VolumeSurgeResponse(_CamelModel):
     # Trading day of the newest bar across the surging stocks.
     as_of: date | None = None
     # Echo of the screen parameters the results were computed with.
-    recent_days: int
-    baseline_days: int
+    recent_days: int | None
+    baseline_days: int | None
+    recent_weeks: int | None = None
+    baseline_weeks: int | None = None
     min_ratio: float
     # Stocks that passed the pre-filters and had enough history to score.
     scanned_count: int = 0

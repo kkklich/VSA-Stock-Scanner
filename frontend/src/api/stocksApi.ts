@@ -503,19 +503,15 @@ export interface ApiVolumeSurgeItem {
   /** The currency `lastPrice` is in. */
   currency: string
   lastPrice: number
-  /** Average daily volume over the recent window (shares). */
+  /** Average volume per session or week over the recent window (shares). */
   recentAvgVolume: number
-  /**
-   * Typical daily volume over the baseline window before it — the median
-   * session since 2026-09-26, so one exceptional day cannot distort it
-   * (shares). The name predates the change.
-   */
+  /** Median volume per session or week of the preceding baseline (shares). */
   baselineAvgVolume: number
   /** Recent avg ÷ baseline — the multi-day relative volume (RVOL). */
   volumeRatio: number
-  /** Latest single session's volume ÷ baseline (classic RVOL). */
+  /** Latest session or week's volume ÷ baseline. */
   lastDayRatio: number
-  /** Recent sessions whose volume individually beat the baseline. */
+  /** Recent sessions or weeks whose volume individually beat the baseline. */
   daysAboveBaseline: number
   /** Price change across the recent window, % (the "result" of the effort). */
   priceChangePct: number
@@ -528,7 +524,7 @@ export interface ApiVolumeSurgeItem {
   signalInWindow: boolean
   /** First session of the surge window (ISO date). */
   surgeStart: string
-  /** The session in the window that traded the most shares (ISO date). */
+  /** The last session of the highest-volume bar (ISO date). */
   peakDate: string
   /** Its volume ÷ the baseline. */
   peakVolumeRatio: number
@@ -549,8 +545,10 @@ export interface ApiVolumeSurgeResponse {
   /** Trading day of the newest bar across the surging stocks. */
   asOf: string | null
   /** Echo of the screen parameters the results were computed with. */
-  recentDays: number
-  baselineDays: number
+  recentDays: number | null
+  baselineDays: number | null
+  recentWeeks?: number | null
+  baselineWeeks?: number | null
   minRatio: number
   /** Stocks that passed the pre-filters and had enough history to score. */
   scannedCount: number
@@ -579,10 +577,14 @@ export type VolumeSurgeSortKey =
 export interface VolumeSurgeQuery {
   /** Restrict to starred tickers; an empty array matches no companies. */
   tickers?: string[]
-  /** Sessions in the "now" window (1–10, default 3). */
+  /** Sessions in the "now" window (1–20, default 3). */
   recentDays?: number
-  /** Sessions in the reference window before it (10–60, default 20). */
+  /** Sessions in the reference window before it (10–250, default 20). */
   baselineDays?: number
+  /** Select weekly candles with this surge window (1–12, default 1). */
+  recentWeeks?: number
+  /** Select weekly candles with this baseline window (4–52, default 13). */
+  baselineWeeks?: number
   /** Minimum RVOL ratio to include a stock (1–10, default 1.5). */
   minRatio?: number
   page?: number
@@ -601,6 +603,8 @@ export async function fetchVolumeSurge(
   const params = new URLSearchParams()
   if (query.recentDays) params.set('recentDays', String(query.recentDays))
   if (query.baselineDays) params.set('baselineDays', String(query.baselineDays))
+  if (query.recentWeeks) params.set('recentWeeks', String(query.recentWeeks))
+  if (query.baselineWeeks) params.set('baselineWeeks', String(query.baselineWeeks))
   if (query.minRatio) params.set('minRatio', String(query.minRatio))
   if (query.tickers !== undefined) params.set('tickers', query.tickers.join(','))
   if (query.page) params.set('page', String(query.page))

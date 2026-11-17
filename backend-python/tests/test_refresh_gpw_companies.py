@@ -21,8 +21,8 @@ def directory(*entries):
 def test_parse_extracts_exchange_ticker_and_registered_name_without_guessing_sector():
     html = directory(("S2B", "Syn2bio Spółka Akcyjna"), ("CRQ", "Creotech Quantum S.A."))
     assert parse_gpw_companies(html) == [
-        {"ticker": "crq", "name": "Creotech Quantum S.A.", "sector": None},
-        {"ticker": "s2b", "name": "Syn2bio Spółka Akcyjna", "sector": None},
+        {"ticker": "crq", "name": "Creotech Quantum S.A.", "sector": None, "isin": "PL0000000000"},
+        {"ticker": "s2b", "name": "Syn2bio Spółka Akcyjna", "sector": None, "isin": "PL0000000000"},
     ]
 
 
@@ -30,7 +30,7 @@ def test_parse_only_reads_the_official_company_table_and_collapses_layout_whites
     html = '<a href="spolka?isin=PL0000000000"><strong class="name">Other (BAD)</strong></a>'
     html += directory(("06N", "  Example\n  Spółka\tAkcyjna  "))
     assert parse_gpw_companies(html) == [
-        {"ticker": "06n", "name": "Example Spółka Akcyjna", "sector": None},
+        {"ticker": "06n", "name": "Example Spółka Akcyjna", "sector": None, "isin": "PL0000000000"},
     ]
 
 
@@ -70,8 +70,12 @@ def test_merge_preserves_all_existing_metadata_and_historical_symbols():
     )
     merged = merge_companies(existing, official)
     assert [company["ticker"] for company in merged] == ["crq", "nul", "old", "s2b"]
-    assert all(company in merged for company in existing)
-    assert merged[-1] == {"ticker": "s2b", "name": "Syn2bio S.A.", "sector": None}
+    assert merged[0] == {**existing[1], "isin": "PL0000000000"}
+    assert merged[1] == {**existing[2], "isin": "PL0000000000"}
+    assert merged[2] == existing[0]
+    assert merged[-1] == {
+        "ticker": "s2b", "name": "Syn2bio S.A.", "sector": None, "isin": "PL0000000000",
+    }
     assert merge_companies(merged, official) == merged
     assert existing[0]["extra"] == 42
 
@@ -105,7 +109,9 @@ def test_cli_merges_complete_saved_source_as_sorted_utf8_json(tmp_path):
     merged = json.loads(content)
     assert len(merged) == 301
     assert merged[0] == existing
-    assert merged[1] == {"ticker": "t000", "name": "Spółka 0", "sector": None}
+    assert merged[1] == {
+        "ticker": "t000", "name": "Spółka 0", "sector": None, "isin": "PL0000000000",
+    }
     assert "Spółka" in content
     assert content.endswith("\n")
     assert main(args) == 0
