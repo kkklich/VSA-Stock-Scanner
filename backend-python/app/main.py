@@ -117,6 +117,7 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("journal_entries", "observation_date", "DATE"),
     # Alembic 016 — link a portfolio to its XTB account without changing its primary key.
     ("portfolios", "broker_account_id", "VARCHAR(32)"),
+    # Alembic 017 — store the linked account's three-letter currency code.
     ("portfolios", "broker_account_currency", "VARCHAR(3)"),
 )
 
@@ -136,6 +137,7 @@ _ALLOWED_COLUMN_TYPES = frozenset(
         "BOOLEAN",
         "NUMERIC",
         "DATE",
+        "VARCHAR(3)",
         "VARCHAR(8)",
         "VARCHAR(32)",
         "JSON",
