@@ -71,6 +71,7 @@ from app.markets import (
     PLN_PER_UNIT,
     Market,
     enabled_markets,
+    listed_ticker,
     market_of,
     normalize_ticker,
     quote_currency,
@@ -548,10 +549,13 @@ def _query_ranking(
     if q:
         needle = q.strip().casefold()
         if needle:
+            listing = listed_ticker(needle)
             rows = [
                 r
                 for r in rows
-                if needle in r.ticker.casefold() or needle in r.name.casefold()
+                if r.ticker.casefold() == listing
+                or needle in r.ticker.casefold()
+                or needle in r.name.casefold()
             ]
     if min_rating > 0:
         rows = [r for r in rows if r.current_rating >= min_rating]
@@ -749,7 +753,7 @@ def _resolve_ticker(ticker: str, companies: GpwCompanyService) -> str:
             status.HTTP_404_NOT_FOUND,
             detail=f"'{ticker.strip().upper()}' is not a tracked company.",
         )
-    return normalized
+    return listed_ticker(normalized)
 
 
 def _stock_identity(
@@ -1196,7 +1200,7 @@ async def get_ranking(
     # Optional allow-list of tickers (used by the "favorites only" view).
     ticker_set: set[str] | None = None
     if tickers is not None:
-        ticker_set = {t.strip().casefold() for t in tickers.split(",") if t.strip()}
+        ticker_set = {listed_ticker(t.strip().casefold()) for t in tickers.split(",") if t.strip()}
 
     # Which methods fold into the combined cross-method score. Unknown ids are
     # dropped (a stale client can't change the maths); an empty/absent value
@@ -1753,7 +1757,7 @@ async def get_volume_surge(
     # in-memory filter + sort + slice runs per request.
     items = full.items
     if tickers is not None:
-        ticker_set = {t.strip().casefold() for t in tickers.split(",") if t.strip()}
+        ticker_set = {listed_ticker(t.strip().casefold()) for t in tickers.split(",") if t.strip()}
         items = [item for item in items if item.ticker.casefold() in ticker_set]
     pooled = len(markets) > 1
     price_unit = markets[0].currency if len(markets) == 1 else None
@@ -1944,10 +1948,13 @@ async def get_capex(
         rows = [r for r in rows if r.capex is None or r.currency == wanted_currency]
     if q and q.strip():
         needle = q.strip().casefold()
+        listing = listed_ticker(needle)
         rows = [
             r
             for r in rows
-            if needle in r.ticker.casefold() or needle in r.name.casefold()
+            if r.ticker.casefold() == listing
+            or needle in r.ticker.casefold()
+            or needle in r.name.casefold()
         ]
     if wanted_sector and wanted_sector != "all":
         rows = [r for r in rows if (r.sector or "").casefold() == wanted_sector]

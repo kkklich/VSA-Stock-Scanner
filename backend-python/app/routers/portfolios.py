@@ -17,13 +17,18 @@ from app.config import settings
 from app.db.models import UserRow
 from app.db.user_repository import UserRepository
 from app.dependencies import get_live_prices, get_user_repository, gpw_company_service
-from app.markets import market_of, quote_currency
+from app.markets import listed_ticker, market_of, quote_currency
 from app.models.portfolio import AddTransaction, CreatePortfolio, UpdatePortfolio
 from app.routers.auth import get_current_user
 from app.services.auth import jwt_secret
 from app.services.portfolio import WARSAW, PortfolioError, valuation, xtb_checkpoint
 from app.services.portfolio_instruments import find_portfolio_instrument, list_portfolio_instruments
-from app.services.portfolio_summary import SUMMARY_DAYS, portfolio_summary
+from app.services.portfolio_summary import (
+    SUMMARY_DAYS,
+    HistoryRange,
+    history_start_date,
+    portfolio_summary,
+)
 from app.services.xtb_daily_statement import parse_xtb_daily_statement
 from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
 from app.services.xtb_wallet_import import parse_xtb_wallets
@@ -74,7 +79,12 @@ async def instruments(user: Owner, response: Response):
 
 
 @router.get("")
-async def portfolios(user: Owner, repo: Repository, response: Response):
+async def portfolios(
+    user: Owner,
+    repo: Repository,
+    response: Response,
+    history_range: Annotated[HistoryRange, Query(alias="historyRange")] = "1w",
+):
     response.headers["Cache-Control"] = "private, no-store"
     now = datetime.now(UTC)
     today = now.astimezone(WARSAW).date()
@@ -86,20 +96,25 @@ async def portfolios(user: Owner, repo: Repository, response: Response):
         if row["reconciliation"]
         for change in row["reconciliation"]["changes"]
     )
-    history = await repo.portfolios.quote_history(
-        tickers, today - timedelta(days=SUMMARY_DAYS), today
-    )
+    listings = {listed_ticker(ticker) for ticker in tickers}
+    history_start = history_start_date(rows, today, history_range)
+    quote_start = min(history_start, today - timedelta(days=SUMMARY_DAYS))
+    stored_history = await repo.portfolios.quote_history(tickers | listings, quote_start, today)
+    history = {}
     quotes = {}
     live = get_live_prices()
     for ticker in tickers:
         market = market_of(ticker)
         company = find_portfolio_instrument(ticker, gpw_company_service)
         currency = quote_currency(company) if company else market.currency
-        observations = history.get(ticker, [])
-        for observation in observations:
-            observation["currency"] = currency
+        listing = listed_ticker(ticker)
+        observations = [
+            {**observation, "currency": currency}
+            for observation in stored_history.get(listing, stored_history.get(ticker, []))
+        ]
+        history[ticker] = observations
         quote = {**observations[-1], "source": "close"} if observations else None
-        current = live.get(ticker) if live else None
+        current = live.get(listing) if live else None
         if (
             current
             and current.session_date <= today
@@ -126,7 +141,7 @@ async def portfolios(user: Owner, repo: Repository, response: Response):
     ]
     return {
         "items": items,
-        "summary": await portfolio_summary(rows, items, history, today),
+        "summary": await portfolio_summary(rows, items, history, today, history_start),
         "valuedAt": now,
     }
 

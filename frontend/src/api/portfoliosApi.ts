@@ -30,6 +30,7 @@ export interface Portfolio {
 export interface PortfolioSummaryPoint {
   date: string; value: number | null; missingQuotes: number; missingRates: string[]; staleQuotes: number
 }
+export type PortfolioHistoryRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | 'all'
 export interface PortfolioSummaryChange { amount: number; percent: number | null; since: string; partial: boolean }
 export interface PortfolioSummaryMissingHolding { ticker: string; currency: string; walletId: string; walletName: string }
 export interface PortfolioSummary {

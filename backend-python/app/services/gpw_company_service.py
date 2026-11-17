@@ -27,7 +27,16 @@ import logging
 import threading
 from pathlib import Path
 
-from app.markets import GPW, GPW_ID, MARKETS, enabled_markets, market_of, normalize_ticker
+from app.markets import (
+    GPW,
+    GPW_ID,
+    GPW_TICKER_ALIASES,
+    MARKETS,
+    enabled_markets,
+    listed_ticker,
+    market_of,
+    normalize_ticker,
+)
 from app.models import GpwCompany
 
 logger = logging.getLogger(__name__)
@@ -102,6 +111,10 @@ class GpwCompanyService:
                 for companies in by_market.values()
                 for c in companies
             }
+            # Keep broker codes available to existing portfolio ledgers.
+            by_market[GPW_ID] = [
+                c for c in by_market[GPW_ID] if listed_ticker(c.ticker) == c.ticker
+            ]
             self._by_market = by_market
             return by_market
 
@@ -142,6 +155,10 @@ class GpwCompanyService:
                     market=GPW_ID,
                     exchange=GPW.exchange,
                     currency=GPW.currency,
+                    aliases=tuple(
+                        alias for alias, listing in GPW_TICKER_ALIASES.items()
+                        if listing == ticker
+                    ),
                 )
             )
 

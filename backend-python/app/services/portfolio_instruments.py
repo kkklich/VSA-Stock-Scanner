@@ -1,6 +1,6 @@
 """Listed instruments available to portfolio ledgers outside the scanner universe."""
 
-from app.markets import GERMANY
+from app.markets import GERMANY, GPW_TICKER_ALIASES
 from app.models.stocks import GpwCompany
 from app.services.gpw_company_service import GpwCompanyService
 
@@ -21,6 +21,9 @@ def find_portfolio_instrument(ticker: str, companies: GpwCompanyService) -> GpwC
 
 def list_portfolio_instruments(companies: GpwCompanyService) -> list[GpwCompany]:
     available = {company.ticker: company for company in companies.enabled_companies()}
+    for ticker in GPW_TICKER_ALIASES:
+        if (company := companies.find(ticker)) is not None:
+            available.setdefault(ticker, company)
     for ticker, company in _PORTFOLIO_ONLY.items():
         available.setdefault(ticker, company)
     return list(available.values())

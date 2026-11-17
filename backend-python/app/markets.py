@@ -321,6 +321,14 @@ _FOREIGN_CODE = re.compile(r"[a-z0-9][a-z0-9-]{0,18}")
 # "KGH.WA" (how Yahoo and most foreign sites write it) resolves to "kgh".
 _GPW_ALIAS_SUFFIX = ".wa"
 
+# XTB symbols used in portfolio imports for these GPW listings.
+GPW_TICKER_ALIASES = {"dada": "dad", "pmg": "gns"}
+
+
+def listed_ticker(ticker: str) -> str:
+    """The active listing for a normalized ticker, including broker aliases."""
+    return GPW_TICKER_ALIASES.get(ticker, ticker)
+
 
 def get_market(market_id: str | None) -> Market | None:
     """A market by id (case-insensitive), or ``None`` when unknown."""
@@ -387,7 +395,8 @@ def yahoo_symbol(ticker: str) -> str:
     normalized = normalize_ticker(ticker)
     if normalized is None:
         raise ValueError(f"Not a valid ticker: {ticker!r}.")
-    return ticker_symbol(normalized) + market_of(normalized).yahoo_suffix
+    listing = listed_ticker(normalized)
+    return ticker_symbol(listing) + market_of(listing).yahoo_suffix
 
 
 def market_for_yahoo_symbol(symbol: str) -> Market:

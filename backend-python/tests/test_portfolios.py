@@ -376,6 +376,23 @@ def test_newer_intraday_quote_is_used_and_completed_close_takes_precedence(clien
     assert closed["quoteAgeDays"] >= 0
 
 
+@pytest.mark.parametrize(("alias", "ticker"), [("pmg", "gns"), ("dada", "dad")])
+def test_broker_ticker_uses_active_listing_quotes(client, monkeypatch, alias, ticker):
+    repo = client.app_instance.dependency_overrides[get_user_repository]().portfolios
+
+    async def quote_history(tickers, start, end):
+        assert ticker in tickers
+        return {ticker: [{"date": date(2026, 1, 6), "price": Decimal("130")}]}
+
+    monkeypatch.setattr(repo, "quote_history", quote_history)
+    result = trade(client, create(client), ticker=alias)
+    assert result.status_code == 201
+
+    position = client.get("/api/portfolios").json()["items"][0]["positions"][0]
+    assert position["ticker"] == alias
+    assert position["currentPrice"] == 130
+
+
 def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client, monkeypatch):
     import app.routers.portfolios as endpoint
     import app.services.portfolio_summary as summary_service
@@ -438,6 +455,10 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
         "partial": False,
     }
 
+    one_day = client.get("/api/portfolios?historyRange=1d").json()["summary"]
+    assert one_day["history"] == summary["history"][-2:]
+    assert one_day["weekChange"] == summary["weekChange"]
+
     rates.clear()
     summary = client.get("/api/portfolios").json()["summary"]
     assert summary["current"]["value"] == 840
@@ -448,6 +469,28 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
         {"currency": "EUR", "marketValue": 24, "missingQuotes": 0},
         {"currency": "PLN", "marketValue": 840, "missingQuotes": 0},
     ]
+
+
+def test_portfolio_history_ranges_start_on_the_requested_date_or_first_trade(client, monkeypatch):
+    import app.routers.portfolios as endpoint
+
+    class ValuationClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 3, 31, 12, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(endpoint, "datetime", ValuationClock)
+    assert trade(client, create(client), date="2026-01-01").status_code == 201
+    for period, start in (("1m", "2026-02-28"), ("all", "2026-01-01")):
+        result = client.get("/api/portfolios", params={"historyRange": period})
+        assert result.status_code == 200
+        summary = result.json()["summary"]
+        assert summary["history"][0]["date"] == start
+        assert summary["history"][-1]["date"] == "2026-03-31"
+        if period == "all":
+            january = next(point for point in summary["history"] if point["date"] == "2026-01-06")
+            assert january["value"] is not None
+    assert client.get("/api/portfolios?historyRange=invalid").status_code == 422
 
 
 def test_account_summary_names_missing_holdings_and_compares_shared_price_coverage(

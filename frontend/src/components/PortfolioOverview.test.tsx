@@ -22,6 +22,7 @@ vi.mock('lightweight-charts', () => ({
 }))
 
 const current = { date: '2026-11-12', value: 1_200, missingQuotes: 0, staleQuotes: 0, missingRates: [] }
+const defaultControls = { historyRange: '1w', onHistoryRangeChange: vi.fn() } as const
 const summary: PortfolioSummary = {
   currency: 'PLN',
   current,
@@ -46,7 +47,7 @@ beforeEach(() => {
 
 describe('PortfolioOverview', () => {
   it('shows value and signed changes and leaves a gap for an unavailable daily value', () => {
-    render(<PortfolioOverview summary={summary} walletCount={2} />)
+    render(<PortfolioOverview {...defaultControls} summary={summary} walletCount={2} />)
 
     const section = screen.getByRole('region', { name: 'All wallets' })
     expect(section).toHaveTextContent('2 wallets')
@@ -55,6 +56,8 @@ describe('PortfolioOverview', () => {
     expect(section).toHaveTextContent('(-4.00%)')
     expect(section).toHaveTextContent('+200.00 PLN')
     expect(section).toHaveTextContent('(+20.00%)')
+    expect(screen.getByRole('button', { name: '1 week' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText('View daily values')).not.toBeInTheDocument()
     expect(chart.setData).toHaveBeenNthCalledWith(1, [
       { time: '2026-11-05', value: 1_000 },
       { time: '2026-11-06' },
@@ -69,7 +72,7 @@ describe('PortfolioOverview', () => {
 
   it('shows available values and chart points alongside the holdings missing prices', () => {
     const partial = { ...current, missingQuotes: 2, missingRates: ['USD'] }
-    render(<MemoryRouter><PortfolioOverview walletCount={2} summary={{
+    render(<MemoryRouter><PortfolioOverview {...defaultControls} walletCount={2} summary={{
       ...summary,
       current: partial,
       history: [summary.history[2], partial],
@@ -102,7 +105,7 @@ describe('PortfolioOverview', () => {
 
   it('shows native subtotals when conversion is unavailable', () => {
     const missingRate = { ...current, value: null, missingRates: ['USD'] }
-    render(<PortfolioOverview walletCount={2} summary={{
+    render(<PortfolioOverview {...defaultControls} walletCount={2} summary={{
       ...summary,
       current: missingRate,
       history: [missingRate],

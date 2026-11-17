@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.markets import normalize_ticker
+from app.markets import GPW_TICKER_ALIASES, normalize_ticker
 from app.services.gpw_company_service import GpwCompanyService
 from app.services.portfolio import holdings
 from app.services.xtb_import import _company, prepare_import
@@ -16,7 +16,9 @@ from tests.test_xtb_wallet_import import BUY_TIME, OPEN_HEADERS, workbook
 CATALOGUE = Path(__file__).resolve().parents[1] / "app/data/gpw-companies.json"
 
 
-@pytest.mark.parametrize("symbol", ["CRQ.PL", "S2B.PL", "1AT.PL", "3RG.PL", "CAR.PL"])
+@pytest.mark.parametrize(
+    "symbol", ["CRQ.PL", "S2B.PL", "1AT.PL", "3RG.PL", "CAR.PL", "PMG.PL", "DADA.PL"]
+)
 def test_requested_and_new_polish_stocks_resolve_through_the_real_import_catalogue(symbol):
     company = _company(symbol, GpwCompanyService())
     assert company.ticker == symbol[:-3].lower()
@@ -63,4 +65,4 @@ def test_shipped_polish_catalogue_has_unique_normalized_tickers_and_complete_lab
         assert row["name"]
         assert row["sector"] is None or isinstance(row["sector"], str)
     loaded = GpwCompanyService().get_companies("gpw")
-    assert {company.ticker for company in loaded} == set(tickers)
+    assert {company.ticker for company in loaded} == set(tickers) - GPW_TICKER_ALIASES.keys()

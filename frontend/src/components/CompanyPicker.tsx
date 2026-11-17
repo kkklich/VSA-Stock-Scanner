@@ -34,7 +34,8 @@ export function CompanyPicker({
       ? companies.filter(
           (c) =>
             c.ticker.toLowerCase().includes(q) ||
-            c.name.toLowerCase().includes(q),
+            c.name.toLowerCase().includes(q) ||
+            c.aliases?.some((alias) => alias.includes(q)),
         )
       : companies
     return list.slice(0, MAX_RESULTS)

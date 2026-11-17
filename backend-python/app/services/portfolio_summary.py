@@ -1,7 +1,11 @@
 """Combine tracked holdings across wallets using dated quotes and exchange rates."""
 
+from bisect import bisect_right
+from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal, localcontext
+from operator import itemgetter
+from typing import Literal
 
 from starlette.concurrency import run_in_threadpool
 
@@ -14,6 +18,28 @@ MAX_PRICE_AGE_DAYS = 7
 MAX_RATE_AGE_DAYS = 7
 HoldingKey = tuple[str, str, str]
 PositionValues = dict[HoldingKey, Decimal | None]
+HistoryRange = Literal["1d", "1w", "1m", "3m", "6m", "1y", "all"]
+_MONTHS = {"1m": 1, "3m": 3, "6m": 6, "1y": 12}
+_by_date = itemgetter("date")
+_fixing_date = itemgetter(0)
+
+
+def history_start_date(wallets, today: date, period: HistoryRange) -> date:
+    if period == "1d":
+        return today - timedelta(days=1)
+    if period == "1w":
+        return today - timedelta(days=SUMMARY_DAYS)
+
+    first_entry = min(
+        (entry["date"] for wallet in wallets for entry in wallet["ledger"]),
+        default=today.isoformat(),
+    )
+    first_day = min(date.fromisoformat(first_entry), today)
+    if period == "all":
+        return first_day
+    year, month_index = divmod(today.year * 12 + today.month - 1 - _MONTHS[period], 12)
+    month = month_index + 1
+    return max(first_day, date(year, month, min(today.day, monthrange(year, month)[1])))
 
 
 def _currency_totals(positions: PositionValues):
@@ -29,22 +55,24 @@ def _currency_totals(positions: PositionValues):
     return sorted(totals.values(), key=lambda total: total["currency"])
 
 
-def _historical_positions(wallets, quote_history, day, holdings_cache):
+def _historical_positions(wallets, ledgers, quote_history, day, holdings_cache):
     quotes = {}
     for ticker, history in quote_history.items():
-        quote = next((quote for quote in reversed(history) if quote["date"] <= day), None)
+        index = bisect_right(history, day, key=_by_date)
+        quote = history[index - 1] if index else None
         if quote and (day - quote["date"]).days <= MAX_PRICE_AGE_DAYS:
             quotes[ticker] = quote
 
     cutoff = day.isoformat()
     for wallet in wallets:
-        ledger = [entry for entry in wallet["ledger"] if entry["date"] <= cutoff]
+        ledger = ledgers[wallet["id"]]
+        size = bisect_right(ledger, cutoff, key=_by_date)
         ledger_size, positions = holdings_cache.get(wallet["id"], (0, []))
         # Each cutoff contains all earlier entries, so the same count means the
         # same ledger. Reuse holdings on days without any trades or snapshots.
-        if ledger_size != len(ledger):
-            positions = holdings(ledger, wallet["costMethod"])
-            holdings_cache[wallet["id"]] = (len(ledger), positions)
+        if ledger_size != size:
+            positions = holdings(ledger[:size], wallet["costMethod"])
+            holdings_cache[wallet["id"]] = (size, positions)
         for position in positions:
             if not position["quantity"]:
                 continue
@@ -58,25 +86,23 @@ def _historical_positions(wallets, quote_history, day, holdings_cache):
             yield (wallet["id"], position["ticker"], currency), value
 
 
-def _historical_values(wallets, quote_history, start):
+def _historical_values(wallets, quote_history, start, today):
+    ledgers = {wallet["id"]: sorted(wallet["ledger"], key=_by_date) for wallet in wallets}
     holdings_cache = {}
-    values = {}
-    with localcontext() as context:
-        context.prec = 50
-        for offset in range(SUMMARY_DAYS):
-            day = start + timedelta(days=offset)
-            values[day] = dict(_historical_positions(wallets, quote_history, day, holdings_cache))
-    return values
+    for offset in range((today - start).days):
+        day = start + timedelta(days=offset)
+        yield day, dict(_historical_positions(wallets, ledgers, quote_history, day, holdings_cache))
 
 
 def _pln_rate(currency, day, rates):
     if currency == "PLN":
         return Decimal(1)
     major = major_currency(currency)
-    for effective, rate in reversed(rates.get(major, [])):
-        if effective <= day:
-            if (day - effective).days > MAX_RATE_AGE_DAYS:
-                return None
+    history = rates.get(major, [])
+    index = bisect_right(history, day, key=_fixing_date)
+    if index:
+        effective, rate = history[index - 1]
+        if (day - effective).days <= MAX_RATE_AGE_DAYS:
             return rate / 100 if major != currency else rate
     return None
 
@@ -129,9 +155,42 @@ def _change(since, current_positions, previous_positions, current, previous, sta
     }
 
 
-async def portfolio_summary(wallets, valued_wallets, quote_history, today: date) -> dict:
-    start = today - timedelta(days=SUMMARY_DAYS)
-    values_by_date = await run_in_threadpool(_historical_values, wallets, quote_history, start)
+def _value_history(valuation_days, current_positions, stale_holdings, history_start, today, rates):
+    baselines = {
+        today - timedelta(days=1): "dayChange",
+        today - timedelta(days=SUMMARY_DAYS): "weekChange",
+    }
+    history = []
+    changes = {}
+    with localcontext() as context:
+        context.prec = 50
+        current, current_pln = _value_point(today, current_positions, rates, len(stale_holdings))
+        for day, positions in valuation_days:
+            if day < history_start and day not in baselines:
+                continue
+            point, converted = _value_point(day, positions, rates)
+            if day >= history_start:
+                history.append(point)
+            if day in baselines:
+                changes[baselines[day]] = _change(
+                    day, current_positions, positions, current_pln, converted, stale_holdings
+                )
+        latest = current
+        if stale_holdings:
+            # Keep last-known quotes in the headline and apply the chart's quote age limit today.
+            chart_positions = {
+                key: None if key in stale_holdings else value
+                for key, value in current_positions.items()
+            }
+            latest, _ = _value_point(today, chart_positions, rates, len(stale_holdings))
+        history.append(latest)
+        return current, history, changes, _currency_totals(current_positions)
+
+
+async def portfolio_summary(
+    wallets, valued_wallets, quote_history, today: date, history_start: date
+) -> dict:
+    start = min(today - timedelta(days=SUMMARY_DAYS), history_start)
     current_positions = {}
     missing_holdings = []
     stale_holdings = set()
@@ -150,46 +209,25 @@ async def portfolio_summary(wallets, valued_wallets, quote_history, today: date)
             quote_date = position["quoteDate"]
             if quote_date and (today - quote_date).days > MAX_PRICE_AGE_DAYS:
                 stale_holdings.add(key)
-    values_by_date[today] = current_positions
     currencies = {
-        currency
-        for positions in values_by_date.values()
-        for (_, _, currency), value in positions.items()
-        if value is not None and currency != "PLN"
+        quotes[-1]["currency"] for quotes in quote_history.values() if quotes
     }
+    currencies.update(currency for (_, _, currency), value in current_positions.items()
+                      if value is not None)
+    currencies.discard("PLN")
     rates = await get_portfolio_fx(start, today, currencies) if currencies else {}
-    yesterday = today - timedelta(days=1)
-    with localcontext() as context:
-        context.prec = 50
-        points = {
-            day: _value_point(day, values, rates, len(stale_holdings) if day == today else 0)
-            for day, values in values_by_date.items()
-        }
-        current, current_pln = points[today]
-        history = [point for point, _ in points.values()]
-        if stale_holdings:
-            # Keep last-known values in the headline. Apply the same quote age
-            # cutoff throughout the chart so stale quotes do not reappear today.
-            chart_positions = {
-                key: None if key in stale_holdings else value
-                for key, value in current_positions.items()
-            }
-            history[-1], _ = _value_point(today, chart_positions, rates, len(stale_holdings))
-        changes = {
-            label: _change(
-                day, current_positions, values_by_date[day], current_pln, points[day][1],
-                stale_holdings,
-            )
-            for label, day in (("dayChange", yesterday), ("weekChange", start))
-        }
-        return {
-            "currency": "PLN",
-            "current": current,
-            "history": history,
-            **changes,
-            "currencyTotals": _currency_totals(current_positions),
-            "missingHoldings": sorted(
-                missing_holdings,
-                key=lambda item: (item["ticker"], item["walletName"], item["currency"]),
-            ),
-        }
+    current, history, changes, totals = await run_in_threadpool(
+        _value_history, _historical_values(wallets, quote_history, start, today),
+        current_positions, stale_holdings, history_start, today, rates,
+    )
+    return {
+        "currency": "PLN",
+        "current": current,
+        "history": history,
+        **changes,
+        "currencyTotals": totals,
+        "missingHoldings": sorted(
+            missing_holdings,
+            key=lambda item: (item["ticker"], item["walletName"], item["currency"]),
+        ),
+    }

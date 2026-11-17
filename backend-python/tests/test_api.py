@@ -245,6 +245,24 @@ class TestGetRanking:
             for item in body
         )
 
+    @pytest.mark.parametrize(("alias", "ticker"), [("PMG", "gns"), ("DADA", "dad")])
+    def test_broker_ticker_finds_the_active_listing(self, alias: str, ticker: str) -> None:
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {ticker: _rich_quotes()}
+        )
+        with TestClient(app) as client:
+            companies = {company["ticker"]: company for company in client.get("/api/stocks").json()}
+            result = client.get("/api/stocks/ranking", params={"q": alias})
+            history = client.get(f"/api/stocks/{alias}/history")
+
+        assert alias.lower() not in companies
+        assert alias.lower() in companies[ticker]["aliases"]
+        assert result.status_code == 200
+        assert [item["ticker"] for item in result.json()] == [ticker.upper()]
+        assert history.status_code == 200
+        assert history.json()["ticker"] == ticker.upper()
+        assert history.json()["quotes"]
+
     def test_tickers_allow_list_restricts_results(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(
             quotes=_rich_quotes()

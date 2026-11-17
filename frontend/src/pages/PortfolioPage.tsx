@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
-import { portfolioRequest, type Instrument, type Portfolio, type Portfolios, type Transaction } from '../api/portfoliosApi'
+import { portfolioRequest, type Instrument, type Portfolio, type PortfolioHistoryRange, type Portfolios, type Transaction } from '../api/portfoliosApi'
 import { useAuth } from '../hooks/useAuth'
-import { currencyLabel, fmtMoney, fmtPct } from '../lib/format'
+import { currencyLabel } from '../lib/format'
 import { PortfolioOverview } from '../components/PortfolioOverview'
+import { PortfolioPositions, PortfolioTotals, PortfolioTransactionHistory } from '../components/PortfolioTables'
 import { XtbReconciliationDetails } from '../components/XtbReconciliationDetails'
 import { XtbWalletImport } from '../components/XtbWalletImport'
 
@@ -81,12 +82,8 @@ function TradeForm({ portfolio, instruments, busy, save }: { portfolio: Portfoli
 function PortfolioDetail({ portfolio, instruments, save, busy }: {
   portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
-  const money = (n: number | null, currency: string) => n === null ? '—' : fmtMoney(n, currency)
-  const quantity = (n: number | string) => Number(n).toLocaleString(i18n.language, { maximumFractionDigits: 8 })
-  const pnl = (amount: number | null, pct: number | null, currency: string) => `${money(amount, currency)}${pct === null ? '' : ` (${fmtPct(pct)})`}`
-  const trades = portfolio.transactions.map((trade, index) => ({ trade, index })).sort((a, b) => b.trade.date.localeCompare(a.trade.date) || b.index - a.index).map(({ trade }) => trade)
   async function remove(trade: Transaction) {
     if (window.confirm(t('portfolio.confirmTransaction'))) await save('DELETE', `/${portfolio.id}/transactions/${trade.id}?version=${portfolio.version}`)
   }
@@ -104,29 +101,19 @@ function PortfolioDetail({ portfolio, instruments, save, busy }: {
       </div>}
     </section>
     {portfolio.reconciliation && <XtbReconciliationDetails reconciliation={portfolio.reconciliation} />}
-    <div className="grid gap-3 lg:grid-cols-2">{portfolio.totals.map(total => <section key={total.currency} className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-      <h3 className="mb-3 font-semibold">{currencyLabel(total.currency)}</h3>
-      <dl className="grid grid-cols-2 gap-3 text-sm">
-        <div><dt className="text-slate-400">{t('portfolio.marketValue')}</dt><dd className="text-xl font-semibold">{money(total.marketValue, total.currency)}</dd></div>
-        <div><dt className="text-slate-400">{t('portfolio.cost')}</dt><dd>{money(total.cost, total.currency)}</dd></div>
-        <div><dt className="text-slate-400">{t('portfolio.unrealized')}</dt><dd className={(total.unrealizedPnl ?? 0) < 0 ? 'text-rose-400' : 'text-emerald-400'}>{pnl(total.unrealizedPnl, total.unrealizedPnlPct, total.currency)}</dd></div>
-        <div><dt className="text-slate-400">{t('portfolio.realized')}</dt><dd>{money(total.realizedPnl, total.currency)}</dd></div>
-      </dl>
-      {!!total.missingQuotes && <p className="mt-3 text-sm text-amber-400">{t('portfolio.missingQuotes', { count: total.missingQuotes })}</p>}
-    </section>)}</div>
+    <PortfolioTotals totals={portfolio.totals} />
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
-    <section><h3 className="mb-3 font-semibold">{t('portfolio.holdings')}</h3>
-      {!portfolio.positions.length ? <p className="text-sm text-slate-400">{t('portfolio.emptyHoldings')}</p> : <div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="text-xs text-slate-400"><tr>{['instrument', 'quantity', 'averagePrice', 'currentPrice', 'marketValue', 'unrealized', 'realized', 'quoteDate'].map(key => <th key={key} className="p-3">{t(`portfolio.${key}`)}</th>)}</tr></thead><tbody>{portfolio.positions.map(p => <tr key={`${p.ticker}:${p.currency}`} className="border-t border-slate-800">
-        <td className="p-3"><Link className="text-emerald-400 hover:underline" to={`/stock/${encodeURIComponent(p.ticker)}`}>{p.ticker.toUpperCase()}</Link></td><td className="p-3">{quantity(p.quantity)}</td><td className="p-3">{money(p.averagePrice, p.currency)}</td><td className="p-3">{money(p.currentPrice, p.currency)}</td><td className="p-3">{money(p.marketValue, p.currency)}</td><td className="p-3">{pnl(p.unrealizedPnl, p.unrealizedPnlPct, p.currency)}</td><td className="p-3">{money(p.realizedPnl, p.currency)}</td><td className="p-3">{p.quoteDate ?? t('portfolio.noQuote')}{p.quoteAsOf && <span className="block text-xs text-slate-400">{new Date(p.quoteAsOf).toLocaleTimeString(i18n.language)}</span>}{p.quoteSource && <span className="block text-xs text-slate-400">{t(`portfolio.quote_${p.quoteSource}`)}</span>}{p.quantity > 0 && p.quoteAgeDays !== null && p.quoteAgeDays > 7 && <span className="block text-xs text-amber-400">{t('portfolio.oldQuote', { count: p.quoteAgeDays })}</span>}</td>
-      </tr>)}</tbody></table></div>}
-    </section>
-    <section><h3 className="mb-3 font-semibold">{t('portfolio.transactions')}</h3><div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="text-xs text-slate-400"><tr>{['date', 'side', 'instrument', 'quantity', 'price', 'fees', 'actions'].map(key => <th key={key} className="p-3">{t(`portfolio.${key}`)}</th>)}</tr></thead><tbody>{trades.map(trade => <tr key={trade.id} className="border-t border-slate-800"><td className="p-3">{trade.date}</td><td className="p-3">{t(`portfolio.${trade.side}`)}</td><td className="p-3">{trade.ticker.toUpperCase()}</td><td className="p-3">{quantity(trade.quantity)}</td><td className="p-3">{money(Number(trade.price), trade.currency)}</td><td className="p-3">{money(Number(trade.fees), trade.currency)}</td><td className="p-3"><button className={button} disabled={busy} onClick={() => remove(trade)}>{t('portfolio.delete')}</button></td></tr>)}</tbody></table></div></section>
+    <PortfolioPositions positions={portfolio.positions} />
+    <PortfolioTransactionHistory transactions={portfolio.transactions} busy={busy} onRemove={remove} />
   </div>
 }
 
 function AccountPortfolios({ owner }: { owner: number }) {
   const { t, i18n } = useTranslation()
-  const [data, setData] = useState<Portfolios | null>(null)
+  const [snapshot, setSnapshot] = useState<{ data: Portfolios; historyRange: PortfolioHistoryRange } | null>(null)
+  const data = snapshot?.data
+  const [historyRange, setHistoryRange] = useState<PortfolioHistoryRange>('1w')
+  const requestedRange = useRef(historyRange)
   const [instruments, setInstruments] = useState<Instrument[]>([])
   const [selected, setSelected] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -146,7 +133,7 @@ function AccountPortfolios({ owner }: { owner: number }) {
   const clearAccountView = useCallback(() => {
     importing.current = false
     setImportBusy(false)
-    setData(null)
+    setSnapshot(null)
     setInstruments([])
     setSelected('')
     setCreating(false)
@@ -157,14 +144,16 @@ function AccountPortfolios({ owner }: { owner: number }) {
     request.current?.abort()
     const abort = new AbortController()
     request.current = abort
+    const range = requestedRange.current
+    const path = range === '1w' ? '' : `?historyRange=${range}`
     setLoading(true)
     try {
       const [next, options] = await Promise.all([
-        portfolioRequest<Portfolios>('GET', '', undefined, abort.signal, owner),
+        portfolioRequest<Portfolios>('GET', path, undefined, abort.signal, owner),
         portfolioRequest<Instrument[]>('GET', '/instruments', undefined, abort.signal, owner),
       ])
       if (abort.signal.aborted || !alive.current) return
-      setData(next); setInstruments(options); setStale(false)
+      setSnapshot({ data: next, historyRange: range }); setInstruments(options); setStale(false)
       setError(current => current === 'account_changed' ? null : current)
       setSelected(current => next.items.some(p => p.id === current) ? current : next.items[0]?.id ?? '')
     } catch (failure) {
@@ -176,6 +165,13 @@ function AccountPortfolios({ owner }: { owner: number }) {
       }
     } finally { if (!abort.signal.aborted && alive.current) setLoading(false) }
   }, [owner, clearAccountView])
+  function changeHistoryRange(range: PortfolioHistoryRange) {
+    if (range === historyRange && (loading || snapshot?.historyRange === range)) return
+    requestedRange.current = range
+    setHistoryRange(range)
+    setError(null)
+    void reload()
+  }
   useEffect(() => {
     alive.current = true
     void reload()
@@ -217,7 +213,9 @@ function AccountPortfolios({ owner }: { owner: number }) {
     {data && <>
       {data.summary && <PortfolioOverview summary={data.summary} walletCount={data.items.length}
         hasMultipleXtbWallets={data.items.filter(wallet => wallet.broker.trim().toUpperCase() === 'XTB').length > 1}
-        staleSince={stale ? data.valuedAt : undefined} />}
+        staleSince={stale ? data.valuedAt : undefined} historyRange={historyRange}
+        historyStatus={snapshot?.historyRange === historyRange ? undefined : loading ? 'loading' : 'error'}
+        historyControlsDisabled={busy || importBusy} onHistoryRangeChange={changeHistoryRange} />}
       <XtbWalletImport owner={owner} portfolios={data.items} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
       {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{[p.name, p.broker, p.brokerAccountId, p.brokerAccountCurrency].filter(Boolean).join(' · ')}</option>)}</select></label>}

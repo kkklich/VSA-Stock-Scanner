@@ -76,3 +76,28 @@ async def test_service_outage_leaves_rates_unavailable(nbp):
     assert await portfolio_fx.get_portfolio_fx(day, day, {"USD"}) == {}
     assert await portfolio_fx.get_portfolio_fx(day, day, {"EUR"}) == {}
     assert len(calls) == 1
+
+
+async def test_long_ranges_keep_fixings_across_quarter_boundaries(nbp):
+    calls = []
+    first_days = (date(2026, 1, 1), date(2026, 4, 1), date(2026, 7, 1))
+
+    def table(request):
+        first, last = map(date.fromisoformat, request.url.path.rstrip("/").split("/")[-2:])
+        calls.append(first)
+        assert (last - first).days < 93
+        return httpx.Response(200, json=[{
+            "effectiveDate": last.isoformat(),
+            "rates": [{"code": "USD", "mid": 3.61}],
+        }])
+
+    nbp(table)
+    end = date(2026, 7, 12)
+    rates = await portfolio_fx.get_portfolio_fx(date(2026, 1, 10), end, {"USD"})
+    assert rates == {"USD": [
+        (date(2026, 3, 31), Decimal("3.61")),
+        (date(2026, 6, 30), Decimal("3.61")),
+        (end, Decimal("3.61")),
+    ]}
+    assert await portfolio_fx.get_portfolio_fx(date(2026, 1, 11), end, {"USD"}) == rates
+    assert sorted(calls) == list(first_days)

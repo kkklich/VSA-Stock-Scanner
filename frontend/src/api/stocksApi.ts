@@ -53,6 +53,7 @@ export interface ApiCompany {
   ticker: string
   name: string
   sector: string | null
+  aliases?: string[]
   /** Market id; absent from older backends (then: the GPW). */
   market?: string
   exchange?: string | null

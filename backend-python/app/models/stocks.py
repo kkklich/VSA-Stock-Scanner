@@ -62,6 +62,7 @@ class GpwCompany(BaseModel):
     # The indices the company was selected through ("sp500", "ndx", …); empty
     # for the GPW list, which is not index-based.
     indices: tuple[str, ...] = ()
+    aliases: tuple[str, ...] = ()
 
 
 class StooqDailyQuote(BaseModel):

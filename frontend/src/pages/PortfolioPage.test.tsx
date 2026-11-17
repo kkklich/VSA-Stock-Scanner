@@ -41,7 +41,7 @@ describe('account portfolios', () => {
     const current = { date: '2026-01-06', value: 2500, missingQuotes: 0, missingRates: [], staleQuotes: 0 }
     vi.mocked(portfolioRequest).mockImplementation(async (method, path, ...args) => {
       const data = await original(method, path, ...args)
-      return path === '' ? { ...(data as object), summary: {
+      return path === '' || path === '?historyRange=all' ? { ...(data as object), summary: {
         currency: 'PLN', current, history: [current], dayChange: null, weekChange: null, currencyTotals: [], missingHoldings: [],
       } } : data
     })
@@ -52,6 +52,10 @@ describe('account portfolios', () => {
     expect(screen.getAllByRole('heading', { name: 'Import from XTB' })).toHaveLength(1)
     expect(screen.getByText('2,500.00 PLN', { selector: 'dd' })).toBeVisible()
     expect(screen.getByText(/overlapping XTB imports/)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'All time' }))
+    expect(vi.mocked(portfolioRequest)).toHaveBeenCalledWith('GET', '?historyRange=all', undefined, expect.any(AbortSignal), 1)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled())
+    expect(screen.getByRole('button', { name: 'All time' })).toHaveAttribute('aria-pressed', 'true')
     vi.mocked(portfolioRequest).mockRejectedValueOnce(new ApiError(0, 'Offline'))
     await user.click(screen.getByRole('button', { name: 'Refresh' }))
     expect(await screen.findByText(/Showing the valuation from/)).toBeVisible()
@@ -147,6 +151,77 @@ describe('account portfolios', () => {
     expect(screen.getByRole('link', { name: 'KGH' })).toHaveAttribute('href', '/stock/kgh')
     expect(screen.getByText('Closing price')).toBeVisible()
     expect(screen.getByText('Quote is 10 calendar days old')).toBeVisible()
+  })
+
+  it('sorts and filters positions and shows status and unrealized profit or loss', async () => {
+    const winner = {
+      ticker: 'kgh', currency: 'PLN', quantity: 2, cost: 200, averagePrice: 100, currentPrice: 130,
+      marketValue: 260, unrealizedPnl: 60, unrealizedPnlPct: 30, realizedPnl: 0,
+      quoteDate: '2026-01-06', quoteAsOf: null, quoteSource: 'close', quoteAgeDays: 0,
+    } as const
+    portfolios[0].positions = [winner, {
+      ...winner, ticker: 'pzu', quantity: 10, unrealizedPnl: -20, unrealizedPnlPct: -10,
+    }, {
+      ...winner, ticker: 'aapl.us', currency: 'USD', quantity: 0, cost: 0, averagePrice: null,
+      marketValue: 0, unrealizedPnl: 0, unrealizedPnlPct: null,
+    }]
+    const user = userEvent.setup()
+    render(<App />)
+    const positions = within(await screen.findByRole('region', { name: 'Portfolio positions' }))
+    const tickers = () => positions.getAllByRole('link').map(link => link.textContent)
+    const table = within(positions.getByRole('table'))
+    expect(positions.getByLabelText('Position status')).toHaveValue('active')
+    expect(tickers()).toEqual(['KGH', 'PZU'])
+    expect(table.getAllByText('Active')).toHaveLength(2)
+    expect(table.queryByText('Closed')).not.toBeInTheDocument()
+    await user.selectOptions(positions.getByLabelText('Position status'), '')
+    expect(positions.getByRole('row', { name: /AAPL.US/ })).toHaveTextContent('Closed')
+    expect(positions.getByText('60.00 PLN (+30.00%)')).toHaveClass('text-emerald-400')
+    expect(positions.getByText('-20.00 PLN (-10.00%)')).toHaveClass('text-rose-400')
+    const quantity = positions.getByRole('button', { name: 'Sort by Quantity' })
+    await user.click(quantity)
+    expect(tickers()).toEqual(['PZU', 'KGH', 'AAPL.US'])
+    await user.click(quantity)
+    expect(tickers()).toEqual(['AAPL.US', 'KGH', 'PZU'])
+    await user.selectOptions(positions.getByLabelText('Position status'), 'closed')
+    expect(tickers()).toEqual(['AAPL.US'])
+    await user.click(positions.getByRole('button', { name: 'Clear filters' }))
+    await user.selectOptions(positions.getByLabelText('Currency'), 'PLN')
+    await user.type(positions.getByRole('searchbox', { name: 'Search ticker' }), 'PZ')
+    expect(tickers()).toEqual(['PZU'])
+  })
+
+  it('sorts and filters transaction history and restores the filters when reopened', async () => {
+    const trade = { date: '2026-01-02', ticker: 'kgh', side: 'buy', currency: 'PLN', quantity: '2', price: '50', fees: '0' } as const
+    portfolios[0].transactions = [
+      { ...trade, id: 'first' },
+      { ...trade, id: 'second', date: '2026-01-07', side: 'sell', quantity: '10' },
+      { ...trade, id: 'third', date: '2026-01-12', ticker: 'aapl.us', currency: 'USD', quantity: '3' },
+    ]
+    const user = userEvent.setup()
+    render(<App />)
+    const history = within(await screen.findByRole('region', { name: 'Transaction history' }))
+    const dates = () => history.getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[0].textContent)
+    expect(history.queryByRole('table')).not.toBeInTheDocument()
+    expect(history.getByRole('button', { name: 'Show history' })).toHaveAttribute('aria-expanded', 'false')
+    await user.click(history.getByRole('button', { name: 'Show history' }))
+    expect(dates()).toEqual(['2026-01-12', '2026-01-07', '2026-01-02'])
+    await user.click(history.getByRole('button', { name: 'Sort by Quantity' }))
+    expect(dates()).toEqual(['2026-01-07', '2026-01-12', '2026-01-02'])
+    await user.type(history.getByRole('searchbox', { name: 'Search ticker' }), 'KGH')
+    await user.selectOptions(history.getByLabelText('Type'), 'sell')
+    fireEvent.change(history.getByLabelText('From date'), { target: { value: '2026-01-07' } })
+    fireEvent.change(history.getByLabelText('To date'), { target: { value: '2026-01-07' } })
+    expect(dates()).toEqual(['2026-01-07'])
+    await user.click(history.getByRole('button', { name: 'Hide history' }))
+    expect(history.queryByRole('table')).not.toBeInTheDocument()
+    const show = history.getByRole('button', { name: 'Show history' })
+    expect(show).toHaveAttribute('aria-expanded', 'false')
+    await user.click(show)
+    expect(dates()).toEqual(['2026-01-07'])
+    expect(history.getByLabelText('From date')).toHaveValue('2026-01-07')
+    await user.click(history.getByRole('button', { name: 'Clear filters' }))
+    expect(dates()).toEqual(['2026-01-07', '2026-01-12', '2026-01-02'])
   })
 
   it('lets the owner choose the cost method when editing a portfolio', async () => {

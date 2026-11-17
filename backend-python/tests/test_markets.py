@@ -193,6 +193,8 @@ class TestYahooSymbols:
         [
             ("kgh", "KGH.WA"),
             ("KGH.WA", "KGH.WA"),
+            ("PMG.WA", "GNS.WA"),
+            ("DADA", "DAD.WA"),
             ("aapl.us", "AAPL"),
             ("brk-b.us", "BRK-B"),
             ("sap.de", "SAP.DE"),

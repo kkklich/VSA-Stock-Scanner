@@ -53,6 +53,8 @@ agent/      ALL project documentation & reference material lives here:
 
 ## API contract (do not change without updating DOCUMENTATION.md)
 
+- `GET /api/portfolios` accepts `historyRange=1d|1w|1m|3m|6m|1y|all` for the daily chart in `summary.history`. The default is `1w`. `GET /api/stocks` exposes broker ticker aliases on the active GPW listings. See the portfolio and ticker alias notes in `agent/DOCUMENTATION.md`.
+
 - **Long-term QVM ranking (2026-10-22).** `/long-term` shows a separate, deterministic
   Quality + Value + Momentum screen (equal thirds, `qvm-v1`), not a calibrated
   probability or validated return forecast. `GET /api/stocks/long-term?market=gpw`

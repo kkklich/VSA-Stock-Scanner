@@ -1,12 +1,20 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { AreaSeries, ColorType, createChart, isBusinessDay, type AreaData, type Time } from 'lightweight-charts'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { AreaSeries, ColorType, TickMarkType, createChart, isBusinessDay, type AreaData, type Time } from 'lightweight-charts'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import type { PortfolioSummary, PortfolioSummaryPoint } from '../api/portfoliosApi'
+import type { PortfolioHistoryRange, PortfolioSummary, PortfolioSummaryPoint } from '../api/portfoliosApi'
 import { useChartPalette } from '../lib/chartTheme'
 import { currencyLabel, deltaTone } from '../lib/format'
 
 const unavailable = '—'
+const historyRanges = ['1d', '1w', '1m', '3m', '6m', '1y', 'all'] as const
+
+interface HistoryControls {
+  historyRange: PortfolioHistoryRange
+  historyStatus?: 'loading' | 'error'
+  historyControlsDisabled?: boolean
+  onHistoryRangeChange: (range: PortfolioHistoryRange) => void
+}
 
 function formatAmount(amount: number, locale: string, signed = false) {
   return new Intl.NumberFormat(locale, {
@@ -56,21 +64,24 @@ function ValueChange({ change, label, currency }: {
   </div>
 }
 
-function ValueHistory({ history, currency }: { history: PortfolioSummary['history']; currency: string }) {
+function ValueHistory({ history, currency, historyRange, historyStatus, historyControlsDisabled, onHistoryRangeChange }:
+  HistoryControls & { history: PortfolioSummary['history']; currency: string }) {
   const { t, i18n } = useTranslation()
   const id = useId()
   const locale = i18n.language
   const palette = useChartPalette()
   const container = useRef<HTMLDivElement>(null)
   const [hoverDate, setHoverDate] = useState<string>()
-  const focused = history.find(point => point.date === hoverDate) ?? history[history.length - 1]
-  const pricedDays = history.filter(point => point.value !== null).length
-  const canPlot = pricedDays >= 2
-  const hasPartialDays = history.some(point => point.value !== null && hasMissingInputs(point))
+  const first = history[0]
+  const latest = history[history.length - 1]
+  const focused = historyStatus ? undefined : history.find(point => point.date === hoverDate) ?? latest
+  const canPlot = !historyStatus && history.filter(point => point.value !== null).length >= 2
+  const hasPartialDays = !historyStatus && history.some(point => point.value !== null && hasMissingInputs(point))
+  const dates = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }), [locale])
 
   useEffect(() => {
     if (!canPlot || !container.current) return
-    const dateLabel = (time: Time) => formatDate(dateFromChartTime(time), locale)
+    const dateLabel = (time: Time) => dates.format(new Date(dateFromChartTime(time)))
     const chart = createChart(container.current, {
       autoSize: true,
       layout: {
@@ -83,7 +94,13 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
         horzLines: { color: palette.scaleBorder },
       },
       localization: { locale, timeFormatter: dateLabel },
-      timeScale: { borderColor: palette.scaleBorder, tickMarkFormatter: dateLabel },
+      timeScale: {
+        borderColor: palette.scaleBorder,
+        minBarSpacing: Math.min(0.5, 1 / history.length),
+        tickMarkFormatter: (time: Time, type: TickMarkType) => type === TickMarkType.Year || (type === TickMarkType.Month && history.length > 93)
+          ? null
+          : formatDate(dateFromChartTime(time), locale),
+      },
       rightPriceScale: { borderColor: palette.scaleBorder, scaleMargins: { top: 0.12, bottom: 0.15 } },
       handleScroll: false,
       handleScale: false,
@@ -110,28 +127,31 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
         topColor: `${palette.bull}32`,
         bottomColor: `${palette.bull}03`,
         lineWidth: 2,
-        pointMarkersVisible: true,
+        pointMarkersVisible: history.length <= 60 || points.length === 1,
         pointMarkersRadius: 3,
         lastValueVisible: false,
         priceLineVisible: false,
         priceFormat: { type: 'custom', formatter: (value: number) => axisValue.format(value), minMove: 0.01 },
       })
-      series.setData(index === 0
-        ? history.map(point => points.find(item => item.time === point.date) ?? { time: point.date })
-        : points)
+      if (index === 0) {
+        const byDate = new Map(points.map(point => [point.time, point]))
+        series.setData(history.map(point => byDate.get(point.date) ?? { time: point.date }))
+      } else {
+        series.setData(points)
+      }
     }
     chart.timeScale().fitContent()
     chart.subscribeCrosshairMove(({ time }) => setHoverDate(time === undefined ? undefined : dateFromChartTime(time)))
     return () => chart.remove()
-  }, [canPlot, history, locale, palette])
+  }, [canPlot, dates, history, locale, palette])
 
   return <figure aria-labelledby={id} className="min-w-0 border-t border-slate-800 pt-4">
     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <figcaption id={id} className="text-sm font-semibold text-slate-200">
         {t('portfolio.overview.chartTitle', { currency: currencyLabel(currency) })}
       </figcaption>
-      {canPlot && focused && <p aria-hidden="true" className="text-sm text-slate-400 tabular-nums">
-        {formatDate(focused.date, locale)}
+      {focused && <p className="text-sm text-slate-400 tabular-nums">
+        {dates.format(new Date(focused.date))}
         <span className="ml-2 font-medium text-slate-200">
           {focused.value === null ? unavailable : money(focused.value, currency, locale)}
         </span>
@@ -140,32 +160,31 @@ function ValueHistory({ history, currency }: { history: PortfolioSummary['histor
         </span>}
       </p>}
     </div>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div role="group" aria-label={t('portfolio.overview.historyRange')} className="flex flex-wrap gap-1">
+        {historyRanges.map(range => <button key={range} type="button" aria-pressed={range === historyRange}
+          aria-label={t(`portfolio.overview.ranges.${range}.label`)} disabled={historyControlsDisabled}
+          className="rounded-md border border-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 aria-pressed:border-emerald-500/40 aria-pressed:bg-emerald-500/10 aria-pressed:text-emerald-400 disabled:opacity-50"
+          onClick={() => { setHoverDate(undefined); onHistoryRangeChange(range) }}>
+          {t(`portfolio.overview.ranges.${range}.short`)}
+        </button>)}
+      </div>
+      {!historyStatus && first && latest && <p className="text-xs text-slate-400 tabular-nums">
+        {dates.format(new Date(first.date))}
+        {latest.date !== first.date && ` – ${dates.format(new Date(latest.date))}`}
+      </p>}
+    </div>
     {hasPartialDays && <p className="mb-2 text-xs text-amber-400">{t('portfolio.overview.partialHistory')}</p>}
     {canPlot
       ? <div ref={container} aria-hidden="true" className="h-52 w-full sm:h-60" />
-      : <p className="rounded-lg bg-slate-950 p-4 text-sm text-slate-400">{t('portfolio.overview.historyUnavailable')}</p>}
-    {pricedDays > 0 && <details className="mt-3 text-sm text-slate-400">
-      <summary className="w-fit cursor-pointer rounded hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400">
-        {t('portfolio.overview.chartValues')}
-      </summary>
-      <table className="mt-2 w-full max-w-sm table-fixed border-collapse text-left tabular-nums">
-        <thead><tr className="text-xs"><th scope="col" className="py-1 font-medium">{t('portfolio.overview.valuationDate')}</th>
-          <th scope="col" className="py-1 text-right font-medium">{t('portfolio.overview.value')}</th></tr></thead>
-        <tbody>{history.map(point => <tr key={point.date} className="border-t border-slate-800">
-          <th scope="row" className="py-1 font-normal">{formatDate(point.date, locale)}</th>
-          <td className="py-1 text-right">
-            {point.value === null ? t('portfolio.overview.valueUnavailable') : money(point.value, currency, locale)}
-            {point.value !== null && hasMissingInputs(point) && <span className="ml-2 text-xs text-amber-400">
-              {t('portfolio.overview.partial')}
-            </span>}
-          </td>
-        </tr>)}</tbody>
-      </table>
-    </details>}
+      : <p role="status" className="rounded-lg bg-slate-950 p-4 text-sm text-slate-400">
+        {t(historyStatus === 'loading' ? 'portfolio.overview.historyLoading'
+          : historyStatus === 'error' ? 'portfolio.overview.historyFailed' : 'portfolio.overview.historyUnavailable')}
+      </p>}
   </figure>
 }
 
-export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets, staleSince }: {
+export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets, staleSince, ...historyControls }: HistoryControls & {
   summary: PortfolioSummary; walletCount: number; hasMultipleXtbWallets?: boolean; staleSince?: string
 }) {
   const { t, i18n } = useTranslation()
@@ -226,7 +245,7 @@ export function PortfolioOverview({ summary, walletCount, hasMultipleXtbWallets,
           </dd>
         </div>)}</dl>
       </div>}
-      <ValueHistory history={summary.history} currency={currency} />
+      <ValueHistory {...historyControls} history={summary.history} currency={currency} />
       <p className="text-xs leading-relaxed text-slate-400">{t('portfolio.overview.method')}</p>
     </>}
   </section>
