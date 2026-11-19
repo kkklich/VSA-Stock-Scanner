@@ -50,11 +50,10 @@ export function useStockDetail(
   /** Chart bar size; omitted = daily, the endpoint's own default. */
   interval?: ChartInterval,
 ): UseStockDetailResult {
-  const [data, setData] = useState<ApiStockSignals | null>(null)
+  const [snapshot, setSnapshot] = useState<{ ticker: string; data: ApiStockSignals } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [noDataForInterval, setNoDataForInterval] = useState(false)
-  const lastTickerRef = useRef<string | null>(null)
   // Moves when the server's data changes (today's live price, the evening
   // refresh); the page then reloads quietly — see `quiet` below.
   const version = useDataVersion()
@@ -62,7 +61,7 @@ export function useStockDetail(
 
   useEffect(() => {
     if (!ticker) {
-      setData(null)
+      setSnapshot(null)
       return
     }
 
@@ -79,19 +78,17 @@ export function useStockDetail(
     }
     // Clear the chart only when switching companies; when only the time range
     // changes, keep the current chart on screen while the new one loads.
-    if (lastTickerRef.current !== ticker) {
-      lastTickerRef.current = ticker
-      setData(null)
-    }
+    setSnapshot((previous) => previous?.ticker === ticker ? previous : null)
 
     fetchSignals(ticker, fromDate, undefined, settingsQueryValue(), interval)
       .then((result) => {
         if (!cancelled) {
-          setData((prev) =>
-            quiet && prev && sameHistory(prev.history, result.history)
-              ? { ...result, history: prev.history }
+          setSnapshot((previous) => ({
+            ticker,
+            data: quiet && previous?.ticker === ticker && sameHistory(previous.data.history, result.history)
+              ? { ...result, history: previous.data.history }
               : result,
-          )
+          }))
           setLoading(false)
         }
       })
@@ -110,5 +107,6 @@ export function useStockDetail(
     }
   }, [ticker, fromDate, interval, version])
 
+  const data = snapshot?.ticker === ticker ? snapshot.data : null
   return { data, loading, error, noDataForInterval }
 }

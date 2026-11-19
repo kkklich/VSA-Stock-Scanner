@@ -538,7 +538,7 @@ export function ChartsPage() {
     fromDate,
     interval,
   )
-  // The API returns the canonical ticker, and data can briefly belong to the previous stock.
+  // The API returns the canonical ticker.
   const requestedTicker = ticker.trim().toUpperCase().replace(/\.WA$/, '')
   const companyName = data?.ticker === requestedTicker ? data.name : null
   const tabTitle = companyName?.trim().replace(/\s+S\.?A\.?$/i, '') || displayTicker(requestedTicker)
@@ -765,7 +765,7 @@ export function ChartsPage() {
     t,
   ])
 
-  const stockHoldings = <StockHoldingsCard key="stock-holdings" ticker={ticker} />
+  const stockHoldings = <StockHoldingsCard ticker={ticker} quote={data} />
   // "This company has no intraday history" is information, not a failure, so it
   // never shows the red panel. When the previous (daily) chart is still in
   // hand — which it always is, since the page opens on 1D and the hook keeps
@@ -776,11 +776,11 @@ export function ChartsPage() {
   if (!data || chartError) {
     return (
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        {stockHoldings}
         {loading && !data ? <LoadingState />
           : noDataForInterval ? <NoIntradayState ticker={ticker} interval={interval} />
           : chartError ? <ErrorState message={chartError} ticker={ticker} />
           : null}
+        {!loading && (noDataForInterval || chartError) && stockHoldings}
       </div>
     )
   }
@@ -823,7 +823,6 @@ export function ChartsPage() {
       </div>
 
       <DisclaimerNote />
-      {stockHoldings}
 
       {/* Chart and supporting analysis */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -945,6 +944,7 @@ export function ChartsPage() {
               </>
             )}
           </Card>
+          {stockHoldings}
           <InsiderActivityCard
             data={insiderData}
             loading={insiderLoading}

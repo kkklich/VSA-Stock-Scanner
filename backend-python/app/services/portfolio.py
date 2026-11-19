@@ -143,21 +143,21 @@ def valuation(
                 {
                     "currency": currency,
                     "cost": Decimal(0),
-                    "marketValue": Decimal(0),
+                    "marketValue": None,
                     "realizedPnl": Decimal(0),
                     "missingQuotes": 0,
                 },
             )
-            total["cost"] += cost
             total["realizedPnl"] += position["realizedPnl"]
             if value is None:
                 total["missingQuotes"] += 1
-            else:
-                total["marketValue"] += value
+            elif quantity:
+                total["cost"] += cost
+                total["marketValue"] = (total["marketValue"] or Decimal(0)) + value
             positions.append(position)
         for total in totals.values():
-            if total["missingQuotes"]:
-                total["marketValue"] = None
+            if total["marketValue"] is None and not total["missingQuotes"]:
+                total["marketValue"] = Decimal(0)
             total["unrealizedPnl"] = (
                 total["marketValue"] - total["cost"] if total["marketValue"] is not None else None
             )

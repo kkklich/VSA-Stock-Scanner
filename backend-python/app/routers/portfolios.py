@@ -28,6 +28,7 @@ from app.services.portfolio_summary import (
     HistoryRange,
     history_start_date,
     portfolio_summary,
+    wallet_baseline_dates,
 )
 from app.services.xtb_daily_statement import parse_xtb_daily_statement
 from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
@@ -108,6 +109,7 @@ async def portfolios(
     repo: Repository,
     response: Response,
     history_range: Annotated[HistoryRange, Query(alias="historyRange")] = "1w",
+    wallet_range: Annotated[HistoryRange | None, Query(alias="walletRange")] = None,
 ):
     response.headers["Cache-Control"] = "private, no-store"
     now = datetime.now(UTC)
@@ -122,7 +124,10 @@ async def portfolios(
     )
     listings = {listed_ticker(ticker) for ticker in tickers}
     history_start = history_start_date(rows, today, history_range)
-    quote_start = min(history_start, today - timedelta(days=SUMMARY_DAYS))
+    wallet_baselines = wallet_baseline_dates(rows, today, wallet_range)
+    quote_start = min(
+        history_start, today - timedelta(days=SUMMARY_DAYS), *wallet_baselines.values()
+    )
     stored_history = await repo.portfolios.quote_history(tickers | listings, quote_start, today)
     history = {}
     quotes = {}
@@ -165,7 +170,9 @@ async def portfolios(
     ]
     return {
         "items": items,
-        "summary": await portfolio_summary(rows, items, history, today, history_start),
+        "summary": await portfolio_summary(
+            rows, items, history, today, history_start, wallet_baselines
+        ),
         "valuedAt": now,
     }
 

@@ -1,20 +1,26 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { portfolioRequest, type Instrument, type Portfolio, type PortfolioHistoryRange, type Portfolios, type Transaction } from '../api/portfoliosApi'
 import { useAuth } from '../hooks/useAuth'
 import { currencyLabel } from '../lib/format'
+import { groupWalletValuations } from '../lib/portfolioValuations'
 import { PortfolioOverview } from '../components/PortfolioOverview'
-import { PortfolioWalletHeatmap } from '../components/PortfolioWalletHeatmap'
+import { PortfolioWalletHeatmap, type WalletHeatmapRange } from '../components/PortfolioWalletHeatmap'
 import { PortfolioPositions, PortfolioTotals, PortfolioTransactionHistory } from '../components/PortfolioTables'
 import { XtbWalletImport } from '../components/XtbWalletImport'
 
 const input = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-sm'
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
 const ACCOUNT_ID_MAX_LENGTH = 32
+const ALL_WALLETS = 'all-wallets'
 type Save = (method: string, path: string, payload?: unknown) => Promise<boolean>
 const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
+
+function walletLabel(wallet: Portfolio) {
+  return [wallet.name, wallet.broker, wallet.brokerAccountId, wallet.brokerAccountCurrency].filter(Boolean).join(' · ')
+}
 
 function PortfolioForm({ portfolio, save, busy, close }: { portfolio?: Portfolio; save: Save; busy: boolean; close?: () => void }) {
   const { t } = useTranslation()
@@ -102,17 +108,39 @@ function PortfolioDetail({ portfolio, instruments, save, busy }: {
     </section>
     <PortfolioTotals totals={portfolio.totals} />
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
-    <PortfolioPositions positions={portfolio.positions} instruments={instruments} />
+    <PortfolioPositions positions={portfolio.positions} instruments={instruments} transactions={portfolio.transactions} />
     <PortfolioTransactionHistory transactions={portfolio.transactions} busy={busy} onRemove={remove} />
+  </div>
+}
+
+interface ValuationRanges {
+  historyRange: PortfolioHistoryRange
+  walletRange: WalletHeatmapRange
+}
+
+function AllWalletsDetail({ wallets, instruments }: { wallets: Portfolio[]; instruments: Instrument[] }) {
+  const { positions, totals, transactions } = useMemo(() => ({
+    ...groupWalletValuations(wallets),
+    transactions: wallets.flatMap(wallet => {
+      const sourceWallet = { id: wallet.id, label: walletLabel(wallet) }
+      return wallet.transactions.map(trade => ({ ...trade, sourceWallet }))
+    }),
+  }), [wallets])
+
+  return <div className="space-y-5">
+    <PortfolioTotals totals={totals} />
+    <PortfolioPositions positions={positions} instruments={instruments} transactions={transactions} />
+    <PortfolioTransactionHistory transactions={transactions} />
   </div>
 }
 
 function AccountPortfolios({ owner }: { owner: number }) {
   const { t, i18n } = useTranslation()
-  const [snapshot, setSnapshot] = useState<{ data: Portfolios; historyRange: PortfolioHistoryRange } | null>(null)
+  const [snapshot, setSnapshot] = useState<{ data: Portfolios; ranges: ValuationRanges } | null>(null)
   const data = snapshot?.data
-  const [historyRange, setHistoryRange] = useState<PortfolioHistoryRange>('1w')
-  const requestedRange = useRef(historyRange)
+  const [ranges, setRanges] = useState<ValuationRanges>({ historyRange: '1w', walletRange: '1w' })
+  const { historyRange, walletRange } = ranges
+  const requestedRanges = useRef(ranges)
   const [instruments, setInstruments] = useState<Instrument[]>([])
   const [selected, setSelected] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -143,8 +171,11 @@ function AccountPortfolios({ owner }: { owner: number }) {
     request.current?.abort()
     const abort = new AbortController()
     request.current = abort
-    const range = requestedRange.current
-    const path = range === '1w' ? '' : `?historyRange=${range}`
+    const range = requestedRanges.current
+    const query = new URLSearchParams()
+    if (range.historyRange !== '1w') query.set('historyRange', range.historyRange)
+    if (range.walletRange !== '1d' && range.walletRange !== '1w') query.set('walletRange', range.walletRange)
+    const path = query.size ? `?${query}` : ''
     setLoading(true)
     try {
       const [next, options] = await Promise.all([
@@ -152,9 +183,10 @@ function AccountPortfolios({ owner }: { owner: number }) {
         portfolioRequest<Instrument[]>('GET', '/instruments', undefined, abort.signal, owner),
       ])
       if (abort.signal.aborted || !alive.current) return
-      setSnapshot({ data: next, historyRange: range }); setInstruments(options); setStale(false)
+      setSnapshot({ data: next, ranges: range }); setInstruments(options); setStale(false)
       setError(current => current === 'account_changed' ? null : current)
-      setSelected(current => next.items.some(p => p.id === current) ? current : next.items[0]?.id ?? '')
+      setSelected(current => current === ALL_WALLETS || next.items.some(p => p.id === current)
+        ? current : next.items[0]?.id ?? '')
     } catch (failure) {
       if (!abort.signal.aborted && alive.current) {
         const failureCode = code(failure)
@@ -165,11 +197,22 @@ function AccountPortfolios({ owner }: { owner: number }) {
     } finally { if (!abort.signal.aborted && alive.current) setLoading(false) }
   }, [owner, clearAccountView])
   function changeHistoryRange(range: PortfolioHistoryRange) {
-    if (range === historyRange && (loading || snapshot?.historyRange === range)) return
-    requestedRange.current = range
-    setHistoryRange(range)
+    if (range === historyRange && (loading || snapshot?.ranges.historyRange === range)) return
+    requestedRanges.current = { ...requestedRanges.current, historyRange: range }
+    setRanges(requestedRanges.current)
     setError(null)
     void reload()
+  }
+  function changeWalletRange(range: WalletHeatmapRange) {
+    const needsHistory = range !== '1d' && range !== '1w'
+    const isLoaded = snapshot?.ranges.walletRange === range
+    if (range === walletRange && (loading || isLoaded || !needsHistory)) return
+    requestedRanges.current = { ...requestedRanges.current, walletRange: range }
+    setRanges(requestedRanges.current)
+    if (needsHistory && (!isLoaded || loading)) {
+      setError(null)
+      void reload()
+    }
   }
   useEffect(() => {
     alive.current = true
@@ -204,6 +247,7 @@ function AccountPortfolios({ owner }: { owner: number }) {
   }
   const active = data?.items.find(p => p.id === selected)
   const disabled = busy || importBusy || stale || loading
+  const walletRangePending = walletRange !== '1d' && walletRange !== '1w' && snapshot?.ranges.walletRange !== walletRange
   function selectWallet(id: string) {
     setSelected(id)
     setError(null)
@@ -218,14 +262,22 @@ function AccountPortfolios({ owner }: { owner: number }) {
       {data.summary && <PortfolioOverview summary={data.summary} walletCount={data.items.length}
         hasMultipleXtbWallets={data.items.filter(wallet => wallet.broker.trim().toUpperCase() === 'XTB').length > 1}
         staleSince={stale ? data.valuedAt : undefined} historyRange={historyRange}
-        historyStatus={snapshot?.historyRange === historyRange ? undefined : loading ? 'loading' : 'error'}
+        historyStatus={snapshot?.ranges.historyRange === historyRange ? undefined : loading ? 'loading' : 'error'}
         historyControlsDisabled={busy || importBusy} onHistoryRangeChange={changeHistoryRange} />}
       {!!data.items.length && data.summary?.wallets && <PortfolioWalletHeatmap wallets={data.items}
         valuations={data.summary.wallets} currency={data.summary.currency} selected={selected}
-        disabled={busy || importBusy} onSelect={selectWallet} />}
+        disabled={busy || importBusy} onSelect={selectWallet} period={walletRange}
+        periodStatus={walletRangePending ? loading ? 'loading' : 'error' : undefined}
+        onPeriodChange={changeWalletRange} />}
       <XtbWalletImport owner={owner} portfolios={data.items} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
-      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => selectWallet(e.target.value)}>{data.items.map(p => <option key={p.id} value={p.id}>{[p.name, p.broker, p.brokerAccountId, p.brokerAccountCurrency].filter(Boolean).join(' · ')}</option>)}</select></label>}
+      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}
+        <select className={input} value={selected} disabled={busy || importBusy} onChange={e => selectWallet(e.target.value)}>
+          <option value={ALL_WALLETS}>{t('portfolio.overview.title')}</option>
+          {data.items.map(wallet => <option key={wallet.id} value={wallet.id}>{walletLabel(wallet)}</option>)}
+        </select>
+      </label>}
+      {selected === ALL_WALLETS && data.items.length > 0 && <AllWalletsDetail wallets={data.items} instruments={instruments} />}
       {active && <>
         <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
         <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} />

@@ -36,6 +36,11 @@ vi.mock('../hooks/useTickerVolume', () => ({
 vi.mock('../components/StockChart', () => ({
   StockChart: () => <div data-testid="chart" />,
 }))
+vi.mock('../components/StockHoldingsCard', () => ({
+  StockHoldingsCard: ({ quote }: { quote: ApiStockSignals | null }) => (
+    <div data-testid="holdings">{quote?.lastPrice}</div>
+  ),
+}))
 vi.mock('../components/AnalyticsSummaryCard', () => ({
   AnalyticsSummaryCard: () => null,
 }))
@@ -120,6 +125,15 @@ it('opens the existing Constellation Software chart from its Toronto ticker', ()
 
   expect(useStockDetailMock).toHaveBeenCalledWith('csu.us', expect.any(String), '1d')
   expect(document.title).toBe('Constellation Software Inc.')
+})
+
+it('places holdings after the chart and passes the latest stock price', () => {
+  mockData({ lastPrice: 124 })
+  renderWithProviders(<ChartsPage />)
+  const chart = screen.getByTestId('chart')
+  const holdings = screen.getByTestId('holdings')
+  expect(chart.compareDocumentPosition(holdings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(holdings).toHaveTextContent('124')
 })
 
 it('collapses and reopens the three stock sections independently', async () => {

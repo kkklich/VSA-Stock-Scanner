@@ -259,9 +259,12 @@ def test_decimal_accounting_mixed_currencies_and_missing_prices():
 
     ledger = [
         transaction("kgh", "PLN", "0.1", "0.2"),
-        transaction("pkn", "PLN", "1", "100"),
+        transaction("pkn", "PLN", "2", "100"),
+        transaction("pkn", "PLN", "1", "110", side="sell"),
         transaction("aapl.us", "USD", "2", "200"),
         transaction("hsba.l", "GBp", "3", "400"),
+        transaction("bp.l", "GBp", "1", "400"),
+        transaction("bp.l", "GBp", "1", "400", side="sell"),
     ]
     result = valuation(
         ledger,
@@ -274,11 +277,20 @@ def test_decimal_accounting_mixed_currencies_and_missing_prices():
     assert result["positions"][0]["cost"] == Decimal("0.02")
     assert result["positions"][0]["unrealizedPnl"] == Decimal("0.01")
     totals = {t["currency"]: t for t in result["totals"]}
-    assert totals["PLN"]["marketValue"] is None
-    assert totals["PLN"]["unrealizedPnl"] is None
-    assert totals["PLN"]["missingQuotes"] == 1
+    assert totals["PLN"] == {
+        "currency": "PLN",
+        "marketValue": Decimal("0.03"),
+        "cost": Decimal("0.02"),
+        "unrealizedPnl": Decimal("0.01"),
+        "unrealizedPnlPct": Decimal(50),
+        "realizedPnl": Decimal(10),
+        "missingQuotes": 1,
+    }
     assert totals["USD"]["marketValue"] == 420
     assert totals["GBp"]["marketValue"] is None
+    assert totals["GBp"]["cost"] == 0
+    assert totals["GBp"]["unrealizedPnl"] is None
+    assert totals["GBp"]["missingQuotes"] == 1
     # Closing a fractional position zeroes cost exactly, even with repeating average cost.
     closed = valuation(
         [
@@ -513,7 +525,6 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
     summary = client.get("/api/portfolios").json()["summary"]
     assert summary["current"]["value"] == 840
     assert summary["current"]["missingRates"] == ["EUR"]
-    assert summary["history"][-1]["coverage"] == {"included": 1, "total": 2, "changed": False}
     assert summary["dayChange"]["amount"] == 60
     assert summary["dayChange"]["partial"] is True
     foreign = next(wallet for wallet in summary["wallets"] if wallet["walletId"] == foreign_id)
@@ -546,6 +557,58 @@ def test_portfolio_history_ranges_start_on_the_requested_date_or_first_trade(cli
             january = next(point for point in summary["history"] if point["date"] == "2026-01-06")
             assert january["value"] is not None
     assert client.get("/api/portfolios?historyRange=invalid").status_code == 422
+
+
+def test_wallet_heatmap_uses_independent_calendar_ranges_and_each_wallets_first_trade(
+    client, monkeypatch,
+):
+    import app.routers.portfolios as endpoint
+
+    class ValuationClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 3, 31, 12, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(endpoint, "datetime", ValuationClock)
+    monkeypatch.setattr(endpoint, "get_live_prices", lambda: None)
+    repo = client.app_instance.dependency_overrides[get_user_repository]().portfolios
+    prices = {
+        "2025-03-01": 70, "2025-03-31": 80, "2025-12-31": 85, "2026-02-28": 120,
+        "2026-03-24": 146, "2026-03-30": 150, "2026-03-31": 160,
+    }
+    with repo._session_factory().session as session:
+        for index, (day, price) in enumerate(prices.items(), 3):
+            session.add(DailyQuoteRow(
+                id=index, ticker="kgh", date=date.fromisoformat(day), open=price,
+                high=price, low=price, close=price, volume=100,
+            ))
+        session.commit()
+
+    older = trade(client, create(client), date="2025-03-01").json()["id"]
+    newer = trade(client, create(client), date="2026-01-06", quantity="2").json()["id"]
+    opened_today = trade(client, create(client), date="2026-03-31").json()["id"]
+    cutoffs = {
+        "all": "2025-03-01", "1y": "2025-03-31", "3m": "2025-12-31",
+        "1m": "2026-02-28", "1w": "2026-03-24", "1d": "2026-03-30",
+    }
+    for period, day in cutoffs.items():
+        result = client.get("/api/portfolios", params={"historyRange": "1d", "walletRange": period})
+        assert result.status_code == 200
+        summary = result.json()["summary"]
+        assert [point["date"] for point in summary["history"]] == ["2026-03-30", "2026-03-31"]
+        wallets = {wallet["walletId"]: wallet for wallet in summary["wallets"]}
+        base_price = prices[day]
+        assert wallets[older]["rangeChange"] == {
+            "amount": (160 - base_price) * 10,
+            "percent": pytest.approx((160 - base_price) / base_price * 100),
+            "since": day,
+            "partial": False,
+        }
+        if period in {"all", "1y", "3m"}:
+            assert wallets[newer]["rangeChange"]["since"] == "2026-01-06"
+            assert wallets[newer]["rangeChange"]["amount"] == 60
+            assert wallets[opened_today]["rangeChange"] is None
+    assert client.get("/api/portfolios?walletRange=invalid").status_code == 422
 
 
 def test_account_summary_names_missing_holdings_and_compares_shared_price_coverage(
@@ -596,9 +659,7 @@ def test_account_summary_names_missing_holdings_and_compares_shared_price_covera
     ]
     assert summary["history"][-2]["value"] == 1300
     assert summary["history"][-2]["missingQuotes"] == 3
-    assert summary["history"][-2]["coverage"] == {"included": 1, "total": 4, "changed": True}
     assert summary["history"][-1]["value"] == 1480
-    assert summary["history"][-1]["coverage"] == {"included": 2, "total": 4, "changed": True}
     assert summary["dayChange"]["amount"] == 100
     assert summary["dayChange"]["partial"] is True
     assert summary["weekChange"]["amount"] == 500
@@ -610,40 +671,6 @@ def test_account_summary_names_missing_holdings_and_compares_shared_price_covera
     assert other["current"]["missingQuotes"] == 1
     assert other["current"]["staleQuotes"] == 1
     assert other["dayChange"] is None
-
-
-def test_history_distinguishes_trades_from_a_swap_in_quote_coverage(client, monkeypatch):
-    import app.routers.portfolios as endpoint
-
-    class ValuationClock(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return cls(2026, 1, 14, 12, tzinfo=UTC).astimezone(tz)
-
-    monkeypatch.setattr(endpoint, "datetime", ValuationClock)
-    monkeypatch.setattr(endpoint, "get_live_prices", lambda: {})
-    repo = client.app_instance.dependency_overrides[get_user_repository]().portfolios
-    with repo._session_factory().session as session:
-        session.add_all([
-            DailyQuoteRow(id=3, ticker="ale", date=date(2026, 1, 12),
-                          open=20, high=20, low=20, close=20, volume=100),
-            DailyQuoteRow(id=4, ticker="pzu", date=date(2026, 1, 14),
-                          open=40, high=40, low=40, close=40, volume=100),
-        ])
-        session.commit()
-
-    bought = trade(client, create(client))
-    assert bought.status_code == 201
-    bought = trade(client, bought.json(), ticker="PZU", quantity="2")
-    assert bought.status_code == 201
-    assert trade(client, bought.json(), ticker="ALE", date="2026-01-13").status_code == 201
-
-    history = client.get("/api/portfolios").json()["summary"]["history"]
-    assert [point["coverage"] for point in history[-3:]] == [
-        {"included": 1, "total": 2, "changed": False},
-        {"included": 2, "total": 3, "changed": False},
-        {"included": 2, "total": 3, "changed": True},
-    ]
 
 
 def test_portfolio_migration_upgrade_and_downgrade():

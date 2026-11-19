@@ -106,15 +106,15 @@ function ValueHistory({ history, currency, historyRange, historyStatus, historyC
       handleScale: false,
     })
 
-    // Keep unavailable days and changes in coverage from connecting adjacent totals.
+    // Separate series keep gaps visible on days when no value could be calculated.
     const segments: AreaData[][] = []
     let segment: AreaData[] | undefined
-    for (const { date, value, coverage } of history) {
+    for (const { date, value } of history) {
       if (value === null) {
         segment = undefined
         continue
       }
-      if (!segment || coverage?.changed) {
+      if (!segment) {
         segment = []
         segments.push(segment)
       }
@@ -155,11 +155,7 @@ function ValueHistory({ history, currency, historyRange, historyStatus, historyC
         <span className="ml-2 font-medium text-slate-200">
           {focused.value === null ? unavailable : money(focused.value, currency, locale)}
         </span>
-        {focused.coverage ? <span className={`ml-2 ${hasMissingInputs(focused) ? 'text-amber-400' : ''}`}>
-          {t('portfolio.overview.historyCoverage', {
-            included: focused.coverage.included, total: focused.coverage.total,
-          })}
-        </span> : focused.value !== null && hasMissingInputs(focused) && <span className="ml-2 text-amber-400">
+        {focused.value !== null && hasMissingInputs(focused) && <span className="ml-2 text-amber-400">
           {t('portfolio.overview.partial')}
         </span>}
       </p>}
