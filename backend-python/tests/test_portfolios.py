@@ -393,6 +393,42 @@ def test_broker_ticker_uses_active_listing_quotes(client, monkeypatch, alias, ti
     assert position["currentPrice"] == 130
 
 
+def test_stock_holdings_combines_open_wallet_positions_and_broker_aliases(client):
+    wallet = create(client)
+    purchase = trade(client, wallet, ticker="dada", quantity="4.125")
+    assert purchase.status_code == 201, purchase.text
+    sale = trade(client, purchase.json(), ticker="dada", side="sell", quantity="1.25")
+    assert sale.status_code == 201, sale.text
+    purchase = trade(client, sale.json(), ticker="dad", quantity="0.25")
+    assert purchase.status_code == 201, purchase.text
+
+    second_wallet = create(client)
+    purchase = trade(client, second_wallet, ticker="dad", quantity="2")
+    assert purchase.status_code == 201, purchase.text
+    closed_wallet = create(client)
+    purchase = trade(client, closed_wallet, ticker="dad", quantity="1")
+    assert purchase.status_code == 201, purchase.text
+    sale = trade(client, purchase.json(), ticker="dad", side="sell", quantity="1")
+    assert sale.status_code == 201, sale.text
+
+    result = client.get("/api/portfolios/holdings/DAD.WA", headers={"X-Expected-User-Id": "1"})
+    assert result.headers["cache-control"] == "private, no-store"
+    assert result.json() == {
+        "quantity": 5.125,
+        "wallets": [
+            {"id": wallet["id"], "name": wallet["name"], "quantity": 3.125},
+            {"id": second_wallet["id"], "name": second_wallet["name"], "quantity": 2},
+        ],
+    }
+    assert client.get("/api/portfolios/holdings/dada").json() == result.json()
+    assert client.get("/api/portfolios/holdings/kgh").json() == {"quantity": 0, "wallets": []}
+
+    client.owner.id = 2
+    assert client.get("/api/portfolios/holdings/dad").json() == {"quantity": 0, "wallets": []}
+    mismatch = client.get("/api/portfolios/holdings/dad", headers={"X-Expected-User-Id": "1"})
+    assert mismatch.status_code == 409
+
+
 def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client, monkeypatch):
     import app.routers.portfolios as endpoint
     import app.services.portfolio_summary as summary_service
@@ -422,6 +458,7 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
     assert trade(client, purchase, side="sell", quantity="4", date="2026-01-08").status_code == 201
     foreign_purchase = trade(client, create(client), ticker="NVD.DE", currency="EUR", quantity="2")
     assert foreign_purchase.status_code == 201
+    empty_wallet = create(client)
 
     rates = {
         "EUR": [
@@ -454,17 +491,35 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
         "since": "2026-01-05",
         "partial": False,
     }
+    wallets = {wallet["walletId"]: wallet for wallet in summary["wallets"]}
+    domestic = wallets[purchase["id"]]
+    foreign_id = foreign_purchase.json()["id"]
+    foreign = wallets[foreign_id]
+    empty = wallets[empty_wallet["id"]]
+    assert domestic["current"]["value"] == 840
+    assert domestic["weekChange"]["amount"] == -60
+    assert foreign["current"]["value"] == 108
+    assert foreign["dayChange"]["amount"] == 6
+    assert foreign["weekChange"]["percent"] == 35
+    assert empty["current"]["value"] == 0
+    assert empty["weekChange"]["percent"] is None
 
     one_day = client.get("/api/portfolios?historyRange=1d").json()["summary"]
     assert one_day["history"] == summary["history"][-2:]
     assert one_day["weekChange"] == summary["weekChange"]
+    assert one_day["wallets"] == summary["wallets"]
 
     rates.clear()
     summary = client.get("/api/portfolios").json()["summary"]
     assert summary["current"]["value"] == 840
     assert summary["current"]["missingRates"] == ["EUR"]
+    assert summary["history"][-1]["coverage"] == {"included": 1, "total": 2, "changed": False}
     assert summary["dayChange"]["amount"] == 60
     assert summary["dayChange"]["partial"] is True
+    foreign = next(wallet for wallet in summary["wallets"] if wallet["walletId"] == foreign_id)
+    assert foreign["current"]["value"] is None
+    assert foreign["current"]["missingRates"] == ["EUR"]
+    assert foreign["dayChange"] is None
     assert summary["currencyTotals"] == [
         {"currency": "EUR", "marketValue": 24, "missingQuotes": 0},
         {"currency": "PLN", "marketValue": 840, "missingQuotes": 0},
@@ -541,11 +596,54 @@ def test_account_summary_names_missing_holdings_and_compares_shared_price_covera
     ]
     assert summary["history"][-2]["value"] == 1300
     assert summary["history"][-2]["missingQuotes"] == 3
+    assert summary["history"][-2]["coverage"] == {"included": 1, "total": 4, "changed": True}
     assert summary["history"][-1]["value"] == 1480
+    assert summary["history"][-1]["coverage"] == {"included": 2, "total": 4, "changed": True}
     assert summary["dayChange"]["amount"] == 100
     assert summary["dayChange"]["partial"] is True
     assert summary["weekChange"]["amount"] == 500
     assert summary["weekChange"]["partial"] is True
+    wallets = {wallet["walletId"]: wallet for wallet in summary["wallets"]}
+    assert wallets[first_wallet["id"]]["dayChange"]["partial"] is False
+    other = wallets[other_wallet["id"]]
+    assert other["current"]["value"] == 100
+    assert other["current"]["missingQuotes"] == 1
+    assert other["current"]["staleQuotes"] == 1
+    assert other["dayChange"] is None
+
+
+def test_history_distinguishes_trades_from_a_swap_in_quote_coverage(client, monkeypatch):
+    import app.routers.portfolios as endpoint
+
+    class ValuationClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 1, 14, 12, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(endpoint, "datetime", ValuationClock)
+    monkeypatch.setattr(endpoint, "get_live_prices", lambda: {})
+    repo = client.app_instance.dependency_overrides[get_user_repository]().portfolios
+    with repo._session_factory().session as session:
+        session.add_all([
+            DailyQuoteRow(id=3, ticker="ale", date=date(2026, 1, 12),
+                          open=20, high=20, low=20, close=20, volume=100),
+            DailyQuoteRow(id=4, ticker="pzu", date=date(2026, 1, 14),
+                          open=40, high=40, low=40, close=40, volume=100),
+        ])
+        session.commit()
+
+    bought = trade(client, create(client))
+    assert bought.status_code == 201
+    bought = trade(client, bought.json(), ticker="PZU", quantity="2")
+    assert bought.status_code == 201
+    assert trade(client, bought.json(), ticker="ALE", date="2026-01-13").status_code == 201
+
+    history = client.get("/api/portfolios").json()["summary"]["history"]
+    assert [point["coverage"] for point in history[-3:]] == [
+        {"included": 1, "total": 2, "changed": False},
+        {"included": 2, "total": 3, "changed": False},
+        {"included": 2, "total": 3, "changed": True},
+    ]
 
 
 def test_portfolio_migration_upgrade_and_downgrade():

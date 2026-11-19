@@ -27,6 +27,7 @@ import { RatingHistoryCard } from '../components/RatingHistoryCard'
 import { VolumeCard } from '../components/VolumeCard'
 import { InvestmentCard } from '../components/InvestmentCard'
 import { InsiderActivityCard } from '../components/InsiderActivityCard'
+import { StockHoldingsCard } from '../components/StockHoldingsCard'
 import {
   Card,
   CardTitle,
@@ -59,7 +60,7 @@ import {
   safeHttpUrl,
 } from '../lib/format'
 import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
-import { displayTicker, GPW_MARKET, marketOfTicker } from '../lib/markets'
+import { canonicalTicker, displayTicker, GPW_MARKET, marketOfTicker } from '../lib/markets'
 import { CLASSIC_VSA_ENABLED, isMethodActive } from '../lib/methodStatus'
 import { fmtLiveTime, notTradedYet } from '../lib/live'
 
@@ -523,7 +524,8 @@ function NoIntradayState({
 
 export function ChartsPage() {
   const { t } = useTranslation()
-  const { ticker = 'kgh' } = useParams<{ ticker: string }>()
+  const { ticker: routeTicker = 'kgh' } = useParams<{ ticker: string }>()
+  const ticker = canonicalTicker(routeTicker)
 
   // Chart bar size and time range — together they drive the interval and
   // fromDate sent to the signals endpoint. The range list depends on the bar
@@ -763,18 +765,25 @@ export function ChartsPage() {
     t,
   ])
 
-  if (loading && !data) return <LoadingState />
+  const stockHoldings = <StockHoldingsCard key="stock-holdings" ticker={ticker} />
   // "This company has no intraday history" is information, not a failure, so it
   // never shows the red panel. When the previous (daily) chart is still in
   // hand — which it always is, since the page opens on 1D and the hook keeps
   // the old data across an interval switch — the page keeps rendering and only
   // the chart area is replaced, so the bar-size buttons stay reachable and the
   // user can click straight back to 1D.
-  if (noDataForInterval && !data)
-    return <NoIntradayState ticker={ticker} interval={interval} />
-  if (error && !noDataForInterval)
-    return <ErrorState message={error} ticker={ticker} />
-  if (!data) return null
+  const chartError = error && !noDataForInterval ? error : null
+  if (!data || chartError) {
+    return (
+      <div className="flex flex-col gap-4 p-4 sm:p-6">
+        {stockHoldings}
+        {loading && !data ? <LoadingState />
+          : noDataForInterval ? <NoIntradayState ticker={ticker} interval={interval} />
+          : chartError ? <ErrorState message={chartError} ticker={ticker} />
+          : null}
+      </div>
+    )
+  }
 
   const tone = ratingTone(data.currentRating)
 
@@ -814,6 +823,7 @@ export function ChartsPage() {
       </div>
 
       <DisclaimerNote />
+      {stockHoldings}
 
       {/* Chart and supporting analysis */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">

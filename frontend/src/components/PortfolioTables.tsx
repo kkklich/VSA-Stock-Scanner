@@ -1,8 +1,9 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import type { PortfolioTotal, Position, Transaction } from '../api/portfoliosApi'
+import type { Instrument, PortfolioTotal, Position, Transaction } from '../api/portfoliosApi'
 import { currencyLabel, deltaTone, fmtMoney, fmtPct } from '../lib/format'
+import { canonicalTicker, toPln } from '../lib/markets'
 import { applySortClick, type SortLevel } from '../lib/sorting'
 import { SortHeader } from './ui'
 
@@ -11,7 +12,9 @@ const control = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-s
 const table = 'w-full whitespace-nowrap text-left text-sm'
 const cell = 'px-4 py-3'
 
-type SortColumn<Row> = { value: (row: Row) => number | string | null; monetary?: boolean }
+type SortColumn<Row> =
+  | { value: (row: Row) => number | string | null; monetary?: 'currency' }
+  | { value: (row: Row) => number | null; monetary: 'pln' }
 
 function sortRows<Row extends { currency: string }, Key extends string>(
   rows: Row[], sort: SortLevel<Key>[], columns: Record<Key, SortColumn<Row>>, locale: string,
@@ -21,13 +24,13 @@ function sortRows<Row extends { currency: string }, Key extends string>(
   return rows.sort((a, b) => {
     for (const { key, dir } of sort) {
       const column = columns[key]
-      const left = column.value(a)
-      const right = column.value(b)
+      const left = column.monetary === 'pln' ? toPln(column.value(a), a.currency) : column.value(a)
+      const right = column.monetary === 'pln' ? toPln(column.value(b), b.currency) : column.value(b)
       if (left === null || right === null) {
         if (left !== right) return left === null ? 1 : -1
         continue
       }
-      if (column.monetary) {
+      if (column.monetary === 'currency') {
         const byCurrency = compare(currencyLabel(a.currency), currencyLabel(b.currency))
         if (byCurrency) return byCurrency
       }
@@ -85,23 +88,27 @@ function positionStatus(position: Position) {
 }
 
 type PositionColumn = 'instrument' | 'positionStatus' | 'quantity' | 'averagePrice' | 'currentPrice'
-  | 'marketValue' | 'unrealized' | 'realized' | 'quoteDate'
+  | 'marketValue' | 'unrealized' | 'unrealizedPct' | 'realized' | 'quoteDate'
 
 const positionColumns: Record<PositionColumn, SortColumn<Position>> = {
   instrument: { value: position => position.ticker },
   positionStatus: { value: positionStatus },
   quantity: { value: position => position.quantity },
-  averagePrice: { value: position => position.averagePrice, monetary: true },
-  currentPrice: { value: position => position.currentPrice, monetary: true },
-  marketValue: { value: position => position.marketValue, monetary: true },
-  unrealized: { value: position => position.unrealizedPnl, monetary: true },
-  realized: { value: position => position.realizedPnl, monetary: true },
+  averagePrice: { value: position => position.averagePrice, monetary: 'pln' },
+  currentPrice: { value: position => position.currentPrice, monetary: 'pln' },
+  marketValue: { value: position => position.marketValue, monetary: 'pln' },
+  unrealized: { value: position => position.unrealizedPnl, monetary: 'pln' },
+  unrealizedPct: { value: position => position.unrealizedPnlPct },
+  realized: { value: position => position.realizedPnl, monetary: 'pln' },
   quoteDate: { value: position => position.quoteDate },
 }
 
-export function PortfolioPositions({ positions }: { positions: Position[] }) {
+export function PortfolioPositions({ positions, instruments }: { positions: Position[]; instruments: Instrument[] }) {
   const { t, i18n } = useTranslation()
   const id = useId()
+  const instrumentNames = useMemo(() => new Map(instruments.map(instrument =>
+    [canonicalTicker(instrument.ticker).toLowerCase(), instrument.name],
+  )), [instruments])
   const [ticker, setTicker] = useState('')
   const [status, setStatus] = useState('active')
   const [currency, setCurrency] = useState('')
@@ -132,8 +139,8 @@ export function PortfolioPositions({ positions }: { positions: Position[] }) {
           setTicker(''); setStatus(''); setCurrency('')
         }}>{t('portfolio.filters.clear')}</button>}
       </div>
-      {sort[0] && positionColumns[sort[0].key].monetary && hasMultipleCurrencies(rows) && <p className="mb-2 text-xs text-slate-400">
-        {t('portfolio.filters.currencySort')}
+      {sort.some(({ key }) => positionColumns[key].monetary === 'pln') && hasMultipleCurrencies(rows) && <p className="mb-2 text-xs text-slate-400">
+        {t('portfolio.filters.plnSort')}
       </p>}
       <div className="overflow-x-auto">
         <table className={table} aria-labelledby={id}>
@@ -145,10 +152,14 @@ export function PortfolioPositions({ positions }: { positions: Position[] }) {
           ))}</tr></thead>
           <tbody>{rows.map(position => {
             const rowStatus = positionStatus(position)
+            const name = instrumentNames.get(canonicalTicker(position.ticker).toLowerCase())
             return <tr key={`${position.ticker}:${position.currency}`} className="border-t border-slate-800">
-              <td className={cell}><Link className="text-emerald-400 hover:underline" to={`/stock/${encodeURIComponent(position.ticker)}`}>
-                {position.ticker.toUpperCase()}
-              </Link></td>
+              <td className={cell}>
+                <Link className="text-emerald-400 hover:underline" to={`/stock/${encodeURIComponent(position.ticker)}`}>
+                  {position.ticker.toUpperCase()}
+                </Link>
+                {name && <span className="mt-0.5 block max-w-48 whitespace-normal text-xs text-slate-400">{name}</span>}
+              </td>
               <td className={cell}><span className={`rounded-full px-2 py-1 text-xs font-medium ${rowStatus === 'active'
                 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-300'}`}>
                 {t(`portfolio.${rowStatus}`)}
@@ -158,7 +169,10 @@ export function PortfolioPositions({ positions }: { positions: Position[] }) {
               <td className={cell}>{money(position.currentPrice, position.currency)}</td>
               <td className={cell}>{money(position.marketValue, position.currency)}</td>
               <td className={`${cell} ${deltaTone(position.unrealizedPnl ?? 0)}`}>
-                {pnl(position.unrealizedPnl, position.unrealizedPnlPct, position.currency)}
+                {money(position.unrealizedPnl, position.currency)}
+              </td>
+              <td className={`${cell} ${deltaTone(position.unrealizedPnlPct ?? 0)}`}>
+                {position.unrealizedPnlPct === null ? '-' : fmtPct(position.unrealizedPnlPct)}
               </td>
               <td className={cell}>{money(position.realizedPnl, position.currency)}</td>
               <td className={cell}>
@@ -185,8 +199,8 @@ const transactionColumns: Record<TransactionColumn, SortColumn<Transaction>> = {
   side: { value: trade => trade.side },
   instrument: { value: trade => trade.ticker },
   quantity: { value: trade => Number(trade.quantity) },
-  price: { value: trade => Number(trade.price), monetary: true },
-  fees: { value: trade => Number(trade.fees), monetary: true },
+  price: { value: trade => Number(trade.price), monetary: 'currency' },
+  fees: { value: trade => Number(trade.fees), monetary: 'currency' },
 }
 
 export function PortfolioTransactionHistory({ transactions, busy, onRemove }: {

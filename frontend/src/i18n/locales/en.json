@@ -1178,6 +1178,13 @@
   },
   "portfolio": {
     "title": "My portfolio",
+    "stockHoldings": {
+      "title": "My holdings",
+      "total": "Total shares",
+      "empty": "You have no open position in this stock.",
+      "loading": "Loading holdings…",
+      "error": "Could not load holdings."
+    },
     "overview": {
       "title": "All wallets",
       "wallets_one": "{{count}} wallet",
@@ -1209,7 +1216,8 @@
         "1y": { "short": "1Y", "label": "1 year" },
         "all": { "short": "All", "label": "All time" }
       },
-      "partialHistory": "Partial values include holdings with available prices and exchange rates. Coverage can vary by day.",
+      "partialHistory": "Partial values include holdings with available prices and exchange rates. The line breaks when the set of holdings without a valuation changes.",
+      "historyCoverage": "Holdings valued ({{included}}/{{total}})",
       "historyUnavailable": "At least two daily valuations are needed to draw the chart.",
       "historyLoading": "Loading valuations for this period…",
       "historyFailed": "Could not load valuations for this period.",
@@ -1217,6 +1225,22 @@
       "staleSnapshot": "Refresh failed. Showing the valuation from {{timestamp}} (Warsaw time).",
       "xtbOverlap": "Holdings from overlapping XTB imports can count more than once in this total.",
       "method": "Holdings only, excluding broker cash. Changes include buys and sells. Historical prices can be adjusted for splits and dividends, which can affect the comparisons. Dates use Warsaw time and currency conversion uses NBP rates."
+    },
+    "heatmap": {
+      "title": "Wallet heatmap",
+      "description": "Tile size shows holdings value in {{currency}}. Color shows the percentage change.",
+      "period": "Heatmap comparison period",
+      "dayChange": "1 day",
+      "weekChange": "7 days",
+      "decrease": "Down",
+      "steady": "Flat",
+      "increase": "Up",
+      "noPercent": "Percentage unavailable",
+      "noTiles": "Tiles appear when a wallet has a positive holdings value.",
+      "walletValue": "Wallet / Value",
+      "change": "Change",
+      "partialChange": "Partial change",
+      "staleQuotes": "Older quotes"
     },
     "name": "Portfolio name",
     "broker": "Broker",
@@ -1262,6 +1286,7 @@
       "all": "All",
       "clear": "Clear filters",
       "currencySort": "Amounts are sorted within each currency.",
+      "plnSort": "Amounts are compared using approximate PLN equivalents.",
       "noPositions": "No positions match your filters.",
       "noTransactions": "No transactions match your filters.",
       "invalidDates": "The start date must be on or before the end date."
@@ -1269,6 +1294,7 @@
     "marketValue": "Current value",
     "cost": "Remaining cost basis",
     "unrealized": "Unrealized profit / loss",
+    "unrealizedPct": "Unrealized return (%)",
     "realized": "Realized profit / loss",
     "averagePrice": "Average cost / share",
     "currentPrice": "Latest price",
@@ -1348,14 +1374,6 @@
       "accountCurrency": "Account currency {{currency}}",
       "reportCurrency": "Report currency {{currency}}",
       "emptyWallet": "This worksheet will create an empty wallet.",
-      "reconciliation": {
-        "title": "XTB holdings adjustment",
-        "date": "Based on Open Positions as of {{asOf}}. Costs are shown in the instrument’s quote currency.",
-        "previousQuantity": "Quantity from trades",
-        "quantity": "Quantity in XTB snapshot",
-        "previousCost": "Cost from trades",
-        "cost": "Cost in XTB snapshot"
-      },
       "codes": {
         "broker_account_currency_mismatch": "The account currency in this report differs from the destination wallet’s currency.",
         "import_multiple_account_currencies": "This report contains multiple account currencies. Export one account currency per report.",

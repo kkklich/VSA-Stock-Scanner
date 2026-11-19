@@ -30,16 +30,29 @@ export interface Portfolio {
 export interface PortfolioSummaryPoint {
   date: string; value: number | null; missingQuotes: number; missingRates: string[]; staleQuotes: number
 }
+export interface PortfolioHistoryPoint extends PortfolioSummaryPoint {
+  coverage?: { included: number; total: number; changed: boolean }
+}
 export type PortfolioHistoryRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | 'all'
 export interface PortfolioSummaryChange { amount: number; percent: number | null; since: string; partial: boolean }
 export interface PortfolioSummaryMissingHolding { ticker: string; currency: string; walletId: string; walletName: string }
-export interface PortfolioSummary {
-  currency: string; current: PortfolioSummaryPoint; history: PortfolioSummaryPoint[]
+export interface PortfolioWalletSummary {
+  walletId: string; current: PortfolioSummaryPoint
   dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
+}
+export interface PortfolioSummary {
+  currency: string; current: PortfolioSummaryPoint; history: PortfolioHistoryPoint[]
+  dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
+  wallets?: PortfolioWalletSummary[]
   currencyTotals: { currency: string; marketValue: number | null; missingQuotes: number }[]
   missingHoldings: PortfolioSummaryMissingHolding[]
 }
 export interface Portfolios { items: Portfolio[]; valuedAt: string; summary?: PortfolioSummary }
+export interface StockHoldings {
+  quantity: number
+  wallets: { id: string; name: string; quantity: number }[]
+}
+
 function accountHeaders(owner?: number): Record<string, string> {
   return owner === undefined ? {} : { 'X-Expected-User-Id': String(owner) }
 }

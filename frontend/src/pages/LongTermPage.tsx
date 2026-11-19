@@ -12,7 +12,7 @@ import { WatchlistControls } from '../components/WatchlistControls'
 import { ratingTone } from '../lib/format'
 import { useSingleMarket } from '../hooks/useMarkets'
 import { useLongTermRanking } from '../hooks/useLongTerm'
-import { displayTicker, GPW_MARKET } from '../lib/markets'
+import { canonicalTicker, displayTicker, GPW_MARKET } from '../lib/markets'
 import type { LongTermItem } from '../types/longTerm'
 
 type SortKey = 'ticker' | 'score' | 'qualityScore' | 'valueScore' | 'momentumScore' | 'coverage' | 'fundamentalScore'
@@ -65,7 +65,7 @@ export function LongTermPage() {
     url.setState((previous) => ({ ...previous, q: '', scoredOnly: false, favorites: false, sector: '' }))
   }
   const items = useMemo(() => {
-    const search = query.trim().toLocaleLowerCase()
+    const search = canonicalTicker(query.trim().toLocaleLowerCase())
     return (data?.items ?? []).filter((item) =>
       `${item.ticker} ${item.name}`.toLocaleLowerCase().includes(search)
       && (!scoredOnly || (hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible && item.score !== null))

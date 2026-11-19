@@ -2,8 +2,10 @@
 
 from bisect import bisect_right
 from calendar import monthrange
+from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal, localcontext
+from itertools import chain
 from operator import itemgetter
 from typing import Literal
 
@@ -155,7 +157,16 @@ def _change(since, current_positions, previous_positions, current, previous, sta
     }
 
 
-def _value_history(valuation_days, current_positions, stale_holdings, history_start, today, rates):
+def _positions_by_wallet(positions: PositionValues) -> dict[str, PositionValues]:
+    grouped = defaultdict(dict)
+    for key, value in positions.items():
+        grouped[key[0]][key] = value
+    return grouped
+
+
+def _value_history(
+    wallet_ids, valuation_days, current_positions, stale_holdings, history_start, today, rates
+):
     baselines = {
         today - timedelta(days=1): "dayChange",
         today - timedelta(days=SUMMARY_DAYS): "weekChange",
@@ -165,26 +176,61 @@ def _value_history(valuation_days, current_positions, stale_holdings, history_st
     with localcontext() as context:
         context.prec = 50
         current, current_pln = _value_point(today, current_positions, rates, len(stale_holdings))
-        for day, positions in valuation_days:
-            if day < history_start and day not in baselines:
-                continue
-            point, converted = _value_point(day, positions, rates)
-            if day >= history_start:
-                history.append(point)
-            if day in baselines:
-                changes[baselines[day]] = _change(
-                    day, current_positions, positions, current_pln, converted, stale_holdings
-                )
-        latest = current
+        wallet_positions = _positions_by_wallet(current_positions)
+        wallet_pln = {}
+        wallet_summaries = {}
+        for wallet_id in wallet_ids:
+            positions = wallet_positions.get(wallet_id, {})
+            point, wallet_pln[wallet_id] = _value_point(
+                today, positions, rates, len(stale_holdings & positions.keys())
+            )
+            wallet_summaries[wallet_id] = {"walletId": wallet_id, "current": point}
+        chart_positions = current_positions
         if stale_holdings:
-            # Keep last-known quotes in the headline and apply the chart's quote age limit today.
+            # Apply the same quote age limit to today as to earlier chart points.
             chart_positions = {
                 key: None if key in stale_holdings else value
                 for key, value in current_positions.items()
             }
-            latest, _ = _value_point(today, chart_positions, rates, len(stale_holdings))
-        history.append(latest)
-        return current, history, changes, _currency_totals(current_positions)
+        previous_missing = None
+        for day, positions in chain(valuation_days, [(today, chart_positions)]):
+            if day < history_start and day not in baselines:
+                continue
+            if day == today and not stale_holdings:
+                point, converted = current, current_pln
+            else:
+                point, converted = _value_point(
+                    day, positions, rates, len(stale_holdings) if day == today else 0
+                )
+            if day >= history_start:
+                # Fully valued trades can change the holding count without changing coverage.
+                missing = positions.keys() - converted.keys()
+                history.append({
+                    **point,
+                    "coverage": {
+                        "included": len(converted),
+                        "total": len(positions),
+                        "changed": previous_missing is not None and missing != previous_missing,
+                    },
+                })
+                previous_missing = missing
+            if day in baselines:
+                change_key = baselines[day]
+                changes[change_key] = _change(
+                    day, current_positions, positions, current_pln, converted, stale_holdings
+                )
+                previous_positions = _positions_by_wallet(positions)
+                previous_pln = _positions_by_wallet(converted)
+                for wallet_id, summary in wallet_summaries.items():
+                    summary[change_key] = _change(
+                        day, wallet_positions.get(wallet_id, {}),
+                        previous_positions.get(wallet_id, {}), wallet_pln[wallet_id],
+                        previous_pln.get(wallet_id, {}), stale_holdings,
+                    )
+        return (
+            current, history, changes, _currency_totals(current_positions),
+            list(wallet_summaries.values()),
+        )
 
 
 async def portfolio_summary(
@@ -216,8 +262,9 @@ async def portfolio_summary(
                       if value is not None)
     currencies.discard("PLN")
     rates = await get_portfolio_fx(start, today, currencies) if currencies else {}
-    current, history, changes, totals = await run_in_threadpool(
-        _value_history, _historical_values(wallets, quote_history, start, today),
+    current, history, changes, totals, wallet_summaries = await run_in_threadpool(
+        _value_history, [wallet["id"] for wallet in valued_wallets],
+        _historical_values(wallets, quote_history, start, today),
         current_positions, stale_holdings, history_start, today, rates,
     )
     return {
@@ -225,6 +272,7 @@ async def portfolio_summary(
         "current": current,
         "history": history,
         **changes,
+        "wallets": wallet_summaries,
         "currencyTotals": totals,
         "missingHoldings": sorted(
             missing_holdings,

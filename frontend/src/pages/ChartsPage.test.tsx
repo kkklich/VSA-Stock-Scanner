@@ -114,6 +114,49 @@ it('updates the browser tab when opening and leaving stock pages', () => {
   expect(document.title).toBe('StockPilot')
 })
 
+it('opens the existing Constellation Software chart from its Toronto ticker', () => {
+  mockData({ ticker: 'CSU.US', name: 'Constellation Software Inc.', currency: 'CAD' })
+  renderWithProviders(<App />, { initialEntries: ['/stock/CSU.TO'] })
+
+  expect(useStockDetailMock).toHaveBeenCalledWith('csu.us', expect.any(String), '1d')
+  expect(document.title).toBe('Constellation Software Inc.')
+})
+
+it('collapses and reopens the three stock sections independently', async () => {
+  await i18n.changeLanguage('en')
+  mockData()
+  renderWithProviders(<App />, { initialEntries: ['/stock/kgh'] })
+
+  const sections = [
+    { title: en.insider.title, control: 'checkbox', name: en.insider.includeAllToggle },
+    { title: en.chart.simulation.title, control: 'group', name: en.chart.simulation.sidesLabel },
+    { title: en.journal.title, control: 'link', name: en.journal.allEntries },
+  ].map(({ title, control, name }) => {
+    const toggle = screen.getByRole('button', { name: title })
+    const content = document.getElementById(toggle.getAttribute('aria-controls')!)
+    return { toggle, content, control, name }
+  })
+
+  for (const { toggle, content, control, name } of sections) {
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(content).toBeVisible()
+    expect(screen.getByRole(control, { name })).toBeVisible()
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toBeVisible()
+    expect(content).not.toBeVisible()
+    expect(screen.queryByRole(control, { name })).not.toBeInTheDocument()
+  }
+
+  for (const { toggle, content, control, name } of sections) {
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(content).toBeVisible()
+    expect(screen.getByRole(control, { name })).toBeVisible()
+  }
+})
+
 describe('ChartsPage — weekly section of the VSA Rating card', () => {
   beforeEach(async () => {
     vi.clearAllMocks()

@@ -61,6 +61,26 @@ describe('private observation journal', () => {
     expect(journalRequest).not.toHaveBeenCalled()
   })
 
+  it('keeps a journal draft when the stock section is collapsed with the keyboard', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/No observations yet/)
+    const note = screen.getByRole('textbox', { name: 'Observation / scenario' })
+    await user.type(note, 'Watching a breakout')
+
+    const toggle = screen.getByRole('button', { name: 'Observation journal' })
+    toggle.focus()
+    await user.keyboard('{Enter}')
+    expect(toggle).toHaveFocus()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(note).not.toBeVisible()
+
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(note).toBeVisible()
+    expect(note).toHaveValue('Watching a breakout')
+  })
+
   it('saves the scenario and frozen chart, then compares and updates only its outcome', async () => {
     const user = userEvent.setup()
     render(<App />)

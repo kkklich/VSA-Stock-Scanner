@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PortfolioSummary } from '../api/portfoliosApi'
@@ -96,11 +96,32 @@ describe('PortfolioOverview', () => {
     expect(screen.getByText('· Savings · USD')).toBeVisible()
     expect(screen.getByText('Missing exchange rates for USD.')).toBeVisible()
     expect(screen.getByText('Comparable holdings only')).toBeVisible()
-    expect(screen.getByText(/Coverage can vary by day/)).toBeVisible()
+    expect(screen.getByText(/Partial values include holdings/)).toBeVisible()
     expect(chart.setData).toHaveBeenCalledWith([
       { time: '2026-11-11', value: 1_250 },
       { time: '2026-11-12', value: 1_200 },
     ])
+  })
+
+  it('breaks the line between adjacent totals with different coverage and shows the hovered count', () => {
+    render(<PortfolioOverview {...defaultControls} walletCount={1} summary={{
+      ...summary,
+      history: [
+        { ...current, date: '2025-09-21', value: 22_000, missingQuotes: 1,
+          coverage: { included: 29, total: 30, changed: false } },
+        { ...current, date: '2025-09-22', value: 36_000,
+          coverage: { included: 30, total: 30, changed: true } },
+      ],
+    }} />)
+
+    expect(chart.setData).toHaveBeenNthCalledWith(1, [
+      { time: '2025-09-21', value: 22_000 }, { time: '2025-09-22' },
+    ])
+    expect(chart.setData).toHaveBeenNthCalledWith(2, [{ time: '2025-09-22', value: 36_000 }])
+    expect(screen.getByText('Holdings valued (30/30)')).toBeVisible()
+    const [hover] = chart.subscribeCrosshairMove.mock.calls[0]
+    act(() => hover({ time: '2025-09-21' }))
+    expect(screen.getByText('Holdings valued (29/30)')).toBeVisible()
   })
 
   it('shows native subtotals when conversion is unavailable', () => {

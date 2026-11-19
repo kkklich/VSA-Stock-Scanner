@@ -27,6 +27,17 @@ Amount = Annotated[
 CostMethod = Literal["fifo", "moving_average"]
 
 
+class StockWalletHolding(BaseModel):
+    id: str
+    name: str
+    quantity: float
+
+
+class StockHoldings(BaseModel):
+    quantity: float
+    wallets: list[StockWalletHolding]
+
+
 class Command(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

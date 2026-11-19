@@ -12,7 +12,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
-import { Card, CardTitle, InfoTip } from './ui'
+import { CollapsibleCard, InfoTip } from './ui'
 import { useTradeSimulation } from '../hooks/useTradeSimulation'
 import type {
   ApiEquityPoint,
@@ -316,25 +316,20 @@ export function TradeSimulationCard({ ticker }: { ticker: string }) {
   )
 
   return (
-    <Card>
-      <CardTitle right={toggle}>
-        {t('chart.simulation.title')} <InfoTip text={t('chart.simulation.info')} />
-      </CardTitle>
-      <div className="px-4 pb-4">
-        {loading && !current && (
-          <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-            <Loader2 size={14} className="animate-spin" /> {t('chart.simulation.loading')}
-          </div>
-        )}
-        {error && !current && (
-          <p className="py-2 text-xs text-slate-500">{t('chart.simulation.error', { error })}</p>
-        )}
-        {current && (
-          <div className={loading ? 'opacity-60 transition-opacity' : undefined}>
-            <Results data={current} />
-          </div>
-        )}
-      </div>
-    </Card>
+    <CollapsibleCard title={t('chart.simulation.title')} info={t('chart.simulation.info')} actions={toggle}>
+      {loading && !current && (
+        <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+          <Loader2 size={14} className="animate-spin" /> {t('chart.simulation.loading')}
+        </div>
+      )}
+      {error && !current && (
+        <p className="py-2 text-xs text-slate-500">{t('chart.simulation.error', { error })}</p>
+      )}
+      {current && (
+        <div className={loading ? 'opacity-60 transition-opacity' : undefined}>
+          <Results data={current} />
+        </div>
+      )}
+    </CollapsibleCard>
   )
 }

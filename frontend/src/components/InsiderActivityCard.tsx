@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, Loader2, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react'
-import { Card, CardTitle, InfoTip } from './ui'
+import { CollapsibleCard } from './ui'
 import type { ApiInsiderTransactionsResponse } from '../api/stocksApi'
 import { fmtMoney, safeHttpUrl } from '../lib/format'
 
@@ -79,42 +79,38 @@ export function InsiderActivityCard({
   const netNegative = (directionAmount ?? 0) < 0
 
   return (
-    <Card className="p-4">
-      <div data-testid="insider-activity-card">
-        <CardTitle
-          right={
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              {loading && !onRefresh && (
-                <Loader2 size={14} className="animate-spin text-slate-500" />
-              )}
-              {onRefresh && (
-                <button
-                  type="button"
-                  onClick={onRefresh}
-                  disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded border border-slate-700 px-2 py-1 text-xs font-medium normal-case tracking-normal text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:cursor-wait disabled:opacity-50"
-                >
-                  <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-                  {t('insider.refresh')}
-                </button>
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-normal normal-case tracking-normal text-slate-400 hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={includeAll}
-                  onChange={(e) => onToggleIncludeAll(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-900 accent-emerald-500"
-                />
-                <span>{t('insider.includeAllToggle')}</span>
-              </label>
-            </div>
-          }
-        >
-          {t('insider.title')} <InfoTip text={t('insider.info')} />
-        </CardTitle>
-      </div>
-
-      <p className="mt-1.5 text-xs text-slate-500">{t('insider.asymmetryNote')}</p>
+    <CollapsibleCard
+      title={t('insider.title')}
+      info={t('insider.info')}
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          {loading && !onRefresh && (
+            <Loader2 size={14} className="animate-spin text-slate-500" />
+          )}
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded border border-slate-700 px-2 py-1 text-xs font-medium text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:cursor-wait disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              {t('insider.refresh')}
+            </button>
+          )}
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200">
+            <input
+              type="checkbox"
+              checked={includeAll}
+              onChange={(e) => onToggleIncludeAll(e.target.checked)}
+              className="rounded border-slate-700 bg-slate-900 accent-emerald-500"
+            />
+            <span>{t('insider.includeAllToggle')}</span>
+          </label>
+        </div>
+      }
+    >
+      <p className="text-xs text-slate-500">{t('insider.asymmetryNote')}</p>
 
       {data?.market === 'gpw' && (
         <p className="mt-2 text-xs text-slate-400">{t('insider.gpwSourceNote')}</p>
@@ -389,6 +385,6 @@ export function InsiderActivityCard({
           <span>{loading ? t('insider.loading') : t('insider.empty')}</span>
         </div>
       )}
-    </Card>
+    </CollapsibleCard>
   )
 }

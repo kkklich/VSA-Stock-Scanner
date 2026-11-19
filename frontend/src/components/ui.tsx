@@ -1,6 +1,6 @@
 // Small reusable presentational pieces used across pages.
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  Play,
 } from 'lucide-react'
 import type { SignalVerdict, WeeklyAgreement } from '../types'
 import type { SortLevel } from '../lib/sorting'
@@ -200,6 +201,56 @@ export function CardTitle({
       </h3>
       {right}
     </div>
+  )
+}
+
+export function CollapsibleCard({
+  title,
+  heading: Heading = 'h3',
+  info,
+  actions,
+  children,
+}: {
+  title: string
+  heading?: 'h2' | 'h3'
+  info?: string
+  actions?: React.ReactNode
+  children: React.ReactNode
+}) {
+  const [expanded, setExpanded] = useState(true)
+  const contentId = useId()
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Heading className={Heading === 'h2'
+            ? 'text-lg font-semibold text-slate-200'
+            : 'text-[11px] font-semibold uppercase tracking-wider text-slate-400'}>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={contentId}
+              onClick={() => setExpanded((value) => !value)}
+              className="flex items-center gap-2 rounded-sm text-left hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+            >
+              <Play
+                aria-hidden="true"
+                size={11}
+                fill="currentColor"
+                className={'shrink-0 motion-safe:transition-transform' + (expanded ? ' rotate-90' : '')}
+              />
+              {title}
+            </button>
+          </Heading>
+          {expanded && info && <InfoTip text={info} />}
+        </div>
+        {expanded && actions}
+      </div>
+      <div id={contentId} hidden={!expanded} className="px-4 pb-4">
+        {children}
+      </div>
+    </Card>
   )
 }
 

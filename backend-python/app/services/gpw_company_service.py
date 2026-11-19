@@ -28,6 +28,7 @@ import threading
 from pathlib import Path
 
 from app.markets import (
+    FOREIGN_TICKER_ALIASES,
     GPW,
     GPW_ID,
     GPW_TICKER_ALIASES,
@@ -223,6 +224,10 @@ class GpwCompanyService:
                         exchange=item.get("exchange"),
                         currency=item.get("currency"),
                         indices=tuple(item.get("indices") or ()),
+                        aliases=tuple(
+                            alias for alias, listing in FOREIGN_TICKER_ALIASES.items()
+                            if listing == ticker
+                        ),
                     )
                 )
             except Exception:

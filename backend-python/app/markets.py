@@ -323,11 +323,13 @@ _GPW_ALIAS_SUFFIX = ".wa"
 
 # XTB symbols used in portfolio imports for these GPW listings.
 GPW_TICKER_ALIASES = {"dada": "dad", "pmg": "gns"}
+FOREIGN_TICKER_ALIASES = {_CSU_YAHOO_SYMBOL.casefold(): CSU_TICKER}
+_TICKER_ALIASES = {**GPW_TICKER_ALIASES, **FOREIGN_TICKER_ALIASES}
 
 
 def listed_ticker(ticker: str) -> str:
     """The active listing for a normalized ticker, including broker aliases."""
-    return GPW_TICKER_ALIASES.get(ticker, ticker)
+    return _TICKER_ALIASES.get(ticker, ticker)
 
 
 def get_market(market_id: str | None) -> Market | None:
@@ -341,7 +343,8 @@ def normalize_ticker(raw: str | None) -> str | None:
     """The canonical (lower-case) ticker, or ``None`` when it is not one.
 
     Accepts a bare GPW code (``KGH``), Yahoo's spelling of it (``KGH.WA``) and
-    a suffixed foreign ticker (``AAPL.US``, ``BT-A.L``). Anything else — an
+    a suffixed foreign ticker (``AAPL.US``, ``BT-A.L``), including the Toronto
+    listing alias ``CSU.TO``. Anything else — an
     unknown suffix, stray characters, an over-long value — is rejected, so the
     result is always safe to use as a cache key or a database value.
     """
@@ -350,6 +353,7 @@ def normalize_ticker(raw: str | None) -> str | None:
     value = raw.strip().casefold()
     if not value or len(value) > MAX_TICKER_LENGTH:
         return None
+    value = FOREIGN_TICKER_ALIASES.get(value, value)
     head, dot, tail = value.rpartition(".")
     if not dot:
         return value if _GPW_CODE.fullmatch(value) else None

@@ -106,6 +106,7 @@ class TestNormalizeTicker:
             ("11b", "11b"),
             # Yahoo's spelling of a GPW code is the same stock.
             ("KGH.WA", "kgh"),
+            (" CSU.TO ", "csu.us"),
             ("AAPL.US", "aapl.us"),
             ("brk-b.US", "brk-b.us"),
             ("SAP.DE", "sap.de"),
@@ -129,6 +130,7 @@ class TestNormalizeTicker:
             # A GPW code never had a hyphen.
             "abc-def",
             "foo.xx",
+            "SHOP.TO",
             ".us",
             "-abc.us",
             "aapl.us.us",

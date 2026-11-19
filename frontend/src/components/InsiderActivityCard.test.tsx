@@ -80,7 +80,7 @@ describe('InsiderActivityCard', () => {
       />,
     )
 
-    expect(screen.getByTestId('insider-activity-card')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: i18n.t('insider.title') })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('Prezes Zarządu')).toBeInTheDocument()
     expect(screen.getByText('Członek Rady Nadzorczej')).toBeInTheDocument()
     expect(screen.getByText('2026-04-02')).toBeInTheDocument()

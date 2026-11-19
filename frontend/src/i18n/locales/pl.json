@@ -1197,6 +1197,13 @@
   },
   "portfolio": {
     "title": "Mój portfel",
+    "stockHoldings": {
+      "title": "Moje pozycje",
+      "total": "Liczba akcji",
+      "empty": "Nie masz otwartej pozycji w tym instrumencie.",
+      "loading": "Wczytywanie pozycji…",
+      "error": "Nie udało się wczytać pozycji."
+    },
     "overview": {
       "title": "Wszystkie portfele",
       "wallets_one": "{{count}} portfel",
@@ -1234,7 +1241,8 @@
         "1y": { "short": "1R", "label": "1 rok" },
         "all": { "short": "Całość", "label": "Cały okres" }
       },
-      "partialHistory": "Częściowe wyceny obejmują pozycje z dostępnymi notowaniami i kursami walut. Zakres wyceny może się różnić w zależności od dnia.",
+      "partialHistory": "Częściowe wyceny obejmują pozycje z dostępnymi notowaniami i kursami walut. Linia wykresu przerywa się, gdy zmienia się lista pozycji bez wyceny.",
+      "historyCoverage": "Wycenione pozycje ({{included}}/{{total}})",
       "historyUnavailable": "Do narysowania wykresu potrzeba co najmniej dwóch dziennych wycen.",
       "historyLoading": "Ładowanie wycen dla tego okresu…",
       "historyFailed": "Nie udało się wczytać wycen dla tego okresu.",
@@ -1242,6 +1250,22 @@
       "staleSnapshot": "Nie udało się odświeżyć danych. Wyświetlana jest wycena z {{timestamp}} (czas warszawski).",
       "xtbOverlap": "Pozycje z nakładających się importów XTB mogą zostać uwzględnione w sumie więcej niż raz.",
       "method": "Wycena obejmuje pozycje z wyłączeniem gotówki u brokera. Zmiany uwzględniają kupno i sprzedaż. Historyczne notowania mogą uwzględniać korekty o splity i dywidendy, co wpływa na porównania. Daty podajemy w czasie warszawskim, a waluty przeliczamy według kursów NBP."
+    },
+    "heatmap": {
+      "title": "Mapa portfeli",
+      "description": "Wielkość kafelka pokazuje wartość pozycji w {{currency}}. Kolor oznacza zmianę procentową.",
+      "period": "Okres porównania na mapie",
+      "dayChange": "1 dzień",
+      "weekChange": "7 dni",
+      "decrease": "Spadek",
+      "steady": "Bez zmian",
+      "increase": "Wzrost",
+      "noPercent": "Brak zmiany procentowej",
+      "noTiles": "Kafelki są widoczne, gdy co najmniej jeden portfel ma dodatnią wartość pozycji.",
+      "walletValue": "Portfel / Wartość",
+      "change": "Zmiana",
+      "partialChange": "Częściowe porównanie",
+      "staleQuotes": "Starsze notowania"
     },
     "name": "Nazwa portfela",
     "broker": "Broker",
@@ -1287,6 +1311,7 @@
       "all": "Wszystkie",
       "clear": "Wyczyść filtry",
       "currencySort": "Kwoty są sortowane w obrębie każdej waluty.",
+      "plnSort": "Kwoty są porównywane po przybliżonym przeliczeniu na PLN.",
       "noPositions": "Żadne pozycje nie pasują do filtrów.",
       "noTransactions": "Żadne transakcje nie pasują do filtrów.",
       "invalidDates": "Data początkowa nie może być późniejsza niż data końcowa."
@@ -1294,6 +1319,7 @@
     "marketValue": "Aktualna wartość",
     "cost": "Koszt pozostałych pozycji",
     "unrealized": "Niezrealizowany zysk / strata",
+    "unrealizedPct": "Niezrealizowany wynik (%)",
     "realized": "Zrealizowany zysk / strata",
     "averagePrice": "Średni koszt / szt.",
     "currentPrice": "Ostatni kurs",
@@ -1373,14 +1399,6 @@
       "accountCurrency": "Waluta rachunku {{currency}}",
       "reportCurrency": "Waluta w raporcie {{currency}}",
       "emptyWallet": "Z tego arkusza powstanie pusty portfel.",
-      "reconciliation": {
-        "title": "Korekta stanu portfela według XTB",
-        "date": "Na podstawie otwartych pozycji według stanu na {{asOf}}. Koszty podano w walucie notowania waloru.",
-        "previousQuantity": "Liczba sztuk z transakcji",
-        "quantity": "Liczba sztuk według XTB",
-        "previousCost": "Koszt z transakcji",
-        "cost": "Koszt według XTB"
-      },
       "codes": {
         "broker_account_currency_mismatch": "Waluta rachunku w raporcie różni się od waluty portfela docelowego.",
         "import_multiple_account_currencies": "Raport zawiera kilka walut rachunku. Wyeksportuj osobny raport dla każdej waluty.",

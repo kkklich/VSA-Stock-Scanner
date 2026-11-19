@@ -65,7 +65,60 @@ describe('account portfolios', () => {
     expect(screen.getByText(/Showing the valuation from/)).toBeVisible()
   })
 
-  it('previews worksheet reconciliation and shows it on the created wallet after reload', async () => {
+  it('ranks wallet heatmap values in PLN and switches comparison and wallet selection', async () => {
+    portfolios.push(
+      { ...makePortfolio(), id: 'largest-wallet', name: 'Savings', brokerAccountCurrency: 'EUR' },
+      { ...makePortfolio(), id: 'unpriced-wallet', name: 'Unpriced' },
+      { ...makePortfolio(), id: 'empty-wallet', name: 'Empty' },
+    )
+    const point = { date: '2026-01-06', value: 2500, missingQuotes: 0, missingRates: [], staleQuotes: 0 }
+    const change = { amount: -120, percent: -10, since: '2025-12-30', partial: true }
+    const original = vi.mocked(portfolioRequest).getMockImplementation()!
+    vi.mocked(portfolioRequest).mockImplementation(async (method, path, ...args) => {
+      const data = await original(method, path, ...args)
+      return path === '' ? { ...(data as object), summary: {
+        currency: 'PLN', current: point, history: [point], dayChange: null, weekChange: null,
+        currencyTotals: [], missingHoldings: [], wallets: [
+          { walletId: 'portfolio-1', current: { ...point, value: 500 }, dayChange: null, weekChange: change },
+          { walletId: 'largest-wallet', current: { ...point, value: 2000 }, dayChange: {
+            amount: 100, percent: 5, since: '2026-01-05', partial: false,
+          }, weekChange: change },
+          { walletId: 'unpriced-wallet', current: { ...point, value: null, missingQuotes: 1 }, dayChange: null, weekChange: null },
+          { walletId: 'empty-wallet', current: { ...point, value: 0 }, dayChange: null, weekChange: null },
+        ],
+      } } : data
+    })
+    const user = userEvent.setup()
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(240)
+    render(<App />)
+    const heatmap = within(await screen.findByRole('region', { name: 'Wallet heatmap' }))
+    const savingsTile = heatmap.getByRole('button', { name: 'Savings · EUR · 2,000.00 PLN · -10.00%' })
+    const retirementTile = heatmap.getByRole('button', { name: 'Retirement · 500.00 PLN · -10.00%' })
+    const area = (tile: HTMLElement) => parseFloat(tile.style.width) * parseFloat(tile.style.height)
+    expect(area(savingsTile) / area(retirementTile)).toBeCloseTo(4)
+    const ranking = heatmap.getAllByRole('list').at(-1)!
+    const rows = within(ranking).getAllByRole('button')
+    expect(rows.map(row => row.textContent)).toEqual([
+      expect.stringContaining('Savings'), expect.stringContaining('Retirement'),
+      expect.stringContaining('Empty'), expect.stringContaining('Unpriced'),
+    ])
+    expect(rows[0]).toHaveTextContent('2,000.00 PLN')
+    expect(rows[0]).toHaveTextContent('-10.00%')
+    expect(rows[0]).toHaveTextContent('Partial change')
+    expect(rows[2]).toHaveTextContent('0.00 PLN')
+    expect(rows[3]).toHaveTextContent('Unavailable')
+    await user.click(heatmap.getByRole('button', { name: '1 day' }))
+    expect(rows[0]).toHaveTextContent('+5.00%')
+    expect(rows[0]).toHaveTextContent('+100.00 PLN')
+    await user.click(savingsTile)
+    expect(rows[0]).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Choose portfolio')).toHaveValue('largest-wallet')
+    expect(screen.getByRole('heading', { name: 'Savings' })).toBeVisible()
+    expect(portfolioRequest).toHaveBeenCalledTimes(2)
+  })
+
+  it('imports a reconciled worksheet without displaying the adjustment table', async () => {
     portfolios = []
     const user = userEvent.setup()
     const reconciliation = { asOf: '2026-01-06', changes: [{
@@ -83,17 +136,18 @@ describe('account portfolios', () => {
     render(<App />)
     await user.upload(await screen.findByLabelText('XTB report file'), new File(['report'], 'IKE.xlsx'))
     await user.click(screen.getByRole('button', { name: 'Preview import' }))
-    expect(await screen.findByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
+    const createWallet = await screen.findByRole('button', { name: 'Create wallet' })
+    expect(screen.queryByText('XTB holdings adjustment')).not.toBeInTheDocument()
     expect(screen.getByText('XTB account 00123456')).toBeVisible()
-    expect(screen.getByText('800 PLN')).toBeVisible()
-    await user.click(await screen.findByRole('button', { name: 'Create wallet' }))
+    expect(screen.queryByText('800 PLN')).not.toBeInTheDocument()
+    await user.click(createWallet)
     const walletSelector = await screen.findByLabelText('Choose portfolio')
     expect(within(walletSelector).getByRole('option', { name: 'Cash Operations · XTB · 00123456 · PLN' })).toBeInTheDocument()
     expect(screen.getByText('XTB account 00123456')).toBeVisible()
     expect(screen.getByText('Account currency PLN')).toBeVisible()
     expect(screen.getByText(/Import complete\. Wallets created: 1/)).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'XTB holdings adjustment' })).toBeVisible()
-    expect(screen.getByText('800 PLN')).toBeVisible()
+    expect(screen.queryByText('XTB holdings adjustment')).not.toBeInTheDocument()
+    expect(screen.queryByText('800 PLN')).not.toBeInTheDocument()
   })
 
   it('freezes wallet controls and background refresh while an upload is pending', async () => {
@@ -142,13 +196,14 @@ describe('account portfolios', () => {
     expect(post[4]).toBe(1)
   })
 
-  it('shows currency totals and the price date supplied by the server', async () => {
+  it('shows the instrument name, currency totals and price date', async () => {
     portfolios[0].totals = [{ currency: 'PLN', cost: 606, marketValue: 780, unrealizedPnl: 174, unrealizedPnlPct: 28.71, realizedPnl: 74, missingQuotes: 0 }]
     portfolios[0].positions = [{ ticker: 'kgh', currency: 'PLN', quantity: 6, cost: 606, averagePrice: 101, currentPrice: 130, marketValue: 780, unrealizedPnl: 174, unrealizedPnlPct: 28.71, realizedPnl: 74, quoteDate: '2026-01-06', quoteAsOf: null, quoteSource: 'close', quoteAgeDays: 10 }]
     render(<App />)
     expect(await screen.findByText('2026-01-06')).toBeVisible()
     expect(screen.getAllByText('780.00 PLN')).toHaveLength(2)
     expect(screen.getByRole('link', { name: 'KGH' })).toHaveAttribute('href', '/stock/kgh')
+    expect(within(screen.getByRole('cell', { name: 'KGH KGHM' })).getByText('KGHM')).toBeVisible()
     expect(screen.getByText('Closing price')).toBeVisible()
     expect(screen.getByText('Quote is 10 calendar days old')).toBeVisible()
   })
@@ -176,8 +231,10 @@ describe('account portfolios', () => {
     expect(table.queryByText('Closed')).not.toBeInTheDocument()
     await user.selectOptions(positions.getByLabelText('Position status'), '')
     expect(positions.getByRole('row', { name: /AAPL.US/ })).toHaveTextContent('Closed')
-    expect(positions.getByText('60.00 PLN (+30.00%)')).toHaveClass('text-emerald-400')
-    expect(positions.getByText('-20.00 PLN (-10.00%)')).toHaveClass('text-rose-400')
+    expect(positions.getByText('60.00 PLN')).toHaveClass('text-emerald-400')
+    expect(positions.getByText('+30.00%')).toHaveClass('text-emerald-400')
+    expect(positions.getByText('-20.00 PLN')).toHaveClass('text-rose-400')
+    expect(positions.getByText('-10.00%')).toHaveClass('text-rose-400')
     const quantity = positions.getByRole('button', { name: 'Sort by Quantity' })
     await user.click(quantity)
     expect(tickers()).toEqual(['PZU', 'KGH', 'AAPL.US'])
@@ -189,6 +246,40 @@ describe('account portfolios', () => {
     await user.selectOptions(positions.getByLabelText('Currency'), 'PLN')
     await user.type(positions.getByRole('searchbox', { name: 'Search ticker' }), 'PZ')
     expect(tickers()).toEqual(['PZU'])
+  })
+
+  it('sorts mixed-currency positions by PLN value and by unrealized return', async () => {
+    const position = {
+      ticker: 'kgh', currency: 'PLN', quantity: 1, cost: 100, averagePrice: 100, currentPrice: 120,
+      marketValue: 120, unrealizedPnl: 20, unrealizedPnlPct: 20, realizedPnl: 0,
+      quoteDate: '2026-01-06', quoteAsOf: null, quoteSource: 'close', quoteAgeDays: 0,
+    } as const
+    portfolios[0].positions = [position, {
+      ...position, ticker: 'sap.de', currency: 'EUR', cost: 15, averagePrice: 15, currentPrice: 21,
+      marketValue: 21, unrealizedPnl: 6, unrealizedPnlPct: 40,
+    }, {
+      ...position, ticker: 'aapl.us', currency: 'USD', currentPrice: 110,
+      marketValue: 110, unrealizedPnl: 10, unrealizedPnlPct: 10,
+    }, {
+      ...position, ticker: 'pzu', marketValue: null, currentPrice: null,
+      unrealizedPnl: null, unrealizedPnlPct: null, quoteDate: null, quoteSource: null, quoteAgeDays: null,
+    }]
+    const user = userEvent.setup()
+    render(<App />)
+    const positions = within(await screen.findByRole('region', { name: 'Portfolio positions' }))
+    const tickers = () => positions.getAllByRole('link').map(link => link.textContent)
+    const value = positions.getByRole('button', { name: 'Sort by Current value' })
+    await user.click(value)
+    expect(tickers()).toEqual(['AAPL.US', 'KGH', 'SAP.DE', 'PZU'])
+    await user.click(value)
+    expect(tickers()).toEqual(['SAP.DE', 'KGH', 'AAPL.US', 'PZU'])
+    await user.click(positions.getByRole('button', { name: 'Sort by Unrealized profit / loss' }))
+    expect(tickers()).toEqual(['AAPL.US', 'SAP.DE', 'KGH', 'PZU'])
+    const percent = positions.getByRole('button', { name: 'Sort by Unrealized return (%)' })
+    await user.click(percent)
+    expect(tickers()).toEqual(['SAP.DE', 'KGH', 'AAPL.US', 'PZU'])
+    await user.click(percent)
+    expect(tickers()).toEqual(['AAPL.US', 'KGH', 'SAP.DE', 'PZU'])
   })
 
   it('sorts and filters transaction history and restores the filters when reopened', async () => {

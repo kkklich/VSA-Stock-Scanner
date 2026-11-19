@@ -17,11 +17,11 @@ from app.config import settings
 from app.db.models import UserRow
 from app.db.user_repository import UserRepository
 from app.dependencies import get_live_prices, get_user_repository, gpw_company_service
-from app.markets import listed_ticker, market_of, quote_currency
-from app.models.portfolio import AddTransaction, CreatePortfolio, UpdatePortfolio
+from app.markets import listed_ticker, market_of, normalize_ticker, quote_currency
+from app.models.portfolio import AddTransaction, CreatePortfolio, StockHoldings, UpdatePortfolio
 from app.routers.auth import get_current_user
 from app.services.auth import jwt_secret
-from app.services.portfolio import WARSAW, PortfolioError, valuation, xtb_checkpoint
+from app.services.portfolio import WARSAW, PortfolioError, holdings, valuation, xtb_checkpoint
 from app.services.portfolio_instruments import find_portfolio_instrument, list_portfolio_instruments
 from app.services.portfolio_summary import (
     SUMMARY_DAYS,
@@ -76,6 +76,30 @@ async def instruments(user: Owner, response: Response):
         {"ticker": c.ticker, "name": c.name, "market": c.market, "currency": quote_currency(c)}
         for c in list_portfolio_instruments(gpw_company_service)
     ]
+
+
+@router.get("/holdings/{ticker}", response_model=StockHoldings)
+async def stock_holdings(ticker: str, user: Owner, repo: Repository, response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
+    normalized = normalize_ticker(ticker)
+    if normalized is None:
+        raise HTTPException(400, detail="Invalid ticker")
+    listing = listed_ticker(normalized)
+    wallets = []
+    total = Decimal(0)
+    for row in await repo.portfolios.list(user.id):
+        quantity = sum(
+            (
+                position["quantity"]
+                for position in holdings(row["ledger"], row["costMethod"])
+                if position["quantity"] > 0 and listed_ticker(position["ticker"]) == listing
+            ),
+            Decimal(0),
+        )
+        if quantity:
+            wallets.append({"id": row["id"], "name": row["name"], "quantity": quantity})
+            total += quantity
+    return {"quantity": total, "wallets": wallets}
 
 
 @router.get("")

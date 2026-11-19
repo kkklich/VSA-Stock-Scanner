@@ -9,6 +9,7 @@ import { useStockDetail } from '../hooks/useStockDetail'
 import { settingsQueryValue } from '../lib/vsaSettings'
 import { fmtMoney, fmtPct } from '../lib/format'
 import { StockChart, type MethodOverlay } from './StockChart'
+import { CollapsibleCard } from './ui'
 import type { VsaSignal } from '../types'
 
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
@@ -231,8 +232,36 @@ function AccountJournal(props: Props) {
 export function JournalPanel(props: Props) {
   const { t } = useTranslation()
   const { user, loading, config } = useAuth()
-  return <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-slate-200">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">{t('journal.title')}</h2>{props.ticker && <Link className="text-sm text-emerald-400" to="/journal">{t('journal.allEntries')}</Link>}</div>
-    {loading ? <p role="status">{t('journal.loading')}</p> : user ? <AccountJournal key={`${user.id}:${props.ticker ?? '*'}`} {...props} /> : <p className="text-sm text-slate-400">{t('journal.accountOnly')} {config?.enabled !== false && <Link className="text-emerald-400" to="/login">{t('journal.signIn')}</Link>}</p>}
-  </section>
+  const title = t('journal.title')
+  const content = loading ? (
+    <p role="status">{t('journal.loading')}</p>
+  ) : user ? (
+    <AccountJournal key={`${user.id}:${props.ticker ?? '*'}`} {...props} />
+  ) : (
+    <p className="text-sm text-slate-400">
+      {t('journal.accountOnly')}{' '}
+      {config?.enabled !== false && <Link className="text-emerald-400" to="/login">{t('journal.signIn')}</Link>}
+    </p>
+  )
+
+  if (props.ticker) {
+    return (
+      <section className="text-slate-200">
+        <CollapsibleCard
+          title={title}
+          heading="h2"
+          actions={<Link className="text-sm text-emerald-400" to="/journal">{t('journal.allEntries')}</Link>}
+        >
+          {content}
+        </CollapsibleCard>
+      </section>
+    )
+  }
+
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-slate-200">
+      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+      {content}
+    </section>
+  )
 }

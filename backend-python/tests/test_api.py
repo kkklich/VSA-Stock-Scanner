@@ -9,6 +9,7 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import settings
 from app.db.repository import InMemoryQuoteRepository
 from app.dependencies import (
     get_quote_repository,
@@ -262,6 +263,24 @@ class TestGetRanking:
         assert history.status_code == 200
         assert history.json()["ticker"] == ticker.upper()
         assert history.json()["quotes"]
+
+    def test_toronto_ticker_finds_constellation_in_the_scanner(self, monkeypatch) -> None:
+        monkeypatch.setattr(settings, "markets", "us")
+        app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
+            {"csu.us": _rich_quotes()}
+        )
+        with TestClient(app) as client:
+            companies = client.get("/api/stocks", params={"market": "us"}).json()
+            ranking = client.get("/api/stocks/ranking", params={"market": "us", "q": "CSU.TO"})
+            signals = client.get("/api/stocks/CSU.TO/signals")
+
+        [company] = [item for item in companies if item["ticker"] in {"csu.us", "csu.to"}]
+        assert company["aliases"] == ["csu.to"]
+        assert ranking.status_code == 200
+        assert [item["ticker"] for item in ranking.json()] == ["CSU.US"]
+        assert signals.status_code == 200
+        stock = signals.json()
+        assert (stock["ticker"], stock["exchange"], stock["currency"]) == ("CSU.US", "TSX", "CAD")
 
     def test_tickers_allow_list_restricts_results(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(

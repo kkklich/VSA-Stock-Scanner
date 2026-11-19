@@ -20,6 +20,7 @@ import { fmtCompactPln, fmtMoney, fmtPct, majorCurrency } from '../lib/format'
 import { displayTicker, GPW_MARKET } from '../lib/markets'
 import { fmtLiveTime } from '../lib/live'
 import { useChartPalette, type ChartPalette } from '../lib/chartTheme'
+import { heatmapColor, squarify, type Rect } from '../lib/treemap'
 
 /* ── Color modes ────────────────────────────────────────────────────────── */
 
@@ -60,108 +61,21 @@ function changeFor(item: ApiHeatmapItem, mode: Exclude<ColorMode, 'rating'>) {
 // from the theme palette, because the light theme needs darker, less luminous
 // tiles for the white tile text to stay readable on a white page.
 
-function mix(
-  a: [number, number, number],
-  b: [number, number, number],
-  t: number,
-): string {
-  const c = a.map((v, i) => Math.round(v + (b[i] - v) * t))
-  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
-}
-
-/** Diverging rose → neutral → emerald color for t in [-1, +1]. */
-function diverging(t: number, palette: ChartPalette): string {
-  const clamped = Math.max(-1, Math.min(1, t))
-  return clamped < 0
-    ? mix(palette.heatmapNeutral, palette.heatmapNegative, -clamped)
-    : mix(palette.heatmapNeutral, palette.heatmapPositive, clamped)
-}
-
 function tileColor(
   item: ApiHeatmapItem,
   mode: ColorMode,
   palette: ChartPalette,
 ): string {
-  if (mode === 'rating') return diverging((item.currentRating - 50) / 50, palette)
+  if (mode === 'rating') return heatmapColor((item.currentRating - 50) / 50, palette)
   const change = changeFor(item, mode)
   if (change === null) return palette.heatmapMissing
-  return diverging(change / CHANGE_SCALE[mode], palette)
+  return heatmapColor(change / CHANGE_SCALE[mode], palette)
 }
 
 function tileValueLabel(item: ApiHeatmapItem, mode: ColorMode): string {
   if (mode === 'rating') return String(item.currentRating)
   const change = changeFor(item, mode)
   return change === null ? '—' : fmtPct(change)
-}
-
-/* ── Squarified treemap layout ──────────────────────────────────────────── */
-
-interface Rect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-/**
- * Squarified treemap (Bruls et al.): splits `rect` into one sub-rectangle per
- * value, areas proportional to the values, keeping tiles close to square.
- * Values must be positive and sorted descending for best results.
- */
-function squarify(values: number[], rect: Rect): Rect[] {
-  const rects: Rect[] = values.map(() => ({ x: rect.x, y: rect.y, w: 0, h: 0 }))
-  const total = values.reduce((a, b) => a + b, 0)
-  if (total <= 0 || rect.w <= 0 || rect.h <= 0) return rects
-
-  // Scale values so they sum to the rectangle's area.
-  const areas = values.map((v) => (v / total) * rect.w * rect.h)
-
-  let { x, y, w, h } = rect
-  let start = 0
-  while (start < areas.length) {
-    // Lay the next row along the shorter edge; greedily grow it while the
-    // worst tile aspect ratio keeps improving.
-    const horizontal = w >= h // row is a vertical strip on the left
-    const side = horizontal ? h : w
-    let end = start
-    let sum = 0
-    let best = Infinity
-    while (end < areas.length) {
-      const trySum = sum + areas[end]
-      const thickness = trySum / side
-      let worst = 0
-      for (let i = start; i <= end; i++) {
-        const len = areas[i] / thickness
-        worst = Math.max(worst, thickness / len, len / thickness)
-      }
-      if (worst <= best) {
-        best = worst
-        sum = trySum
-        end++
-      } else {
-        break
-      }
-    }
-
-    const thickness = sum / side
-    let offset = 0
-    for (let i = start; i < end; i++) {
-      const len = areas[i] / thickness
-      rects[i] = horizontal
-        ? { x, y: y + offset, w: thickness, h: len }
-        : { x: x + offset, y, w: len, h: thickness }
-      offset += len
-    }
-    if (horizontal) {
-      x += thickness
-      w -= thickness
-    } else {
-      y += thickness
-      h -= thickness
-    }
-    start = end
-  }
-  return rects
 }
 
 /* ── Layout data shapes ─────────────────────────────────────────────────── */

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { importXtbWallets, previewXtbWallets, type Portfolio, type XtbWalletsImportResult, type XtbWalletsPreview } from '../api/portfoliosApi'
 import { currencyLabel } from '../lib/format'
-import { XtbReconciliationDetails } from './XtbReconciliationDetails'
 
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
 const MAX_BYTES = 5 * 1024 * 1024
@@ -142,7 +141,7 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
           ? 'portfolio.xtbWallets.alreadyImported' : 'portfolio.xtbWallets.noNewTrades',
       )}</p>}
       {preview.wallets.map(wallet => <details key={wallet.id} className="rounded-lg border border-slate-800 p-3" open={
-        !!wallet.error || !!wallet.ledgerError || !!wallet.errors || !!wallet.reconciliation ||
+        !!wallet.error || !!wallet.ledgerError || !!wallet.errors ||
         (wallet.version === null && !wallet.ready) || wallet.warnings.includes('xtb_reconciliation_unavailable')
       }>
         <summary className="cursor-pointer text-sm font-medium">
@@ -165,7 +164,6 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
           {wallet.version === null && !wallet.ready && !wallet.error && !wallet.ledgerError && <p className="text-xs text-slate-400">{t('portfolio.xtbWallets.emptyWallet')}</p>}
           {!!wallet.ignored && <p className="text-xs text-slate-400">{t('portfolio.xtb.ignored', { count: wallet.ignored })}</p>}
           {wallet.warnings.map(code => <p key={code} className="text-sm text-amber-400">{message(code)}</p>)}
-          {wallet.reconciliation && <XtbReconciliationDetails reconciliation={wallet.reconciliation} />}
           {!!wallet.rows.length && <div className="max-h-80 overflow-auto rounded-md border border-slate-800">
             <table className="w-full whitespace-nowrap text-left text-xs">
               <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr>{['source', 'date', 'side', 'instrument', 'quantity', 'price', 'fees', 'status'].map(key => <th key={key} className="p-2">{t(['source', 'status'].includes(key) ? `portfolio.xtb.${key}` : `portfolio.${key}`)}</th>)}</tr></thead>

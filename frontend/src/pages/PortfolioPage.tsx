@@ -6,8 +6,8 @@ import { portfolioRequest, type Instrument, type Portfolio, type PortfolioHistor
 import { useAuth } from '../hooks/useAuth'
 import { currencyLabel } from '../lib/format'
 import { PortfolioOverview } from '../components/PortfolioOverview'
+import { PortfolioWalletHeatmap } from '../components/PortfolioWalletHeatmap'
 import { PortfolioPositions, PortfolioTotals, PortfolioTransactionHistory } from '../components/PortfolioTables'
-import { XtbReconciliationDetails } from '../components/XtbReconciliationDetails'
 import { XtbWalletImport } from '../components/XtbWalletImport'
 
 const input = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-sm'
@@ -100,10 +100,9 @@ function PortfolioDetail({ portfolio, instruments, save, busy }: {
         <button className={button + ' text-rose-400'} disabled={busy} onClick={async () => { if (window.confirm(t('portfolio.confirmPortfolio', { name: portfolio.name }))) await save('DELETE', `/${portfolio.id}?version=${portfolio.version}`) }}>{t('portfolio.delete')}</button>
       </div>}
     </section>
-    {portfolio.reconciliation && <XtbReconciliationDetails reconciliation={portfolio.reconciliation} />}
     <PortfolioTotals totals={portfolio.totals} />
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
-    <PortfolioPositions positions={portfolio.positions} />
+    <PortfolioPositions positions={portfolio.positions} instruments={instruments} />
     <PortfolioTransactionHistory transactions={portfolio.transactions} busy={busy} onRemove={remove} />
   </div>
 }
@@ -205,6 +204,11 @@ function AccountPortfolios({ owner }: { owner: number }) {
   }
   const active = data?.items.find(p => p.id === selected)
   const disabled = busy || importBusy || stale || loading
+  function selectWallet(id: string) {
+    setSelected(id)
+    setError(null)
+    setSaved(false)
+  }
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center gap-3"><h1 className="mr-auto text-xl font-semibold">{t('portfolio.title')}</h1><button className={button} disabled={busy || importBusy || loading} onClick={() => { setError(null); void reload() }}>{t('portfolio.refresh')}</button><button className={button} disabled={disabled} onClick={() => setCreating(v => !v)}>{t('portfolio.create')}</button></div>
     {error && <p role="alert" className="rounded-md border border-rose-500/30 p-3 text-sm text-rose-400">{t(`portfolio.errors.${error}`, { defaultValue: t('portfolio.errors.failed') })}</p>}
@@ -216,9 +220,12 @@ function AccountPortfolios({ owner }: { owner: number }) {
         staleSince={stale ? data.valuedAt : undefined} historyRange={historyRange}
         historyStatus={snapshot?.historyRange === historyRange ? undefined : loading ? 'loading' : 'error'}
         historyControlsDisabled={busy || importBusy} onHistoryRangeChange={changeHistoryRange} />}
+      {!!data.items.length && data.summary?.wallets && <PortfolioWalletHeatmap wallets={data.items}
+        valuations={data.summary.wallets} currency={data.summary.currency} selected={selected}
+        disabled={busy || importBusy} onSelect={selectWallet} />}
       <XtbWalletImport owner={owner} portfolios={data.items} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
-      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => { setSelected(e.target.value); setError(null); setSaved(false) }}>{data.items.map(p => <option key={p.id} value={p.id}>{[p.name, p.broker, p.brokerAccountId, p.brokerAccountCurrency].filter(Boolean).join(' · ')}</option>)}</select></label>}
+      {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}<select className={input} value={selected} disabled={busy || importBusy} onChange={e => selectWallet(e.target.value)}>{data.items.map(p => <option key={p.id} value={p.id}>{[p.name, p.broker, p.brokerAccountId, p.brokerAccountCurrency].filter(Boolean).join(' · ')}</option>)}</select></label>}
       {active && <>
         <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
         <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} />
