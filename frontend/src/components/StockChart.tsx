@@ -9,6 +9,8 @@ import {
   createSeriesMarkers,
   HistogramSeries,
   type IChartApi,
+  type ISeriesApi,
+  type ISeriesMarkersPluginApi,
   type SeriesMarker,
   type Time,
 } from 'lightweight-charts'
@@ -104,12 +106,11 @@ export function StockChart({
   forming?: FormingCandle | null
   /**
    * Called once the user stops scrolling/zooming the time scale. Lets the page
-   * grow or shrink the loaded time range to match what they scrolled to.
+   * load older history without discarding bars the user is viewing.
    */
   onSpanSettled?: (span: VisibleSpan) => void
   /**
-   * When the parent flips this to `true` right before it swaps in a wider or
-   * narrower slice of history (because the user scrolled/zoomed off the edge),
+   * When the parent flips this to `true` before loading older history,
    * the chart keeps the exact same bars under the viewport instead of
    * re-fitting — so the range change is seamless, with no "jump". The chart
    * resets it to `false` after each data swap. Left `false` (button clicks,
@@ -119,74 +120,131 @@ export function StockChart({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Chart colours for the active theme. Lightweight Charts paints to a canvas
-  // and cannot read CSS variables, so a theme change rebuilds the chart (the
-  // effect below lists `palette` as a dependency); the visible range is kept,
-  // because the candles are the same objects, so the rebuild is invisible
-  // apart from the colours.
   const palette = useChartPalette()
-
-  // Keep the latest callback without re-creating the chart when it changes.
   const spanCb = useRef(onSpanSettled)
   spanCb.current = onSpanSettled
-
-  // Remembered across chart rebuilds so a data swap can restore the same view
-  // instead of snapping to fit. `lastRange` tracks where the user is looking
-  // (updated on every scroll/zoom); the counts identify the series it belongs
-  // to so we only reuse it for the same stock.
-  const lastRangeRef = useRef<{ from: number; to: number } | null>(null)
-  const lastBarCountRef = useRef(0)
   const lastCandlesRef = useRef<Candle[] | null>(null)
+  const chartRef = useRef<{
+    chart: IChartApi
+    candleSeries: ISeriesApi<'Candlestick'>
+    volumeSeries: ISeriesApi<'Histogram'>
+    markers: ISeriesMarkersPluginApi<Time>
+  } | null>(null)
 
+  // Keep the canvas and its interaction state alive until the component unmounts.
+  // Data, marker and theme updates are applied to these existing series below.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-
-    // Intraday bars need the time of day on the axis and in the crosshair
-    // label; on a daily/weekly chart the date alone is the right label.
-    const intraday = isIntraday(candles)
-
-    const chart: IChartApi = createChart(el, {
+    const chart = createChart(el, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: palette.axisText,
         fontFamily: 'inherit',
       },
-      grid: {
-        vertLines: { color: palette.grid },
-        horzLines: { color: palette.grid },
-      },
-      rightPriceScale: { borderColor: palette.scaleBorder },
       timeScale: {
-        borderColor: palette.scaleBorder,
         rightOffset: RIGHT_OFFSET,
-        timeVisible: intraday,
+        shiftVisibleRangeOnNewBar: false,
         secondsVisible: false,
       },
       crosshair: { mode: 0 },
       width: el.clientWidth,
       height: el.clientHeight,
     })
+    const candleSeries = chart.addSeries(CandlestickSeries, { borderVisible: true })
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'vol',
+    })
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } })
+    const markers = createSeriesMarkers(candleSeries, [])
+    chartRef.current = { chart, candleSeries, volumeSeries, markers }
 
-    // Today's forming candle, when it really is newer than the finished bars.
+    let settleTimer: ReturnType<typeof setTimeout> | undefined
+    let dragging = false
+    let pendingRange: { from: number; to: number } | null = null
+    const scheduleSettled = () => {
+      clearTimeout(settleTimer)
+      if (dragging || !pendingRange) return
+      settleTimer = setTimeout(() => {
+        if (!pendingRange) return
+        spanCb.current?.({
+          barsBefore: pendingRange.from,
+          visibleBars: pendingRange.to - pendingRange.from,
+          totalBars: lastCandlesRef.current?.length ?? 0,
+        })
+      }, SETTLE_MS)
+    }
+    const onLogicalRange = (logical: { from: number; to: number } | null) => {
+      pendingRange = logical
+      scheduleSettled()
+    }
+    const onPointerDown = () => {
+      dragging = true
+      clearTimeout(settleTimer)
+    }
+    const onPointerUp = () => {
+      if (!dragging) return
+      dragging = false
+      scheduleSettled()
+    }
+    chart.timeScale().subscribeVisibleLogicalRangeChange(onLogicalRange)
+    el.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+    const observer = new ResizeObserver(() =>
+      chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }),
+    )
+    observer.observe(el)
+    return () => {
+      clearTimeout(settleTimer)
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLogicalRange)
+      el.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+      observer.disconnect()
+      chart.remove()
+      chartRef.current = null
+      lastCandlesRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const api = chartRef.current
+    if (!api) return
+    api.chart.applyOptions({
+      layout: { textColor: palette.axisText },
+      grid: {
+        vertLines: { color: palette.grid },
+        horzLines: { color: palette.grid },
+      },
+      rightPriceScale: { borderColor: palette.scaleBorder },
+      timeScale: { borderColor: palette.scaleBorder },
+    })
+    api.candleSeries.applyOptions({
+      upColor: palette.bull,
+      downColor: palette.bear,
+      wickUpColor: palette.bull,
+      wickDownColor: palette.bear,
+      borderUpColor: palette.bull,
+      borderDownColor: palette.bear,
+    })
+  }, [palette])
+
+  useEffect(() => {
+    const api = chartRef.current
+    if (!api) return
+    const { chart, candleSeries, volumeSeries } = api
+    const previous = lastCandlesRef.current
+    const previousRange = chart.timeScale().getVisibleLogicalRange()
+    const sameSeries = previous === candles
+    const intraday = isIntraday(candles)
+    chart.applyOptions({ timeScale: { timeVisible: intraday } })
     const newest = candles.length > 0 ? candles[candles.length - 1].time : null
     const formingBar =
       forming && !intraday && (newest === null || forming.time > newest) ? forming : null
     const formingColor =
       formingBar && formingBar.close < formingBar.open ? palette.bear : palette.bull
 
-    // Candlesticks (top pane). Borders in the body colours, so a finished
-    // candle looks exactly as it always did — the border only shows on the
-    // forming candle, which is drawn hollow.
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: palette.bull,
-      downColor: palette.bear,
-      wickUpColor: palette.bull,
-      wickDownColor: palette.bear,
-      borderVisible: true,
-      borderUpColor: palette.bull,
-      borderDownColor: palette.bear,
-    })
     candleSeries.setData([
       ...candles.map((c) => ({
         time: toChartTime(c.time),
@@ -211,14 +269,6 @@ export function StockChart({
         : []),
     ])
 
-    // Volume histogram pinned to a lower overlay band.
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'vol',
-    })
-    chart.priceScale('vol').applyOptions({
-      scaleMargins: { top: 0.78, bottom: 0 },
-    })
     volumeSeries.setData([
       ...candles.map((c) => ({
         time: toChartTime(c.time),
@@ -237,7 +287,35 @@ export function StockChart({
           ]
         : []),
     ])
+    // Anchor by a shared candle's date. A count difference alone also includes
+    // newly appended bars, which would shift the view when a session completes.
+    const oldFirst = previous?.[0]?.time
+    const newFirst = candles[0]?.time
+    const prepended = oldFirst ? candles.findIndex(c => c.time === oldFirst) : -1
+    const removed = newFirst && previous ? previous.findIndex(c => c.time === newFirst) : -1
+    const offset = prepended >= 0 ? prepended : removed >= 0 ? -removed : null
+    const keepView = previousRange && offset !== null && (
+      sameSeries || preserveViewRef?.current === true || oldFirst === newFirst
+    )
+    if (keepView) {
+      // Let the library retain its current drag/zoom state when dates did not move.
+      // Only a history prepend/removal requires moving logical indices explicitly.
+      if (offset !== 0) {
+        chart.timeScale().setVisibleLogicalRange({
+          from: previousRange.from + offset,
+          to: previousRange.to + offset,
+        })
+      }
+    } else {
+      chart.timeScale().fitContent()
+    }
+    if (!sameSeries && preserveViewRef) preserveViewRef.current = false
+    lastCandlesRef.current = candles
+  }, [candles, forming, palette, preserveViewRef])
 
+  useEffect(() => {
+    const api = chartRef.current
+    if (!api) return
     // VSA structural markers — bullish below the bar (▲), bearish above (▼).
     // Each marker travels next to `sortKey`, the original API date string, so
     // the merge below can order markers by it: the converted times are strings
@@ -324,82 +402,8 @@ export function StockChart({
     const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers, ...personalMarkers]
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
       .map((m) => m.marker)
-    createSeriesMarkers(candleSeries, markers)
-
-    // Choose the initial view for this freshly built chart. Setting the range
-    // (or fitting) here — in the same synchronous block as createChart/setData
-    // — is the layout that reliably sticks; deferring it to a later effect does
-    // not, because setData re-applies a default view on the next frame.
-    const prevRange = lastRangeRef.current
-    const prevCount = lastBarCountRef.current
-    const sameSeries = lastCandlesRef.current === candles // only signals changed
-    const keepView =
-      prevRange != null &&
-      prevCount > 0 &&
-      candles.length > 0 &&
-      (preserveViewRef?.current === true || sameSeries)
-
-    if (keepView && prevRange) {
-      // A range change adds (or removes) `delta` bars at the OLD end of the
-      // series; the newest bar is unchanged. Shifting the visible range by
-      // `delta` keeps the same bars under the viewport (and slides freshly
-      // loaded history into the margin the user zoomed into). `delta` is 0 when
-      // only the signals changed, so the view is simply held in place.
-      const delta = candles.length - prevCount
-      chart.timeScale().setVisibleLogicalRange({
-        from: prevRange.from + delta,
-        to: prevRange.to + delta,
-      })
-    } else {
-      chart.timeScale().fitContent()
-    }
-    // Consume the one-shot preserve request only once the candles have actually
-    // swapped. Widening the range also widens the signal context window, which
-    // changes `signals` and re-runs this effect one render BEFORE the new
-    // candles arrive; consuming the flag on that early run would drop it before
-    // the data swap it was meant for, and the swap would snap to fit.
-    if (!sameSeries && preserveViewRef) preserveViewRef.current = false
-    lastBarCountRef.current = candles.length
-    lastCandlesRef.current = candles
-
-    // Track the visible range as the user moves it, and report the settled span
-    // so the page can load a wider or narrower slice of history to match.
-    let settleTimer: ReturnType<typeof setTimeout> | undefined
-    const onLogicalRange = (
-      logical: { from: number; to: number } | null,
-    ) => {
-      if (!logical) return
-      lastRangeRef.current = { from: logical.from, to: logical.to }
-      clearTimeout(settleTimer)
-      settleTimer = setTimeout(() => {
-        spanCb.current?.({
-          barsBefore: logical.from,
-          visibleBars: logical.to - logical.from,
-          totalBars: candles.length,
-        })
-      }, SETTLE_MS)
-    }
-    chart.timeScale().subscribeVisibleLogicalRangeChange(onLogicalRange)
-
-    // Watch the CONTAINER, not the window. Lightweight Charts draws onto a
-    // fixed-size canvas, so it has to be told when its box changes — and the
-    // box changes plenty without the window doing anything: the sidebar drawer
-    // opening below `lg`, a card above the chart growing by a line, the
-    // right-hand column reflowing when the fundamentals land. Each of those
-    // used to leave the canvas at its old width until the user happened to
-    // resize the browser.
-    const applySize = () =>
-      chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
-    const observer = new ResizeObserver(applySize)
-    observer.observe(el)
-
-    return () => {
-      clearTimeout(settleTimer)
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLogicalRange)
-      observer.disconnect()
-      chart.remove()
-    }
-  }, [candles, signals, overlays, tradeMarkers, forming, preserveViewRef, palette])
+    api.markers.setMarkers(markers)
+  }, [signals, overlays, tradeMarkers, palette])
 
   return <div ref={containerRef} className="h-full w-full" />
 }

@@ -11,11 +11,12 @@ import { CHART_THEME } from '../lib/chartTheme'
 const PALETTE = CHART_THEME.dark
 
 const lib = vi.hoisted(() => {
-  const candleSeries = { setData: vi.fn() }
+  const candleSeries = { setData: vi.fn(), applyOptions: vi.fn() }
   const volumeSeries = { setData: vi.fn() }
   const priceScale = { applyOptions: vi.fn() }
   const timeScale = {
     fitContent: vi.fn(),
+    getVisibleLogicalRange: vi.fn(() => null),
     setVisibleLogicalRange: vi.fn(),
     subscribeVisibleLogicalRangeChange: vi.fn(),
     unsubscribeVisibleLogicalRangeChange: vi.fn(),
@@ -31,6 +32,7 @@ const lib = vi.hoisted(() => {
   }
   return {
     createChart: vi.fn(),
+    markers: { setMarkers: vi.fn() },
     createSeriesMarkers: vi.fn(),
     CandlestickSeries,
     HistogramSeries,
@@ -74,6 +76,7 @@ beforeEach(() => {
   lib.chart.priceScale.mockReturnValue(lib.priceScale)
   lib.chart.timeScale.mockReturnValue(lib.timeScale)
   lib.createChart.mockReturnValue(lib.chart)
+  lib.createSeriesMarkers.mockReturnValue(lib.markers)
 })
 
 describe('StockChart — the forming candle', () => {

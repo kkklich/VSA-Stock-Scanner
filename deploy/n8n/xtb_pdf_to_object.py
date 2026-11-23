@@ -27,6 +27,17 @@ def plain(value):
     return unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower()
 
 
+def polish_datetime(value):
+    if not re.fullmatch(r"\d{2}\.\d{2}\.\d{4}(?: \d{2}:\d{2}:\d{2})?", value):
+        raise ValueError("A report date or execution time could not be read reliably.")
+    date_text, separator, time_text = value.partition(" ")
+    day, month, year = date_text.split(".")
+    iso_value = f"{year}-{month}-{day}"
+    if separator:
+        iso_value += "T" + time_text
+    return datetime.fromisoformat(iso_value)
+
+
 def number(value, *, positive=False, absolute=False):
     cleaned = re.sub(r"\s+", "", value).replace("\u2212", "-")
     if not re.fullmatch(r"[+-]?\d+(?:[,.]\d+)?", cleaned):
@@ -95,7 +106,7 @@ def transaction_row(order, line, continuation, columns, report_date, account_cur
     if asset not in {"akcja", "akcje", "prawaulamkowedotakcji", "prawoulamkowedotakcji"}:
         raise ValueError("An asset type requires manual review: " + values["asset"])
 
-    executed = datetime.strptime(values["time"], "%d.%m.%Y %H:%M:%S")
+    executed = polish_datetime(values["time"])
     if executed.date() != report_date:
         raise ValueError("A transaction date differs from the report date.")
     symbol = values["symbol"].upper()
@@ -120,7 +131,8 @@ def transaction_row(order, line, continuation, columns, report_date, account_cur
     if fees and currency != account_currency:
         raise ValueError("The fee currency differs from the stock currency and needs review.")
     fx_cost = number(values["fx"], absolute=True) if values["fx"] else Decimal(0)
-    reference = f"xtb:daily/{order}/{executed:%Y%m%dT%H%M%S}/{symbol}:{side}"
+    execution_key = executed.isoformat(timespec="seconds").replace("-", "").replace(":", "")
+    reference = f"xtb:daily/{order}/{execution_key}/{symbol}:{side}"
     return {
         "orderId": order,
         "sourceId": reference,
@@ -145,7 +157,7 @@ def parse_pages(pages):
     title = re.search(r"potwierdzenie zlecen wykonanych w dniu\s+(\d{2}\.\d{2}\.\d{4})", title_text)
     if title is None:
         raise ValueError("The expected Polish XTB DailyStatement title was not found.")
-    report_date = datetime.strptime(title[1], "%d.%m.%Y").date()
+    report_date = polish_datetime(title[1]).date()
     account = account_summary(first_page)
     if account is None:
         raise ValueError("The account-summary columns were not recognized.")
@@ -204,6 +216,7 @@ def parse_pages(pages):
         raise ValueError("The extracted transaction count does not match the report headings.")
     return {
         "status": "ready",
+        "konto": account_id,
         "brokerAccountId": account_id,
         "brokerAccountCurrency": account_currency,
         "reportDate": report_date.isoformat(),
@@ -212,9 +225,242 @@ def parse_pages(pages):
     }
 
 
+def summary_columns(line):
+    cells = list(re.finditer(r"\S(?:.*?\S)?(?=\s{2,}|$)", line))
+    fields = {
+        "order": "nr zlecenia",
+        "side": "zlecenie",
+        "symbol": "symbol instrumentu bazowego",
+        "quantity": "wolumen",
+        "currency": "waluta instrumentu",
+        "price": "cena realizacji zlecenia",
+        "fees": "prowizja",
+    }
+    columns = {}
+    for index, cell in enumerate(cells):
+        label = re.sub(r"\s+", " ", plain(cell.group().strip()))
+        for key, expected in fields.items():
+            if label == expected or (key == "currency" and label.startswith(expected)):
+                stop = cells[index + 1].start() if index + 1 < len(cells) else None
+                columns[key] = slice(cell.start(), stop)
+    if not (fields.keys() - {"fees"}) <= columns.keys():
+        raise ValueError("The order-summary table columns were not recognized.")
+    return columns
+
+
+def order_badges(page):
+    objects = page["/Resources"].get("/XObject", {})
+    badges = []
+
+    def capture(operator, operands, matrix, text_matrix):
+        if operator != b"Do" or not operands or operands[0] not in objects:
+            return
+        image = objects[operands[0]].get_object()
+        if image.get("/Subtype") != "/Image":
+            return
+        width, height = image.get("/Width"), image.get("/Height")
+        if (width, height) != (108, 42):
+            return
+        mask = image.get("/SMask")
+        mask_data = mask.get_object().get_data() if mask is not None else b""
+        reference = (
+            f"xtb-side/{width}/{height}/"
+            + base64.b64encode(image.get_data()).decode("ascii")
+            + "/"
+            + base64.b64encode(mask_data).decode("ascii")
+        )
+        # This exact image was visually verified as "Kupno" in both supplied PDFs.
+        known_badges = {"8d1cf3a6-b5d6-5d7d-b17b-2ecdc991cba0": "buy"}
+        side = known_badges.get(str(uuid5(NAMESPACE_URL, reference)))
+        badges.append((float(matrix[5]), float(matrix[4]), side))
+
+    page.extract_text(visitor_operand_before=capture)
+    return [side for y, x, side in sorted(badges, key=lambda value: (-value[0], value[1]))]
+
+
+def parse_order_summary(pages, confirmed_orders, page_badges=None):
+    title = re.search(
+        r"najwazniejsze informacje na temat zlecen wykonanych w dniu\s+(\d{2}\.\d{2}\.\d{4})",
+        re.sub(r"\s+", " ", plain(pages[0])),
+    )
+    if title is None:
+        raise ValueError("The XTB order-summary report date was not found.")
+    report_date = polish_datetime(title[1]).date()
+    candidates = []
+    account_id = None
+    order_ids = set()
+    missing = []
+    transactions = []
+    sides = {"buy": "buy", "kupno": "buy", "sell": "sell", "sprzedaz": "sell"}
+
+    for page_index, page in enumerate(pages):
+        lines = [line for line in page.splitlines() if line.strip()]
+        columns = None
+        badges = page_badges[page_index] if page_badges is not None else []
+        row_count = sum(bool(re.match(r"\s*\d+\s+\d{1,24}\s+", line)) for line in lines)
+        row_index = 0
+        for index, line in enumerate(lines):
+            normalized = re.sub(r"\s+", " ", plain(line.strip()))
+            if "imie i nazwisko" in normalized and (
+                account := re.search(r"\bkonto\b", plain(line))
+            ):
+                if index + 1 >= len(lines):
+                    raise ValueError("The order-summary account number is missing.")
+                value = lines[index + 1][account.start() :].strip()
+                if not re.fullmatch(r"\d{1,32}", value):
+                    raise ValueError("The order-summary account number is unreadable.")
+                if account_id is not None and account_id != value:
+                    raise ValueError("The report contains inconsistent XTB accounts.")
+                account_id = value
+            elif "nr zlecenia" in normalized and "symbol instrumentu bazowego" in normalized:
+                columns = summary_columns(line)
+            elif re.match(r"\s*\d+\s+\d{1,24}\s+", line):
+                if columns is None:
+                    raise ValueError("An order row has no recognized table header.")
+                values = {key: line[column].strip() for key, column in columns.items()}
+                order = values["order"]
+                symbol = values["symbol"].upper()
+                if not re.fullmatch(r"\d{1,24}", order) or order in order_ids:
+                    raise ValueError("An invalid or repeated order number needs review.")
+                if not re.fullmatch(r"[A-Z0-9][A-Z0-9.\-]{0,29}", symbol):
+                    raise ValueError("An order-summary symbol is unreadable.")
+                currency = values["currency"]
+                if currency not in {"PLN", "USD", "EUR", "GBP", "GBp"}:
+                    raise ValueError("An order-summary currency is unsupported.")
+                order_ids.add(order)
+                if len(order_ids) > MAX_ORDERS:
+                    raise ValueError("The order-summary report exceeds the import order limit.")
+                confirmed = confirmed_orders.get(order, {})
+                if not isinstance(confirmed, dict):
+                    raise ValueError("An order confirmation must be an object with side and fees.")
+                side = sides.get(plain(values["side"]))
+                image_side = badges[row_index] if len(badges) == row_count else None
+                row_index += 1
+                if side and image_side and side != image_side:
+                    raise ValueError("The order direction in text conflicts with its image badge.")
+                side = side or image_side
+                confirmed_side = sides.get(str(confirmed.get("side", "")).lower())
+                if side and confirmed_side and side != confirmed_side:
+                    raise ValueError("The confirmed direction conflicts with the report.")
+                side = side or confirmed_side
+                reported_fees = (
+                    number(values["fees"], absolute=True) if values.get("fees") else None
+                )
+                confirmed_fees = confirmed.get("fees")
+                if confirmed_fees is not None:
+                    confirmed_fees = number(str(confirmed_fees))
+                if (
+                    reported_fees is not None
+                    and confirmed_fees is not None
+                    and reported_fees != confirmed_fees
+                ):
+                    raise ValueError("The confirmed commission conflicts with the report.")
+                fees = reported_fees if reported_fees is not None else confirmed_fees
+                fees = format(fees, "f") if fees is not None else None
+                ticker = symbol.lower()
+                for suffix, replacement in {
+                    ".pl": "",
+                    ".wa": "",
+                    ".fr": ".pa",
+                    ".nl": ".as",
+                    ".uk": ".l",
+                }.items():
+                    if ticker.endswith(suffix):
+                        ticker = ticker[: -len(suffix)] + replacement
+                        break
+                candidate = {
+                    "orderId": order,
+                    "ticker": ticker,
+                    "date": report_date.isoformat(),
+                    "side": side,
+                    "quantity": format(number(values["quantity"], positive=True), "f"),
+                    "price": format(number(values["price"], positive=True), "f"),
+                    "fees": fees,
+                    "currency": currency,
+                }
+                candidates.append(candidate)
+                if side is None:
+                    missing.append({"orderId": order, "field": "side"})
+                if fees is None:
+                    missing.append({"orderId": order, "field": "fees"})
+
+    if account_id is None or not candidates:
+        raise ValueError("The report's account number or transaction rows are missing.")
+    if not missing:
+        for candidate in candidates:
+            order = candidate["orderId"]
+            reference = (
+                f"xtb:order-summary/{account_id}/{order}/"
+                f"{report_date.isoformat().replace('-', '')}/"
+                f"{candidate['ticker']}:{candidate['side']}"
+            )
+            transactions.append(
+                {
+                    "orderId": order,
+                    "sourceId": reference,
+                    "transaction": {
+                        "id": str(uuid5(NAMESPACE_URL, reference)),
+                        **{key: value for key, value in candidate.items() if key != "orderId"},
+                    },
+                }
+            )
+    return {
+        "status": "needs_review" if missing else "ready",
+        "konto": account_id,
+        "brokerAccountId": account_id,
+        "reportDate": report_date.isoformat(),
+        "candidates": candidates,
+        "missingFields": missing,
+        "transactions": transactions,
+        "warnings": [],
+    }
+
+
+def parse_report_pages(pages, input_json, page_badges=None):
+    if not pages:
+        raise ValueError("The report contains no extracted pages.")
+    if "najwazniejsze informacje na temat zlecen" in plain(pages[0]):
+        confirmed_orders = input_json.get("confirmedOrders", {})
+        if not isinstance(confirmed_orders, dict):
+            raise ValueError("confirmedOrders must be an object keyed by XTB order number.")
+        return parse_order_summary(pages, confirmed_orders, page_badges)
+    return parse_pages(pages)
+
+
+def report_object(report):
+    if report["status"] != "ready":
+        return report
+    transactions = []
+    for entry in report["transactions"]:
+        trade = entry["transaction"]
+        transactions.append(
+            {
+                "orderId": entry["orderId"],
+                "ticker": trade["ticker"],
+                "date": trade["date"],
+                "side": trade["side"],
+                "quantity": trade["quantity"],
+                "price": trade["price"],
+                "fees": "0" if Decimal(trade["fees"]) == 0 else trade["fees"],
+                "currency": trade["currency"],
+            }
+        )
+    return {
+        "status": "ready",
+        "brokerAccountId": report["brokerAccountId"],
+        "reportDate": report["reportDate"],
+        "transactions": transactions,
+    }
+
+
 def transform_item(input_json):
     pages = []
     try:
+        if input_json.get("pages") and not input_json.get("pdfBase64"):
+            pages = [page["text"] for page in input_json["pages"]]
+            if not 1 <= len(pages) <= MAX_PAGES or any(len(page) > 100_000 for page in pages):
+                raise ValueError("The extracted pages exceed the existing import limits.")
+            return report_object(parse_report_pages(pages, input_json))
         encoded = input_json.get("pdfBase64")
         if not isinstance(encoded, str) or not encoded:
             raise ValueError("Missing pdfBase64. Add Extract From File before this node.")
@@ -232,12 +478,14 @@ def transform_item(input_json):
                 raise ValueError("The PDF password is incorrect.")
         if not 1 <= len(reader.pages) <= MAX_PAGES:
             raise ValueError("The PDF page count is outside the existing import limits.")
+        page_badges = []
         for page in reader.pages:
             text = page.extract_text(extraction_mode="layout") or ""
             if len(text) > 100_000:
                 raise ValueError("An extracted page exceeds the existing import text limit.")
             pages.append(text)
-        return parse_pages(pages)
+            page_badges.append(order_badges(page))
+        return report_object(parse_report_pages(pages, input_json, page_badges))
     except (ValueError, InvalidOperation, PyPdfError, DependencyError, PermissionError) as error:
         return {
             "status": "needs_review",

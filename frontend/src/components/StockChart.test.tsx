@@ -5,8 +5,8 @@
 // correctly-oriented marker — bullish below the bar (▲), bearish above (▼) —
 // coloured by direction, as is every other method's marker.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, fireEvent, render } from '@testing-library/react'
 import type { Candle, VsaSignal } from '../types'
 import { CHART_THEME, methodColorsFor } from '../lib/chartTheme'
 
@@ -14,11 +14,12 @@ import { CHART_THEME, methodColorsFor } from '../lib/chartTheme'
 const PALETTE = CHART_THEME.dark
 
 const lib = vi.hoisted(() => {
-  const candleSeries = { setData: vi.fn() }
+  const candleSeries = { setData: vi.fn(), applyOptions: vi.fn() }
   const volumeSeries = { setData: vi.fn() }
   const priceScale = { applyOptions: vi.fn() }
   const timeScale = {
     fitContent: vi.fn(),
+    getVisibleLogicalRange: vi.fn((): { from: number; to: number } | null => null),
     setVisibleLogicalRange: vi.fn(),
     subscribeVisibleLogicalRangeChange: vi.fn(),
     unsubscribeVisibleLogicalRangeChange: vi.fn(),
@@ -34,6 +35,7 @@ const lib = vi.hoisted(() => {
   }
   return {
     createChart: vi.fn(),
+    markers: { setMarkers: vi.fn() },
     createSeriesMarkers: vi.fn(),
     CandlestickSeries,
     HistogramSeries,
@@ -84,7 +86,11 @@ beforeEach(() => {
   lib.chart.priceScale.mockReturnValue(lib.priceScale)
   lib.chart.timeScale.mockReturnValue(lib.timeScale)
   lib.createChart.mockReturnValue(lib.chart)
+  lib.createSeriesMarkers.mockReturnValue(lib.markers)
+  lib.timeScale.getVisibleLogicalRange.mockReturnValue(null)
 })
+
+afterEach(() => vi.useRealTimers())
 
 describe('StockChart', () => {
   it('builds the chart once and feeds both series the mapped bars', () => {
@@ -106,11 +112,9 @@ describe('StockChart', () => {
     render(<StockChart candles={CANDLES} signals={SIGNALS} />)
 
     expect(lib.createSeriesMarkers).toHaveBeenCalledTimes(1)
-    const [series, markers] = lib.createSeriesMarkers.mock.calls[0] as [
-      unknown,
-      Array<{ position: string; shape: string; text: string }>,
-    ]
-    expect(series).toBe(lib.candleSeries)
+    expect(lib.createSeriesMarkers.mock.calls[0][0]).toBe(lib.candleSeries)
+    const markers = lib.markers.setMarkers.mock.calls[0][0] as
+      Array<{ position: string; shape: string; text: string }>
     expect(markers).toHaveLength(SIGNALS.length)
 
     const [bull, bear] = markers
@@ -134,7 +138,7 @@ describe('StockChart', () => {
       { date: '2026-01-01', side: 'buy', label: 'My buy' },
     ]} />)
 
-    const markers = lib.createSeriesMarkers.mock.calls[0][1]
+    const markers = lib.markers.setMarkers.mock.calls[0][0]
     expect(markers).toMatchObject([
       { text: 'Spring' },
       { time: '2026-01-01', text: 'My buy', position: 'belowBar', shape: 'arrowUp', color: PALETTE.bull },
@@ -158,8 +162,7 @@ describe('StockChart', () => {
       />,
     )
 
-    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
-      unknown,
+    const [markers] = lib.markers.setMarkers.mock.calls.at(-1) as [
       Array<{ time: string; position: string; shape: string; text?: string; size?: number }>,
     ]
     // Two VSA arrows + the overlay's dot and label, sorted oldest → newest.
@@ -204,8 +207,7 @@ describe('StockChart', () => {
       />,
     )
 
-    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
-      unknown,
+    const [markers] = lib.markers.setMarkers.mock.calls.at(-1) as [
       Array<{ position: string; shape: string; text?: string; color: string; size?: number }>,
     ]
     const dotBefore = (text: string) => markers[markers.findIndex((m) => m.text === text) - 1]
@@ -250,8 +252,7 @@ describe('StockChart', () => {
       />,
     )
 
-    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
-      unknown,
+    const [markers] = lib.markers.setMarkers.mock.calls.at(-1) as [
       Array<{ position: string; shape: string; text?: string; color: string }>,
     ]
     const [watchDot, watchLabel, dot, label] = markers
@@ -298,6 +299,85 @@ describe('StockChart', () => {
     expect(lib.chart.remove).toHaveBeenCalledTimes(1)
     expect(lib.timeScale.unsubscribeVisibleLogicalRangeChange).toHaveBeenCalled()
   })
+
+  it('updates markers without replacing the canvas, resetting the view or reloading candles', () => {
+    const { rerender } = render(<StockChart candles={CANDLES} signals={SIGNALS} />)
+    rerender(<StockChart candles={CANDLES} signals={[]} tradeMarkers={[
+      { date: '2026-01-02', side: 'buy', label: 'My buy' },
+    ]} />)
+
+    expect(lib.createChart).toHaveBeenCalledTimes(1)
+    expect(lib.chart.remove).not.toHaveBeenCalled()
+    expect(lib.candleSeries.setData).toHaveBeenCalledTimes(1)
+    expect(lib.timeScale.fitContent).toHaveBeenCalledTimes(1)
+    expect(lib.markers.setMarkers.mock.calls.at(-1)?.[0]).toMatchObject([{ text: 'My buy' }])
+  })
+
+  it('anchors the view to the same dates when older bars load, even if new bars also arrive', () => {
+    const preserveViewRef = { current: false }
+    const { rerender } = render(<StockChart candles={CANDLES} signals={SIGNALS} preserveViewRef={preserveViewRef} />)
+    lib.timeScale.getVisibleLogicalRange.mockReturnValue({ from: -1.5, to: 1.5 })
+    preserveViewRef.current = true
+    // An intervening marker update must not consume the pending history request.
+    rerender(<StockChart candles={CANDLES} signals={[]} preserveViewRef={preserveViewRef} />)
+    expect(preserveViewRef.current).toBe(true)
+    const expanded = [
+      { ...CANDLES[0], time: '2025-12-31' },
+      ...CANDLES,
+      { ...CANDLES[2], time: '2026-01-04' },
+    ]
+    rerender(<StockChart candles={expanded} signals={[]} preserveViewRef={preserveViewRef} />)
+
+    expect(lib.timeScale.setVisibleLogicalRange).toHaveBeenCalledWith({ from: -0.5, to: 2.5 })
+    expect(lib.timeScale.fitContent).toHaveBeenCalledTimes(1)
+    expect(lib.createChart).toHaveBeenCalledTimes(1)
+    expect(preserveViewRef.current).toBe(false)
+  })
+
+  it('keeps the view when the live candle changes or another session completes', () => {
+    const { rerender } = render(<StockChart candles={CANDLES} signals={SIGNALS} />)
+    lib.timeScale.getVisibleLogicalRange.mockReturnValue({ from: 0.25, to: 1.75 })
+    const next = { ...CANDLES[2], time: '2026-01-04' }
+    rerender(<StockChart candles={CANDLES} signals={SIGNALS} forming={next} />)
+    rerender(<StockChart candles={CANDLES} signals={SIGNALS} forming={{ ...next, close: 12 }} />)
+    rerender(<StockChart candles={[...CANDLES, next]} signals={SIGNALS} />)
+
+    expect(lib.createChart).toHaveBeenCalledTimes(1)
+    expect(lib.timeScale.fitContent).toHaveBeenCalledTimes(1)
+    expect(lib.timeScale.setVisibleLogicalRange).not.toHaveBeenCalled()
+  })
+
+  it('fits a deliberately selected shorter history range', () => {
+    const { rerender } = render(<StockChart candles={CANDLES} signals={SIGNALS} />)
+    lib.timeScale.getVisibleLogicalRange.mockReturnValue({ from: 0, to: 2 })
+    rerender(<StockChart candles={CANDLES.slice(1)} signals={[]} preserveViewRef={{ current: false }} />)
+
+    expect(lib.timeScale.fitContent).toHaveBeenCalledTimes(2)
+    expect(lib.createChart).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for a held drag to end and reports the latest callback and candle count', () => {
+    vi.useFakeTimers()
+    const original = vi.fn()
+    const latest = vi.fn()
+    const { container, rerender, unmount } = render(<StockChart candles={CANDLES} signals={[]} onSpanSettled={original} />)
+    const onRange = lib.timeScale.subscribeVisibleLogicalRangeChange.mock.calls[0][0]
+    fireEvent.pointerDown(container.firstChild!)
+    act(() => {
+      onRange({ from: -10, to: 2 })
+      vi.advanceTimersByTime(1000)
+    })
+    expect(original).not.toHaveBeenCalled()
+    rerender(<StockChart candles={CANDLES.slice(1)} signals={[]} onSpanSettled={latest} />)
+    fireEvent.pointerUp(window)
+    act(() => vi.advanceTimersByTime(220))
+    expect(original).not.toHaveBeenCalled()
+    expect(latest).toHaveBeenCalledWith({ barsBefore: -10, visibleBars: 12, totalBars: 2 })
+    act(() => onRange({ from: -20, to: -8 }))
+    unmount()
+    act(() => vi.runAllTimers())
+    expect(latest).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('toChartTime', () => {
@@ -336,11 +416,8 @@ describe('StockChart on an intraday series', () => {
   it('converts bars to timestamps and turns on the clock in the axis', () => {
     render(<StockChart candles={INTRADAY_CANDLES} signals={[]} />)
 
-    const options = lib.createChart.mock.calls.at(-1)?.[1] as {
-      timeScale: { timeVisible: boolean; secondsVisible: boolean }
-    }
-    expect(options.timeScale.timeVisible).toBe(true)
-    expect(options.timeScale.secondsVisible).toBe(false)
+    expect(lib.chart.applyOptions).toHaveBeenCalledWith({ timeScale: { timeVisible: true } })
+    expect(lib.createChart.mock.calls[0][1].timeScale.secondsVisible).toBe(false)
 
     const candleData = lib.candleSeries.setData.mock.calls.at(-1)?.[0] as Array<{
       time: number
@@ -351,10 +428,7 @@ describe('StockChart on an intraday series', () => {
 
   it('leaves the clock off on a daily series', () => {
     render(<StockChart candles={CANDLES} signals={SIGNALS} />)
-    const options = lib.createChart.mock.calls.at(-1)?.[1] as {
-      timeScale: { timeVisible: boolean }
-    }
-    expect(options.timeScale.timeVisible).toBe(false)
+    expect(lib.chart.applyOptions).toHaveBeenCalledWith({ timeScale: { timeVisible: false } })
   })
 
   it('sorts merged intraday markers by time, and strips the sort key', () => {
@@ -377,8 +451,7 @@ describe('StockChart on an intraday series', () => {
       />,
     )
 
-    const [, markers] = lib.createSeriesMarkers.mock.calls.at(-1) as [
-      unknown,
+    const [markers] = lib.markers.setMarkers.mock.calls.at(-1) as [
       Array<{ time: number; text?: string; sortKey?: string }>,
     ]
     // The overlay's dot carries no text; its label follows it directly.

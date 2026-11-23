@@ -90,9 +90,7 @@ class UpdatePortfolio(PortfolioDetails):
     cost_method: CostMethod = Field(alias="costMethod")
 
 
-class AddTransaction(Command):
-    id: UUID
-    version: int = Field(ge=1)
+class TransactionDetails(Command):
     ticker: str
     date: date
     side: Literal["buy", "sell"]
@@ -126,3 +124,32 @@ class AddTransaction(Command):
         if value > datetime.now(ZoneInfo("Europe/Warsaw")).date():
             raise ValueError("Future transactions are not supported")
         return value
+
+
+class AddTransaction(TransactionDetails):
+    id: UUID
+    version: int = Field(ge=1)
+
+
+class ImportTransaction(TransactionDetails):
+    order_id: Annotated[str, StringConstraints(strict=True, pattern=r"^[0-9]{1,64}$")] = Field(
+        alias="orderId"
+    )
+    execution_id: (
+        Annotated[str, StringConstraints(strict=True, pattern=r"^[A-Za-z0-9_-]{1,80}$")] | None
+    ) = Field(default=None, alias="executionId")
+    # An absent commission requires review; zero must be supplied explicitly.
+    fees: Decimal = Field(
+        ge=0,
+        le=Decimal("1000000000000"),
+        max_digits=24,
+        decimal_places=8,
+        allow_inf_nan=False,
+    )
+
+
+class ImportTransactions(Command):
+    status: Literal["ready"]
+    broker_account_id: BrokerAccountId = Field(alias="brokerAccountId")
+    report_date: date = Field(alias="reportDate")
+    transactions: list[ImportTransaction] = Field(min_length=1, max_length=1000)

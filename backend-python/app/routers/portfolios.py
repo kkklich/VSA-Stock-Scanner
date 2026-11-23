@@ -18,7 +18,13 @@ from app.db.models import UserRow
 from app.db.user_repository import UserRepository
 from app.dependencies import get_live_prices, get_user_repository, gpw_company_service
 from app.markets import listed_ticker, market_of, normalize_ticker, quote_currency
-from app.models.portfolio import AddTransaction, CreatePortfolio, StockHoldings, UpdatePortfolio
+from app.models.portfolio import (
+    AddTransaction,
+    CreatePortfolio,
+    ImportTransactions,
+    StockHoldings,
+    UpdatePortfolio,
+)
 from app.routers.auth import get_current_user
 from app.services.auth import jwt_secret
 from app.services.portfolio import WARSAW, PortfolioError, holdings, valuation, xtb_checkpoint
@@ -30,6 +36,7 @@ from app.services.portfolio_summary import (
     portfolio_summary,
     wallet_baseline_dates,
 )
+from app.services.transaction_import import prepare_transactions
 from app.services.xtb_daily_statement import parse_xtb_daily_statement
 from app.services.xtb_import import MAX_FILE_BYTES, parse_xtb, prepare_import
 from app.services.xtb_wallet_import import parse_xtb_wallets
@@ -213,14 +220,7 @@ async def import_file(request: Request, filename: str):
     return await run_in_threadpool(parse_xtb, data, filename, gpw_company_service)
 
 
-@router.post("/imports/xtb/automation")
-async def import_xtb_automation(
-    request: Request,
-    repo: Annotated[UserRepository | None, Depends(get_user_repository)],
-    response: Response,
-    authorization: Annotated[str | None, Header()] = None,
-    x_import_filename: Annotated[str | None, Header()] = None,
-):
+def automation_scope(authorization: str | None, repo: UserRepository | None):
     token = settings.xtb_automation_token.get_secret_value()
     owner = settings.xtb_automation_user_id
     portfolio = settings.xtb_automation_portfolio_id
@@ -233,6 +233,38 @@ async def import_xtb_automation(
         )
     if repo is None:
         raise HTTPException(503, detail={"code": "database_unavailable"})
+    return owner, str(portfolio) if portfolio is not None else None
+
+
+@router.post("/imports/transactions")
+async def import_transactions(
+    payload: ImportTransactions,
+    repo: Annotated[UserRepository | None, Depends(get_user_repository)],
+    response: Response,
+    authorization: Annotated[str | None, Header()] = None,
+):
+    """Save one reviewed report to its linked wallet; retries do not replay executions."""
+    owner, portfolio_id = automation_scope(authorization, repo)
+
+    async def commit():
+        parsed = prepare_transactions(payload, gpw_company_service)
+        result = await repo.portfolios.change(
+            owner, "automated_import", portfolio_id=portfolio_id, parsed=parsed
+        )
+        return {**result, "brokerAccountId": payload.broker_account_id, "warnings": []}
+
+    return await execute(response, commit())
+
+
+@router.post("/imports/xtb/automation")
+async def import_xtb_automation(
+    request: Request,
+    repo: Annotated[UserRepository | None, Depends(get_user_repository)],
+    response: Response,
+    authorization: Annotated[str | None, Header()] = None,
+    x_import_filename: Annotated[str | None, Header()] = None,
+):
+    owner, portfolio = automation_scope(authorization, repo)
 
     async def commit():
         try:

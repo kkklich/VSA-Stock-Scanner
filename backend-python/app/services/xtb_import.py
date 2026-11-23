@@ -764,8 +764,15 @@ def _trade_key(trade, *, with_time=True, with_fees=True):
 
 
 def _xtb_import_key(trade):
-    is_daily_statement = (trade.get("sourceId") or "").startswith("xtb:daily/")
-    return is_daily_statement, _trade_key(trade, with_time=False, with_fees=False)
+    reference = trade.get("sourceId") or ""
+    kind = (
+        "daily"
+        if reference.startswith("xtb:daily/")
+        else "json"
+        if reference.startswith("xtb:json:")
+        else "cash"
+    )
+    return kind, _trade_key(trade, with_time=False, with_fees=False)
 
 
 def _same_trade(first, second):
@@ -808,14 +815,18 @@ def prepare_import(
         if trade:
             prior = by_id.get(trade["id"])
             is_xtb = trade.get("source") == "xtb"
-            is_daily_statement, match_key = _xtb_import_key(trade)
+            import_kind, match_key = _xtb_import_key(trade)
             if prior:
                 row.update(status="duplicate" if _same_trade(prior, trade) else "error")
                 if row["status"] == "error":
                     row["code"] = "reference_conflict"
             elif _trade_key(trade, with_time=False) in manual_keys:
                 row.update(status="error", code="manual_overlap")
-            elif is_xtb and (not is_daily_statement, match_key) in xtb_keys:
+            elif is_xtb and any(
+                (kind, match_key) in xtb_keys
+                for kind in ("daily", "json", "cash")
+                if kind != import_kind
+            ):
                 # Daily statements identify orders, while the cash export uses operation IDs.
                 # Matching amounts and dates warrant review without assuming the fills are equal.
                 row.update(status="error", code="xtb_source_overlap")
@@ -828,7 +839,7 @@ def prepare_import(
                 additions.append(trade)
                 by_id[trade["id"]] = trade
                 if is_xtb:
-                    xtb_keys.add((is_daily_statement, match_key))
+                    xtb_keys.add((import_kind, match_key))
         rows.append(row)
     ledger = sorted([*existing, *additions], key=trade_order)
     ledger_error = None

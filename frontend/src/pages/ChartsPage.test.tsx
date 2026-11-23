@@ -12,6 +12,7 @@ import en from '../i18n/locales/en.json'
 import type { ApiStockSignals } from '../api/stocksApi'
 import { stockTradeMarkers, type StockTradeMarker } from '../lib/stockTradeMarkers'
 import type { StockTrade } from '../api/portfoliosApi'
+import type { VisibleSpan } from '../components/StockChart'
 
 const { useStockDetailMock, useStockHoldingsMock } = vi.hoisted(() => ({
   useStockDetailMock: vi.fn(),
@@ -40,8 +41,13 @@ vi.mock('../hooks/useTickerVolume', () => ({
 // The chart needs a real canvas, and the sibling cards each fetch on their own —
 // none of that is what this test is about.
 vi.mock('../components/StockChart', () => ({
-  StockChart: ({ tradeMarkers }: { tradeMarkers?: StockTradeMarker[] }) => (
+  StockChart: ({ tradeMarkers, onSpanSettled }: {
+    tradeMarkers?: StockTradeMarker[]
+    onSpanSettled?: (span: VisibleSpan) => void
+  }) => (
     <div data-testid="chart">
+      <button onClick={() => onSpanSettled?.({ barsBefore: 20, visibleBars: 50, totalBars: 500 })}>Simulate chart zoom</button>
+      <button onClick={() => onSpanSettled?.({ barsBefore: -20, visibleBars: 500, totalBars: 500 })}>Simulate older history</button>
       {tradeMarkers?.map(marker => <span key={`${marker.date}:${marker.side}`}>{marker.label}</span>)}
     </div>
   ),
@@ -230,7 +236,26 @@ it('collapses and reopens the three stock sections independently', async () => {
   }
 })
 
-describe('ChartsPage — weekly section of the VSA Rating card', () => {
+describe('ChartsPage history navigation', () => {
+  it('keeps older history loaded when zooming in, and still allows explicit shorter ranges', () => {
+    mockData()
+    renderWithProviders(<ChartsPage />)
+    fireEvent.click(screen.getByRole('button', { name: '2Y', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate chart zoom' }))
+    expect(screen.getByRole('button', { name: '2Y', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '3M', exact: true }))
+    expect(screen.getByRole('button', { name: '3M', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('loads a wider range when panning beyond the oldest candle', () => {
+    mockData()
+    renderWithProviders(<ChartsPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate older history' }))
+    expect(screen.getByRole('button', { name: '2Y', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('ChartsPage - weekly section of the VSA Rating card', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     await i18n.changeLanguage('en')

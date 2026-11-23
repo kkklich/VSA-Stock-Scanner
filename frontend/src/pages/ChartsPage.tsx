@@ -183,14 +183,14 @@ function rangesFor(interval: ChartInterval) {
  * than `PAN_PAST_START_BARS` past the oldest loaded candle, or zooming out
  * until the viewport is `ZOOM_OUT_FACTOR` times wider than the loaded data
  * (which is what a wheel-zoom anchored near the right edge looks like — the
- * window grows past the newest bar rather than past the oldest one). Shrinking
- * the view below `ZOOM_IN_FRACTION` of the loaded bars means "show me a shorter
- * range". At rest the viewport is only a few bars wider than the data, so the
- * zoom-out factor has margin. The cooldown keeps one gesture to a single step.
+ * window grows past the newest bar rather than past the oldest one). Zooming
+ * in keeps the loaded history: a narrow view may still show old dates that a
+ * shorter range would discard. At rest the viewport is only a few bars wider
+ * than the data, so the zoom-out factor has margin. The cooldown keeps one
+ * gesture to a single step.
  */
 const PAN_PAST_START_BARS = 8
 const ZOOM_OUT_FACTOR = 1.15
-const ZOOM_IN_FRACTION = 0.3
 const STEP_COOLDOWN_MS = 700
 
 /** API `fromDate` (YYYY-MM-DD) for a range; MAX asks far enough back for everything. */
@@ -589,10 +589,8 @@ export function ChartsPage() {
   }, [])
 
   // Scroll-driven range switching: scrolling/zooming out past the oldest loaded
-  // bar steps up to the next longer range (loading more history), and zooming
-  // well inside the loaded data steps down to the next shorter one. The chart
-  // refits after each step, so one scroll gesture moves at most one step and
-  // the buttons stay in sync with what is on screen.
+  // bar steps up to the next longer range, keeping all loaded candles available.
+  // Shorter ranges are selected explicitly with the toolbar, never by zooming.
   const stepCooldown = useRef(0)
 
   const handleSpanSettled = useCallback(
@@ -607,13 +605,7 @@ export function ChartsPage() {
       const wantsOlder =
         barsBefore < -PAN_PAST_START_BARS ||
         visibleBars > totalBars * ZOOM_OUT_FACTOR
-      const wantsNarrower = visibleBars < totalBars * ZOOM_IN_FRACTION
-
-      const next = wantsOlder
-        ? options[index + 1]
-        : wantsNarrower
-          ? options[index - 1]
-          : undefined
+      const next = wantsOlder ? options[index + 1] : undefined
       if (!next) return
 
       stepCooldown.current = Date.now() + STEP_COOLDOWN_MS
@@ -974,6 +966,7 @@ export function ChartsPage() {
                 />
                 <div className="h-[300px] w-full sm:h-[420px]">
                   <StockChart
+                    key={`${ticker}:${interval}`}
                     candles={data.history}
                     signals={vsaChartSignals}
                     overlays={overlays}
