@@ -67,12 +67,8 @@ export function canonicalTicker(ticker: string): string {
  * copy of `PLN_PER_UNIT` in backend-python/app/markets.py, and it must stay in
  * step with it.
  *
- * It exists only to EXPLAIN an ordering, never to produce one: when markets
- * are pooled the backend sorts the money columns on this same scale, and a
- * London price of 17,760 (pence) landing below a US price of 6,242 (dollars)
- * looks like a broken sort until the row can show that the first is ~906 PLN
- * and the second ~23,720. Rates are fixed approximations; the figure is shown
- * with a "≈".
+ * The frontend and backend can compare mixed-currency values on this scale.
+ * Rates are fixed approximations. Displayed equivalents use "≈".
  */
 export const PLN_PER_UNIT: Record<string, number> = {
   PLN: 1,

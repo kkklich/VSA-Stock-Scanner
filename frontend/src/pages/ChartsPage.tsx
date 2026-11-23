@@ -38,6 +38,7 @@ import {
   SignalBadge,
 } from '../components/ui'
 import { useStockDetail } from '../hooks/useStockDetail'
+import { useStockHoldings } from '../hooks/useStockHoldings'
 import { useMethods } from '../hooks/useMethods'
 import { usePersistentState } from '../hooks/usePersistentState'
 import { useFundamentals } from '../hooks/useFundamentals'
@@ -63,6 +64,7 @@ import { methodColorsFor, useChartPalette } from '../lib/chartTheme'
 import { canonicalTicker, displayTicker, GPW_MARKET, marketOfTicker } from '../lib/markets'
 import { CLASSIC_VSA_ENABLED, isMethodActive } from '../lib/methodStatus'
 import { fmtLiveTime, notTradedYet } from '../lib/live'
+import { stockTradeMarkers } from '../lib/stockTradeMarkers'
 
 // ── Trading-method chart overlays ─────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ import { fmtLiveTime, notTradedYet } from '../lib/live'
 const VSA_METHOD_ID = 'vsa'
 /** Layer id for reported insider buys and sells on the chart. */
 const INSIDER_METHOD_ID = 'insider'
+const PERSONAL_TRADES_ID = 'personal-trades'
 /*
  * Two colour channels on one chart. WHICH method: VSA draws arrows, and every
  * other method draws dots in its own fixed colour (`methodColorsFor`, keyed by
@@ -526,6 +529,8 @@ export function ChartsPage() {
   const { t } = useTranslation()
   const { ticker: routeTicker = 'kgh' } = useParams<{ ticker: string }>()
   const ticker = canonicalTicker(routeTicker)
+  const { owner, holdings, retry: retryHoldings } = useStockHoldings(ticker)
+  const [showPersonalTrades, setShowPersonalTrades] = useState(true)
 
   // Chart bar size and time range — together they drive the interval and
   // fromDate sent to the signals endpoint. The range list depends on the bar
@@ -664,11 +669,16 @@ export function ChartsPage() {
   )
 
   const toggleChartMethod = useCallback(
-    (id: string) =>
+    (id: string) => {
+      if (id === PERSONAL_TRADES_ID) {
+        setShowPersonalTrades(previous => !previous)
+        return
+      }
       setChartMethods((prev) => {
         const base = prev ?? allChartMethodIds
         return base.includes(id) ? base.filter((m) => m !== id) : [...base, id]
-      }),
+      })
+    },
     [allChartMethodIds, setChartMethods],
   )
 
@@ -719,6 +729,25 @@ export function ChartsPage() {
     }
   }, [data])
 
+  const personalTradeMarkers = useMemo(() => {
+    if (!data || !holdings || holdings === 'error') return []
+    return stockTradeMarkers(
+      holdings.wallets.flatMap(wallet => wallet.trades),
+      data.history,
+      data.interval ?? DEFAULT_INTERVAL,
+      formingCandle?.time,
+      trades => {
+        const trade = trades[0]
+        const side = t(`portfolio.stockHoldings.chart.${trade.side}`)
+        if (trades.length > 1) return `${side} ×${trades.length}`
+        const price = fmtMoney(Number(trade.price), trade.currency)
+        const pnl = trade.side === 'sell' ? trade.realizedPnl : null
+        const result = pnl === null ? '' : ` · ${pnl > 0 ? '+' : ''}${fmtMoney(pnl, trade.currency)}`
+        return `${side} · ${price}${result}`
+      },
+    )
+  }, [holdings, data, formingCandle, t])
+
   // Legend / chooser rows: VSA first, then each overlay method, then Insiders.
   const legendItems = useMemo<ChartMethodLegendItem[]>(() => {
     if (!data) return []
@@ -754,6 +783,14 @@ export function ChartsPage() {
             },
           ]
         : []),
+      ...(personalTradeMarkers.length ? [{
+        id: PERSONAL_TRADES_ID,
+        name: t('portfolio.stockHoldings.chart.label'),
+        shape: 'arrow' as const,
+        color: palette.bull,
+        count: personalTradeMarkers.length,
+        selected: showPersonalTrades,
+      }] : []),
     ]
   }, [
     data,
@@ -762,10 +799,14 @@ export function ChartsPage() {
     visibleInsiderMarkers.length,
     isMethodShown,
     palette,
+    personalTradeMarkers.length,
+    showPersonalTrades,
     t,
   ])
 
-  const stockHoldings = <StockHoldingsCard ticker={ticker} quote={data} />
+  const stockHoldings = owner === undefined ? null : (
+    <StockHoldingsCard key={`${owner}:${ticker}`} holdings={holdings} quote={data} onRetry={retryHoldings} />
+  )
   // "This company has no intraday history" is information, not a failure, so it
   // never shows the red panel. When the previous (daily) chart is still in
   // hand — which it always is, since the page opens on 1D and the hook keeps
@@ -936,6 +977,7 @@ export function ChartsPage() {
                     candles={data.history}
                     signals={vsaChartSignals}
                     overlays={overlays}
+                    tradeMarkers={showPersonalTrades ? personalTradeMarkers : undefined}
                     forming={formingCandle}
                     onSpanSettled={handleSpanSettled}
                     preserveViewRef={preserveViewRef}
@@ -944,7 +986,6 @@ export function ChartsPage() {
               </>
             )}
           </Card>
-          {stockHoldings}
           <InsiderActivityCard
             data={insiderData}
             loading={insiderLoading}
@@ -956,6 +997,7 @@ export function ChartsPage() {
           {CLASSIC_VSA_ENABLED && <RatingHistoryCard ticker={ticker} />}
           <TradeSimulationCard ticker={ticker} />
           <JournalPanel ticker={ticker} data={data} overlays={overlays} signals={vsaChartSignals} loading={loading} />
+          {stockHoldings}
         </div>
 
         {/* Right: consolidated summary, volume, fundamentals / investment /

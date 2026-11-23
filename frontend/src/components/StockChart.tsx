@@ -15,6 +15,7 @@ import {
 import type { Candle, VsaSignal } from '../types'
 import { markerColor, useChartPalette, type MarkerType } from '../lib/chartTheme'
 import { toChartTime } from '../lib/chartTime'
+import type { StockTradeMarker } from '../lib/stockTradeMarkers'
 
 /** Empty slots kept to the right of the newest bar (time-scale `rightOffset`). */
 const RIGHT_OFFSET = 4
@@ -86,6 +87,7 @@ export function StockChart({
   candles,
   signals,
   overlays,
+  tradeMarkers,
   forming,
   onSpanSettled,
   preserveViewRef,
@@ -94,6 +96,7 @@ export function StockChart({
   signals: VsaSignal[]
   /** Extra per-method overlay layers (Minervini, …); VSA uses `signals`. */
   overlays?: MethodOverlay[]
+  tradeMarkers?: StockTradeMarker[]
   /**
    * Today's still-forming candle, drawn after `candles` (daily charts only —
    * the page decides). Ignored unless it is later than the newest candle.
@@ -305,7 +308,20 @@ export function StockChart({
     // VSA + overlay layers interleaves them, so sort the combined set by the
     // API date string, which is chronological as text in both bar formats.
     // The sort is stable, which keeps each dot directly followed by its label.
-    const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers]
+    const personalMarkers: SortedMarker[] = (tradeMarkers ?? []).map(trade => {
+      const buy = trade.side === 'buy'
+      return {
+        sortKey: trade.date,
+        marker: {
+          time: toChartTime(trade.date),
+          position: buy ? 'belowBar' : 'aboveBar',
+          shape: buy ? 'arrowUp' : 'arrowDown',
+          color: markerColor(buy ? 'Bullish' : 'Bearish', palette),
+          text: trade.label,
+        },
+      }
+    })
+    const markers: SeriesMarker<Time>[] = [...vsaMarkers, ...overlayMarkers, ...personalMarkers]
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
       .map((m) => m.marker)
     createSeriesMarkers(candleSeries, markers)
@@ -383,7 +399,7 @@ export function StockChart({
       observer.disconnect()
       chart.remove()
     }
-  }, [candles, signals, overlays, forming, preserveViewRef, palette])
+  }, [candles, signals, overlays, tradeMarkers, forming, preserveViewRef, palette])
 
   return <div ref={containerRef} className="h-full w-full" />
 }

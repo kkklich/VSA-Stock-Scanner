@@ -10,7 +10,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, MoreHorizontal, RotateCcw, Save } from 'lucide-react'
-import { Card, CardTitle, InfoTip } from '../components/ui'
+import { Card, CardTitle, InfoTip, SortHeader } from '../components/ui'
+import { useTableSort } from '../hooks/useTableSort'
+import { sortTableRows, type SortColumns } from '../lib/sorting'
 import { useScannerStats } from '../hooks/useScannerStats'
 import { useMarketScope } from '../hooks/useMarkets'
 import type { ApiSignalEffectiveness } from '../api/stocksApi'
@@ -474,6 +476,15 @@ function EffectivenessDonut({ profit }: { profit: number }) {
 }
 
 type SortKey = 'signal' | 'successPct' | 'rewardRisk' | 'count'
+const effectivenessColumns: SortColumns<ApiSignalEffectiveness, SortKey> = {
+  signal: row => row.signal,
+  successPct: row => row.count ? row.successPct : null,
+  // Wins with no losses have the best possible ratio.
+  rewardRisk: row => row.count ? row.rewardRisk ?? Infinity : null,
+  count: row => row.count,
+}
+const effectivenessLabels: Record<SortKey, string> = { signal: 'Signal', successPct: 'Success%', rewardRisk: 'R/R', count: 'Trades' }
+const effectivenessSortDir = (key: SortKey) => key === 'signal' ? 'asc' : 'desc'
 
 function EffectivenessStats({
   enabledNames,
@@ -492,8 +503,7 @@ function EffectivenessStats({
   refreshing: boolean
   error: string | null
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>('successPct')
-  const [asc, setAsc] = useState(false)
+  const { sort, onHeaderSort } = useTableSort<SortKey>({ key: 'successPct', dir: 'desc' }, effectivenessSortDir)
 
   const avg = useMemo(() => {
     const active = stats.filter((r) => enabledNames.has(r.signal))
@@ -503,36 +513,7 @@ function EffectivenessStats({
     )
   }, [stats, enabledNames])
 
-  const sorted = useMemo(() => {
-    const rows = [...stats]
-    rows.sort((a, b) => {
-      let av = a[sortKey as keyof ApiSignalEffectiveness]
-      let bv = b[sortKey as keyof ApiSignalEffectiveness]
-      // A null rewardRisk means wins with no losses — the best possible
-      // ratio, so it sorts above every finite value.
-      if (sortKey === 'rewardRisk') {
-        av = av ?? Infinity
-        bv = bv ?? Infinity
-      }
-      const cmp =
-        typeof av === 'number' && typeof bv === 'number'
-          ? av - bv
-          : String(av).localeCompare(String(bv))
-      return asc ? cmp : -cmp
-    })
-    return rows
-  }, [stats, sortKey, asc])
-
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) setAsc((v) => !v)
-    else {
-      setSortKey(key)
-      setAsc(false)
-    }
-  }
-
-  const arrow = (key: SortKey) =>
-    key === sortKey ? (asc ? ' ▲' : ' ▼') : ''
+  const sorted = useMemo(() => sortTableRows(stats, sort, effectivenessColumns), [stats, sort])
 
   if (loading && stats.length === 0) {
     return (
@@ -591,30 +572,10 @@ function EffectivenessStats({
             viewports where this column scrolls) so the labels stay visible. */}
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
-            <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
-              onClick={() => toggleSort('signal')}
-            >
-              Signal{arrow('signal')}
-            </th>
-            <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
-              onClick={() => toggleSort('successPct')}
-            >
-              Success%{arrow('successPct')}
-            </th>
-            <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-2 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
-              onClick={() => toggleSort('rewardRisk')}
-            >
-              R/R{arrow('rewardRisk')}
-            </th>
-            <th
-              className="sticky top-0 z-10 cursor-pointer select-none bg-slate-900 px-4 py-2 text-right font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] hover:text-slate-300"
-              onClick={() => toggleSort('count')}
-            >
-              Trades{arrow('count')}
-            </th>
+            {(Object.keys(effectivenessLabels) as SortKey[]).map(key => (
+              <SortHeader key={key} label={effectivenessLabels[key]} col={key} sort={sort} onSort={onHeaderSort}
+                compact align={key === 'signal' ? 'left' : 'right'} className={key === 'signal' ? '' : 'text-right'} />
+            ))}
           </tr>
         </thead>
         <tbody>

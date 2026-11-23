@@ -179,7 +179,7 @@
     "moreInfo": "More information",
     "sortBy": "Sort by {{label}}",
     "sortByLevel": "Sort by {{label}} (level {{level}})",
-    "sortAddHint": "Click to sort by this column. Shift-click to add it as a further sort level.",
+    "sortClickToAddHint": "Click columns in priority order. Each additional column breaks ties in the preceding columns.",
     "sort": "Sort",
     "sortHeading": "Sort by",
     "sortAsc": "Ascending",
@@ -1184,6 +1184,15 @@
       "marketValue": "Current value",
       "valueUnavailable": "Price unavailable",
       "empty": "You have no open position in this stock.",
+      "totalPnl": "Total profit / loss",
+      "remaining": "Shares remaining",
+      "realizedNote": "Realized results are shown on the sale and on any matched purchases. The summary counts each sale once.",
+      "snapshotNote": "The wallet totals include costs from the XTB snapshot. Snapshot balances have no link to individual purchases.",
+      "chart": {
+        "label": "My trades",
+        "buy": "My buy",
+        "sell": "My sell"
+      },
       "loading": "Loading holdings…",
       "error": "Could not load holdings."
     },
@@ -1229,10 +1238,14 @@
     },
     "heatmap": {
       "title": "Wallet heatmap",
+      "stockTitle": "Stock heatmap · {{wallet}}",
+      "stockDescription": "Tile size shows each open holding’s value in {{currency}}. Changes include trades, prices, and exchange rates.",
+      "stockValue": "Stock / Value",
+      "noStockTiles": "Tiles appear when an open holding has a value in PLN.",
       "description": "Tile size shows holdings value in {{currency}}. Color shows the percentage change.",
       "period": "Heatmap comparison period",
-      "loading": "Loading wallet changes for this period…",
-      "failed": "Could not load wallet changes. Select the period again to retry.",
+      "loading": "Loading changes for this period…",
+      "failed": "Could not load changes. Select the period again to retry.",
       "decrease": "Down",
       "steady": "Flat",
       "increase": "Up",
@@ -1432,6 +1445,28 @@
         "import_reference_conflict": "Conflicting data for the same XTB reference. No changes were saved.",
         "execution_mismatch": "Quantity or price columns disagree with the execution comment. Check the report."
       }
+    }
+  },
+  "addStock": {
+    "title": "Add a new stock",
+    "hint": "Add a listing to the shared stock catalogue, available to all users. Use its exchange ticker and select a supported stock market. Price history is checked before saving.",
+    "signIn": "Sign in to add a stock",
+    "ticker": "Stock ticker",
+    "name": "Company name",
+    "country": "Company country",
+    "market": "Stock market / exchange",
+    "submit": "Add stock",
+    "saving": "Checking prices and saving…",
+    "success": "Stock added:",
+    "errors": {
+      "stock_exists": "This stock is already tracked.",
+      "unsupported_market": "This stock market is not enabled.",
+      "invalid_ticker": "Enter a valid ticker for the selected stock market.",
+      "no_price_history": "No completed price history was found. Check the ticker and stock market.",
+      "price_check_failed": "Unable to check prices. Try again shortly.",
+      "storage_unavailable": "Stock storage is unavailable. Try again later.",
+      "account_changed": "Your account changed. Reload Settings and try again.",
+      "failed": "Could not add the stock. Check the fields and your connection, then try again."
     }
   }
 }

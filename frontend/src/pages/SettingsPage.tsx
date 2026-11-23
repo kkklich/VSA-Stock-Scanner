@@ -1,5 +1,4 @@
-// Settings. Two real sections so far: Account (who is signed in, change your
-// password) and Appearance (the light / dark theme choice). The rest of the
+// Settings: account, shared stock catalogue additions and appearance. The rest of the
 // blueprint's settings — default date range, badge thresholds, alert
 // preferences — are still to come, see agent/ROADMAP.md #7.
 
@@ -7,6 +6,7 @@ import { Construction, Monitor, Moon, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { THEME_PREFERENCES, useTheme, type ThemePreference } from '../lib/theme'
 import { AccountSection } from '../components/AccountSection'
+import { AddStockSection } from '../components/AddStockSection'
 
 const ICONS: Record<ThemePreference, typeof Sun> = {
   light: Sun,
@@ -21,6 +21,7 @@ export function SettingsPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
       <AccountSection />
+      <AddStockSection />
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-slate-200">

@@ -195,7 +195,7 @@ const URL_FIELDS = {
   minInsiderTrades: numberParam(null, { min: 1, integer: true }),
   maxInsiderTradeAge: numberParam(null, { max: 365, integer: true }),
   minInsiderValueLast30Days: numberParam(null),
-  sort: sortParam<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, [...RANKING_SORT_KEYS, ...INSIDER_SORT_KEYS]),
+  sort: sortParam<RankingSortKey>(null, [...RANKING_SORT_KEYS, ...INSIDER_SORT_KEYS]),
 }
 
 export function FiltersPage() {
@@ -212,9 +212,7 @@ export function FiltersPage() {
   // Debounced copy — typing in the text/number inputs shouldn't fire a
   // request per keystroke.
   const [applied, setApplied] = useState<ScreenFilters>(filters)
-  // The sort is a list of levels — a shift-click on a second header adds a
-  // tie-break ("sector A→Z, best rating first") — and starts as one column.
-  const { sort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
+  const { sort, onHeaderSort, onSort, onSortDirChange, onRemoveLevel, key: sortStateKey } =
     useTableSort<RankingSortKey>({ key: 'currentRating', dir: 'desc' }, initialSortDir, undefined, url.field('sort'))
   const sortingInsiders = sort.some((level) => isInsiderSort(level.key))
   const [page, setPage] = useState(1)
@@ -871,7 +869,7 @@ export function FiltersPage() {
             onOpen={openTicker}
             pooled={market === ALL_MARKETS}
             sort={sort}
-            onSort={onSort}
+            onSort={onHeaderSort}
             minWidth={tableMinWidth(renderColumns)}
           />
 

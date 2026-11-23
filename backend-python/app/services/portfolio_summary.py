@@ -158,11 +158,15 @@ def _change(since, current_positions, previous_positions, current, previous, sta
     zero = Decimal(0)
     baseline = sum((previous.get(key, zero) for key in comparable), zero)
     amount = sum((current.get(key, zero) for key in comparable), zero) - baseline
+    return _change_result(since, amount, baseline, partial=comparable != active)
+
+
+def _change_result(since: date, amount: Decimal, baseline: Decimal, *, partial: bool = False):
     return {
         "amount": amount,
         "percent": amount / baseline * 100 if baseline else None,
         "since": since,
-        "partial": comparable != active,
+        "partial": partial,
     }
 
 
@@ -197,13 +201,24 @@ def _value_history(
         wallet_positions = _positions_by_wallet(current_positions)
         wallet_pln = {}
         wallet_summaries = {}
+        holding_summaries = {}
         for wallet_id in wallet_ids:
             positions = wallet_positions.get(wallet_id, {})
             point, wallet_pln[wallet_id] = _value_point(
                 today, positions, rates, len(stale_holdings & positions.keys())
             )
+            holdings_by_key = {
+                key: {
+                    "ticker": key[1], "currency": key[2],
+                    "currentValue": wallet_pln[wallet_id].get(key),
+                    "staleQuote": key in stale_holdings, "rangeChange": None,
+                }
+                for key in positions
+            }
+            holding_summaries[wallet_id] = holdings_by_key
             wallet_summaries[wallet_id] = {
                 "walletId": wallet_id, "current": point, "rangeChange": None,
+                "holdings": list(holdings_by_key.values()),
             }
         for day, positions in valuation_days:
             point, converted = _value_point(day, positions, rates)
@@ -217,11 +232,19 @@ def _value_history(
                 previous_positions = _positions_by_wallet(positions)
                 previous_pln = _positions_by_wallet(converted)
                 for wallet_id, change_key in wallet_comparisons[day]:
+                    previous = previous_positions.get(wallet_id, {})
+                    previous_values = previous_pln.get(wallet_id, {})
                     wallet_summaries[wallet_id][change_key] = _change(
-                        day, wallet_positions.get(wallet_id, {}),
-                        previous_positions.get(wallet_id, {}), wallet_pln[wallet_id],
-                        previous_pln.get(wallet_id, {}), stale_holdings,
+                        day, wallet_positions.get(wallet_id, {}), previous,
+                        wallet_pln[wallet_id], previous_values, stale_holdings,
                     )
+                    for key, holding in holding_summaries[wallet_id].items():
+                        value = holding["currentValue"]
+                        baseline = previous_values.get(key) if key in previous else Decimal(0)
+                        change = None
+                        if value is not None and baseline is not None and key not in stale_holdings:
+                            change = _change_result(day, value - baseline, baseline)
+                        holding[change_key] = change
         latest = current
         if stale_holdings:
             # Keep last-known quotes in the headline and apply the chart's quote age limit today.

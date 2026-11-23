@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { importXtb, previewXtb, type Portfolio, type XtbImportResult, type XtbPreview } from '../api/portfoliosApi'
-import { currencyLabel } from '../lib/format'
+import { XtbPreviewTable } from './XtbPreviewTable'
 
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
 const MAX_BYTES = 5 * 1024 * 1024
@@ -10,7 +10,7 @@ const MAX_BYTES = 5 * 1024 * 1024
 export function XtbImport({ owner, portfolio, disabled, onImported }: {
   owner: number; portfolio: Portfolio; disabled: boolean; onImported: () => Promise<void>
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<XtbPreview | null>(null)
   const [result, setResult] = useState<(XtbImportResult & { linkedAccount: boolean }) | null>(null)
@@ -21,7 +21,6 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
   useEffect(() => () => request.current?.abort(), [])
 
   const message = (code: string) => t(`portfolio.xtb.codes.${code}`, { defaultValue: t('portfolio.errors.failed') })
-  const number = (value: string) => Number(value).toLocaleString(i18n.language, { maximumFractionDigits: 8 })
   async function run(commit: boolean) {
     if (!file || request.current || disabled) return
     const abort = new AbortController()
@@ -79,21 +78,7 @@ export function XtbImport({ owner, portfolio, disabled, onImported }: {
       {preview.warnings.map(code => <p key={code} className="text-sm text-amber-400">{message(code)}</p>)}
       {preview.ledgerError && <p role="alert" className="text-sm text-rose-400">{t(`portfolio.errors.${preview.ledgerError}`, { defaultValue: message(preview.ledgerError) })}</p>}
       {versionChanged && <p role="alert" className="text-sm text-amber-400">{t('portfolio.xtb.changed')}</p>}
-      <div className="max-h-80 overflow-auto rounded-md border border-slate-800">
-        <table className="w-full whitespace-nowrap text-left text-xs">
-          <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr>{['source', 'date', 'side', 'instrument', 'quantity', 'price', 'fees', 'status'].map(key => <th key={key} className="p-2">{t(['source', 'status'].includes(key) ? `portfolio.xtb.${key}` : `portfolio.${key}`)}</th>)}</tr></thead>
-          <tbody>{preview.rows.map((row, index) => {
-            const trade = row.transaction
-            const amount = (value: string) => `${number(value)} ${currencyLabel(trade?.currency)}`
-            return <tr key={`${row.sheet}:${row.row}:${index}`} className="border-t border-slate-800">
-              <td className="p-2">{row.sheet} · {row.row}</td><td className="p-2">{trade?.executedAt?.replace('T', ' ') ?? trade?.date ?? '—'}</td>
-              <td className="p-2">{trade ? t(`portfolio.${trade.side}`) : '—'}</td><td className="p-2">{trade?.ticker.toUpperCase() ?? row.symbol}</td>
-              <td className="p-2">{trade ? number(trade.quantity) : '—'}</td><td className="p-2">{trade ? amount(trade.price) : '—'}</td><td className="p-2">{trade ? amount(trade.fees) : '—'}</td>
-              <td className={'p-2 ' + (row.status === 'error' ? 'text-amber-400' : 'text-slate-300')}>{row.code ? message(row.code) : t(`portfolio.xtb.${row.status}`)}</td>
-            </tr>
-          })}</tbody>
-        </table>
-      </div>
+      <XtbPreviewTable rows={preview.rows} message={message} />
       {!!preview.errors && <label className="flex items-start gap-2 text-sm text-amber-400"><input type="checkbox" checked={allowPartial} disabled={busy || disabled} onChange={event => setAllowPartial(event.target.checked)} />{t('portfolio.xtb.partial')}</label>}
       <p className="text-xs text-slate-400">{t('portfolio.xtb.reconcile')}</p>
       <button type="button" className={button + ' text-emerald-400'} disabled={busy || disabled || (!preview.ready && !preview.linksBrokerAccount) || !!preview.ledgerError || versionChanged || (!!preview.errors && !allowPartial)} onClick={() => void run(true)}>

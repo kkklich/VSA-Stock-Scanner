@@ -27,10 +27,35 @@ Amount = Annotated[
 CostMethod = Literal["fifo", "moving_average"]
 
 
+class StockCurrencyHolding(BaseModel):
+    currency: str
+    quantity: float
+    cost: float
+    realizedPnl: float
+
+
+class StockTrade(BaseModel):
+    id: str
+    date: date
+    executedAt: str | None = None
+    side: Literal["buy", "sell"]
+    currency: str
+    quantity: str
+    price: str
+    fees: str
+    remainingQuantity: float | None = None
+    costBasis: float | None = None
+    realizedCostBasis: float | None = None
+    realizedPnl: float | None = None
+
+
 class StockWalletHolding(BaseModel):
     id: str
     name: str
     quantity: float
+    positions: list[StockCurrencyHolding]
+    trades: list[StockTrade]
+    reconciled: bool
 
 
 class StockHoldings(BaseModel):

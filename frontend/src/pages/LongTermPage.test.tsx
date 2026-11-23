@@ -60,7 +60,8 @@ describe('Long-term ranking', () => {
     renderWithProviders(<LongTermPage />)
     expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['LOW', 'HIGH', 'MISSING'])
     expect(screen.getByRole('columnheader', { name: /Fundamentals/ })).toHaveAttribute('aria-sort', 'descending')
-    await userEvent.click(screen.getByRole('button', { name: /Descending/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Fundamentals' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Fundamentals ascending' }))
     expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['HIGH', 'LOW', 'MISSING'])
     await userEvent.click(screen.getByRole('checkbox', { name: 'Scored only' }))
     expect(rows()).toHaveLength(2)
@@ -72,7 +73,7 @@ describe('Long-term ranking', () => {
     expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['HIGH', 'LOW', 'MISSING'])
     expect(within(rows()[2]).getAllByText('—')).toHaveLength(4)
     expect(screen.getByText('Financial data unavailable')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Descending/ }))
+    await userEvent.click(within(screen.getByRole('table')).getByRole('button', { name: `Sort by ${i18n.t('longTerm.score')}` }))
     expect(rows().map((row) => within(row).getByRole('link').textContent)).toEqual(['LOW', 'HIGH', 'MISSING'])
   })
 

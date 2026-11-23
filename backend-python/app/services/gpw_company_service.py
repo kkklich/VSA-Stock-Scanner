@@ -63,6 +63,8 @@ class GpwCompanyService:
         self._lock = threading.Lock()
         self._by_market: dict[str, list[GpwCompany]] | None = None
         self._by_ticker: dict[str, GpwCompany] = {}
+        self._enabled: list[GpwCompany] = []
+        self.custom_repository = None
 
     def get_companies(self, market: str = GPW_ID) -> list[GpwCompany]:
         """Every tracked company on one market (the GPW unless another is named).
@@ -76,7 +78,20 @@ class GpwCompanyService:
     def enabled_companies(self) -> list[GpwCompany]:
         """Every tracked company on the markets this deployment serves."""
         by_market = self._load()
-        return [c for m in enabled_markets() for c in by_market.get(m.id, [])]
+        self._enabled[:] = [
+            c for m in enabled_markets() for c in by_market.get(m.id, [])
+        ]
+        return self._enabled
+
+    def add_company(self, company: GpwCompany) -> None:
+        """Publish a committed listing to readers and running ingestion services."""
+        by_market = self._load()
+        if company.ticker in self._by_ticker:
+            return
+        self._by_ticker[company.ticker] = company
+        by_market.setdefault(company.market, []).append(company)
+        if any(m.id == company.market for m in enabled_markets()):
+            self._enabled.append(company)
 
     def find(self, ticker: str) -> GpwCompany | None:
         """Find a company by its ticker (case-insensitive), or ``None``.
@@ -117,6 +132,9 @@ class GpwCompanyService:
                 c for c in by_market[GPW_ID] if listed_ticker(c.ticker) == c.ticker
             ]
             self._by_market = by_market
+            self._enabled[:] = [
+                c for m in enabled_markets() for c in by_market.get(m.id, [])
+            ]
             return by_market
 
     def _load_gpw(self) -> list[GpwCompany]:

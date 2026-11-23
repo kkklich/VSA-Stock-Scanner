@@ -1,26 +1,3 @@
-// The sort control every list page shows in its toolbar — on ALL screen sizes.
-//
-// It started as the phone/tablet stand-in for the column headers the card
-// layout does not have. It is shown on the desktop too because multi-column
-// sorting was otherwise invisible there: the table can be sorted by one column
-// and then by another (see `lib/sorting.ts`), but the only way in was a
-// shift-click on a header, a gesture nothing on screen advertises — and
-// because a tie-break often reorders nothing visible, a user who never found
-// the gesture, and a user who found it and added a level to a column with no
-// ties, both saw exactly the same thing: no change at all.
-//
-// So the panel states the ordering outright, in two halves: the active sort
-// levels at the top, numbered, each with its own direction switch and a remove
-// button, and below them the remaining columns, where a click appends a
-// "then by" level. Clicking an active level's name makes it the only sort
-// again — the one-click way back to a simple ordering.
-//
-// The headers still work (and shift-click still adds a level) for anyone who
-// prefers them; this is the same state, shown.
-//
-// Presentational: the page owns the levels and passes the same `onSort`
-// handler its table headers use, so both layouts drive one state.
-
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDown, ArrowDownUp, ArrowUp, Plus, X } from 'lucide-react'
@@ -43,10 +20,7 @@ export function SortMenu<T extends string>({
   options: SortOption<T>[]
   /** The whole sort, outermost level first. */
   sort: SortLevel<T>[]
-  /**
-   * Same handler the table headers use. `additive` is the touch equivalent of
-   * shift-click: append a "then by" level instead of replacing the sort.
-   */
+  /** Select a single primary column or append a tie-breaker. */
   onSort: (col: T, additive: boolean) => void
   /** Set one level's direction explicitly. */
   onSortDirChange: (col: T, dir: SortDir) => void
@@ -116,8 +90,7 @@ export function SortMenu<T extends string>({
                       type="button"
                       role="menuitemradio"
                       aria-checked={i === 0}
-                      // Tapping an active level's name is the way back to a
-                      // plain one-column sort (what a desktop plain click does).
+                      // Select just this level.
                       onClick={() => onSort(level.key, false)}
                       className="flex min-w-0 flex-1 items-center rounded-md bg-emerald-500/15 px-2 py-2 text-left text-sm text-emerald-300"
                     >

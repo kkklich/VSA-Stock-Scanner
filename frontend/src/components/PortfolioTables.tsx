@@ -5,7 +5,8 @@ import { Play } from 'lucide-react'
 import type { Instrument, PortfolioTotal, Position, Transaction } from '../api/portfoliosApi'
 import { currencyLabel, deltaTone, fmtMoney, fmtPct } from '../lib/format'
 import { canonicalTicker, toPln } from '../lib/markets'
-import { applySortClick, type SortLevel } from '../lib/sorting'
+import { useTableSort } from '../hooks/useTableSort'
+import type { SortLevel } from '../lib/sorting'
 import { SortHeader } from './ui'
 
 const filterInput = 'rounded-md border border-slate-700 bg-slate-950 px-2.5 py-2 text-sm'
@@ -112,17 +113,16 @@ function positionKey({ ticker, currency }: Pick<Position, 'ticker' | 'currency'>
 
 function PositionTransactions({ trades, label }: { trades: TransactionRow[]; label: string }) {
   const { t, i18n } = useTranslation()
+  const { sort, onHeaderSort } = useTableSort<TransactionColumn>({ key: 'date', dir: 'desc' }, transactionSortDir)
   if (!trades.length) return <p className="text-slate-400">{t('portfolio.emptyTransactions')}</p>
 
   const showWallet = trades.some(trade => trade.sourceWallet)
-  const rows = [...trades].reverse().sort((left, right) => right.date.localeCompare(left.date))
+  const keys = transactionColumnKeys.filter(key => key !== 'instrument' && (showWallet || key !== 'sourceWallet'))
+  const rows = sortRows([...trades].reverse(), sort, transactionColumns, i18n.language)
 
   return <table className="whitespace-nowrap text-left text-sm" aria-label={label}>
     <thead className="text-xs text-slate-400"><tr>
-      {(['date', 'side', 'quantity', 'price', 'fees'] as const).map(key => (
-        <th key={key} scope="col" className={`${cell} font-medium`}>{t(`portfolio.${key}`)}</th>
-      ))}
-      {showWallet && <th scope="col" className={`${cell} font-medium`}>{t('portfolio.sourceWallet')}</th>}
+      {keys.map(key => <SortHeader key={key} label={t('portfolio.' + key)} col={key} sort={sort} onSort={onHeaderSort} compact />)}
     </tr></thead>
     <tbody>{rows.map(trade => <tr key={trade.sourceWallet ? `${trade.sourceWallet.id}:${trade.id}` : trade.id} className="border-t border-slate-800">
       <td className={cell}><time dateTime={trade.date}>{trade.date}</time></td>
@@ -138,6 +138,7 @@ function PositionTransactions({ trades, label }: { trades: TransactionRow[]; lab
 }
 
 const positionColumnKeys = Object.keys(positionColumns) as PositionColumn[]
+const positionSortDir = (key: PositionColumn) => key === 'instrument' || key === 'positionStatus' ? 'asc' : 'desc'
 
 export function PortfolioPositions({ positions, instruments, transactions }: {
   positions: Position[]; instruments: Instrument[]; transactions: TransactionRow[]
@@ -161,7 +162,7 @@ export function PortfolioPositions({ positions, instruments, transactions }: {
   const [ticker, setTicker] = useState('')
   const [status, setStatus] = useState('active')
   const [currency, setCurrency] = useState('')
-  const [sort, setSort] = useState<SortLevel<PositionColumn>[]>([])
+  const { sort, onHeaderSort } = useTableSort<PositionColumn>(null, positionSortDir)
   const query = ticker.trim().toLowerCase()
   const rows = sortRows(positions.filter(position =>
     position.ticker.toLowerCase().includes(query)
@@ -197,9 +198,7 @@ export function PortfolioPositions({ positions, instruments, transactions }: {
             <th scope="col"><span className="sr-only">{t('portfolio.transactions')}</span></th>
             {positionColumnKeys.map(key => (
               <SortHeader key={key} label={t(`portfolio.${key}`)} col={key} sort={sort}
-                onSort={(col, additive) => setSort(levels => applySortClick(levels, col, {
-                  additive, initialDir: key => key === 'instrument' || key === 'positionStatus' ? 'asc' : 'desc',
-                }))} />
+                onSort={onHeaderSort} />
             ))}
           </tr></thead>
           <tbody>{rows.map(position => {
@@ -270,16 +269,19 @@ export function PortfolioPositions({ positions, instruments, transactions }: {
   </section>
 }
 
-type TransactionColumn = 'date' | 'side' | 'instrument' | 'quantity' | 'price' | 'fees'
+type TransactionColumn = 'date' | 'side' | 'instrument' | 'quantity' | 'price' | 'fees' | 'sourceWallet'
 
-const transactionColumns: Record<TransactionColumn, SortColumn<Transaction>> = {
+const transactionColumns: Record<TransactionColumn, SortColumn<TransactionRow>> = {
   date: { value: trade => trade.date },
   side: { value: trade => trade.side },
   instrument: { value: trade => trade.ticker },
   quantity: { value: trade => Number(trade.quantity) },
   price: { value: trade => Number(trade.price), monetary: 'currency' },
   fees: { value: trade => Number(trade.fees), monetary: 'currency' },
+  sourceWallet: { value: trade => trade.sourceWallet?.label ?? null },
 }
+const transactionColumnKeys = Object.keys(transactionColumns) as TransactionColumn[]
+const transactionSortDir = (key: TransactionColumn) => key === 'side' || key === 'instrument' || key === 'sourceWallet' ? 'asc' : 'desc'
 
 export function PortfolioTransactionHistory({ transactions, busy, onRemove }: {
   transactions: TransactionRow[]; busy?: boolean; onRemove?: (trade: Transaction) => void
@@ -292,10 +294,11 @@ export function PortfolioTransactionHistory({ transactions, busy, onRemove }: {
   const [currency, setCurrency] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [sort, setSort] = useState<SortLevel<TransactionColumn>[]>([{ key: 'date', dir: 'desc' }])
+  const { sort, onHeaderSort } = useTableSort<TransactionColumn>({ key: 'date', dir: 'desc' }, transactionSortDir)
   const query = ticker.trim().toLowerCase()
   const invalidDates = from !== '' && to !== '' && from > to
   const showWallet = expanded && transactions.some(trade => trade.sourceWallet)
+  const visibleSort = sort.filter(({ key }) => showWallet || key !== 'sourceWallet')
   // A stable sort keeps the most recently recorded trade first on ties.
   const rows = expanded ? sortRows(transactions.filter(trade =>
     trade.ticker.toLowerCase().includes(query)
@@ -303,7 +306,7 @@ export function PortfolioTransactionHistory({ transactions, busy, onRemove }: {
     && (!currency || currency === currencyLabel(trade.currency))
     && (!from || trade.date >= from)
     && (!to || trade.date <= to),
-  ).reverse(), sort, transactionColumns, i18n.language) : []
+  ).reverse(), visibleSort, transactionColumns, i18n.language) : []
 
   return <section aria-labelledby={id}>
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -337,19 +340,15 @@ export function PortfolioTransactionHistory({ transactions, busy, onRemove }: {
             setTicker(''); setSide(''); setCurrency(''); setFrom(''); setTo('')
           }}>{t('portfolio.filters.clear')}</button>}
         </div>
-        {transactionColumns[sort[0].key].monetary && hasMultipleCurrencies(rows) && <p className="mb-2 text-xs text-slate-400">
+        {visibleSort.some(({ key }) => transactionColumns[key].monetary) && hasMultipleCurrencies(rows) && <p className="mb-2 text-xs text-slate-400">
           {t('portfolio.filters.currencySort')}
         </p>}
         <div className="overflow-x-auto">
           <table className={table} aria-labelledby={id}>
             <thead className="text-xs text-slate-400"><tr>
-              {(Object.keys(transactionColumns) as TransactionColumn[]).map(key => (
-                <SortHeader key={key} label={t(`portfolio.${key}`)} col={key} sort={sort}
-                  onSort={(col, additive) => setSort(levels => applySortClick(levels, col, {
-                    additive, initialDir: key => key === 'side' || key === 'instrument' ? 'asc' : 'desc',
-                  }))} />
+              {transactionColumnKeys.filter(key => showWallet || key !== 'sourceWallet').map(key => (
+                <SortHeader key={key} label={t('portfolio.' + key)} col={key} sort={visibleSort} onSort={onHeaderSort} />
               ))}
-              {showWallet && <th scope="col" className={`${cell} font-medium`}>{t('portfolio.sourceWallet')}</th>}
               {onRemove && <th scope="col" className={`${cell} font-medium`}>{t('portfolio.actions')}</th>}
             </tr></thead>
             <tbody>{rows.map(trade => <tr key={trade.sourceWallet ? `${trade.sourceWallet.id}:${trade.id}` : trade.id} className="border-t border-slate-800">

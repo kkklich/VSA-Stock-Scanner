@@ -1,7 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useUrlState, textParam, booleanParam, enumParam } from '../hooks/useUrlState'
+import { useUrlState, textParam, booleanParam } from '../hooks/useUrlState'
 import { useTranslation } from 'react-i18next'
-import { Card, CompanyLink } from '../components/ui'
+import { Card, CompanyLink, SortHeader } from '../components/ui'
+import { SortMenu } from '../components/SortMenu'
+import { useTableSort } from '../hooks/useTableSort'
+import { sortTableRows, type SortColumns, type SortLevel } from '../lib/sorting'
+import { sortParam } from '../lib/urlSort'
 import { MarketTabs } from '../components/MarketTabs'
 import { LoadError, LongTermHistory } from '../components/LongTermHistory'
 import { LongTermFactorBar } from '../components/LongTermFactorBar'
@@ -15,9 +19,12 @@ import { useLongTermRanking } from '../hooks/useLongTerm'
 import { canonicalTicker, displayTicker, GPW_MARKET } from '../lib/markets'
 import type { LongTermItem } from '../types/longTerm'
 
-type SortKey = 'ticker' | 'score' | 'qualityScore' | 'valueScore' | 'momentumScore' | 'coverage' | 'fundamentalScore'
-const SORT_KEYS: SortKey[] = ['score', 'qualityScore', 'valueScore', 'momentumScore', 'coverage', 'ticker']
+type SortKey = 'ticker' | 'score' | 'qualityScore' | 'valueScore' | 'momentumScore' | 'coverage' | 'fundamentalScore' | 'status'
 const SCORE_KEYS = ['score', 'qualityScore', 'valueScore', 'momentumScore'] as const
+const SORT_KEYS = ['ticker', ...SCORE_KEYS, 'coverage', 'status'] as const
+const SORT_FIELDS = ['ticker', 'fundamentalScore', ...SCORE_KEYS, 'coverage', 'status'] as const
+const longTermSort = sortParam<SortKey>(null, SORT_FIELDS)
+const initialSortDir = (key: SortKey) => key === 'ticker' || key === 'status' ? 'asc' : 'desc'
 const UNKNOWN_SECTOR = '__unknown_sector__'
 
 function loadedTime(value: string | null, locale: string) {
@@ -28,8 +35,19 @@ function loadedTime(value: string | null, locale: string) {
 
 const URL_FIELDS = {
   q: textParam(), scoredOnly: booleanParam(), favorites: booleanParam(), sector: textParam(),
-  sortBy: enumParam<SortKey>('fundamentalScore', ['fundamentalScore', ...SORT_KEYS]),
-  sortDir: enumParam<'asc' | 'desc'>('desc', ['asc', 'desc']),
+  sort: {
+    ...longTermSort,
+    read: (params: URLSearchParams): SortLevel<SortKey>[] => {
+      const key = params.get('sortBy')
+      const dir = params.get('sortDir')
+      if (!key && !dir) return []
+      // Older links omitted the default column or direction.
+      if (!key?.includes(',') && !dir?.includes(',')) {
+        return [{ key: SORT_FIELDS.includes(key as SortKey) ? key as SortKey : 'fundamentalScore', dir: dir === 'asc' ? 'asc' : 'desc' }]
+      }
+      return longTermSort.read(params, 'sort')
+    },
+  },
 }
 
 export function LongTermPage() {
@@ -42,14 +60,20 @@ export function LongTermPage() {
   const [watchlistOnly, setWatchlistOnly] = url.field('favorites')
   const { stars: favorites } = useWatchlists()
   const [sectorFilter, setSector] = url.field('sector')
-  const [selectedSortKey, setSortKey] = url.field('sortBy')
   const hasFundamentals = data?.items.some((item) => item.fundamentalAnalysis != null) ?? false
-  const sortKey = selectedSortKey === 'fundamentalScore' && !hasFundamentals ? 'score' : selectedSortKey
-  const sortKeys = hasFundamentals ? ['fundamentalScore' as const, ...SORT_KEYS] : SORT_KEYS
+  const [selectedSort, setSelectedSort] = url.field('sort')
+  const availableSort = (levels: SortLevel<SortKey>[]) => {
+    if (hasFundamentals) return levels
+    const mapped = levels.map(level => level.key === 'fundamentalScore' ? { ...level, key: 'score' as const } : level)
+    return mapped.filter((level, index) => mapped.findIndex(other => other.key === level.key) === index)
+  }
+  const { sort, onHeaderSort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<SortKey>(
+    { key: hasFundamentals ? 'fundamentalScore' : 'score', dir: 'desc' }, initialSortDir, undefined,
+    [availableSort(selectedSort), action => setSelectedSort(levels => typeof action === 'function' ? action(availableSort(levels)) : action)],
+  )
+  const sortLabel = (key: SortKey) => t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : 'longTerm.' + key)
+  const sortOptions = (hasFundamentals ? SORT_FIELDS : SORT_KEYS).map(key => ({ key, label: sortLabel(key) }))
   const fundamentalCount = data?.items.filter((item) => item.fundamentalAnalysis?.score != null).length ?? 0
-  const [sortDirection, setSortDirection] = url.field('sortDir')
-  const ascending = sortDirection === 'asc'
-  const setAscending = (value: boolean) => setSortDirection(value ? 'asc' : 'desc')
   const [selected, setSelected] = useState<{ market: string; ticker: string } | null>(null)
   const historyButtons = useRef(new Map<string, HTMLButtonElement>())
   const sectors = useMemo(() => Array.from(new Set((data?.items ?? []).map((item) => item.sector?.trim() || UNKNOWN_SECTOR))).sort((a, b) => a.localeCompare(b, i18n.language)), [data, i18n.language])
@@ -66,21 +90,24 @@ export function LongTermPage() {
   }
   const items = useMemo(() => {
     const search = canonicalTicker(query.trim().toLocaleLowerCase())
-    return (data?.items ?? []).filter((item) =>
+    const matches = (data?.items ?? []).filter((item) =>
       `${item.ticker} ${item.name}`.toLocaleLowerCase().includes(search)
       && (!scoredOnly || (hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible && item.score !== null))
       && (!watchlistOnly || favorites[item.ticker] === true)
       && (!sector || (item.sector?.trim() || UNKNOWN_SECTOR) === sector)
-    ).sort((a, b) => {
-      const left = sortKey === 'fundamentalScore' ? a.fundamentalAnalysis?.score : a[sortKey]
-      const right = sortKey === 'fundamentalScore' ? b.fundamentalAnalysis?.score : b[sortKey]
-      // A missing figure always goes last, including ascending order.
-      if (left == null) return right == null ? a.ticker.localeCompare(b.ticker) : 1
-      if (right == null) return -1
-      const delta = typeof left === 'string' && typeof right === 'string' ? left.localeCompare(right) : Number(left) - Number(right)
-      return (ascending ? delta : -delta) || a.ticker.localeCompare(b.ticker)
-    })
-  }, [data, query, sortKey, ascending, scoredOnly, watchlistOnly, favorites, sector, hasFundamentals])
+    ).sort((a, b) => a.ticker.localeCompare(b.ticker))
+    const columns: SortColumns<LongTermItem, SortKey> = {
+      ticker: item => displayTicker(item.ticker),
+      fundamentalScore: item => item.fundamentalAnalysis?.score,
+      score: item => item.score,
+      qualityScore: item => item.qualityScore,
+      valueScore: item => item.valueScore,
+      momentumScore: item => item.momentumScore,
+      coverage: item => item.coverage,
+      status: item => Number(hasFundamentals ? item.fundamentalAnalysis?.score != null : item.eligible),
+    }
+    return sortTableRows(matches, sort, columns, i18n.language)
+  }, [data, query, sort, scoredOnly, watchlistOnly, favorites, sector, hasFundamentals, i18n.language])
   const selectedItem = selected?.market === market ? data?.items.find((item) => item.ticker === selected.ticker) : undefined
   function selectItem(item: LongTermItem) {
     setSelected((previous) => previous?.ticker === item.ticker && previous.market === item.market ? null : { ticker: item.ticker, market: item.market })
@@ -124,13 +151,8 @@ export function LongTermPage() {
           {sectors.map((value) => <option key={value} value={value}>{value === UNKNOWN_SECTOR ? t('longTerm.filters.unknownSector') : value}</option>)}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
-        {t('common.sortHeading')}
-        <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-          {sortKeys.map((key) => <option key={key} value={key}>{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}</option>)}
-        </select>
-      </label>
-      <button type="button" onClick={() => setAscending(!ascending)} className="mt-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">{t(ascending ? 'common.sortAsc' : 'common.sortDesc')} {ascending ? '↑' : '↓'}</button>
+      <SortMenu options={sortOptions} sort={sort} onSort={onSort}
+        onSortDirChange={onSortDirChange} onRemoveLevel={onRemoveLevel} />
       <p className="text-xs text-slate-400 sm:ml-auto">{t('longTerm.oneMarket', { market: t(`markets.name.${market ?? GPW_MARKET}`, { defaultValue: market ?? 'GPW' }) })}</p>
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-800 pt-3 text-sm text-slate-300">
@@ -171,15 +193,11 @@ export function LongTermPage() {
               fetch every selected stock twice and create duplicate regions. */}
           <table className="block w-full text-left text-sm lg:table lg:min-w-[780px]" aria-label={t('longTerm.title')}>
             <thead className="hidden border-b border-slate-800 bg-slate-800/30 text-xs text-slate-400 lg:table-header-group"><tr>
-              <th scope="col" className="px-4 py-3">{t('longTerm.ticker')}</th>
-              {hasFundamentals && <th scope="col" className="px-3 py-3 text-right" aria-sort={sortKey === 'fundamentalScore' ? (ascending ? 'ascending' : 'descending') : 'none'}>
-                <button type="button" onClick={() => { if (sortKey === 'fundamentalScore') setAscending(!ascending); else { setSortKey('fundamentalScore'); setAscending(false) } }}>{t('longTerm.fundamentalScore')}{sortKey === 'fundamentalScore' ? (ascending ? ' ↑' : ' ↓') : ''}</button>
-              </th>}
-              {SCORE_KEYS.map((key) => <th scope="col" key={key} className="px-3 py-3 text-right" aria-sort={sortKey === key ? (ascending ? 'ascending' : 'descending') : 'none'}>
-                <button type="button" onClick={() => { if (sortKey === key) setAscending(!ascending); else { setSortKey(key); setAscending(false) } }}>{t(hasFundamentals && key === 'score' ? 'fundamentals.qvmScore' : `longTerm.${key}`)}{sortKey === key ? (ascending ? ' ↑' : ' ↓') : ''}</button>
-              </th>)}
-              <th scope="col" className="px-3 py-3 text-right">{t('longTerm.coverage')}</th>
-              <th scope="col" className="px-4 py-3">{t('longTerm.status')}</th>
+              {sortOptions.map(({ key, label }) => {
+                const numeric = key !== 'ticker' && key !== 'status'
+                return <SortHeader key={key} label={label} col={key} sort={sort} onSort={onHeaderSort}
+                  align={numeric ? 'right' : 'left'} className={numeric ? 'text-right' : ''} />
+              })}
             </tr></thead>
             <tbody className="block space-y-3 p-3 lg:table-row-group lg:divide-y lg:divide-slate-800/70 lg:space-y-0 lg:p-0">{items.map((item) => <Fragment key={item.ticker}><tr className={`grid grid-cols-4 rounded-lg border border-slate-800 lg:table-row lg:rounded-none lg:border-0 ${selectedItem?.ticker === item.ticker ? 'bg-slate-800/50' : 'hover:bg-slate-800/20'}`}>
               <td className="col-span-4 block min-w-0 px-4 py-3 lg:table-cell lg:max-w-64">

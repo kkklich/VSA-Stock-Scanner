@@ -88,12 +88,18 @@ describe('account portfolios', () => {
       return { ...(data as object), summary: {
         currency: 'PLN', current: point, history: [point], dayChange: null, weekChange: null,
         currencyTotals: [], missingHoldings: [], wallets: [
-          { walletId: 'portfolio-1', current: { ...point, value: 500 }, dayChange: null, weekChange: change },
+          { walletId: 'portfolio-1', current: { ...point, value: 500 }, dayChange: null, weekChange: change, holdings: [] },
           { walletId: 'largest-wallet', current: { ...point, value: 2000 }, dayChange: {
             amount: 100, percent: 5, since: '2026-01-05', partial: false,
           }, weekChange: change, rangeChange: selectedPeriod ? {
             amount: selectedPeriod.percent * 10, percent: selectedPeriod.percent, since: '2025-11-01', partial: false,
-          } : null },
+          } : null, holdings: [
+            { ticker: 'kgh', currency: 'PLN', currentValue: 2000, staleQuote: false,
+              dayChange: { amount: 50, percent: 2.5, since: '2026-01-05', partial: false }, weekChange: null,
+              rangeChange: selectedPeriod ? { ...change, percent: 12 } : null },
+            { ticker: 'aapl.us', currency: 'USD', currentValue: null, staleQuote: false,
+              dayChange: null, weekChange: null, rangeChange: null },
+          ] },
           { walletId: 'unpriced-wallet', current: { ...point, value: null, missingQuotes: 1 }, dayChange: null, weekChange: null },
           { walletId: 'empty-wallet', current: { ...point, value: 0 }, dayChange: null, weekChange: null },
         ],
@@ -128,9 +134,15 @@ describe('account portfolios', () => {
     expect(screen.getByLabelText('Choose portfolio')).toHaveValue('largest-wallet')
     expect(screen.getByRole('heading', { name: 'Savings' })).toBeVisible()
     expect(portfolioRequest).toHaveBeenCalledTimes(2)
+    const stocks = within(screen.getByRole('region', { name: 'Stock heatmap · Savings' }))
+    const stockTile = stocks.getByRole('link', { name: 'KGH · KGHM · PLN · 2,000.00 PLN · +2.50%' })
+    expect(stockTile).toHaveTextContent('KGH+2.50%2,000.00 PLN')
+    expect(stockTile).toHaveAttribute('href', '/stock/kgh')
+    expect(stocks.getByRole('link', { name: /AAPL.US/ })).toHaveTextContent('Unavailable')
     for (const { name, range, percent } of longPeriods) {
-      await user.click(heatmap.getByRole('button', { name }))
+      await user.click(stocks.getByRole('button', { name }))
       await waitFor(() => expect(rows[0]).toHaveTextContent(`+${percent}.00%`))
+      expect(stockTile).toHaveTextContent('+12.00%')
       expect(portfolioRequest).toHaveBeenCalledWith('GET', `?walletRange=${range}`, undefined, expect.any(AbortSignal), 1)
       expect(rows[0]).toHaveTextContent('Since Nov 1, 2025')
     }
@@ -142,6 +154,9 @@ describe('account portfolios', () => {
     await user.click(heatmap.getByRole('button', { name: '1 week' }))
     expect(rows[0]).toHaveTextContent('-10.00%')
     expect(portfolioRequest).toHaveBeenCalledTimes(requests)
+    await user.selectOptions(screen.getByLabelText('Choose portfolio'), 'portfolio-1')
+    const otherStocks = within(screen.getByRole('region', { name: 'Stock heatmap · Retirement' }))
+    expect(otherStocks.queryByRole('link')).not.toBeInTheDocument()
   })
 
   it('imports a reconciled worksheet without displaying the adjustment table', async () => {
@@ -391,14 +406,14 @@ describe('account portfolios', () => {
   it('sorts mixed-currency positions by PLN value and by unrealized return', async () => {
     const position = {
       ticker: 'kgh', currency: 'PLN', quantity: 1, cost: 100, averagePrice: 100, currentPrice: 120,
-      marketValue: 120, unrealizedPnl: 20, unrealizedPnlPct: 20, realizedPnl: 0,
+      marketValue: 21 * 4.35, unrealizedPnl: 6 * 4.35, unrealizedPnlPct: 20, realizedPnl: 0,
       quoteDate: '2026-01-06', quoteAsOf: null, quoteSource: 'close', quoteAgeDays: 0,
     } as const
     portfolios[0].positions = [position, {
       ...position, ticker: 'sap.de', currency: 'EUR', cost: 15, averagePrice: 15, currentPrice: 21,
       marketValue: 21, unrealizedPnl: 6, unrealizedPnlPct: 40,
     }, {
-      ...position, ticker: 'aapl.us', currency: 'USD', currentPrice: 110,
+      ...position, ticker: 'aapl.us', currency: 'USD', currentPrice: 110, marketValue: 110,
       marketValue: 110, unrealizedPnl: 10, unrealizedPnlPct: 10,
     }, {
       ...position, ticker: 'pzu', marketValue: null, currentPrice: null,
@@ -412,14 +427,14 @@ describe('account portfolios', () => {
     await user.click(value)
     expect(tickers()).toEqual(['AAPL.US', 'KGH', 'SAP.DE', 'PZU'])
     await user.click(value)
-    expect(tickers()).toEqual(['SAP.DE', 'KGH', 'AAPL.US', 'PZU'])
+    expect(tickers()).toEqual(['KGH', 'SAP.DE', 'AAPL.US', 'PZU'])
     await user.click(positions.getByRole('button', { name: 'Sort by Unrealized profit / loss' }))
-    expect(tickers()).toEqual(['AAPL.US', 'SAP.DE', 'KGH', 'PZU'])
+    expect(tickers()).toEqual(['KGH', 'SAP.DE', 'AAPL.US', 'PZU'])
     const percent = positions.getByRole('button', { name: 'Sort by Unrealized return (%)' })
     await user.click(percent)
     expect(tickers()).toEqual(['SAP.DE', 'KGH', 'AAPL.US', 'PZU'])
     await user.click(percent)
-    expect(tickers()).toEqual(['AAPL.US', 'KGH', 'SAP.DE', 'PZU'])
+    expect(tickers()).toEqual(['KGH', 'SAP.DE', 'AAPL.US', 'PZU'])
   })
 
   it('sorts and filters transaction history and restores the filters when reopened', async () => {

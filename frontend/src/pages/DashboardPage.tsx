@@ -64,7 +64,7 @@ const URL_FIELDS = {
   q: textParam(), favorites: booleanParam(),
   minRating: numberParam(0, { max: 100, integer: true }),
   signal: enumParam<SignalVerdict | 'all'>('all', SIGNAL_OPTIONS),
-  sort: sortParam<RankingSortKey>({ key: 'priceChangePct', dir: 'desc' }, RANKING_SORT_KEYS),
+  sort: sortParam<RankingSortKey>(null, RANKING_SORT_KEYS),
 }
 
 export function DashboardPage() {
@@ -84,9 +84,7 @@ export function DashboardPage() {
   }, [query])
 
   // Opens on the latest session's movers: price change, biggest gain first.
-  // A sort is a list of levels — shift-clicking a second header adds a
-  // tie-break ("biggest movers, then best rating") — but it starts as one.
-  const { sort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<RankingSortKey>(
+  const { sort, onHeaderSort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<RankingSortKey>(
     { key: 'priceChangePct', dir: 'desc' },
     initialSortDir,
     undefined,
@@ -373,10 +371,6 @@ export function DashboardPage() {
             visibleCount={columns.count}
           />
 
-          {/* Sort. Shown on every screen: the wide table can also be sorted
-              by clicking its headers (shift-click adds a further level), but
-              that gesture is invisible — this names the levels, their
-              direction and offers the "then by" columns outright. */}
           <SortMenu
             options={sortOptions}
             sort={sort}
@@ -514,7 +508,7 @@ export function DashboardPage() {
             showRank
             pooled={pooled}
             sort={sort}
-            onSort={onSort}
+            onSort={onHeaderSort}
             minWidth={tableMinWidth(tableColumns, RANK_COLUMN_WIDTH)}
           />
 

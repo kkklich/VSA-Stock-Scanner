@@ -10,13 +10,19 @@ import { fireEvent, renderWithProviders, screen } from '../test/utils'
 import i18n from '../i18n'
 import en from '../i18n/locales/en.json'
 import type { ApiStockSignals } from '../api/stocksApi'
+import { stockTradeMarkers, type StockTradeMarker } from '../lib/stockTradeMarkers'
+import type { StockTrade } from '../api/portfoliosApi'
 
-const { useStockDetailMock } = vi.hoisted(() => ({
+const { useStockDetailMock, useStockHoldingsMock } = vi.hoisted(() => ({
   useStockDetailMock: vi.fn(),
+  useStockHoldingsMock: vi.fn(),
 }))
 
 vi.mock('../hooks/useStockDetail', () => ({
   useStockDetail: useStockDetailMock,
+}))
+vi.mock('../hooks/useStockHoldings', () => ({
+  useStockHoldings: useStockHoldingsMock,
 }))
 
 vi.mock('../hooks/useMethods', () => ({
@@ -34,7 +40,11 @@ vi.mock('../hooks/useTickerVolume', () => ({
 // The chart needs a real canvas, and the sibling cards each fetch on their own —
 // none of that is what this test is about.
 vi.mock('../components/StockChart', () => ({
-  StockChart: () => <div data-testid="chart" />,
+  StockChart: ({ tradeMarkers }: { tradeMarkers?: StockTradeMarker[] }) => (
+    <div data-testid="chart">
+      {tradeMarkers?.map(marker => <span key={`${marker.date}:${marker.side}`}>{marker.label}</span>)}
+    </div>
+  ),
 }))
 vi.mock('../components/StockHoldingsCard', () => ({
   StockHoldingsCard: ({ quote }: { quote: ApiStockSignals | null }) => (
@@ -55,6 +65,10 @@ import App from '../App'
 import { ChartsPage } from './ChartsPage'
 
 const rating = en.chart.rating
+
+beforeEach(() => {
+  useStockHoldingsMock.mockReturnValue({ owner: undefined, holdings: null, retry: vi.fn() })
+})
 
 function makeSignals(over: Partial<ApiStockSignals> = {}): ApiStockSignals {
   return {
@@ -127,13 +141,58 @@ it('opens the existing Constellation Software chart from its Toronto ticker', ()
   expect(document.title).toBe('Constellation Software Inc.')
 })
 
-it('places holdings after the chart and passes the latest stock price', () => {
+it('places holdings directly below the observation journal and lets the owner toggle trade markers', async () => {
+  await i18n.changeLanguage('en')
   mockData({ lastPrice: 124 })
+  useStockHoldingsMock.mockReturnValue({
+    owner: 12,
+    holdings: {
+      quantity: 3,
+      wallets: [{
+        trades: [{
+          side: 'sell', date: '2026-09-08', price: '120', realizedPnl: 25, currency: 'PLN',
+        }, {
+          side: 'buy', date: '2026-09-07', price: '100', realizedPnl: null, currency: 'PLN',
+        }],
+      }],
+    },
+    retry: vi.fn(),
+  })
   renderWithProviders(<ChartsPage />)
   const chart = screen.getByTestId('chart')
   const holdings = screen.getByTestId('holdings')
-  expect(chart.compareDocumentPosition(holdings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  const journalToggle = screen.getByRole('button', { name: en.journal.title })
+  expect(holdings.previousElementSibling).toContainElement(journalToggle)
   expect(holdings).toHaveTextContent('124')
+  expect(chart).toHaveTextContent('My sell · 120.00 PLN · +25.00 PLN')
+  expect(chart).not.toHaveTextContent('My buy')
+  fireEvent.click(screen.getByRole('button', { name: /My trades/ }))
+  expect(chart).not.toHaveTextContent('My sell')
+})
+
+it('maps trades to weekly candles and only uses known times on intraday charts', () => {
+  const purchase: StockTrade = {
+    id: 'buy', side: 'buy', date: '2026-09-08', executedAt: null, quantity: '1', price: '100',
+    currency: 'PLN', fees: '0', remainingQuantity: null, costBasis: null,
+    realizedPnl: null, realizedCostBasis: null,
+  }
+  const sale: StockTrade = {
+    ...purchase, id: 'sell', side: 'sell', executedAt: '2026-09-08T11:35:00Z',
+  }
+  const candle = makeSignals().history[0]
+  const label = (trades: StockTrade[]) => trades[0].id
+
+  expect(stockTradeMarkers([purchase, sale], [{ ...candle, time: '2026-09-11' }], '1w', undefined, label))
+    .toEqual([
+      { date: '2026-09-11', side: 'buy', label: 'buy' },
+      { date: '2026-09-11', side: 'sell', label: 'sell' },
+    ])
+  const intraday = [
+    { ...candle, time: '2026-09-08T13:00:00+02:00' },
+    { ...candle, time: '2026-09-08T13:30:00+02:00' },
+  ]
+  expect(stockTradeMarkers([purchase, sale], intraday, '30m', undefined, label))
+    .toEqual([{ date: intraday[1].time, side: 'sell', label: 'sell' }])
 })
 
 it('collapses and reopens the three stock sections independently', async () => {

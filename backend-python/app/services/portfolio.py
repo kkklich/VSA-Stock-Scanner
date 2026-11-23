@@ -1,6 +1,7 @@
 """FIFO and moving-average accounting in quote currency, without guessed FX rates."""
 
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, localcontext
 from zoneinfo import ZoneInfo
@@ -53,9 +54,28 @@ def _position(positions, key):
     )
 
 
-def holdings(transactions: list[dict], cost_method: str = "moving_average") -> list[dict]:
+@dataclass
+class _Lot:
+    quantity: Decimal
+    cost: Decimal
+    replaced: bool = False
+    sold_cost: Decimal = Decimal(0)
+    realized_pnl: Decimal = Decimal(0)
+
+    def record_sale(self, quantity: Decimal, cost: Decimal, net_price: Decimal) -> None:
+        self.sold_cost += cost
+        self.realized_pnl += quantity * net_price - cost
+
+
+def holdings(
+    transactions: list[dict],
+    cost_method: str = "moving_average",
+    *,
+    trade_details: list[dict] | None = None,
+) -> list[dict]:
     positions = {}
     lots = {}
+    purchases = []
     # Preserve insertion order on a single date: the UI records trades in execution order.
     with localcontext() as context:
         context.prec = 50
@@ -68,21 +88,39 @@ def holdings(transactions: list[dict], cost_method: str = "moving_average") -> l
                     position = _position(positions, key)
                     position["quantity"] = Decimal(snapshot["quantity"])
                     position["cost"] = Decimal(snapshot["cost"])
+                    if trade_details is not None:
+                        for lot in lots.get(key, ()):
+                            lot.replaced = True
                     lots[key] = deque(
-                        [Decimal(lot["quantity"]), Decimal(lot["cost"])] for lot in snapshot["lots"]
+                        _Lot(Decimal(lot["quantity"]), Decimal(lot["cost"]))
+                        for lot in snapshot["lots"]
                     )
                 continue
             key = (trade["ticker"], trade["currency"])
             position = _position(positions, key)
             quantity, price, fees = (Decimal(trade[k]) for k in ("quantity", "price", "fees"))
+            detail = None
+            if trade_details is not None:
+                detail = dict(trade)
+                if detail.get("executedAt"):
+                    executed = datetime.fromisoformat(detail["executedAt"])
+                    if executed.tzinfo is None:
+                        detail["executedAt"] = executed.replace(tzinfo=WARSAW).isoformat()
+                trade_details.append(detail)
             if trade["side"] == "buy":
+                cost = quantity * price + fees
                 position["quantity"] += quantity
-                position["cost"] += quantity * price + fees
-                if cost_method == "fifo":
-                    lots.setdefault(key, deque()).append([quantity, quantity * price + fees])
+                position["cost"] += cost
+                if cost_method == "fifo" or detail is not None:
+                    lot = _Lot(quantity, cost)
+                    lots.setdefault(key, deque()).append(lot)
+                    if detail is not None:
+                        purchases.append((detail, lot))
             else:
                 if quantity > position["quantity"]:
                     raise PortfolioError("insufficient_shares")
+                proceeds = quantity * price - fees
+                net_price = proceeds / quantity if detail is not None else None
                 cost = (
                     position["cost"]
                     if quantity == position["quantity"]
@@ -92,20 +130,47 @@ def holdings(transactions: list[dict], cost_method: str = "moving_average") -> l
                     remaining, cost = quantity, Decimal(0)
                     while remaining:
                         lot = lots[key][0]
-                        sold = min(remaining, lot[0])
-                        allocated = lot[1] if sold == lot[0] else lot[1] * sold / lot[0]
+                        sold = min(remaining, lot.quantity)
+                        allocated = (
+                            lot.cost if sold == lot.quantity else lot.cost * sold / lot.quantity
+                        )
                         cost += allocated
-                        lot[0] -= sold
-                        lot[1] -= allocated
+                        if net_price is not None:
+                            lot.record_sale(sold, allocated, net_price)
+                        lot.quantity -= sold
+                        lot.cost -= allocated
                         remaining -= sold
-                        if not lot[0]:
+                        if not lot.quantity:
                             lots[key].popleft()
                     # Re-sum remaining lots to avoid a rounding residue when a position closes.
-                    position["cost"] = sum((lot[1] for lot in lots[key]), Decimal(0))
+                    position["cost"] = sum((lot.cost for lot in lots[key]), Decimal(0))
                 else:
                     position["cost"] -= cost
+                    if net_price is not None:
+                        # A moving-average sale draws proportionally from the whole pool.
+                        share_left = (position["quantity"] - quantity) / position["quantity"]
+                        for lot in lots.get(key, ()):
+                            next_quantity = lot.quantity * share_left
+                            next_cost = lot.cost * share_left
+                            lot.record_sale(
+                                lot.quantity - next_quantity, lot.cost - next_cost, net_price
+                            )
+                            lot.quantity = next_quantity
+                            lot.cost = next_cost
+                        if not share_left:
+                            lots.pop(key, None)
                 position["quantity"] -= quantity
-                position["realizedPnl"] += quantity * price - fees - cost
+                realized_pnl = proceeds - cost
+                position["realizedPnl"] += realized_pnl
+                if detail is not None:
+                    detail.update(realizedCostBasis=cost, realizedPnl=realized_pnl)
+        for detail, lot in purchases:
+            detail.update(
+                remainingQuantity=None if lot.replaced else lot.quantity,
+                costBasis=None if lot.replaced else lot.cost,
+                realizedCostBasis=lot.sold_cost or None,
+                realizedPnl=lot.realized_pnl if lot.sold_cost else None,
+            )
         return list(positions.values())
 
 

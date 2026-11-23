@@ -89,17 +89,33 @@ async def stock_holdings(ticker: str, user: Owner, repo: Repository, response: R
     wallets = []
     total = Decimal(0)
     for row in await repo.portfolios.list(user.id):
-        quantity = sum(
-            (
-                position["quantity"]
-                for position in holdings(row["ledger"], row["costMethod"])
-                if position["quantity"] > 0 and listed_ticker(position["ticker"]) == listing
-            ),
-            Decimal(0),
+        ledger = [
+            trade for trade in row["transactions"] if listed_ticker(trade["ticker"]) == listing
+        ]
+        checkpoint = xtb_checkpoint(row["ledger"])
+        snapshots = (
+            [p for p in checkpoint["positions"] if listed_ticker(p["ticker"]) == listing]
+            if checkpoint
+            else []
         )
-        if quantity:
-            wallets.append({"id": row["id"], "name": row["name"], "quantity": quantity})
-            total += quantity
+        if snapshots:
+            ledger.append({**checkpoint, "positions": snapshots})
+        if not ledger:
+            continue
+        trades = []
+        positions = holdings(ledger, row["costMethod"], trade_details=trades)
+        quantity = sum((position["quantity"] for position in positions), Decimal(0))
+        wallets.append(
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "quantity": quantity,
+                "positions": positions,
+                "trades": list(reversed(trades)),
+                "reconciled": bool(snapshots),
+            }
+        )
+        total += quantity
     return {"quantity": total, "wallets": wallets}
 
 

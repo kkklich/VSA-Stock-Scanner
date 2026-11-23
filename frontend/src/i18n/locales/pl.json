@@ -179,7 +179,7 @@
     "moreInfo": "Więcej informacji",
     "sortBy": "Sortuj według: {{label}}",
     "sortByLevel": "Sortuj według: {{label}} (poziom {{level}})",
-    "sortAddHint": "Kliknij, aby posortować według tej kolumny. Kliknij z Shift, aby dodać ją jako kolejny poziom sortowania.",
+    "sortClickToAddHint": "Klikaj kolumny w kolejności ważności. Każda kolejna kolumna rozstrzyga remisy w poprzednich.",
     "sort": "Sortuj",
     "sortHeading": "Sortuj według",
     "sortAsc": "Rosnąco",
@@ -1203,6 +1203,15 @@
       "marketValue": "Aktualna wartość",
       "valueUnavailable": "Brak kursu",
       "empty": "Nie masz otwartej pozycji w tym instrumencie.",
+      "totalPnl": "Łączny zysk / strata",
+      "remaining": "Pozostałe akcje",
+      "realizedNote": "Zrealizowany wynik widnieje przy sprzedaży i przy powiązanych zakupach. Podsumowanie uwzględnia każdą sprzedaż raz.",
+      "snapshotNote": "Podsumowanie portfela uwzględnia koszty z zestawienia XTB. Salda z zestawienia nie mają powiązania z poszczególnymi zakupami.",
+      "chart": {
+        "label": "Moje transakcje",
+        "buy": "Mój zakup",
+        "sell": "Moja sprzedaż"
+      },
       "loading": "Wczytywanie pozycji…",
       "error": "Nie udało się wczytać pozycji."
     },
@@ -1254,10 +1263,14 @@
     },
     "heatmap": {
       "title": "Mapa portfeli",
+      "stockTitle": "Mapa akcji · {{wallet}}",
+      "stockDescription": "Wielkość kafelka pokazuje wartość otwartej pozycji w {{currency}}. Zmiany uwzględniają transakcje, notowania i kursy walut.",
+      "stockValue": "Akcje / Wartość",
+      "noStockTiles": "Kafelki pojawią się, gdy będzie dostępna wycena otwartej pozycji w PLN.",
       "description": "Wielkość kafelka pokazuje wartość pozycji w {{currency}}. Kolor oznacza zmianę procentową.",
       "period": "Okres porównania na mapie",
-      "loading": "Ładowanie zmian wartości portfeli dla tego okresu…",
-      "failed": "Nie udało się wczytać zmian wartości portfeli. Wybierz okres ponownie, aby ponowić próbę.",
+      "loading": "Ładowanie zmian wartości dla tego okresu…",
+      "failed": "Nie udało się wczytać zmian wartości. Wybierz okres ponownie, aby ponowić próbę.",
       "decrease": "Spadek",
       "steady": "Bez zmian",
       "increase": "Wzrost",
@@ -1456,6 +1469,28 @@
         "import_reference_conflict": "Raport zawiera sprzeczne dane dla tego samego numeru XTB. Żadne zmiany nie zostały zapisane.",
         "execution_mismatch": "Ilość lub cena w kolumnach różni się od komentarza wykonania. Sprawdź dane raportu."
       }
+    }
+  },
+  "addStock": {
+    "title": "Dodaj nową spółkę",
+    "hint": "Dodaj spółkę do wspólnego katalogu dostępnego dla wszystkich użytkowników. Podaj symbol giełdowy i wybierz obsługiwany rynek. Przed zapisem sprawdzimy historię notowań.",
+    "signIn": "Zaloguj się, aby dodać spółkę",
+    "ticker": "Ticker akcji",
+    "name": "Nazwa spółki",
+    "country": "Kraj spółki",
+    "market": "Rynek / giełda",
+    "submit": "Dodaj spółkę",
+    "saving": "Sprawdzanie notowań i zapisywanie…",
+    "success": "Dodano spółkę:",
+    "errors": {
+      "stock_exists": "Ta spółka jest już w katalogu.",
+      "unsupported_market": "Ten rynek nie jest włączony.",
+      "invalid_ticker": "Podaj prawidłowy ticker dla wybranego rynku.",
+      "no_price_history": "Nie znaleziono historii zakończonych sesji. Sprawdź ticker i rynek.",
+      "price_check_failed": "Nie udało się sprawdzić notowań. Spróbuj ponownie za chwilę.",
+      "storage_unavailable": "Zapis spółek jest chwilowo niedostępny.",
+      "account_changed": "Konto zostało zmienione. Odśwież ustawienia i spróbuj ponownie.",
+      "failed": "Nie udało się dodać spółki. Sprawdź pola i połączenie, a następnie spróbuj ponownie."
     }
   }
 }

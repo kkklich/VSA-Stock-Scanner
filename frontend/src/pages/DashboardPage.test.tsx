@@ -228,9 +228,7 @@ describe('DashboardPage ranking table', () => {
     })
   })
 
-  // Sorting by one column and then by another: shift-click adds a level
-  // instead of replacing the sort, and a plain click goes back to one column.
-  it('shift-clicking a header adds a second sort level', async () => {
+  it('shift-clicking a header keeps the default first, and clicking it again flips only its direction', async () => {
     const user = userEvent.setup()
     renderWithProviders(<DashboardPage />)
 
@@ -245,14 +243,17 @@ describe('DashboardPage ranking table', () => {
       ],
     })
 
-    // The header now says which level it is, and a plain click resets to one.
+    // The header now says which level it is.
     expect(
       screen.getByRole('button', { name: 'Sort by Company (level 2)' }),
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Sort by Company (level 2)' }))
     expect(useInfiniteRankingMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      sort: [{ key: 'ticker', dir: 'asc' }],
+      sort: [
+        { key: 'priceChangePct', dir: 'desc' },
+        { key: 'ticker', dir: 'desc' },
+      ],
     })
   })
 

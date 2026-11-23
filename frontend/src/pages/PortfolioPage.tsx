@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { currencyLabel } from '../lib/format'
 import { groupWalletValuations } from '../lib/portfolioValuations'
 import { PortfolioOverview } from '../components/PortfolioOverview'
-import { PortfolioWalletHeatmap, type WalletHeatmapRange } from '../components/PortfolioWalletHeatmap'
+import { PortfolioStockHeatmap, PortfolioWalletHeatmap, type WalletHeatmapRange } from '../components/PortfolioWalletHeatmap'
 import { PortfolioPositions, PortfolioTotals, PortfolioTransactionHistory } from '../components/PortfolioTables'
 import { XtbWalletImport } from '../components/XtbWalletImport'
 
@@ -85,8 +85,8 @@ function TradeForm({ portfolio, instruments, busy, save }: { portfolio: Portfoli
   </form>
 }
 
-function PortfolioDetail({ portfolio, instruments, save, busy }: {
-  portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean
+function PortfolioDetail({ portfolio, instruments, save, busy, heatmap }: {
+  portfolio: Portfolio; instruments: Instrument[]; save: Save; busy: boolean; heatmap?: ReactNode
 }) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
@@ -106,6 +106,7 @@ function PortfolioDetail({ portfolio, instruments, save, busy }: {
         <button className={button + ' text-rose-400'} disabled={busy} onClick={async () => { if (window.confirm(t('portfolio.confirmPortfolio', { name: portfolio.name }))) await save('DELETE', `/${portfolio.id}?version=${portfolio.version}`) }}>{t('portfolio.delete')}</button>
       </div>}
     </section>
+    {heatmap}
     <PortfolioTotals totals={portfolio.totals} />
     <section className="rounded-xl border border-slate-800 p-4"><h3 className="mb-3 font-semibold">{t('portfolio.addTransaction')}</h3><TradeForm portfolio={portfolio} instruments={instruments} busy={busy} save={save} /></section>
     <PortfolioPositions positions={portfolio.positions} instruments={instruments} transactions={portfolio.transactions} />
@@ -246,8 +247,14 @@ function AccountPortfolios({ owner }: { owner: number }) {
     } finally { mutation.current = false; if (alive.current) setBusy(false) }
   }
   const active = data?.items.find(p => p.id === selected)
+  const activeHoldings = data?.summary?.wallets?.find(wallet => wallet.walletId === selected)?.holdings
   const disabled = busy || importBusy || stale || loading
   const walletRangePending = walletRange !== '1d' && walletRange !== '1w' && snapshot?.ranges.walletRange !== walletRange
+  const periodStatus: 'loading' | 'error' | undefined = walletRangePending ? (loading ? 'loading' : 'error') : undefined
+  const heatmapControls = {
+    currency: data?.summary?.currency ?? 'PLN', disabled: busy || importBusy, period: walletRange,
+    periodStatus, onPeriodChange: changeWalletRange,
+  }
   function selectWallet(id: string) {
     setSelected(id)
     setError(null)
@@ -265,10 +272,7 @@ function AccountPortfolios({ owner }: { owner: number }) {
         historyStatus={snapshot?.ranges.historyRange === historyRange ? undefined : loading ? 'loading' : 'error'}
         historyControlsDisabled={busy || importBusy} onHistoryRangeChange={changeHistoryRange} />}
       {!!data.items.length && data.summary?.wallets && <PortfolioWalletHeatmap wallets={data.items}
-        valuations={data.summary.wallets} currency={data.summary.currency} selected={selected}
-        disabled={busy || importBusy} onSelect={selectWallet} period={walletRange}
-        periodStatus={walletRangePending ? loading ? 'loading' : 'error' : undefined}
-        onPeriodChange={changeWalletRange} />}
+        valuations={data.summary.wallets} selected={selected} onSelect={selectWallet} {...heatmapControls} />}
       <XtbWalletImport owner={owner} portfolios={data.items} disabled={busy || stale || loading} onImported={reload} onBusyChange={importBusyChanged} />
       {(creating || !data.items.length) && <section className="rounded-xl border border-slate-800 p-4"><PortfolioForm save={async (...args) => { const ok = await save(...args); if (ok) setCreating(false); return ok }} busy={disabled} /></section>}
       {!!data.items.length && <label className="block max-w-md text-sm">{t('portfolio.choose')}
@@ -280,7 +284,9 @@ function AccountPortfolios({ owner }: { owner: number }) {
       {selected === ALL_WALLETS && data.items.length > 0 && <AllWalletsDetail wallets={data.items} instruments={instruments} />}
       {active && <>
         <p className="text-sm text-slate-400">{t('portfolio.valuationHint')}</p>
-        <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled} />
+        <PortfolioDetail key={active.id} portfolio={active} instruments={instruments} save={save} busy={disabled}
+          heatmap={activeHoldings && <PortfolioStockHeatmap walletName={active.name} holdings={activeHoldings}
+            instruments={instruments} {...heatmapControls} />} />
       </>}
       <p className="text-xs text-slate-500">{t('portfolio.valuedAt')}: {new Date(data.valuedAt).toLocaleString(i18n.language)}</p>
     </>}

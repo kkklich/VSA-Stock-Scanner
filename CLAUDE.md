@@ -55,7 +55,7 @@ agent/      ALL project documentation & reference material lives here:
 
 - The authenticated `GET /api/portfolios/holdings/{ticker}` returns the total open share quantity and the quantity per wallet for a stock page.
 
-- `GET /api/portfolios` accepts `historyRange=1d|1w|1m|3m|6m|1y|all` for the daily chart in `summary.history`. The default is `1w`. `summary.wallets` carries PLN values and 1-day and 7-day changes. The optional `walletRange` parameter adds the selected comparison in each wallet's `rangeChange`. `GET /api/stocks` exposes broker ticker aliases on the active GPW listings. See the portfolio and ticker alias notes in `agent/DOCUMENTATION.md`.
+- `GET /api/portfolios` accepts `historyRange=1d|1w|1m|3m|6m|1y|all` for the daily chart in `summary.history`. The default is `1w`. `summary.wallets` carries PLN values and 1-day and 7-day changes for wallets and their open holdings. The optional `walletRange` parameter adds the selected `rangeChange` comparison. `GET /api/stocks` exposes broker ticker aliases on the active GPW listings. See the portfolio and ticker alias notes in `agent/DOCUMENTATION.md`.
 
 - **Long-term QVM ranking (2026-10-22).** `/long-term` shows a separate, deterministic
   Quality + Value + Momentum screen (equal thirds, `qvm-v1`), not a calibrated

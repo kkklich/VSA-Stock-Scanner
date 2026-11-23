@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { importXtbWallets, previewXtbWallets, type Portfolio, type XtbWalletsImportResult, type XtbWalletsPreview } from '../api/portfoliosApi'
 import { currencyLabel } from '../lib/format'
+import { XtbPreviewTable } from './XtbPreviewTable'
 
 const button = 'rounded-md border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40'
 const MAX_BYTES = 5 * 1024 * 1024
@@ -11,7 +12,7 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
   owner: number; disabled: boolean; onImported: () => Promise<void>; onBusyChange?: (busy: boolean) => void
   portfolios?: Pick<Portfolio, 'id' | 'name' | 'broker' | 'brokerAccountId' | 'brokerAccountCurrency'>[]
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [targetWalletId, setTargetWalletId] = useState('')
   const [preview, setPreview] = useState<XtbWalletsPreview | null>(null)
@@ -27,8 +28,6 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
       defaultValue: t(`portfolio.xtb.codes.${code}`, { defaultValue: t('portfolio.errors.failed') }),
     }),
   })
-  const formatter = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 8 })
-  const number = (value: string) => formatter.format(Number(value))
   const targetUnavailable = targetWalletId !== '' && !portfolios.some(wallet => wallet.id === targetWalletId)
   const blocked = !!preview && (!!preview.blockingError || preview.wallets.some(wallet => wallet.error || wallet.ledgerError))
   const linksAccount = !!preview?.wallets.some(wallet => wallet.linksBrokerAccount)
@@ -164,21 +163,7 @@ export function XtbWalletImport({ owner, portfolios = [], disabled, onImported, 
           {wallet.version === null && !wallet.ready && !wallet.error && !wallet.ledgerError && <p className="text-xs text-slate-400">{t('portfolio.xtbWallets.emptyWallet')}</p>}
           {!!wallet.ignored && <p className="text-xs text-slate-400">{t('portfolio.xtb.ignored', { count: wallet.ignored })}</p>}
           {wallet.warnings.map(code => <p key={code} className="text-sm text-amber-400">{message(code)}</p>)}
-          {!!wallet.rows.length && <div className="max-h-80 overflow-auto rounded-md border border-slate-800">
-            <table className="w-full whitespace-nowrap text-left text-xs">
-              <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr>{['source', 'date', 'side', 'instrument', 'quantity', 'price', 'fees', 'status'].map(key => <th key={key} className="p-2">{t(['source', 'status'].includes(key) ? `portfolio.xtb.${key}` : `portfolio.${key}`)}</th>)}</tr></thead>
-              <tbody>{wallet.rows.map((row, index) => {
-                const trade = row.transaction
-                const amount = (value: string) => `${number(value)} ${currencyLabel(trade?.currency)}`
-                return <tr key={`${row.row}:${index}`} className="border-t border-slate-800">
-                  <td className="p-2">{row.sheet} · {row.row}</td><td className="p-2">{trade?.executedAt?.replace('T', ' ') ?? trade?.date ?? '—'}</td>
-                  <td className="p-2">{trade ? t(`portfolio.${trade.side}`) : '—'}</td><td className="p-2">{trade?.ticker.toUpperCase() ?? row.symbol}</td>
-                  <td className="p-2">{trade ? number(trade.quantity) : '—'}</td><td className="p-2">{trade ? amount(trade.price) : '—'}</td><td className="p-2">{trade ? amount(trade.fees) : '—'}</td>
-                  <td className={'p-2 ' + (row.status === 'error' ? 'text-amber-400' : 'text-slate-300')}>{row.code ? message(row.code) : t(`portfolio.xtb.${row.status}`)}</td>
-                </tr>
-              })}</tbody>
-            </table>
-          </div>}
+          {!!wallet.rows.length && <XtbPreviewTable rows={wallet.rows} message={message} />}
         </div>
       </details>)}
       {!blocked && hasChanges && !!preview.errors && <label className="flex items-start gap-2 text-sm text-amber-400"><input type="checkbox" checked={allowPartial} disabled={busy || disabled} onChange={event => setAllowPartial(event.target.checked)} />{t('portfolio.xtb.partial')}</label>}

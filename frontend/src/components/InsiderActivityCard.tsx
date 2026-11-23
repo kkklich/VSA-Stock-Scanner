@@ -6,11 +6,27 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, Loader2, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react'
-import { CollapsibleCard } from './ui'
-import type { ApiInsiderTransactionsResponse } from '../api/stocksApi'
+import { CollapsibleCard, SortHeader } from './ui'
+import { useTableSort } from '../hooks/useTableSort'
+import { sortTableRows, type SortColumns } from '../lib/sorting'
+import { toPln } from '../lib/markets'
+import type { ApiInsiderPersonSummary, ApiInsiderTransactionItem, ApiInsiderTransactionsResponse } from '../api/stocksApi'
 import { fmtMoney, safeHttpUrl } from '../lib/format'
 
 const INITIAL_VISIBLE_ROWS = 8
+
+const personColumns = {
+  person: (row: ApiInsiderPersonSummary) => row.insiderName,
+  currency: (row: ApiInsiderPersonSummary) => row.currency,
+  boughtShares: (row: ApiInsiderPersonSummary) => row.totalPurchasesShares,
+  soldShares: (row: ApiInsiderPersonSummary) => row.totalSalesShares,
+  netShares: (row: ApiInsiderPersonSummary) => row.netShares,
+}
+type PersonColumn = keyof typeof personColumns
+type TransactionColumn = 'colTradeDate' | 'colDate' | 'colRole' | 'colType' | 'colShares' | 'colPrice' | 'colValue' | 'colSource'
+const personSortDir = (key: PersonColumn) => key === 'person' || key === 'currency' ? 'asc' : 'desc'
+const transactionSortDir = (key: TransactionColumn) => key === 'colRole' || key === 'colType' || key === 'colSource' ? 'asc' : 'desc'
+const rightAligned = new Set(['boughtShares', 'soldShares', 'netShares', 'colShares', 'colPrice', 'colValue', 'colSource'])
 
 function fmtShares(n: number | null | undefined): string {
   if (n == null) return '—'
@@ -32,7 +48,9 @@ export function InsiderActivityCard({
   error?: string | null
   onRefresh?: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const personSort = useTableSort<PersonColumn>(null, personSortDir)
+  const transactionSort = useTableSort<TransactionColumn>(null, transactionSortDir)
   const [expanded, setExpanded] = useState(false)
 
   const summary = data?.summary
@@ -66,9 +84,20 @@ export function InsiderActivityCard({
   const netSharesText = netSharesKnown
     ? `${(summary?.netShares ?? 0) > 0 ? '+' : ''}${fmtShares(summary?.netShares)}`
     : t('insider.unknown')
-  const visibleRows = expanded
-    ? transactions
-    : transactions.slice(0, INITIAL_VISIBLE_ROWS)
+  const transactionCurrency = (tx: ApiInsiderTransactionItem) => tx.currency ?? currency
+  const compareInPln = transactions.some(tx => transactionCurrency(tx) !== transactionCurrency(transactions[0]))
+  const transactionColumns: SortColumns<ApiInsiderTransactionItem, TransactionColumn> = {
+    colTradeDate: row => row.tradeDate,
+    colDate: row => row.publicationDate,
+    colRole: row => row.insiderName || row.role || null,
+    colType: row => t('insider.type.' + row.transactionType, { defaultValue: row.transactionType }),
+    colShares: row => row.shares,
+    colPrice: row => compareInPln ? toPln(row.price, transactionCurrency(row)) : row.price,
+    colValue: row => compareInPln ? toPln(row.value, transactionCurrency(row)) : row.value,
+    colSource: row => row.source,
+  }
+  const sortedTransactions = sortTableRows(transactions, transactionSort.sort, transactionColumns, i18n.language)
+  const visibleRows = expanded ? sortedTransactions : sortedTransactions.slice(0, INITIAL_VISIBLE_ROWS)
 
   const directionAmount = netValueKnown && summary?.netValue !== 0
     ? summary?.netValue
@@ -247,15 +276,13 @@ export function InsiderActivityCard({
                 <table className="w-full text-left text-xs" aria-label={t('insider.byPersonTitle')}>
                   <thead>
                     <tr className="border-b border-slate-800 bg-slate-900/40 text-[11px] text-slate-500">
-                      <th className="px-3 py-2 font-medium">{t('insider.person')}</th>
-                      <th className="px-3 py-2 font-medium">{t('insider.currency')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('insider.boughtShares')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('insider.soldShares')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('insider.netShares')}</th>
+                      {(Object.keys(personColumns) as PersonColumn[]).map(key => <SortHeader key={key} col={key}
+                        label={t('insider.' + key)} sort={personSort.sort} onSort={personSort.onHeaderSort} compact
+                        className={rightAligned.has(key) ? 'text-right' : ''} />)}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {byInsider.map((person) => (
+                    {sortTableRows(byInsider, personSort.sort, personColumns, i18n.language).map((person) => (
                       <tr key={`${person.insiderName}-${person.currency ?? ''}`}>
                         <td className="px-3 py-2 font-medium text-slate-200">{person.insiderName}</td>
                         <td className="px-3 py-2 text-slate-400">{person.currency ?? t('insider.unknown')}</td>
@@ -283,21 +310,16 @@ export function InsiderActivityCard({
             <table className="w-full text-left text-xs" aria-label={t('insider.title')}>
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
-                  <th className="pb-2 pr-3 font-semibold">{t('insider.colTradeDate')}</th>
-                  <th className="pb-2 pr-3 font-semibold">{t('insider.colDate')}</th>
-                  <th className="pb-2 pr-3 font-semibold">{t('insider.colRole')}</th>
-                  <th className="pb-2 pr-3 font-semibold">{t('insider.colType')}</th>
-                  <th className="pb-2 pr-3 text-right font-semibold">{t('insider.colShares')}</th>
-                  <th className="pb-2 pr-3 text-right font-semibold">{t('insider.colPrice')}</th>
-                  <th className="pb-2 pr-3 text-right font-semibold">{t('insider.colValue')}</th>
-                  <th className="pb-2 text-right font-semibold">{t('insider.colSource')}</th>
+                  {(Object.keys(transactionColumns) as TransactionColumn[]).map(key => <SortHeader key={key} col={key}
+                    label={t('insider.' + key)} sort={transactionSort.sort} onSort={transactionSort.onHeaderSort} compact
+                    className={rightAligned.has(key) ? 'text-right' : ''} />)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {visibleRows.map((tx, idx) => {
                   const isBuy = tx.transactionType === 'buy'
                   const isSell = tx.transactionType === 'sell'
-                  const txCurrency = tx.currency ?? currency
+                  const txCurrency = transactionCurrency(tx)
                   const safeUrl = safeHttpUrl(tx.sourceUrl)
                   const typeBadgeClass = isBuy
                     ? 'bg-emerald-500/20 text-emerald-300'

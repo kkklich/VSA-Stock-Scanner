@@ -78,7 +78,7 @@ const URL_FIELDS = {
   q: textParam(), sector: textParam('all'),
   currency: enumParam<'market' | 'all'>('market', ['market', 'all']),
   withData: booleanParam(true),
-  sort: sortParam<CapexSortKey>({ key: 'capex', dir: 'desc' }, [
+  sort: sortParam<CapexSortKey>(null, [
     'ticker', 'name', 'sector', 'capex', 'capexTtm', 'capexAnnual',
     'capexGrowthYoyPct', 'capexToRevenuePct', 'capexToOcfPct', 'operatingCashFlow',
   ]),
@@ -105,7 +105,7 @@ export function CapexPage() {
   // Changing the ordering starts a fresh list: the pages accumulate, so page 2
   // of the old order can't be appended under the new one.
   const backToFirstPage = useCallback(() => setPage(1), [])
-  const { sort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<CapexSortKey>(
+  const { sort, onHeaderSort, onSort, onSortDirChange, onRemoveLevel } = useTableSort<CapexSortKey>(
     { key: 'capex', dir: 'desc' },
     initialSortDir,
     backToFirstPage,
@@ -318,20 +318,20 @@ export function CapexPage() {
                     label="Company"
                     col="ticker"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                   />
                   <SortHeader
                     label="Sector"
                     col="sector"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     className="hidden lg:table-cell"
                   />
                   <SortHeader
                     label="Invested"
                     col="capex"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Money spent on property, plant, equipment and software over the last four reported quarters (or the latest full year when quarterly data is missing — marked FY). Shown in the company's own reporting currency, which is not always PLN."
                     className="text-right"
@@ -340,7 +340,7 @@ export function CapexPage() {
                     label="vs last year"
                     col="capexGrowthYoyPct"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Change in yearly investment: the latest full year against the year before it. Rising capex usually means expansion, falling capex belt-tightening — neither is automatically good or bad."
                     className="hidden text-right md:table-cell"
@@ -349,7 +349,7 @@ export function CapexPage() {
                     label="% of revenue"
                     col="capexToRevenuePct"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Capex as a share of revenue — capital intensity. This is the fair way to compare a small heavy investor with a large light one. Heavy industry and utilities run high; software and retail run low."
                     className="text-right"
@@ -358,7 +358,7 @@ export function CapexPage() {
                     label="% of cash flow"
                     col="capexToOcfPct"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Capex as a share of the cash the business itself generated. Above 100% the company is investing more than it earned in cash, so the difference comes from reserves or debt."
                     className="hidden text-right sm:table-cell"
@@ -367,7 +367,7 @@ export function CapexPage() {
                     label="Cash flow"
                     col="operatingCashFlow"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Operating cash flow over the same period: the cash the business generated before investing."
                     className="hidden text-right lg:table-cell"

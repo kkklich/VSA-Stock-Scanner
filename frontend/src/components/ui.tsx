@@ -297,21 +297,16 @@ export function SignalBadge({ verdict }: { verdict: SignalVerdict }) {
 
 /**
  * A clickable table header that drives sorting for one column. Generic over
- * the column-key type so both server-side (Watchlist) and client-side
- * (Dashboard) sortable tables can share it.
+ * the column-key type so both server-side and client-side tables can use it.
  *
- * The table's sort is a list of levels (see `lib/sorting.ts`), so a header can
- * be the primary order or a tie-break inside it. A plain click sorts by this
- * column alone; **shift-click** adds it as the next level (and cycles it back
- * off), which is what makes "sector A→Z, then best rating" possible. When more
- * than one level is active each sorted header carries its position — 1, 2, 3 —
- * so the ordering is readable off the table rather than remembered.
+ * Numbered badges show the priority when more than one sort level is active.
  */
 export function SortHeader<T extends string>({
   label,
   col,
   sort,
   onSort,
+  compact = false,
   align = 'left',
   info,
   subLabel,
@@ -321,8 +316,8 @@ export function SortHeader<T extends string>({
   col: T
   /** The whole sort, outermost level first. */
   sort: SortLevel<T>[]
-  /** `additive` is the shift-click gesture: add a level instead of replacing. */
-  onSort: (col: T, additive: boolean) => void
+  onSort: (col: T, shiftKey: boolean) => void
+  compact?: boolean
   align?: 'left' | 'right'
   info?: string
   subLabel?: string
@@ -345,9 +340,10 @@ export function SortHeader<T extends string>({
       // the rows passing underneath; the inset shadow draws the bottom divider
       // (a plain border-bottom can disappear on scroll with collapsed borders).
       className={
-        'sticky top-0 z-10 bg-slate-900 px-4 py-3 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] ' +
-        className
+        'sticky top-0 z-10 bg-slate-900 font-medium shadow-[inset_0_-1px_0_var(--color-slate-800)] ' +
+        (compact ? 'px-2 py-2 ' : 'px-4 py-3 ') + className
       }
+      scope="col"
       aria-sort={ariaSort}
     >
       <span
@@ -369,7 +365,7 @@ export function SortHeader<T extends string>({
               ? t('common.sortByLevel', { label, level: at + 1 })
               : t('common.sortBy', { label })
           }
-          title={t('common.sortAddHint')}
+          title={t('common.sortClickToAddHint')}
           className={
             'inline-flex select-none items-center gap-1 transition-colors hover:text-slate-200 ' +
             (active ? 'text-slate-200' : '')

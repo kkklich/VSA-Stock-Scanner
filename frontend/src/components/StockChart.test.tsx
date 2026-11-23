@@ -128,6 +128,21 @@ describe('StockChart', () => {
     })
   })
 
+  it('draws personal buys and sells on their own candles', () => {
+    render(<StockChart candles={CANDLES} signals={SIGNALS} tradeMarkers={[
+      { date: '2026-01-03', side: 'sell', label: 'My sell' },
+      { date: '2026-01-01', side: 'buy', label: 'My buy' },
+    ]} />)
+
+    const markers = lib.createSeriesMarkers.mock.calls[0][1]
+    expect(markers).toMatchObject([
+      { text: 'Spring' },
+      { time: '2026-01-01', text: 'My buy', position: 'belowBar', shape: 'arrowUp', color: PALETTE.bull },
+      { text: 'Upthrust' },
+      { time: '2026-01-03', text: 'My sell', position: 'aboveBar', shape: 'arrowDown', color: PALETTE.bear },
+    ])
+  })
+
   it('adds each overlay signal as a dot plus its label, time-sorted with VSA', () => {
     render(
       <StockChart

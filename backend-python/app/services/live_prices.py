@@ -281,7 +281,7 @@ class LivePriceService:
         clock: Callable[[], datetime] | None = None,
         max_concurrent: int = _MAX_CONCURRENT,
     ) -> None:
-        self._companies = list(companies)
+        self._companies = companies if isinstance(companies, list) else list(companies)
         self._client = client
         # Optional, like everywhere in the pipeline: tests build the service
         # without a log.

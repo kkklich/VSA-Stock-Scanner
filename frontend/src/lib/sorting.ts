@@ -5,10 +5,8 @@
 // levels; one level is an ordinary single-column sort and is what the pages
 // start with, so nothing looks different until the user asks for more.
 //
-// These helpers are pure — the pages own the state and the backend does the
-// actual ordering (`sortBy`/`sortDir` carry the levels as comma-separated
-// lists). Keeping the rules here means the table headers, the phone Sort menu
-// and all five pages behave identically.
+// Paged results can send these levels to the API. Tables with all their rows
+// loaded can apply the same priorities locally.
 
 /** Which way a column is ordered. */
 export type SortDir = 'asc' | 'desc'
@@ -30,6 +28,33 @@ export const MAX_SORT_LEVELS = 3
 
 /** The direction a column starts in — labels ascend, numbers descend. */
 export type InitialDir<K extends string> = (key: K) => SortDir
+
+export type SortColumns<Row, Key extends string> = Record<Key, (row: Row) => number | string | null | undefined>
+
+/** Stable ordering with empty values last in either direction. */
+export function sortTableRows<Row, Key extends string>(
+  rows: readonly Row[], levels: SortLevel<Key>[], columns: SortColumns<Row, Key>, locale?: string,
+): readonly Row[] {
+  if (!levels.length) return rows
+  const { compare } = new Intl.Collator(locale, { numeric: true, sensitivity: 'base' })
+  return [...rows].sort((left, right) => {
+    for (const { key, dir } of levels) {
+      const a = columns[key](left)
+      const b = columns[key](right)
+      const missingA = a == null || Number.isNaN(a)
+      const missingB = b == null || Number.isNaN(b)
+      if (missingA || missingB) {
+        if (missingA !== missingB) return missingA ? 1 : -1
+        continue
+      }
+      const order = typeof a === 'number' && typeof b === 'number'
+        ? (a === b ? 0 : a < b ? -1 : 1)
+        : compare(String(a), String(b))
+      if (order) return dir === 'asc' ? order : -order
+    }
+    return 0
+  })
+}
 
 const flip = (dir: SortDir): SortDir => (dir === 'asc' ? 'desc' : 'asc')
 

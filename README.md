@@ -27,6 +27,18 @@ cd backend-python; .\.venv\Scripts\python.exe -m pytest -q   # backend tests
 cd frontend; npm run build                                    # frontend build
 ```
 
+## Adding stocks
+
+Signed-in users can open **Settings → Add a new stock** and enter the exchange
+ticker, company name, company country and stock market. Only markets enabled
+on this deployment are offered. The backend checks completed price history,
+rejects duplicate listings and saves the company and initial prices atomically.
+New listings join the shared catalogue for all users immediately and take part
+in subsequent scans and scheduled downloads. Existing liquidity and analysis
+requirements still apply. New listings are stored in PostgreSQL and restored
+after restart; shipped JSON files are unchanged. Normal startup creates the
+table; Alembic-managed deployments should apply revision `018`.
+
 ## Account watchlists
 
 Stock list URLs remember search, filters, favorites-only mode and sorting

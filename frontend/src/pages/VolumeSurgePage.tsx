@@ -177,7 +177,7 @@ const URL_FIELDS = {
   recentWeeks: numberParam(1, { values: RECENT_WEEKS }),
   baselineWeeks: numberParam(13, { values: BASELINE_WEEKS }),
   minRatio: volumeParam('stockpilot:volume-surge:minRatio', 1.5, [1.5, 2, 3, 5]),
-  sort: sortParam<VolumeSurgeSortKey>({ key: 'volumeRatio', dir: 'desc' }, [
+  sort: sortParam<VolumeSurgeSortKey>(null, [
     'ticker', 'name', 'sector', 'lastPrice', 'recentAvgVolume', 'baselineAvgVolume',
     'volumeRatio', 'lastDayRatio', 'daysAboveBaseline', 'peakVolumeRatio',
     'priceChangePct', 'currentRating', 'lastSignal',
@@ -216,7 +216,7 @@ export function VolumeSurgePage() {
   // Changing the ordering starts a fresh list: the pages accumulate, so page 2
   // of the old order can't be appended under the new one.
   const backToFirstPage = useCallback(() => setPage(1), [])
-  const { sort, onSort, onSortDirChange, onRemoveLevel } =
+  const { sort, onHeaderSort, onSort, onSortDirChange, onRemoveLevel } =
     useTableSort<VolumeSurgeSortKey>(
       { key: 'volumeRatio', dir: 'desc' },
       initialSortDir,
@@ -415,9 +415,6 @@ export function VolumeSurgePage() {
         </div>
       ) : (
         <>
-          {/* Sort. Shown on every screen: the wide table also sorts by its
-              column headers (shift-click there adds a further level), but that
-              gesture is invisible — this names the levels outright. */}
           <div className="flex justify-end">
             <SortMenu
               options={SORT_OPTIONS}
@@ -442,20 +439,20 @@ export function VolumeSurgePage() {
                     label="Company"
                     col="ticker"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                   />
                   <SortHeader
                     label="Sector"
                     col="sector"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     className="hidden min-[1500px]:table-cell"
                   />
                   <SortHeader
                     label="RVOL"
                     col="volumeRatio"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info={`Average volume in the surge window divided by the median volume per ${resultUnit} in the baseline. 2× means double the normal activity.`}
                     className="text-right"
@@ -464,7 +461,7 @@ export function VolumeSurgePage() {
                     label="Volume now / normal"
                     col="recentAvgVolume"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info={`Average shares traded per ${resultUnit} in the surge window compared with the median in the baseline.`}
                     className="hidden text-right md:table-cell"
@@ -473,7 +470,7 @@ export function VolumeSurgePage() {
                     label="Above normal"
                     col="daysAboveBaseline"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info={`Number of ${resultUnit}s in the surge window whose volume exceeded the baseline median.`}
                     className="hidden text-right md:table-cell"
@@ -482,14 +479,14 @@ export function VolumeSurgePage() {
                     label="Peak volume"
                     col="peakVolumeRatio"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     info={`The highest-volume ${resultUnit} in the surge window. The bar's high-to-low range is measured against the baseline average (wide at 1.5× or more, narrow at 0.7× or less). Its close position shows where it finished within that range.`}
                   />
                   <SortHeader
                     label="Price move"
                     col="priceChangePct"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     info="Price change across the surge window. Direction alone doesn't classify a surge in VSA: high volume on a rise can be genuine buying or a buying climax (weakness), and on a fall genuine selling or stopping volume (strength). Read it together with the VSA signal and the chart. A range tag means the surge pushed the price above the highest high, or below the lowest low, of the reference period."
                     className="text-right"
@@ -498,7 +495,7 @@ export function VolumeSurgePage() {
                     label="Price"
                     col="lastPrice"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     className="hidden text-right sm:table-cell"
                   />
@@ -507,7 +504,7 @@ export function VolumeSurgePage() {
                     label="VSA"
                     col="currentRating"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     align="right"
                     className="text-right"
                   />
@@ -517,7 +514,7 @@ export function VolumeSurgePage() {
                     label="Signal"
                     col="lastSignal"
                     sort={sort}
-                    onSort={onSort}
+                    onSort={onHeaderSort}
                     info="The stock's VSA verdict — a score over its signals of the last four months, not a reading of the surge alone. The line under it says how old the latest signal is and whether it happened during the surge."
                     className="hidden sm:table-cell"
                   />

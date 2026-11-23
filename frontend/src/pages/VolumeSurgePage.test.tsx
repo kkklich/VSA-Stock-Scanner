@@ -92,6 +92,36 @@ describe('VolumeSurgePage surge context', () => {
     expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({ recentDays: 3, baselineDays: 20, minRatio: 1.5 })
   })
 
+  it('builds a two-column sort with ordinary header clicks and keeps priorities when reversing direction', async () => {
+    mockScan([makeItem()])
+    const user = userEvent.setup()
+    renderWithProviders(<VolumeSurgePage />)
+    const table = within(screen.getByRole('table'))
+
+    // Changing an unrelated filter leaves the default RVOL sort implicit.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Baseline' }), '30')
+    await user.click(table.getByRole('button', { name: /Sort by Sector/ }))
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0].sort).toEqual([{ key: 'sector', dir: 'asc' }])
+
+    await user.click(table.getByRole('button', { name: /Sort by RVOL/ }))
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      page: 1,
+      sort: [{ key: 'sector', dir: 'asc' }, { key: 'volumeRatio', dir: 'desc' }],
+    })
+    expect(table.getByRole('button', { name: /Sort by Sector/ })).toHaveTextContent('1')
+    expect(table.getByRole('button', { name: /Sort by RVOL/ })).toHaveTextContent('2')
+
+    const rvol = table.getByRole('button', { name: /Sort by RVOL/ })
+    await user.click(rvol)
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0].sort).toEqual([
+      { key: 'sector', dir: 'asc' }, { key: 'volumeRatio', dir: 'asc' },
+    ])
+    await user.click(rvol)
+    expect(useVolumeSurgeMock.mock.calls.at(-1)?.[0].sort).toEqual([
+      { key: 'sector', dir: 'asc' }, { key: 'volumeRatio', dir: 'desc' },
+    ])
+  })
+
   it('keeps separate daily and weekly windows when changing timeframe', async () => {
     mockScan([])
     const user = userEvent.setup()

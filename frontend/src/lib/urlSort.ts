@@ -8,7 +8,7 @@ export const RANKING_SORT_KEYS = [
   'insiderLatestTransaction', 'insiderTotalValue', 'insiderValueLast30Days',
 ] as const
 
-export function sortParam<K extends string>(fallback: SortLevel<K>, allowed: readonly K[]): UrlField<SortLevel<K>[]> {
+export function sortParam<K extends string>(fallback: SortLevel<K> | null, allowed: readonly K[]): UrlField<SortLevel<K>[]> {
   return {
     read: (params) => {
       const keys = params.get('sortBy')?.split(',') ?? []
@@ -22,13 +22,16 @@ export function sortParam<K extends string>(fallback: SortLevel<K>, allowed: rea
           levels.push({ key: key as K, dir })
         }
       })
-      return levels.length ? levels.slice(0, MAX_SORT_LEVELS) : [fallback]
+      return levels.length ? levels.slice(0, MAX_SORT_LEVELS) : fallback ? [fallback] : []
     },
     write: (params, _key, levels) => {
       const serialized = serializeSort(levels)
       if (serialized) {
         params.set('sortBy', serialized.sortBy)
         params.set('sortDir', serialized.sortDir)
+      } else {
+        params.delete('sortBy')
+        params.delete('sortDir')
       }
     },
   }

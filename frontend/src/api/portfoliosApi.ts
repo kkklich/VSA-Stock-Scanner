@@ -37,6 +37,12 @@ export interface PortfolioWalletSummary {
   walletId: string; current: PortfolioSummaryPoint
   dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
   rangeChange?: PortfolioSummaryChange | null
+  holdings?: PortfolioHeatmapHolding[]
+}
+export interface PortfolioHeatmapHolding {
+  ticker: string; currency: string; currentValue: number | null; staleQuote: boolean
+  dayChange: PortfolioSummaryChange | null; weekChange: PortfolioSummaryChange | null
+  rangeChange: PortfolioSummaryChange | null
 }
 export interface PortfolioSummary {
   currency: string; current: PortfolioSummaryPoint; history: PortfolioSummaryPoint[]
@@ -48,7 +54,19 @@ export interface PortfolioSummary {
 export interface Portfolios { items: Portfolio[]; valuedAt: string; summary?: PortfolioSummary }
 export interface StockHoldings {
   quantity: number
-  wallets: { id: string; name: string; quantity: number }[]
+  wallets: StockWalletHolding[]
+}
+export interface StockWalletHolding {
+  id: string; name: string; quantity: number; reconciled: boolean
+  positions: Pick<Position, 'currency' | 'quantity' | 'cost' | 'realizedPnl'>[]
+  trades: StockTrade[]
+}
+export interface StockTrade extends Omit<Transaction, 'ticker' | 'source' | 'sourceId' | 'executedAt'> {
+  executedAt: string | null
+  remainingQuantity: number | null
+  costBasis: number | null
+  realizedCostBasis: number | null
+  realizedPnl: number | null
 }
 
 function accountHeaders(owner?: number): Record<string, string> {

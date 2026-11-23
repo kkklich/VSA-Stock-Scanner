@@ -22,7 +22,7 @@ from app.db.portfolio_repository import PortfolioRepository
 from app.dependencies import get_user_repository, gpw_company_service
 from app.routers.auth import get_current_user
 from app.routers.portfolios import router
-from app.services.portfolio import valuation
+from app.services.portfolio import XTB_RECONCILIATION, holdings, valuation
 from tests.test_watchlists import SQLSession
 
 
@@ -425,13 +425,23 @@ def test_stock_holdings_combines_open_wallet_positions_and_broker_aliases(client
 
     result = client.get("/api/portfolios/holdings/DAD.WA", headers={"X-Expected-User-Id": "1"})
     assert result.headers["cache-control"] == "private, no-store"
-    assert result.json() == {
-        "quantity": 5.125,
-        "wallets": [
-            {"id": wallet["id"], "name": wallet["name"], "quantity": 3.125},
-            {"id": second_wallet["id"], "name": second_wallet["name"], "quantity": 2},
-        ],
-    }
+    body = result.json()
+    assert body["quantity"] == 5.125
+    wallets = {item["id"]: item for item in body["wallets"]}
+    first = wallets[wallet["id"]]
+    assert (first["name"], first["quantity"]) == (wallet["name"], 3.125)
+    assert wallets[second_wallet["id"]]["quantity"] == 2
+    assert [(t["side"], t["remainingQuantity"]) for t in first["trades"]] == [
+        ("buy", 0.25),
+        ("sell", None),
+        ("buy", 2.875),
+    ]
+    closed = wallets[closed_wallet["id"]]
+    assert closed["quantity"] == 0
+    assert closed["positions"] == [
+        {"currency": "PLN", "quantity": 0, "cost": 0, "realizedPnl": -20}
+    ]
+    assert [t["realizedPnl"] for t in closed["trades"]] == [-20, -20]
     assert client.get("/api/portfolios/holdings/dada").json() == result.json()
     assert client.get("/api/portfolios/holdings/kgh").json() == {"quantity": 0, "wallets": []}
 
@@ -439,6 +449,63 @@ def test_stock_holdings_combines_open_wallet_positions_and_broker_aliases(client
     assert client.get("/api/portfolios/holdings/dad").json() == {"quantity": 0, "wallets": []}
     mismatch = client.get("/api/portfolios/holdings/dad", headers={"X-Expected-User-Id": "1"})
     assert mismatch.status_code == 409
+
+
+@pytest.mark.parametrize(
+    ("method", "remaining", "realized"),
+    [
+        ("fifo", [2, 4], [Decimal(96), None, Decimal(96)]),
+        ("moving_average", [3, 3], [Decimal(48), Decimal(-12), Decimal(36)]),
+    ],
+)
+def test_stock_trade_profit_uses_wallet_cost_method(method, remaining, realized):
+    trade = {"ticker": "kgh", "currency": "PLN", "quantity": "4", "side": "buy", "fees": "4"}
+    ledger = [
+        {**trade, "id": "first", "price": "100", "date": "2026-01-01"},
+        {**trade, "id": "second", "price": "160", "date": "2026-01-02"},
+        {
+            **trade,
+            "id": "sale",
+            "quantity": "2",
+            "side": "sell",
+            "price": "151",
+            "fees": "4",
+            "date": "2026-01-03",
+            "executedAt": "2026-01-03T12:00:00",
+        },
+    ]
+    trades = []
+    (position,) = holdings(ledger, method, trade_details=trades)
+    assert [t["remainingQuantity"] for t in trades[:2]] == remaining
+    assert [t["realizedPnl"] for t in trades] == realized
+    assert sum(t["costBasis"] for t in trades[:2]) == position["cost"]
+    assert trades[-1]["realizedPnl"] == position["realizedPnl"]
+    assert trades[-1]["executedAt"] == "2026-01-03T12:00:00+01:00"
+
+
+def test_stock_trade_profit_uses_snapshot_basis_without_linking_snapshot_to_old_buys():
+    trade = {"ticker": "kgh", "currency": "PLN", "quantity": "2", "side": "buy", "fees": "0"}
+    ledger = [
+        {**trade, "id": "first", "price": "100", "date": "2026-01-01"},
+        {
+            "kind": XTB_RECONCILIATION,
+            "date": "2026-01-02",
+            "positions": [
+                {
+                    "ticker": "kgh",
+                    "currency": "PLN",
+                    "quantity": "2",
+                    "cost": "250",
+                    "lots": [{"quantity": "2", "cost": "250"}],
+                }
+            ],
+        },
+        {**trade, "id": "sale", "side": "sell", "price": "150", "date": "2026-01-03"},
+    ]
+    trades = []
+    (position,) = holdings(ledger, "fifo", trade_details=trades)
+    assert (trades[0]["remainingQuantity"], trades[0]["realizedPnl"]) == (None, None)
+    assert trades[1]["realizedPnl"] == position["realizedPnl"] == 50
 
 
 def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client, monkeypatch):
@@ -513,7 +580,13 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
     assert foreign["current"]["value"] == 108
     assert foreign["dayChange"]["amount"] == 6
     assert foreign["weekChange"]["percent"] == 35
+    assert foreign["holdings"] == [{
+        "ticker": "nvd.de", "currency": "EUR", "currentValue": 108, "staleQuote": False,
+        "dayChange": foreign["dayChange"], "weekChange": foreign["weekChange"], "rangeChange": None,
+    }]
+    assert domestic["holdings"][0]["weekChange"]["amount"] == -60
     assert empty["current"]["value"] == 0
+    assert empty["holdings"] == []
     assert empty["weekChange"]["percent"] is None
 
     one_day = client.get("/api/portfolios?historyRange=1d").json()["summary"]
@@ -531,6 +604,8 @@ def test_account_summary_replays_all_wallets_with_dated_prices_and_rates(client,
     assert foreign["current"]["value"] is None
     assert foreign["current"]["missingRates"] == ["EUR"]
     assert foreign["dayChange"] is None
+    assert foreign["holdings"][0]["currentValue"] is None
+    assert foreign["holdings"][0]["dayChange"] is None
     assert summary["currencyTotals"] == [
         {"currency": "EUR", "marketValue": 24, "missingQuotes": 0},
         {"currency": "PLN", "marketValue": 840, "missingQuotes": 0},
@@ -604,6 +679,7 @@ def test_wallet_heatmap_uses_independent_calendar_ranges_and_each_wallets_first_
             "since": day,
             "partial": False,
         }
+        assert wallets[older]["holdings"][0]["rangeChange"] == wallets[older]["rangeChange"]
         if period in {"all", "1y", "3m"}:
             assert wallets[newer]["rangeChange"]["since"] == "2026-01-06"
             assert wallets[newer]["rangeChange"]["amount"] == 60
@@ -671,6 +747,12 @@ def test_account_summary_names_missing_holdings_and_compares_shared_price_covera
     assert other["current"]["missingQuotes"] == 1
     assert other["current"]["staleQuotes"] == 1
     assert other["dayChange"] is None
+    holdings_by_ticker = {holding["ticker"]: holding for holding in other["holdings"]}
+    assert holdings_by_ticker["pkn"]["currentValue"] is None
+    assert holdings_by_ticker["pzu"]["currentValue"] == 80
+    assert holdings_by_ticker["pzu"]["dayChange"] is None
+    assert holdings_by_ticker["ale"]["staleQuote"] is True
+    assert holdings_by_ticker["ale"]["dayChange"] is None
 
 
 def test_portfolio_migration_upgrade_and_downgrade():

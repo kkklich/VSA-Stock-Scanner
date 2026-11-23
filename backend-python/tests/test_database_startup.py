@@ -10,6 +10,7 @@ import pytest
 
 from app import dependencies, main
 from app.db import base, repository
+from app.db.custom_company_repository import CustomCompanyRepository
 from app.jobs import daily_ingest
 
 
@@ -96,6 +97,7 @@ def runtime(monkeypatch):
     monkeypatch.setattr(main, "LivePriceService", lambda **kwargs: state.live)
     monkeypatch.setattr(base, "build_engine", lambda url: state.engine)
     monkeypatch.setattr(base, "build_session_factory", lambda engine: MagicMock())
+    monkeypatch.setattr(CustomCompanyRepository, "list", AsyncMock(return_value=[]))
     monkeypatch.setattr(repository, "PostgresQuoteRepository", lambda factory: state.repo)
     monkeypatch.setattr(daily_ingest.IngestService, "bootstrap_plan", state.plan)
     monkeypatch.setattr(daily_ingest.IngestService, "observation_bootstrap_markets",
@@ -106,6 +108,7 @@ def runtime(monkeypatch):
 
 
 def _assert_unwired():
+    assert main.gpw_company_service.custom_repository is None
     assert dependencies.get_quote_repository() is None
     assert dependencies.get_scheduler() is None
     assert dependencies.get_user_repository() is None

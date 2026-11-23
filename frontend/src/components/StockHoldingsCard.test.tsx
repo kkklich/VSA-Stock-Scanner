@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { type StockHoldings, portfolioRequest } from '../api/portfoliosApi'
 import type { ApiStockSignals } from '../api/stocksApi'
 import { AuthContext, type AuthContextValue } from '../hooks/useAuth'
+import { useStockHoldings } from '../hooks/useStockHoldings'
 import i18n from '../i18n'
 import { fireEvent, renderWithProviders, screen, within } from '../test/utils'
 import { StockHoldingsCard } from './StockHoldingsCard'
@@ -12,9 +13,15 @@ const holdingsRequest = vi.mocked(portfolioRequest)
 const holdings: StockHoldings = {
   quantity: 8.75,
   wallets: [
-    { id: 'first', name: 'Retirement', quantity: 6.5 },
-    { id: 'second', name: 'Investing', quantity: 2.25 },
+    { id: 'first', name: 'Retirement', quantity: 6.5, positions: [], trades: [], reconciled: false },
+    { id: 'second', name: 'Investing', quantity: 2.25, positions: [], trades: [], reconciled: false },
   ],
+}
+
+function AccountHoldings({ ticker, quote }: { ticker: string; quote?: Pick<ApiStockSignals, 'lastPrice' | 'currency'> }) {
+  const { owner, holdings, retry } = useStockHoldings(ticker)
+  if (owner === undefined) return null
+  return <StockHoldingsCard key={`${owner}:${ticker}`} holdings={holdings} quote={quote} onRetry={retry} />
 }
 
 function card(owner: number, ticker = 'aapl.us', quote?: Pick<ApiStockSignals, 'lastPrice' | 'currency'>) {
@@ -30,7 +37,7 @@ function card(owner: number, ticker = 'aapl.us', quote?: Pick<ApiStockSignals, '
     signOut: vi.fn(),
     changePassword: vi.fn(),
   }
-  return <AuthContext.Provider value={auth}><StockHoldingsCard ticker={ticker} quote={quote} /></AuthContext.Provider>
+  return <AuthContext.Provider value={auth}><AccountHoldings ticker={ticker} quote={quote} /></AuthContext.Provider>
 }
 
 beforeEach(async () => {
@@ -100,7 +107,7 @@ it('clears the holdings when navigating to a different stock or signing out', as
   expect(screen.queryByText('Retirement')).not.toBeInTheDocument()
   expect(await screen.findByText('You have no open position in this stock.')).toBeInTheDocument()
 
-  rerender(<StockHoldingsCard ticker="kgh" />)
+  rerender(<AccountHoldings ticker="kgh" />)
   expect(screen.queryByRole('region', { name: 'My holdings' })).not.toBeInTheDocument()
   expect(holdingsRequest).toHaveBeenCalledTimes(2)
 })
@@ -112,4 +119,45 @@ it('allows retry after a failed holdings request', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not load holdings.')
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(await screen.findByText('Retirement')).toBeInTheDocument()
+})
+
+it('shows per-trade realized and unrealized returns inside collapsed history', async () => {
+  holdingsRequest.mockResolvedValue({
+    quantity: 1,
+    wallets: [{
+      id: 'first', name: 'Retirement', quantity: 1, reconciled: false,
+      positions: [{ currency: 'USD', quantity: 1, cost: 40.5, realizedPnl: 18.5 }],
+      trades: [
+        {
+          id: 'sell', side: 'sell', date: '2026-09-08', executedAt: '2026-09-08T15:30:00Z',
+          quantity: '1', price: '60', fees: '1', currency: 'USD',
+          remainingQuantity: null, costBasis: null, realizedPnl: 18.5, realizedCostBasis: 40.5,
+        },
+        {
+          id: 'buy', side: 'buy', date: '2026-09-01', executedAt: null,
+          quantity: '2', price: '40', fees: '1', currency: 'USD',
+          remainingQuantity: 1, costBasis: 40.5, realizedPnl: 18.5, realizedCostBasis: 40.5,
+        },
+      ],
+    }],
+  })
+  renderWithProviders(card(12, 'aapl.us', { lastPrice: 50, currency: 'USD' }))
+
+  const history = await screen.findByText('Transaction history')
+  expect(screen.getAllByText('+28.00 USD')).toHaveLength(2)
+  expect(screen.queryByRole('table', { name: 'Transaction history' })).not.toBeInTheDocument()
+  fireEvent.click(history)
+
+  const table = await screen.findByRole('table', { name: 'Transaction history' })
+  const [, sale, purchase] = within(table).getAllByRole('row')
+  expect(sale).toHaveTextContent('2026-09-08')
+  expect(sale).toHaveTextContent('Sell')
+  expect(sale).toHaveTextContent('+18.50 USD (+45.68%)')
+  expect(purchase).toHaveTextContent('2026-09-01')
+  expect(purchase).toHaveTextContent('Buy')
+  expect(purchase).toHaveTextContent('+18.50 USD (+45.68%)')
+  expect(purchase).toHaveTextContent('+9.50 USD (+23.46%)')
+
+  fireEvent.click(history)
+  expect(table).not.toBeVisible()
 })

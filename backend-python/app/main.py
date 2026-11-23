@@ -63,6 +63,7 @@ from app.markets import enabled_markets, refresh_runs
 from app.routers import (
     admin,
     auth,
+    custom_companies,
     filter_presets,
     journal,
     long_term,
@@ -254,6 +255,12 @@ async def lifespan(_app: FastAPI):
                 # keep them, and /api/auth/* says so instead of pretending.
                 user_repo = UserRepository(session_factory)
 
+                from app.db.custom_company_repository import CustomCompanyRepository
+
+                custom_repo = CustomCompanyRepository(session_factory)
+                for company in await custom_repo.list():
+                    gpw_company_service.add_company(company)
+
                 # Mirror the action log into the action_logs table as well as
                 # the file, and start its periodic retention prune.
                 log_repo = ActionLogRepository(session_factory)
@@ -351,6 +358,7 @@ async def lifespan(_app: FastAPI):
                 ranking_cache.clear()
                 set_quote_repository(repo)
                 set_user_repository(user_repo)
+                gpw_company_service.custom_repository = custom_repo
                 set_action_log_repository(log_repo)
                 set_data_health_repository(health_repo)
                 set_live_prices(live_svc)
@@ -405,6 +413,7 @@ async def lifespan(_app: FastAPI):
                         set_scheduler(None)
                         set_quote_repository(None)
                         set_user_repository(None)
+                        gpw_company_service.custom_repository = None
                         set_action_log_repository(None)
                         set_data_health_repository(None)
                         set_live_prices(None)
@@ -469,6 +478,7 @@ async def lifespan(_app: FastAPI):
         set_action_log_repository(None)
         set_data_health_repository(None)
         set_user_repository(None)
+        gpw_company_service.custom_repository = None
         if engine is not None:
             await engine.dispose()
         set_http_client(None)
@@ -516,6 +526,7 @@ app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(watchlists.router)
 app.include_router(filter_presets.router)
+app.include_router(custom_companies.router)
 app.include_router(journal.router)
 app.include_router(portfolios.router)
 

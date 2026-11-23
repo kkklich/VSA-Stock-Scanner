@@ -35,10 +35,16 @@ import {
   XCircle,
 } from 'lucide-react'
 import type {
+  ApiActionLogItem,
   ApiErrorGroup,
+  ApiIngestHealth,
+  ApiMarketDataHealth,
   ApiSystemHealth,
   HealthStatus,
 } from '../api/adminApi'
+import { SortHeader } from '../components/ui'
+import { useTableSort } from '../hooks/useTableSort'
+import { sortTableRows, type SortColumns } from '../lib/sorting'
 import { getAdminToken, setAdminToken } from '../lib/adminToken'
 import {
   useActionLogs,
@@ -159,9 +165,20 @@ const fmtInt = (n: number | null | undefined): string =>
 
 // ── Ingest ────────────────────────────────────────────────────────────────────
 
+type IngestColumn = 'run' | 'status.label' | 'lastRun' | 'nextRun'
+const ingestSortDir = (key: IngestColumn) => key === 'run' || key === 'status.label' ? 'asc' : 'desc'
+
 function IngestCard({ health }: { health: ApiSystemHealth }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { sort, onHeaderSort } = useTableSort<IngestColumn>(null, ingestSortDir)
   const ingest = health.ingest
+  const runName = (run: ApiIngestHealth) => t('system.ingest.runName.' + run.runId, { defaultValue: run.runId ?? DASH })
+  const columns: SortColumns<ApiIngestHealth, IngestColumn> = {
+    run: runName,
+    'status.label': run => t('system.ingest.status.' + run.status),
+    lastRun: run => run.lastRunAt ? Date.parse(run.lastRunAt) : null,
+    nextRun: run => run.schedulerActive && run.nextRunAt ? Date.parse(run.nextRunAt) : null,
+  }
   const tone = toneOf(ingest.status)
 
   // Localised in the UI rather than taken from the payload: the backend sends
@@ -232,22 +249,17 @@ function IngestCard({ health }: { health: ApiSystemHealth }) {
         <table className="mt-4 w-full text-left text-xs">
           <thead className="text-slate-500">
             <tr>
-              <th className="py-1 pr-3 font-medium">{t('system.ingest.run')}</th>
-              <th className="py-1 pr-3 font-medium">{t('system.ingest.status.label')}</th>
-              <th className="hidden py-1 pr-3 font-medium sm:table-cell">
-                {t('system.ingest.lastRun')}
-              </th>
-              <th className="py-1 font-medium">{t('system.ingest.nextRun')}</th>
+              {(Object.keys(columns) as IngestColumn[]).map(key => <SortHeader key={key} col={key}
+                label={t('system.ingest.' + key)} sort={sort} onSort={onHeaderSort} compact
+                className={key === 'lastRun' ? 'hidden sm:table-cell' : ''} />)}
             </tr>
           </thead>
           <tbody>
-            {ingest.runs?.map((run) => (
+            {sortTableRows(ingest.runs ?? [], sort, columns, i18n.language).map((run) => (
               <tr key={run.runId ?? run.schedule} className="border-t border-slate-800">
                 <td className="py-1.5 pr-3 text-slate-300">
                   <span className="font-medium">
-                    {t(`system.ingest.runName.${run.runId}`, {
-                      defaultValue: run.runId ?? DASH,
-                    })}
+                    {runName(run)}
                   </span>
                   <span className="block text-[11px] text-slate-500">
                     {(run.markets ?? []).map((m) => m.toUpperCase()).join(', ')}
@@ -281,9 +293,20 @@ function IngestCard({ health }: { health: ApiSystemHealth }) {
 
 // ── Stored data ───────────────────────────────────────────────────────────────
 
+type MarketColumn = 'market' | 'status' | 'latestSession' | 'coverage'
+const marketSortDir = (key: MarketColumn) => key === 'market' || key === 'status' ? 'asc' : 'desc'
+
 function DataCard({ health }: { health: ApiSystemHealth }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { sort, onHeaderSort } = useTableSort<MarketColumn>(null, marketSortDir)
   const data = health.data
+  const marketName = (row: ApiMarketDataHealth) => t('markets.short.' + row.market, { defaultValue: row.market.toUpperCase() })
+  const columns: SortColumns<ApiMarketDataHealth, MarketColumn> = {
+    market: marketName,
+    status: row => t('system.data.status.' + row.status),
+    latestSession: row => row.latestBarDate,
+    coverage: row => row.coveragePct,
+  }
   const tone = toneOf(data.status)
 
   const summary = (() => {
@@ -360,17 +383,16 @@ function DataCard({ health }: { health: ApiSystemHealth }) {
         <table className="mt-4 w-full text-left text-xs">
           <thead className="text-slate-500">
             <tr>
-              <th className="py-1 pr-3 font-medium">{t('system.data.market')}</th>
-              <th className="py-1 pr-3 font-medium">{t('system.ingest.status.label')}</th>
-              <th className="py-1 pr-3 font-medium">{t('system.data.latestSession')}</th>
-              <th className="py-1 font-medium">{t('system.data.coverage')}</th>
+              {(Object.keys(columns) as MarketColumn[]).map(key => <SortHeader key={key} col={key}
+                label={t(key === 'status' ? 'system.ingest.status.label' : 'system.data.' + key)}
+                sort={sort} onSort={onHeaderSort} compact />)}
             </tr>
           </thead>
           <tbody>
-            {data.markets?.map((m) => (
+            {sortTableRows(data.markets ?? [], sort, columns, i18n.language).map((m) => (
               <tr key={m.market} className="border-t border-slate-800">
                 <td className="py-1.5 pr-3 font-medium text-slate-300">
-                  {t(`markets.short.${m.market}`, { defaultValue: m.market.toUpperCase() })}
+                  {marketName(m)}
                 </td>
                 <td className={`py-1.5 pr-3 ${TONE[toneOf(m.status)].text}`}>
                   {t(`system.data.status.${m.status}`)}
@@ -506,8 +528,18 @@ const OUTCOME_TONE: Record<string, string> = {
   failed: 'text-rose-400',
 }
 
+type LogColumn = 'time' | 'action' | 'outcome' | 'duration'
+const logColumns: SortColumns<ApiActionLogItem, LogColumn> = {
+  time: row => Date.parse(row.timestamp),
+  action: row => row.action,
+  outcome: row => row.outcome + (row.statusCode ? ' ' + row.statusCode : ''),
+  duration: row => row.durationMs,
+}
+const logSortDir = (key: LogColumn) => key === 'action' || key === 'outcome' ? 'asc' : 'desc'
+
 function ActionLogCard({ refreshToken }: { refreshToken?: unknown }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { sort, onHeaderSort } = useTableSort<LogColumn>({ key: 'time', dir: 'desc' }, logSortDir)
   const [kind, setKind] = useState<'' | 'request' | 'job' | 'error'>('')
   const { data, loading, error } = useActionLogs(
     { kind: kind || undefined, pageSize: 25 },
@@ -550,16 +582,13 @@ function ActionLogCard({ refreshToken }: { refreshToken?: unknown }) {
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-slate-800 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-2 font-medium sm:px-5">{t('system.log.time')}</th>
-                <th className="px-2 py-2 font-medium">{t('system.log.action')}</th>
-                <th className="px-2 py-2 font-medium">{t('system.log.outcome')}</th>
-                <th className="px-2 py-2 text-right font-medium">
-                  {t('system.log.duration')}
-                </th>
+                {(Object.keys(logColumns) as LogColumn[]).map(key => <SortHeader key={key} col={key}
+                  label={t('system.log.' + key)} sort={sort} onSort={onHeaderSort} compact
+                  className={key === 'duration' ? 'text-right' : ''} />)}
               </tr>
             </thead>
             <tbody>
-              {data.items.map((item) => (
+              {sortTableRows(data.items, sort, logColumns, i18n.language).map((item) => (
                 <tr
                   key={item.requestId + item.timestamp}
                   className="border-b border-slate-800/60 last:border-0"

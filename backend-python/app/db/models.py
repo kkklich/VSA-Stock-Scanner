@@ -122,6 +122,16 @@ class FilterPresetRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class CustomCompanyRow(Base):
+    """User-added listings supplementing the shipped market catalogues."""
+
+    __tablename__ = "custom_companies"
+
+    ticker: Mapped[str] = mapped_column(String(20), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+
 class CompanyRow(Base):
     """One tracked GPW company."""
 
