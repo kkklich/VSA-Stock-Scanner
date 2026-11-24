@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import {
   ALL_MARKETS,
+  canonicalTicker,
   displayTicker,
   effectiveMarket,
   GPW_MARKET,
@@ -22,6 +23,14 @@ beforeEach(() => {
 })
 
 describe('tickers', () => {
+  it('groups Bitcoin under USA and maps its provider symbol', () => {
+    expect(canonicalTicker(' BTC-USD ')).toBe('btc-usd.us')
+    expect(marketOfTicker('BTC-USD.US')).toBe('us')
+    expect(displayTicker('BTC-USD.US')).toBe('BTC-USD')
+    expect(canonicalTicker('CSU.TO')).toBe('csu.us')
+    expect(canonicalTicker('AAPL.US')).toBe('AAPL.US')
+  })
+
   it('drops the market suffix for display', () => {
     expect(displayTicker('AAPL.US')).toBe('AAPL')
     expect(displayTicker('BT-A.L')).toBe('BT-A')

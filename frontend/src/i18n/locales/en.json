@@ -1295,6 +1295,7 @@
     "emptyTransactions": "No transactions recorded yet.",
     "filters": {
       "ticker": "Search ticker",
+      "tickerOrName": "Search ticker or stock name",
       "currency": "Currency",
       "side": "Type",
       "from": "From date",

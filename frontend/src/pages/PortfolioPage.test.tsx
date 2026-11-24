@@ -399,8 +399,18 @@ describe('account portfolios', () => {
     expect(tickers()).toEqual(['AAPL.US'])
     await user.click(positions.getByRole('button', { name: 'Clear filters' }))
     await user.selectOptions(positions.getByLabelText('Currency'), 'PLN')
-    await user.type(positions.getByRole('searchbox', { name: 'Search ticker' }), 'PZ')
+    const search = positions.getByRole('searchbox', { name: 'Search ticker or stock name' })
+    await user.type(search, 'PZ')
     expect(tickers()).toEqual(['PZU'])
+    await user.clear(search)
+    // The company name matches even when the query does not occur in its ticker.
+    await user.type(search, ' ghM ')
+    expect(tickers()).toEqual(['KGH'])
+    await user.clear(search)
+    await user.type(search, 'unknown company')
+    expect(positions.getByText('No positions match your filters.')).toBeVisible()
+    await user.click(positions.getByRole('button', { name: 'Clear filters' }))
+    expect(tickers()).toEqual(['AAPL.US', 'KGH', 'PZU'])
   })
 
   it('sorts mixed-currency positions by PLN value and by unrealized return', async () => {

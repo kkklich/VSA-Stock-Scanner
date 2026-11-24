@@ -151,6 +151,7 @@ class TestMemberLists:
         assert build.members["csu.us"] == []
         assert build.members["hhh.us"] == []
         assert build.members["nu.us"] == []
+        assert build.members["btc-usd.us"] == []
 
 
 # ── Verification ──────────────────────────────────────────────────────────────

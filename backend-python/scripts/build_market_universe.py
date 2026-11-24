@@ -57,6 +57,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.markets import (
+    BITCOIN_TICKER,
     CSU_TICKER,
     FRANCE,
     GERMANY,
@@ -100,7 +101,7 @@ NASDAQ_100_URL = "https://api.nasdaq.com/api/quote/list-type/nasdaq100"
 # A download far below this is a changed page layout, not a smaller index.
 EXPECTED_SIZE = {"sp500": 500, "ndx": 100, "dax": 40, "cac40": 40, "aex": 25, "ftse100": 100}
 
-EXTRA_US_TICKERS = (CSU_TICKER, "hhh.us", "nu.us")
+EXTRA_US_TICKERS = (BITCOIN_TICKER, CSU_TICKER, "hhh.us", "nu.us")
 
 # Yahoo's exchange codes, as the reader knows them.
 EXCHANGE_NAMES = {

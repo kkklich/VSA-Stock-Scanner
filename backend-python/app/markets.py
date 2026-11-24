@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 
 GPW_ID = "gpw"
 CSU_TICKER = "csu.us"
+BITCOIN_TICKER = "btc-usd.us"
 
 # A daily bar is only trusted once the session has closed AND the data provider
 # has had a moment to publish the final print (closing auctions end a few
@@ -117,6 +118,8 @@ class Market:
     refresh_run: str = "europe"
     #: The indices the tracked companies are selected from (ids of INDEX_NAMES).
     indices: tuple[str, ...] = ()
+    #: Crypto daily candles span UTC calendar days, including weekends.
+    continuous_trading: bool = False
 
     @property
     def tz(self) -> ZoneInfo:
@@ -136,6 +139,9 @@ class Market:
         today cannot have, which also covers a timestamp read in the wrong zone.
         """
         current = (now or datetime.now(tz=UTC)).astimezone(self.tz)
+        if self.continuous_trading:
+            closes = datetime.combine(day + timedelta(days=1), time(), tzinfo=self.tz)
+            return current >= closes + SESSION_SETTLE
         today = current.date()
         if day < today:
             return True
@@ -153,7 +159,9 @@ class Market:
         """
         current = (now or datetime.now(tz=UTC)).astimezone(self.tz)
         day = current.date()
-        while day.weekday() >= 5 or not self.session_is_final(day, current):
+        while (not self.continuous_trading and day.weekday() >= 5) or not self.session_is_final(
+            day, current
+        ):
             day -= timedelta(days=1)
         return day
 
@@ -173,6 +181,8 @@ class Market:
         no bar for today.
         """
         current = (now or datetime.now(tz=UTC)).astimezone(self.tz)
+        if self.continuous_trading:
+            return True
         if current.weekday() >= 5:
             return False
         opens = datetime.combine(current.date(), self.open_time, tzinfo=self.tz)
@@ -211,6 +221,19 @@ US = Market(
     close_time=time(16, 0),
     refresh_run="us",
     indices=("sp500", "ndx"),
+)
+
+# Bitcoin is grouped with US stocks but keeps its own daily candle calendar.
+_BITCOIN = replace(
+    US,
+    name="Bitcoin USD",
+    country="Global",
+    exchange="Cryptocurrency",
+    timezone="UTC",
+    open_time=time(),
+    close_time=time(),
+    indices=(),
+    continuous_trading=True,
 )
 
 # Constellation Software is grouped with the US stocks in the scanner.
@@ -323,7 +346,10 @@ _GPW_ALIAS_SUFFIX = ".wa"
 
 # XTB symbols used in portfolio imports for these GPW listings.
 GPW_TICKER_ALIASES = {"dada": "dad", "pmg": "gns"}
-FOREIGN_TICKER_ALIASES = {_CSU_YAHOO_SYMBOL.casefold(): CSU_TICKER}
+FOREIGN_TICKER_ALIASES = {
+    _CSU_YAHOO_SYMBOL.casefold(): CSU_TICKER,
+    "btc-usd": BITCOIN_TICKER,
+}
 _TICKER_ALIASES = {**GPW_TICKER_ALIASES, **FOREIGN_TICKER_ALIASES}
 
 
@@ -372,6 +398,8 @@ def market_of(ticker: str) -> Market:
     uses Toronto trading details under the US market id.
     """
     cleaned = ticker.strip().casefold()
+    if cleaned in (BITCOIN_TICKER, "btc-usd"):
+        return _BITCOIN
     if cleaned == CSU_TICKER:
         return _TORONTO
     _, dot, tail = cleaned.rpartition(".")
@@ -409,6 +437,8 @@ def market_for_yahoo_symbol(symbol: str) -> Market:
     Raises ``ValueError`` for a Yahoo suffix this app does not track.
     """
     cleaned = symbol.strip().upper()
+    if cleaned == "BTC-USD":
+        return _BITCOIN
     if cleaned == _CSU_YAHOO_SYMBOL:
         return _TORONTO
     _, dot, tail = cleaned.rpartition(".")

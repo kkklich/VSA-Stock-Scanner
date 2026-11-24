@@ -55,9 +55,10 @@ export function displayTicker(ticker: string): string {
   return dot < 0 ? ticker : ticker.slice(0, dot)
 }
 
-/** Map the Toronto symbol to the ticker used by StockPilot links and watchlists. */
+/** Map provider symbols to the tickers used by StockPilot links and watchlists. */
 export function canonicalTicker(ticker: string): string {
-  return ticker.trim().toLowerCase() === 'csu.to' ? 'csu.us' : ticker
+  const aliases: Record<string, string> = { 'csu.to': 'csu.us', 'btc-usd': 'btc-usd.us' }
+  return aliases[ticker.trim().toLowerCase()] ?? ticker
 }
 
 // ── Money across markets ──────────────────────────────────────────────────────

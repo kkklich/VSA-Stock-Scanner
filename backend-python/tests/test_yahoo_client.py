@@ -86,6 +86,7 @@ class TestSymbols:
             ("aapl.us", "AAPL", "America/New_York"),
             ("brk-b.us", "BRK-B", "America/New_York"),
             ("csu.us", "CSU.TO", "America/Toronto"),
+            ("btc-usd.us", "BTC-USD", "UTC"),
             ("sap.de", "SAP.DE", "Europe/Berlin"),
             ("mc.pa", "MC.PA", "Europe/Paris"),
             ("asml.as", "ASML.AS", "Europe/Amsterdam"),
@@ -122,6 +123,15 @@ class TestSymbols:
 
 
 class TestUnfinishedSessions:
+    def test_bitcoin_keeps_weekend_bars_and_drops_today_after_us_close(
+        self, fake_yahoo: type[_FakeTicker], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _pin_clock(monkeypatch, datetime(2026, 11, 23, 22, 30, tzinfo=UTC))
+        fake_yahoo.frame = _daily_frame(["2026-11-21", "2026-11-22", "2026-11-23"], "UTC")
+        quotes = _history("btc-usd.us")
+        assert fake_yahoo.requested == ["BTC-USD"]
+        assert [q.date for q in quotes] == [date(2026, 11, 21), date(2026, 11, 22)]
+
     def test_the_session_in_progress_is_dropped(
         self, fake_yahoo: type[_FakeTicker], monkeypatch: pytest.MonkeyPatch
     ) -> None:

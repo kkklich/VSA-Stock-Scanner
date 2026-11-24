@@ -1320,6 +1320,7 @@
     "emptyTransactions": "Brak zapisanych transakcji.",
     "filters": {
       "ticker": "Szukaj tickera",
+      "tickerOrName": "Szukaj tickera lub nazwy spółki",
       "currency": "Waluta",
       "side": "Rodzaj",
       "from": "Data od",

@@ -264,23 +264,34 @@ class TestGetRanking:
         assert history.json()["ticker"] == ticker.upper()
         assert history.json()["quotes"]
 
-    def test_toronto_ticker_finds_constellation_in_the_scanner(self, monkeypatch) -> None:
+    @pytest.mark.parametrize(
+        ("alias", "ticker", "exchange", "currency"),
+        [
+            ("CSU.TO", "csu.us", "TSX", "CAD"),
+            ("BTC-USD", "btc-usd.us", "Cryptocurrency", "USD"),
+        ],
+    )
+    def test_provider_ticker_finds_its_us_group_listing(
+        self, monkeypatch, alias, ticker, exchange, currency
+    ) -> None:
         monkeypatch.setattr(settings, "markets", "us")
         app.dependency_overrides[get_stooq_client] = lambda: _PerTickerStooqClient(
-            {"csu.us": _rich_quotes()}
+            {ticker: _rich_quotes()}
         )
         with TestClient(app) as client:
             companies = client.get("/api/stocks", params={"market": "us"}).json()
-            ranking = client.get("/api/stocks/ranking", params={"market": "us", "q": "CSU.TO"})
-            signals = client.get("/api/stocks/CSU.TO/signals")
+            ranking = client.get("/api/stocks/ranking", params={"market": "us", "q": alias})
+            signals = client.get(f"/api/stocks/{alias}/signals")
 
-        [company] = [item for item in companies if item["ticker"] in {"csu.us", "csu.to"}]
-        assert company["aliases"] == ["csu.to"]
+        [company] = [item for item in companies if item["ticker"] in {ticker, alias.lower()}]
+        assert company["aliases"] == [alias.lower()]
         assert ranking.status_code == 200
-        assert [item["ticker"] for item in ranking.json()] == ["CSU.US"]
+        assert [item["ticker"] for item in ranking.json()] == [ticker.upper()]
         assert signals.status_code == 200
         stock = signals.json()
-        assert (stock["ticker"], stock["exchange"], stock["currency"]) == ("CSU.US", "TSX", "CAD")
+        assert (stock["ticker"], stock["exchange"], stock["currency"]) == (
+            ticker.upper(), exchange, currency
+        )
 
     def test_tickers_allow_list_restricts_results(self) -> None:
         app.dependency_overrides[get_stooq_client] = lambda: _FakeStooqClient(

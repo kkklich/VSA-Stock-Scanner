@@ -107,6 +107,7 @@ class TestNormalizeTicker:
             # Yahoo's spelling of a GPW code is the same stock.
             ("KGH.WA", "kgh"),
             (" CSU.TO ", "csu.us"),
+            (" BTC-USD ", "btc-usd.us"),
             ("AAPL.US", "aapl.us"),
             ("brk-b.US", "brk-b.us"),
             ("SAP.DE", "sap.de"),
@@ -172,6 +173,27 @@ class TestMarketOf:
             market_of("abc.xx")
 
 
+class TestBitcoinCalendar:
+    def test_bitcoin_uses_utc_and_stays_in_the_us_group(self) -> None:
+        market = market_of("btc-usd.us")
+        assert market.id == "us"
+        assert market.timezone == "UTC"
+        assert market.currency == "USD"
+        assert market.exchange == "Cryptocurrency"
+
+    def test_weekend_candle_settles_after_the_next_utc_midnight(self) -> None:
+        market = market_of("btc-usd.us")
+        sunday = date(2026, 11, 22)
+        assert not market.session_is_final(sunday, datetime(2026, 11, 22, 23, 59, tzinfo=UTC))
+        assert not market.session_is_final(sunday, datetime(2026, 11, 23, 0, 14, tzinfo=UTC))
+        assert market.session_is_final(sunday, datetime(2026, 11, 23, 0, 15, tzinfo=UTC))
+        assert market.latest_final_session(datetime(2026, 11, 23, 0, 14, tzinfo=UTC)) == date(
+            2026, 11, 21
+        )
+        assert market.latest_final_session(datetime(2026, 11, 23, 0, 15, tzinfo=UTC)) == sunday
+        assert market.session_in_progress(datetime(2026, 11, 22, 12, tzinfo=UTC))
+
+
 class TestTheClashesThatForcedTheSuffix:
     """Real pairs of different companies sharing one bare code."""
 
@@ -198,6 +220,7 @@ class TestYahooSymbols:
             ("PMG.WA", "GNS.WA"),
             ("DADA", "DAD.WA"),
             ("aapl.us", "AAPL"),
+            ("btc-usd.us", "BTC-USD"),
             ("brk-b.us", "BRK-B"),
             ("sap.de", "SAP.DE"),
             ("mc.pa", "MC.PA"),
@@ -234,7 +257,8 @@ class TestYahooSymbols:
             market_for_yahoo_symbol("SHOP.TO")
 
     @pytest.mark.parametrize(
-        "ticker", ["kgh", "aapl.us", "csu.us", "sap.de", "mc.pa", "asml.as", "hsba.l"]
+        "ticker",
+        ["kgh", "aapl.us", "btc-usd.us", "csu.us", "sap.de", "mc.pa", "asml.as", "hsba.l"],
     )
     def test_round_trip(self, ticker: str) -> None:
         assert market_for_yahoo_symbol(yahoo_symbol(ticker)) is market_of(ticker)
@@ -251,6 +275,7 @@ class TestTickerFor:
         [
             ("AAPL", US, "aapl.us"),
             ("CSU.TO", US, "csu.us"),
+            ("BTC-USD", US, "btc-usd.us"),
             # Index providers write share classes with a dot; Yahoo uses a hyphen.
             ("BRK.B", US, "brk-b.us"),
             ("SAP.DE", GERMANY, "sap.de"),

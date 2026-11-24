@@ -9,6 +9,19 @@
   "verification": "Each company returned at least 5 traded daily bars in the 21 days before it was verified and a company name from Yahoo Finance, with prices quoted in a currency the app converts (PLN, USD, CAD, EUR, GBP, GBp).",
   "companies": [
     {
+      "ticker": "btc-usd.us",
+      "symbol": "BTC-USD",
+      "name": "Bitcoin USD",
+      "sector": "Cryptocurrency",
+      "industry": "Cryptocurrency",
+      "country": "Global",
+      "exchange": "Cryptocurrency",
+      "currency": "USD",
+      "website": "https://bitcoin.org",
+      "description": "Bitcoin (BTC) quoted in US dollars. Grouped with the USA market in StockPilot; trades continuously, including weekends.",
+      "indices": []
+    },
+    {
       "ticker": "a.us",
       "symbol": "A",
       "name": "Agilent Technologies, Inc.",

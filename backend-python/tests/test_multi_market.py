@@ -84,6 +84,16 @@ def us_market(tmp_path: Path) -> GpwCompanyService:
 
 
 class TestCompanyService:
+    def test_bitcoin_is_available_in_the_real_us_list(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "markets", "us")
+        service = GpwCompanyService()
+        bitcoin = service.find("BTC-USD")
+        assert bitcoin is not None
+        assert (bitcoin.ticker, bitcoin.name, bitcoin.market, bitcoin.currency) == (
+            "btc-usd.us", "Bitcoin USD", "us", "USD"
+        )
+        assert bitcoin in service.get_companies("us")
+
     def test_the_default_list_is_still_the_gpw(self, us_market: GpwCompanyService) -> None:
         companies = us_market.get_companies()
         assert len(companies) == len(GpwCompanyService().get_companies())

@@ -165,7 +165,8 @@ export function PortfolioPositions({ positions, instruments, transactions }: {
   const { sort, onHeaderSort } = useTableSort<PositionColumn>(null, positionSortDir)
   const query = ticker.trim().toLowerCase()
   const rows = sortRows(positions.filter(position =>
-    position.ticker.toLowerCase().includes(query)
+    (position.ticker.toLowerCase().includes(query)
+      || !!instrumentNames.get(canonicalTicker(position.ticker).toLowerCase())?.toLowerCase().includes(query))
     && (!status || status === positionStatus(position))
     && (!currency || currency === currencyLabel(position.currency)),
   ), sort, positionColumns, i18n.language)
@@ -174,7 +175,7 @@ export function PortfolioPositions({ positions, instruments, transactions }: {
     <h3 id={id} className="mb-3 font-semibold">{t('portfolio.holdings')}</h3>
     {positions.length > 0 ? <>
       <div className="mb-3 flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-xs text-slate-400">{t('portfolio.filters.ticker')}
+        <label className="grid gap-1 text-xs text-slate-400">{t('portfolio.filters.tickerOrName')}
           <input className={filterInput} type="search" value={ticker} onChange={event => setTicker(event.target.value)} />
         </label>
         <label className="grid gap-1 text-xs text-slate-400">{t('portfolio.positionStatus')}
