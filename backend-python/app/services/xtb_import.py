@@ -797,6 +797,39 @@ def _same_trade(first, second):
     return False
 
 
+def import_row_errors(plan: dict) -> list[dict]:
+    """Explain rejected rows without exposing source files or the existing wallet ledger."""
+    messages = {
+        "reference_conflict": "This order/execution ID is already saved with different details.",
+        "manual_overlap": "A matching manually entered transaction already exists in this wallet.",
+        "xtb_source_overlap": (
+            "A possible matching transaction exists from another XTB import format."
+        ),
+        "import_snapshot_history_conflict": (
+            "This wallet was seeded from position snapshots; importing earlier fills needs review."
+        ),
+    }
+    errors = []
+    for row in plan["rows"]:
+        if row["status"] != "error":
+            continue
+        code = row.get("code", "invalid_transaction")
+        trade = row.get("transaction") or {}
+        errors.append(
+            {
+                **{
+                    key: row[key]
+                    for key in ("sheet", "row", "orderId", "executionId")
+                    if key in row
+                },
+                **{key: trade[key] for key in ("ticker", "date", "side") if key in trade},
+                "code": code,
+                "message": messages.get(code, code),
+            }
+        )
+    return errors
+
+
 def prepare_import(
     parsed: ParsedImport, existing: list[dict], cost_method: str, *, checkpoint=None
 ) -> dict:

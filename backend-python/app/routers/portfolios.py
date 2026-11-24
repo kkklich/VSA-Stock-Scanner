@@ -21,7 +21,7 @@ from app.markets import listed_ticker, market_of, normalize_ticker, quote_curren
 from app.models.portfolio import (
     AddTransaction,
     CreatePortfolio,
-    ImportTransactions,
+    ImportTransactionBatch,
     StockHoldings,
     UpdatePortfolio,
 )
@@ -74,7 +74,10 @@ async def execute(response, operation):
     try:
         return await operation
     except PortfolioError as exc:
-        raise HTTPException(exc.status, detail={"code": exc.code, "message": exc.code}) from exc
+        detail = {"code": exc.code, "message": exc.code}
+        if exc.context is not None:
+            detail["context"] = exc.context
+        raise HTTPException(exc.status, detail=detail) from exc
 
 
 @router.get("/instruments")
@@ -238,20 +241,19 @@ def automation_scope(authorization: str | None, repo: UserRepository | None):
 
 @router.post("/imports/transactions")
 async def import_transactions(
-    payload: ImportTransactions,
+    payload: ImportTransactionBatch,
     repo: Annotated[UserRepository | None, Depends(get_user_repository)],
     response: Response,
     authorization: Annotated[str | None, Header()] = None,
 ):
-    """Save one reviewed report to its linked wallet; retries do not replay executions."""
+    """Save reviewed reports atomically; retries do not replay executions."""
     owner, portfolio_id = automation_scope(authorization, repo)
 
     async def commit():
-        parsed = prepare_transactions(payload, gpw_company_service)
-        result = await repo.portfolios.change(
-            owner, "automated_import", portfolio_id=portfolio_id, parsed=parsed
+        reports = [prepare_transactions(report, gpw_company_service) for report in payload.root]
+        return await repo.portfolios.import_transaction_reports(
+            owner, reports, portfolio_id=portfolio_id
         )
-        return {**result, "brokerAccountId": payload.broker_account_id, "warnings": []}
 
     return await execute(response, commit())
 

@@ -116,3 +116,44 @@ def test_paste_ready_node_returns_requested_object_with_confirmed_fee():
         {"json": {"pages": [{"text": summary_page(include_column=False)}]}}
     )
     assert result == {"json": EXPECTED_OBJECT}
+
+
+def all_items_node(items):
+    source = PARSER_PATH.with_name("xtb_pdf_code_node_all_items.txt").read_text(encoding="utf-8")
+    namespace = {}
+    exec(
+        "def execute_node(_items):\n" + "\n".join("    " + line for line in source.splitlines()),
+        namespace,
+    )
+    return namespace["execute_node"](items)
+
+
+def test_all_items_node_displays_exact_requested_array():
+    input_json = {"pages": [{"text": summary_page(include_column=False)}]}
+    result = all_items_node([{"json": input_json}])
+    assert [item["json"] for item in result] == [EXPECTED_OBJECT]
+    assert result[0]["pairedItem"] == {"item": 0}
+    assert "confirmedOrders" not in input_json
+
+
+def test_all_items_node_preserves_each_reports_commission_and_input_link():
+    second_page = summary_page("1.25").replace("2955645632", "2955645633")
+    result = all_items_node(
+        [
+            {"json": {"pages": [{"text": summary_page(include_column=False)}]}},
+            {"json": {"pages": [{"text": second_page}]}},
+        ]
+    )
+    assert len(result) == 2
+    assert result[0]["json"] == EXPECTED_OBJECT
+    assert result[1]["json"]["status"] == "ready"
+    assert result[1]["json"]["transactions"][0]["orderId"] == "2955645633"
+    assert result[1]["json"]["transactions"][0]["fees"] == "1.25"
+    assert result[1]["pairedItem"] == {"item": 1}
+
+
+def test_all_items_node_does_not_assume_zero_for_other_orders():
+    page = summary_page(include_column=False).replace("2955645632", "2955645633")
+    [result] = all_items_node([{"json": {"pages": [{"text": page}]}}])
+    assert result["json"]["status"] == "needs_review"
+    assert result["json"]["transactions"] == []

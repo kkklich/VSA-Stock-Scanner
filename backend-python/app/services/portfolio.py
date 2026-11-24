@@ -11,8 +11,9 @@ XTB_RECONCILIATION = "xtb_reconciliation"
 
 
 class PortfolioError(Exception):
-    def __init__(self, code: str, status: int = 409):
+    def __init__(self, code: str, status: int = 409, *, context: dict | None = None):
         self.code, self.status = code, status
+        self.context = context
 
 
 def check_broker_account(expected: str | None, received: str | None) -> None:

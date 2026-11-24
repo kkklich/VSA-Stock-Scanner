@@ -30,5 +30,14 @@ def prepare_transactions(payload: ImportTransactions, companies) -> ParsedImport
         references.add(reference)
         trade = entry.model_dump(mode="json", exclude={"order_id", "execution_id"})
         trade.update(id=str(uuid5(NAMESPACE_URL, reference)), source="xtb", sourceId=reference)
-        rows.append({"sheet": "JSON", "row": index, "status": "ready", "transaction": trade})
+        rows.append(
+            {
+                "sheet": "JSON",
+                "row": index,
+                "status": "ready",
+                "transaction": trade,
+                "orderId": entry.order_id,
+                "executionId": entry.execution_id,
+            }
+        )
     return ParsedImport(rows, 0, [], broker_account_id=payload.broker_account_id)

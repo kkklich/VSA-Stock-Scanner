@@ -18,7 +18,7 @@ from app.services.portfolio import (
     trade_order,
     xtb_checkpoint,
 )
-from app.services.xtb_import import ParsedImport, prepare_import
+from app.services.xtb_import import ParsedImport, import_row_errors, prepare_import
 from app.services.xtb_reconciliation import reconciliation_view
 
 
@@ -502,6 +502,84 @@ class PortfolioRepository:
                     },
                 }
 
+    async def import_transaction_reports(self, owner, reports, *, portfolio_id=None):
+        """Commit all reviewed JSON reports, including multiple wallets, in one transaction."""
+        async with self._session_factory() as session:
+            async with session.begin():
+                active = (
+                    await session.execute(
+                        select(UserRow.is_active).where(UserRow.id == owner).with_for_update()
+                    )
+                ).scalar_one_or_none()
+                if not active:
+                    raise PortfolioError("not_found", 404)
+                rows = (
+                    (
+                        await session.execute(
+                            select(PortfolioRow)
+                            .where(PortfolioRow.user_id == owner)
+                            .with_for_update()
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                by_id = {row.id: row for row in rows}
+                by_account = {row.broker_account_id: row for row in rows if row.broker_account_id}
+                results = []
+                for report_index, parsed in enumerate(reports):
+                    row = (
+                        by_id.get(portfolio_id)
+                        if portfolio_id is not None
+                        else by_account.get(parsed.broker_account_id)
+                    )
+                    if row is None:
+                        code = (
+                            "not_found" if portfolio_id is not None else "broker_account_unlinked"
+                        )
+                        raise PortfolioError(code, 404)
+                    check_broker_account(row.broker_account_id, parsed.broker_account_id)
+                    if row.broker_account_id is None or row.broker.casefold() != "xtb":
+                        raise PortfolioError("broker_account_unlinked", 404)
+                    check_account_currency(
+                        row.broker_account_currency, parsed.broker_account_currency
+                    )
+                    checkpoint = xtb_checkpoint(row.transactions)
+                    plan = prepare_import(
+                        parsed,
+                        response(row)["transactions"],
+                        row.cost_method,
+                        checkpoint=checkpoint,
+                    )
+                    if plan["errors"]:
+                        raise PortfolioError(
+                            "import_rows_invalid",
+                            422,
+                            context={
+                                "reportIndex": report_index,
+                                "brokerAccountId": parsed.broker_account_id,
+                                "errors": import_row_errors(plan),
+                            },
+                        )
+                    if plan["ledgerError"]:
+                        raise PortfolioError(plan["ledgerError"])
+                    if plan["ready"]:
+                        row.transactions = (
+                            [*plan["ledger"], checkpoint] if checkpoint else plan["ledger"]
+                        )
+                        row.version += 1
+                    results.append(
+                        {
+                            "imported": plan["ready"],
+                            "duplicates": plan["duplicates"],
+                            "skipped": 0,
+                            "version": row.version,
+                            "brokerAccountId": row.broker_account_id,
+                            "warnings": parsed.warnings,
+                        }
+                    )
+                return results
+
     async def change(
         self,
         owner,
@@ -610,7 +688,14 @@ class PortfolioRepository:
                         checkpoint=checkpoint,
                     )
                     if plan["errors"] and not allow_partial:
-                        raise PortfolioError("import_rows_invalid", 422)
+                        raise PortfolioError(
+                            "import_rows_invalid",
+                            422,
+                            context={
+                                "brokerAccountId": parsed.broker_account_id,
+                                "errors": import_row_errors(plan),
+                            },
+                        )
                     if plan["ledgerError"]:
                         raise PortfolioError(plan["ledgerError"])
                     if (

@@ -9,9 +9,11 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    RootModel,
     StringConstraints,
     ValidationInfo,
     field_validator,
+    model_validator,
 )
 
 from app.markets import normalize_ticker
@@ -153,3 +155,13 @@ class ImportTransactions(Command):
     broker_account_id: BrokerAccountId = Field(alias="brokerAccountId")
     report_date: date = Field(alias="reportDate")
     transactions: list[ImportTransaction] = Field(min_length=1, max_length=1000)
+
+
+class ImportTransactionBatch(
+    RootModel[Annotated[list[ImportTransactions], Field(min_length=1, max_length=100)]]
+):
+    @model_validator(mode="after")
+    def transaction_limit(self):
+        if sum(len(report.transactions) for report in self.root) > 1000:
+            raise ValueError("A request can contain at most 1000 transactions")
+        return self
